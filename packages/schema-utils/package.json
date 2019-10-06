@@ -1,6 +1,6 @@
 {
   "name": "@polygraph/schema-utils",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Utility functions for dealing with polygraph schemata.",
   "main": "dist/index.js",
   "scripts": {
@@ -11,7 +11,7 @@
   "author": "Jake Sower",
   "license": "CC BY-NC-SA",
   "dependencies": {
-    "@polygraph/utils": "0.0.0",
+    "@polygraph/utils": "^0.0.1",
     "ajv": "^6.10.2"
   },
   "devDependencies": {
