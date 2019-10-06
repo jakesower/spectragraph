@@ -1,0 +1,17 @@
+{
+  "name": "@polygraph/utils",
+  "version": "0.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo 'oh hey'"
+  },
+  "keywords": [],
+  "author": "Jake Sower",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^3.6.3"
+  }
+}
