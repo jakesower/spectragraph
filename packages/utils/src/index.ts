@@ -4,7 +4,7 @@ export function appendKeys<T, K extends keyof T>(
   base: { [k: string]: T[K][] },
   other: { [k: string]: T[K][] }
 ): { [k: string]: T[K][] } {
-  const keys = Object.keys(base);
+  const keys = Object.keys(base); // TODO: should be intersection of base and other keys
   let result = {};
   for (let key of keys) {
     result[key] = [...base[key], ...other[key]];
@@ -100,6 +100,12 @@ export function mapObj<T, U>(
   const [keys, vals] = [Object.keys(obj), Object.values(obj)];
   const mappedVals = vals.map((v, idx) => fn(v, keys[idx]));
   return zipObj(keys, mappedVals);
+}
+
+export function mapObjToArray<T, U>(obj: { [k in string]: T }, fn: (x: T, idx: string) => U): U[] {
+  const [keys, vals] = [Object.keys(obj), Object.values(obj)];
+  const mappedVals = vals.map((v, idx) => fn(v, keys[idx]));
+  return mappedVals;
 }
 
 export function maxStable<T>(fn: (a: T) => Ord, xs: T[]): T {
@@ -208,14 +214,17 @@ export function pick<T>(obj: { [k: string]: T }, keys: string[]): { [k: string]:
   let out = {};
 
   for (let i = 0; i < l; i += 1) {
-    out[keys[i]] = obj[keys[i]];
+    if (keys[i] in obj) out[keys[i]] = obj[keys[i]];
   }
 
   return out;
 }
 
 export function pipe(fns: ((x: any) => any)[]): (x: any) => any {
-  return fns.reduce((acc, fn) => val => fn(acc(val)), x => x);
+  return fns.reduce(
+    (acc, fn) => val => fn(acc(val)),
+    x => x
+  );
 }
 
 export async function pipeMw(init, mws) {
