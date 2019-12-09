@@ -1,6 +1,6 @@
 {
   "name": "@polygraph/sqlite-store",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Sqlite polygraph store.",
   "main": "dist/index.js",
   "scripts": {
@@ -12,8 +12,8 @@
   "author": "Jake Sower",
   "license": "CC BY-NC-SA",
   "dependencies": {
-    "@polygraph/schema-utils": "^0.0.2",
-    "@polygraph/utils": "^0.0.3",
+    "@polygraph/schema-utils": "^0.0.3",
+    "@polygraph/utils": "^0.0.4",
     "sqlite": "^3.0.3"
   },
   "devDependencies": {
