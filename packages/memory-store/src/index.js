@@ -2,7 +2,7 @@ import {
   resourceNames,
   canonicalRelationshipNames,
   canonicalRelationship,
-  isSymmetricRelationship,
+  isReflexiveRelationship,
 } from '@polygraph/schema-utils';
 import {
   mergeChildren,
@@ -48,13 +48,13 @@ export function MemoryStore(schema, baseState) {
 
     state.objects[type][id] = { ...base, ...resource.attributes };
     mapObj(resource.relationships || {}, (relationships, relationshipName) => {
-      const symmetric = isSymmetricRelationship(schema, type, relationshipName);
+      const reflexive = isReflexiveRelationship(schema, type, relationshipName);
       const { name: relationshipKey, locality } = canonicalRelationship(
         schema,
         type,
         relationshipName
       );
-      const filt = symmetric
+      const filt = reflexive
         ? arrow => arrow.local !== id && arrow.foreign !== id
         : arrow => arrow[locality] !== id;
       const withoutExisting = state.relationships[relationshipKey].filter(filt);
@@ -73,13 +73,13 @@ export function MemoryStore(schema, baseState) {
     delete state.objects[type][id];
 
     Object.keys(definition.relationships).forEach(relationshipName => {
-      const symmetric = isSymmetricRelationship(schema, type, relationshipName);
+      const reflexive = isReflexiveRelationship(schema, type, relationshipName);
       const { name: relationshipKey, locality } = canonicalRelationship(
         schema,
         type,
         relationshipName
       );
-      const filt = symmetric
+      const filt = reflexive
         ? arrow => arrow.local !== id && arrow.foreign !== id
         : arrow => arrow[locality] !== id;
 
@@ -88,14 +88,14 @@ export function MemoryStore(schema, baseState) {
   }
 
   function appendRelationships({ type, id, foreignIds, relationship: relationshipName }) {
-    const symmetric = isSymmetricRelationship(schema, type, relationshipName);
+    const reflexive = isReflexiveRelationship(schema, type, relationshipName);
     const { name: relationshipKey, locality } = canonicalRelationship(
       schema,
       type,
       relationshipName
     );
     const inverseLocality = locality === 'foreign' ? 'local' : 'foreign';
-    const excluder = symmetric
+    const excluder = reflexive
       ? arrow =>
           (arrow.local === id && foreignIds.includes(arrow.foreign)) ||
           (arrow.foreign === id && foreignIds.includes(arrow.local))
@@ -109,13 +109,13 @@ export function MemoryStore(schema, baseState) {
   }
 
   function replaceRelationships({ type, id, foreignIds, relationship: relationshipName }) {
-    const symmetric = isSymmetricRelationship(schema, type, relationshipName);
+    const reflexive = isReflexiveRelationship(schema, type, relationshipName);
     const { name: relationshipKey, locality } = canonicalRelationship(
       schema,
       type,
       relationshipName
     );
-    const filt = symmetric
+    const filt = reflexive
       ? arrow => arrow.local !== id && arrow.foreign !== id
       : arrow => arrow[locality] !== id;
     const withoutExisting = state.relationships[relationshipKey].filter(filt);
@@ -127,14 +127,14 @@ export function MemoryStore(schema, baseState) {
   }
 
   function deleteRelationship({ type, id, relationship: relationshipName }) {
-    const symmetric = isSymmetricRelationship(schema, type, relationshipName);
+    const reflexive = isReflexiveRelationship(schema, type, relationshipName);
     const { name: relationshipKey, locality } = canonicalRelationship(
       schema,
       type,
       relationshipName
     );
 
-    const filt = symmetric
+    const filt = reflexive
       ? arrow => arrow.local !== id && arrow.foreign !== id
       : arrow => arrow[locality] !== id;
 
@@ -144,14 +144,14 @@ export function MemoryStore(schema, baseState) {
   }
 
   function deleteRelationships({ type, id, foreignIds, relationship: relationshipName }) {
-    const symmetric = isSymmetricRelationship(schema, type, relationshipName);
+    const reflexive = isReflexiveRelationship(schema, type, relationshipName);
     const { name: relationshipKey, locality } = canonicalRelationship(
       schema,
       type,
       relationshipName
     );
     const inverseLocality = locality === 'foreign' ? 'local' : 'foreign';
-    const excluder = symmetric
+    const excluder = reflexive
       ? (arrow.local === id && foreignIds.includes(arrow.foreign)) ||
         (arrow.foreign === id && foreignIds.includes(arrow.local))
       : arrow => arrow[locality] === id && foreignIds.includes(arrow[inverseLocality]);
@@ -205,13 +205,13 @@ export function MemoryStore(schema, baseState) {
     const pool = state.relationships[relationshipType];
     const inverseLocality = locality === 'local' ? 'foreign' : 'local';
 
-    // three possibilities: symmetric, local, foreign
-    const finder = isSymmetricRelationship(schema, type, relationshipName)
+    // three possibilities: reflexive, local, foreign
+    const finder = isReflexiveRelationship(schema, type, relationshipName)
       ? relArrow => relArrow.local === id || relArrow.foreign === id
       : relArrow => relArrow[locality] === id;
 
     const expand = hit =>
-      isSymmetricRelationship(schema, type, relationshipName)
+      isReflexiveRelationship(schema, type, relationshipName)
         ? getOne({
             id: hit.local === id ? hit.foreign : hit.local,
             type: relationshipDefinition.type,
