@@ -121,7 +121,7 @@ export function canonicalRelationshipNames(schema: Schema): string[] {
   );
 }
 
-export function isSymmetricRelationship(
+export function isReflexiveRelationship(
   schema: Schema,
   resourceType: string,
   relationshipName: string

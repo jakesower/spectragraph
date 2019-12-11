@@ -80,11 +80,11 @@ function canonicalRelationshipNames(schema) {
     ], names), []));
 }
 exports.canonicalRelationshipNames = canonicalRelationshipNames;
-function isSymmetricRelationship(schema, resourceType, relationshipName) {
+function isReflexiveRelationship(schema, resourceType, relationshipName) {
     const relationshipDef = schema.resources[resourceType].relationships[relationshipName];
     return resourceType === relationshipDef.type && relationshipDef.key === relationshipName;
 }
-exports.isSymmetricRelationship = isSymmetricRelationship;
+exports.isReflexiveRelationship = isReflexiveRelationship;
 function joinTableName(relationship) {
     return relationship.inverse > relationship.key
         ? `${relationship.key}_${relationship.inverse}`

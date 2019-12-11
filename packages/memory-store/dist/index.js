@@ -30,7 +30,7 @@ function MemoryStore(schema, baseState) {
     objects: (0, _utils.mergeChildren)(baseObjects, baseState.objects || {}),
     relationships: (0, _utils.assignChildren)([baseRelationships, baseState.relationships || {}])
   };
-  var dispatchMap = {
+  return {
     get: get,
     merge: merge,
     delete: delete_,
@@ -43,17 +43,6 @@ function MemoryStore(schema, baseState) {
     replaceRelationships: replaceRelationships,
     deleteRelationship: deleteRelationship,
     deleteRelationships: deleteRelationships
-  };
-  return function (action) {
-    var actionKey = Object.keys(dispatchMap).find(function (k) {
-      return k in action;
-    });
-
-    if (!actionKey) {
-      return Promise.reject('unrecognized action!');
-    }
-
-    return Promise.resolve(dispatchMap[actionKey](action[actionKey]));
   }; // Main actions
 
   function get(query) {
@@ -68,13 +57,13 @@ function MemoryStore(schema, baseState) {
     var base = state.objects[type][id] || {};
     state.objects[type][id] = _objectSpread({}, base, {}, resource.attributes);
     (0, _utils.mapObj)(resource.relationships || {}, function (relationships, relationshipName) {
-      var symmetric = (0, _schemaUtils.isSymmetricRelationship)(schema, type, relationshipName);
+      var reflexive = (0, _schemaUtils.isReflexiveRelationship)(schema, type, relationshipName);
 
       var _canonicalRelationshi = (0, _schemaUtils.canonicalRelationship)(schema, type, relationshipName),
           relationshipKey = _canonicalRelationshi.name,
           locality = _canonicalRelationshi.locality;
 
-      var filt = symmetric ? function (arrow) {
+      var filt = reflexive ? function (arrow) {
         return arrow.local !== id && arrow.foreign !== id;
       } : function (arrow) {
         return arrow[locality] !== id;
@@ -99,13 +88,13 @@ function MemoryStore(schema, baseState) {
     var definition = schema.resources[type];
     delete state.objects[type][id];
     Object.keys(definition.relationships).forEach(function (relationshipName) {
-      var symmetric = (0, _schemaUtils.isSymmetricRelationship)(schema, type, relationshipName);
+      var reflexive = (0, _schemaUtils.isReflexiveRelationship)(schema, type, relationshipName);
 
       var _canonicalRelationshi2 = (0, _schemaUtils.canonicalRelationship)(schema, type, relationshipName),
           relationshipKey = _canonicalRelationshi2.name,
           locality = _canonicalRelationshi2.locality;
 
-      var filt = symmetric ? function (arrow) {
+      var filt = reflexive ? function (arrow) {
         return arrow.local !== id && arrow.foreign !== id;
       } : function (arrow) {
         return arrow[locality] !== id;
@@ -119,14 +108,14 @@ function MemoryStore(schema, baseState) {
         id = _ref.id,
         foreignIds = _ref.foreignIds,
         relationshipName = _ref.relationship;
-    var symmetric = (0, _schemaUtils.isSymmetricRelationship)(schema, type, relationshipName);
+    var reflexive = (0, _schemaUtils.isReflexiveRelationship)(schema, type, relationshipName);
 
     var _canonicalRelationshi3 = (0, _schemaUtils.canonicalRelationship)(schema, type, relationshipName),
         relationshipKey = _canonicalRelationshi3.name,
         locality = _canonicalRelationshi3.locality;
 
     var inverseLocality = locality === 'foreign' ? 'local' : 'foreign';
-    var excluder = symmetric ? function (arrow) {
+    var excluder = reflexive ? function (arrow) {
       return arrow.local === id && foreignIds.includes(arrow.foreign) || arrow.foreign === id && foreignIds.includes(arrow.local);
     } : function (arrow) {
       return arrow[locality] === id && foreignIds.includes(arrow[inverseLocality]);
@@ -151,13 +140,13 @@ function MemoryStore(schema, baseState) {
         id = _ref2.id,
         foreignIds = _ref2.foreignIds,
         relationshipName = _ref2.relationship;
-    var symmetric = (0, _schemaUtils.isSymmetricRelationship)(schema, type, relationshipName);
+    var reflexive = (0, _schemaUtils.isReflexiveRelationship)(schema, type, relationshipName);
 
     var _canonicalRelationshi4 = (0, _schemaUtils.canonicalRelationship)(schema, type, relationshipName),
         relationshipKey = _canonicalRelationshi4.name,
         locality = _canonicalRelationshi4.locality;
 
-    var filt = symmetric ? function (arrow) {
+    var filt = reflexive ? function (arrow) {
       return arrow.local !== id && arrow.foreign !== id;
     } : function (arrow) {
       return arrow[locality] !== id;
@@ -179,13 +168,13 @@ function MemoryStore(schema, baseState) {
     var type = _ref3.type,
         id = _ref3.id,
         relationshipName = _ref3.relationship;
-    var symmetric = (0, _schemaUtils.isSymmetricRelationship)(schema, type, relationshipName);
+    var reflexive = (0, _schemaUtils.isReflexiveRelationship)(schema, type, relationshipName);
 
     var _canonicalRelationshi5 = (0, _schemaUtils.canonicalRelationship)(schema, type, relationshipName),
         relationshipKey = _canonicalRelationshi5.name,
         locality = _canonicalRelationshi5.locality;
 
-    var filt = symmetric ? function (arrow) {
+    var filt = reflexive ? function (arrow) {
       return arrow.local !== id && arrow.foreign !== id;
     } : function (arrow) {
       return arrow[locality] !== id;
@@ -199,14 +188,14 @@ function MemoryStore(schema, baseState) {
         id = _ref4.id,
         foreignIds = _ref4.foreignIds,
         relationshipName = _ref4.relationship;
-    var symmetric = (0, _schemaUtils.isSymmetricRelationship)(schema, type, relationshipName);
+    var reflexive = (0, _schemaUtils.isReflexiveRelationship)(schema, type, relationshipName);
 
     var _canonicalRelationshi6 = (0, _schemaUtils.canonicalRelationship)(schema, type, relationshipName),
         relationshipKey = _canonicalRelationshi6.name,
         locality = _canonicalRelationshi6.locality;
 
     var inverseLocality = locality === 'foreign' ? 'local' : 'foreign';
-    var excluder = symmetric ? arrow.local === id && foreignIds.includes(arrow.foreign) || arrow.foreign === id && foreignIds.includes(arrow.local) : function (arrow) {
+    var excluder = reflexive ? arrow.local === id && foreignIds.includes(arrow.foreign) || arrow.foreign === id && foreignIds.includes(arrow.local) : function (arrow) {
       return arrow[locality] === id && foreignIds.includes(arrow[inverseLocality]);
     };
     var withoutTargeted = state.relationships[relationshipKey].filter(function (v) {
@@ -256,16 +245,16 @@ function MemoryStore(schema, baseState) {
         locality = _canonicalRelationshi7.locality;
 
     var pool = state.relationships[relationshipType];
-    var inverseLocality = locality === 'local' ? 'foreign' : 'local'; // three possibilities: symmetric, local, foreign
+    var inverseLocality = locality === 'local' ? 'foreign' : 'local'; // three possibilities: reflexive, local, foreign
 
-    var finder = (0, _schemaUtils.isSymmetricRelationship)(schema, type, relationshipName) ? function (relArrow) {
+    var finder = (0, _schemaUtils.isReflexiveRelationship)(schema, type, relationshipName) ? function (relArrow) {
       return relArrow.local === id || relArrow.foreign === id;
     } : function (relArrow) {
       return relArrow[locality] === id;
     };
 
     var expand = function expand(hit) {
-      return (0, _schemaUtils.isSymmetricRelationship)(schema, type, relationshipName) ? getOne({
+      return (0, _schemaUtils.isReflexiveRelationship)(schema, type, relationshipName) ? getOne({
         id: hit.local === id ? hit.foreign : hit.local,
         type: relationshipDefinition.type,
         relationships: options.relationships

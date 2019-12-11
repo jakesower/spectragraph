@@ -168,9 +168,9 @@ export function SqliteStore(schema: Schema, db: Database): Store {
   };
 
   function partitionRelationships(resource: SchemaResource) {
-    // TODO: Add symmetric as a choice
+    // TODO: Add reflexive as a choice
     const init = {
-      symmetric: <{ [k: string]: SchemaRelationship }>{},
+      reflexive: <{ [k: string]: SchemaRelationship }>{},
       local: <{ [k: string]: SchemaRelationship }>{},
       manyToOne: <{ [k: string]: SchemaRelationship }>{},
       manyToMany: <{ [k: string]: SchemaRelationship }>{},
@@ -185,12 +185,12 @@ export function SqliteStore(schema: Schema, db: Database): Store {
 
   function relationshipType(
     relationship: SchemaRelationship
-  ): 'local' | 'manyToOne' | 'manyToMany' | 'symmetric' {
+  ): 'local' | 'manyToOne' | 'manyToMany' | 'reflexive' {
     const inverse = schema.resources[relationship.type].relationships[relationship.inverse];
-    const symmetric = relationship.key === inverse.key && relationship.type === inverse.type;
+    const reflexive = relationship.key === inverse.key && relationship.type === inverse.type;
 
-    return symmetric
-      ? 'symmetric'
+    return reflexive
+      ? 'reflexive'
       : relationship.cardinality === 'one'
       ? 'local'
       : inverse.cardinality === 'one'
