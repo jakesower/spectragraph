@@ -1,6 +1,6 @@
 {
   "name": "@polygraph/schema-utils",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Utility functions for dealing with polygraph schemata.",
   "main": "dist/index.js",
   "scripts": {
