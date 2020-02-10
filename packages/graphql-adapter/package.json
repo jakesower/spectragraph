@@ -4,7 +4,7 @@
   "description": "An adapter that allows interaction with polygraph via graphql-like queries.",
   "main": "dist/index.js",
   "scripts": {
-    "build": "babel src -d dist",
+    "build": "tsc",
     "test": "NODE_ENV=test ava",
     "test:watch": "NODE_ENV=test ava -w"
   },
