@@ -1,6 +1,6 @@
 {
   "name": "@polygraph/graphql-adapter",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "An adapter that allows interaction with polygraph via graphql-like queries.",
   "main": "dist/index.js",
   "scripts": {
