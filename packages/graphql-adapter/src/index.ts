@@ -4,7 +4,7 @@ import { Schema } from '@polygraph/schema-utils';
 
 export async function polygraphql(schema: Schema, polygraphStore: any, query: string) {
   const built = await buildQuery(schema, query);
-  const response = polygraphStore.query(built);
+  const response = await polygraphStore.get(built);
 
   return parseResponse(schema, response, query);
 }

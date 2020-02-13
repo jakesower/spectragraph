@@ -12,16 +12,15 @@ import {
 import { RelationshipReplacement } from '@polygraph/data-graph/dist/types';
 
 export function JsonApiStore(schema: Schema, transport: any): Store {
-  // these lines are due to a flaw in axios that requires setting headers here
+  // these lines are due to a flaw in axios that requires setting these particular headers here
   transport.defaults.headers['Accept'] = 'application/vnd.api+json';
   transport.defaults.headers['Content-Type'] = 'application/vnd.api+json';
 
   async function getOne(query: Query): Promise<any> {
     const { type, id } = query;
-    const params = getParams(query);
 
     const response = await transport.get(`/${type}/${id}`, {
-      params,
+      params: getParams(query),
       headers: { 'Content-Type': 'application/vnd.api+json', Accept: 'application/vnd.api+json' },
     });
 
@@ -45,6 +44,7 @@ export function JsonApiStore(schema: Schema, transport: any): Store {
 
   async function getMany(query: Query) {
     const response = await transport.get(`/${query.type}`, {
+      params: getParams(query),
       headers: { 'Content-Type': 'application/vnd.api+json', Accept: 'application/vnd.api+json' },
     });
 
@@ -84,7 +84,7 @@ export function JsonApiStore(schema: Schema, transport: any): Store {
   function getParams(query) {
     // include
     const getInclude = (node, accum) =>
-      node.relationships
+      node.relationships && Object.keys(node.relationships).length > 0
         ? Object.keys(node.relationships).map(r => getInclude(node.relationships[r], [...accum, r]))
         : accum.join('.');
 
