@@ -4,4 +4,4 @@ import { Schema } from '@polygraph/schema-utils';
  * relatively straightforward operation to unwind the graph-like polygraph
  * response into a graphql response.
  */
-export declare function parseResponse(pgSchema: Schema, pgResponse: any, query: string): Promise<import("graphql/execution/execute").ExecutionResultDataDefault>;
+export declare function parseResponse(pgSchema: Schema, pgResponse: any, query: string): Promise<any>;

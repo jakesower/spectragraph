@@ -33,7 +33,7 @@ function parseResponse(pgSchema, pgResponse, query) {
         if (result.errors) {
             throw result.errors;
         }
-        return result.data;
+        return JSON.parse(JSON.stringify(result.data));
     });
 }
 exports.parseResponse = parseResponse;

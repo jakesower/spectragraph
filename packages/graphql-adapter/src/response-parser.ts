@@ -40,7 +40,7 @@ export async function parseResponse(pgSchema: Schema, pgResponse: any, query: st
     throw result.errors;
   }
 
-  return result.data;
+  return JSON.parse(JSON.stringify(result.data));
 }
 
 function buildTypeDefs(pgSchema: Schema) {

@@ -14,7 +14,7 @@ const response_parser_1 = require("./response-parser");
 function polygraphql(schema, polygraphStore, query) {
     return __awaiter(this, void 0, void 0, function* () {
         const built = yield query_builder_1.buildQuery(schema, query);
-        const response = polygraphStore.query(built);
+        const response = yield polygraphStore.get(built);
         return response_parser_1.parseResponse(schema, response, query);
     });
 }

@@ -12,15 +12,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const data_graph_1 = require("@polygraph/data-graph");
 const utils_1 = require("@polygraph/utils");
 function JsonApiStore(schema, transport) {
-    // these lines are due to a flaw in axios that requires setting headers here
+    // these lines are due to a flaw in axios that requires setting these particular headers here
     transport.defaults.headers['Accept'] = 'application/vnd.api+json';
     transport.defaults.headers['Content-Type'] = 'application/vnd.api+json';
     function getOne(query) {
         return __awaiter(this, void 0, void 0, function* () {
             const { type, id } = query;
-            const params = getParams(query);
             const response = yield transport.get(`/${type}/${id}`, {
-                params,
+                params: getParams(query),
                 headers: { 'Content-Type': 'application/vnd.api+json', Accept: 'application/vnd.api+json' },
             });
             if (response.status === 404)
@@ -38,6 +37,7 @@ function JsonApiStore(schema, transport) {
     function getMany(query) {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield transport.get(`/${query.type}`, {
+                params: getParams(query),
                 headers: { 'Content-Type': 'application/vnd.api+json', Accept: 'application/vnd.api+json' },
             });
             const data = response.data.data;
@@ -64,7 +64,7 @@ function JsonApiStore(schema, transport) {
     }
     function getParams(query) {
         // include
-        const getInclude = (node, accum) => node.relationships
+        const getInclude = (node, accum) => node.relationships && Object.keys(node.relationships).length > 0
             ? Object.keys(node.relationships).map(r => getInclude(node.relationships[r], [...accum, r]))
             : accum.join('.');
         const include = utils_1.flatten(getInclude(query, []));

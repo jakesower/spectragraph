@@ -4,5 +4,6 @@
   },
   "scripts": {
     "publish": "lerna run build && lerna publish"
-  }
+  },
+  "dependencies": {}
 }
