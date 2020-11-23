@@ -1,5 +1,6 @@
 import test from 'ava';
-import schema from './care-bear-schema.json';
+import careBearSchema from './care-bear-schema.json';
+import nodeTreeSchema from './node-tree';
 import { expandSchema } from '../src';
 
 test('fails to validate an empty schema', t => {
@@ -36,7 +37,7 @@ test('fails to validate a schema with a relationship missing a valid inverse', t
 });
 
 test('expands schema', async t => {
-  t.deepEqual(expandSchema(schema), {
+  t.deepEqual(expandSchema(careBearSchema), {
     title: 'Care Bear Schema',
     resources: {
       bears: {
@@ -103,4 +104,9 @@ test('expands schema', async t => {
       },
     },
   });
+});
+
+test('expands a more complex schema', t => {
+  expandSchema(nodeTreeSchema);
+  t.assert(true);
 });

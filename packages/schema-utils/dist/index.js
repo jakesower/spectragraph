@@ -8,16 +8,20 @@ const utils_1 = require("@polygraph/utils");
 const schema_schema_json_1 = __importDefault(require("./etc/schema.schema.json"));
 function schemaErrors(rawSchema) {
     const validate = new ajv_1.default().compile(schema_schema_json_1.default);
+    const validateInverses = (type, inverse, relName, resourceName) => {
+        if (Array.isArray(inverse)) {
+            return inverse.flatMap(i => validateInverses(type, i, relName, resourceName));
+        }
+        return inverse in rawSchema.resources[type].relationships
+            ? []
+            : `the "${relName}" relationship on the "${resourceName}" resource does not have a valid inverse`;
+    };
     if (validate(rawSchema)) {
         return utils_1.reduceObj(rawSchema.resources, [], (errs, resource, resourceName) => [
             ...errs,
             ...utils_1.reduceObj(resource.relationships, [], (rErrs, rel, relName) => [
                 ...rErrs,
-                ...(rel.inverse in rawSchema.resources[rel.type].relationships
-                    ? []
-                    : [
-                        `the "${relName}" relationship on the "${resourceName}" resource does not have a valid inverse`,
-                    ]),
+                ...validateInverses(rel.type, rel.inverse || rel.inverses, relName, resourceName),
             ]),
         ]);
     }

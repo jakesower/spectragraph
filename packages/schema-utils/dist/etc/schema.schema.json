@@ -44,7 +44,7 @@
                     "type": "object",
                     "properties": {
                         "type": {
-                            "enum": ["string", "integer", "date", "datetime", "number", "uuid", "text"]
+                            "$ref": "#/defintions/attributeType"
                         },
                         "meta": {}
                     },
@@ -59,17 +59,39 @@
             "type": "object",
             "patternProperties": {
                 "^([a-z])([A-Za-z0-9_]+)$": {
-                    "type": "object",
-                    "properties": {
-                        "type": { "type": "string" },
-                        "cardinality": { "enum": ["one", "many"] },
-                        "inverse": { "type": "string" }
-                    },
-                    "required": ["type", "cardinality", "inverse"]
+                    "oneOf": [
+                        {
+                            "type": "object",
+                            "properties": {
+                                "type": { "type": "string" },
+                                "cardinality": { "enum": ["one", "many"] },
+                                "inverse": { "type": "string" }
+                            },
+                            "required": ["type", "cardinality", "inverse"]
+                        }, {
+                            "type": "object",
+                            "properties": {
+                                "type": { "type": "string" },
+                                "cardinality": { "enum": ["one", "many"] },
+                                "inverses": {
+                                    "type": "array",
+                                    "properties": { "items": { "type": "string" } }
+                                }
+                            },
+                            "required": ["type", "cardinality", "inverse"]
+                        }
+                    ]
                 }
             },
             "additionalProperties": false,
             "propertyNames": { "pattern": "^([a-z])([A-Za-z0-9_]+)$" }
+        },
+        "attributeType": {
+            "oneOf": [
+                { "enum": ["boolean", "date", "datetime", "integer", "number", "string", "text", "uuid"] },
+                { "type": "array", "minItems": 1, "maxItems": 1, "items": { "$ref": "#/definitions/attributeType" } },
+                { "$ref": "#/definitions/attributes" }
+            ]
         }
     }
 }
