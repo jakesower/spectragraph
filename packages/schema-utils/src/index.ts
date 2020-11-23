@@ -8,16 +8,22 @@ export { Schema };
 function schemaErrors(rawSchema) {
   const validate = new ajv().compile(schemaSchema);
 
+  const validateInverses = (type, inverse, relName, resourceName) => {
+    if (Array.isArray(inverse)) {
+      return inverse.flatMap(i => validateInverses(type, i, relName, resourceName));
+    }
+
+    return inverse in rawSchema.resources[type].relationships
+      ? []
+      : `the "${relName}" relationship on the "${resourceName}" resource does not have a valid inverse`;
+  };
+
   if (validate(rawSchema)) {
     return reduceObj(rawSchema.resources, <string[]>[], (errs, resource: any, resourceName) => [
       ...errs,
       ...reduceObj(resource.relationships, <string[]>[], (rErrs, rel: any, relName) => [
         ...rErrs,
-        ...(rel.inverse in rawSchema.resources[rel.type].relationships
-          ? []
-          : [
-              `the "${relName}" relationship on the "${resourceName}" resource does not have a valid inverse`,
-            ]),
+        ...validateInverses(rel.type, rel.inverse || rel.inverses, relName, resourceName),
       ]),
     ]);
   }
