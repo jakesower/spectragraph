@@ -1,10 +1,4 @@
 import { Resource } from '@polygraph/data-graph/dist/types';
-export interface Database {
-    run: (query: string, ...args: any) => Promise<any>;
-    get: (query: string, ...args: any) => Promise<any>;
-    all: (query: string, params: string[]) => Promise<any>;
-    [k: string]: any;
-}
 interface QueryRelationship {
     relationships?: {
         [k: string]: QueryRelationship;
@@ -13,21 +7,13 @@ interface QueryRelationship {
 export interface Query {
     type: string;
     id?: string;
+    attributes?: {
+        [k: string]: any;
+    };
     relationships?: {
         [k: string]: QueryRelationship;
     };
 }
-interface SingleResult {
-    type: string;
-    id: string;
-    attributes: {
-        [k: string]: string;
-    };
-    relationships: {
-        [k: string]: Result;
-    };
-}
-export declare type Result = SingleResult | SingleResult[];
 export interface Schema {
     resources: {
         [k: string]: SchemaResource;
@@ -36,34 +22,29 @@ export interface Schema {
     meta?: any;
 }
 export interface SchemaResource {
-    key: string;
+    singular: string;
+    plural: string;
     attributes: {
-        [k: string]: SchemaAttribute;
-    };
-    relationships: {
-        [k: string]: SchemaRelationship;
+        [k: string]: SchemaAttribute | SchemaRelationship;
     };
     meta?: any;
 }
 export interface SchemaAttribute {
-    key: string;
+    name: string;
     type: string;
     meta?: any;
 }
 export interface SchemaRelationship {
-    key: string;
+    name: string;
     cardinality: 'one' | 'many';
     type: string;
-    inverse: string;
+    inverse?: string;
     meta?: any;
 }
-export interface ResourceGraph {
+export interface Graph {
     type: string;
     id: string;
-    attributes?: {
-        [k: string]: any;
-    };
-    relationships?: {
+    attributes: {
         [k: string]: any;
     };
 }
@@ -88,11 +69,14 @@ interface MultiDeleteInterface extends DeleteInterface {
     foreignIds: string[];
 }
 export interface Store {
-    get: (query: Query) => Promise<Result>;
+    fetchResource: (type: string, id: string) => Promise<Resource>;
+    fetchGraph: (query: Query) => Promise<Graph | Graph[]>;
     create: (resource: Resource) => Promise<any>;
     update: (resource: Resource) => Promise<any>;
-    merge?: (resourceGraph: ResourceGraph) => Promise<any>;
-    delete?: (resource: ResourceGraph) => Promise<any>;
+    delete?: (resource: Resource) => Promise<any>;
+    merge: (query: Query, graph: Graph) => Promise<any>;
+    query: (query: Query) => Promise<any>;
+    replace: (query: Query, graph: Graph) => Promise<any>;
     replaceRelationship?: (resource: RelationshipReplacement) => Promise<any>;
     replaceRelationships?: (resource: RelationshipReplacements) => Promise<any>;
     appendRelationships?: (resource: RelationshipReplacements) => Promise<any>;

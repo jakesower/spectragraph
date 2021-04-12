@@ -9,6 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.runOperation = void 0;
 function runOperation(operation, transport) {
     const handlers = {
         AddVertex: create,

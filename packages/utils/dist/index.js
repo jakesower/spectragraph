@@ -8,7 +8,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+const deep_equal_1 = __importDefault(require("deep-equal"));
+exports.equals = deep_equal_1.default;
 function append(xs, ys) {
     return [...xs, ...ys];
 }
@@ -22,13 +27,21 @@ function appendKeys(base, other) {
     return result;
 }
 exports.appendKeys = appendKeys;
-function applyOrMap(maybeArray, fn) {
-    return Array.isArray(maybeArray) ? maybeArray.map(fn) : fn(maybeArray);
+function applyOrMap(valueOrArray, fn) {
+    if (Array.isArray(valueOrArray)) {
+        return valueOrArray.map(fn);
+    }
+    return fn(valueOrArray);
 }
 exports.applyOrMap = applyOrMap;
+function arraySetDifference(xs, ys) {
+    const ySet = new Set(ys);
+    return xs.filter((x) => !ySet.has(x));
+}
+exports.arraySetDifference = arraySetDifference;
 function assignChildren(objs) {
     let out = {};
-    objs.forEach(obj => {
+    objs.forEach((obj) => {
         for (let k of Object.keys(obj)) {
             out[k] = obj[k];
         }
@@ -44,12 +57,24 @@ function cmp(a, b) {
     return a < b ? -1 : a > b ? 1 : 0;
 }
 exports.cmp = cmp;
+function deepClone(obj) {
+    if (!obj) {
+        return obj;
+    }
+    let out = (Array.isArray(obj) ? [] : {});
+    for (const key in obj) {
+        const val = obj[key];
+        out[key] = typeof val === 'object' ? deepClone(val) : val;
+    }
+    return out;
+}
+exports.deepClone = deepClone;
 function fgo(generator) {
     const recur = ({ value, done }, gen) => {
         if (done) {
             return value;
         }
-        return value.chain(v => recur(gen.next(v), gen));
+        return value.chain((v) => recur(gen.next(v), gen));
     };
     let g = generator();
     return recur(g.next(), g);
@@ -89,7 +114,7 @@ function flatMap(xs, fn) {
 exports.flatMap = flatMap;
 function forEachObj(obj, fn) {
     const keys = Object.keys(obj);
-    keys.forEach(k => fn(obj[k], k));
+    keys.forEach((k) => fn(obj[k], k));
 }
 exports.forEachObj = forEachObj;
 function flatten(xs) {
@@ -110,7 +135,7 @@ function indexOn(xs, keys) {
         out[k] = out[k] || [];
         out[k][out[k].length] = x;
     }
-    return mapObj(out, ys => indexOn(ys, rest));
+    return mapObj(out, (ys) => indexOn(ys, rest));
 }
 exports.indexOn = indexOn;
 // e.g. {a: {inner: 'thing'}, b: {other: 'item'}} => {a: {key: 'a', inner: 'thing'}, b: {key: 'b', other: 'item'}}
@@ -155,10 +180,10 @@ function mapResult(resultOrResults, fn) {
         return null;
     }
     if (Array.isArray(resultOrResults)) {
-        return resultOrResults.map(r => mapResult(r, fn));
+        return resultOrResults.map((r) => mapResult(r, fn));
     }
     const next = fn(resultOrResults);
-    const relationships = mapObj(resultOrResults.relationships, r => mapResult(r, fn));
+    const relationships = mapObj(resultOrResults.relationships, (r) => mapResult(r, fn));
     return Object.assign(Object.assign({}, next), { relationships });
 }
 exports.mapResult = mapResult;
@@ -214,7 +239,7 @@ exports.omitKeys = omitKeys;
 function parseQueryParams(rawParams) {
     let out = {};
     const indexRegex = /^([^[]+)\[([^\]]+)\]$/;
-    Object.keys(rawParams).forEach(k => {
+    Object.keys(rawParams).forEach((k) => {
         const res = indexRegex.exec(k);
         if (res) {
             const [top, inner] = [res[1], res[2]];
@@ -246,7 +271,7 @@ function pick(obj, keys) {
 }
 exports.pick = pick;
 function pipe(fns) {
-    return fns.reduce((acc, fn) => val => fn(acc(val)), x => x);
+    return fns.reduce((acc, fn) => (val) => fn(acc(val)), (x) => x);
 }
 exports.pipe = pipe;
 function pipeMw(init, mws) {
@@ -300,9 +325,7 @@ function sortBy(fn, xs) {
             lts.push(rest[i]);
         }
     }
-    return sortBy(fn, lts)
-        .concat(eqs)
-        .concat(sortBy(fn, gts));
+    return sortBy(fn, lts).concat(eqs).concat(sortBy(fn, gts));
 }
 exports.sortBy = sortBy;
 function sortByAll(fns, xs) {
@@ -326,7 +349,11 @@ function sortByAll(fns, xs) {
             lts.push(rest[i]);
         }
     }
-    return [...sortByAll(fns, lts), ...sortByAll(restFns, eqs), ...sortByAll(fns, gts)];
+    return [
+        ...sortByAll(fns, lts),
+        ...sortByAll(restFns, eqs),
+        ...sortByAll(fns, gts),
+    ];
 }
 exports.sortByAll = sortByAll;
 function sortWith(fn, xs) {
@@ -351,9 +378,7 @@ function sortWith(fn, xs) {
             eqs.push(rest[i]);
         }
     }
-    return sortWith(fn, lts)
-        .concat(eqs)
-        .concat(sortWith(fn, gts));
+    return sortWith(fn, lts).concat(eqs).concat(sortWith(fn, gts));
 }
 exports.sortWith = sortWith;
 function sortWithAll(fns, xs) {
@@ -381,9 +406,38 @@ function sortWithAll(fns, xs) {
             eqs.push(rest[i]);
         }
     }
-    return [...sortWithAll(fns, lts), ...sortWithAll(restFns, eqs), ...sortWithAll(fns, gts)];
+    return [
+        ...sortWithAll(fns, lts),
+        ...sortWithAll(restFns, eqs),
+        ...sortWithAll(fns, gts),
+    ];
 }
 exports.sortWithAll = sortWithAll;
+function trifurcate(left, right) {
+    const leftKeys = Object.keys(left);
+    let outEquals = {};
+    let outLeft = {};
+    let outRight = Object.assign({}, right);
+    for (let i = 0; i < leftKeys.length; i += 1) {
+        const key = leftKeys[i];
+        if (!(key in right)) {
+            outLeft[key] = left[key];
+        }
+        if (!deep_equal_1.default(left[key], right[key])) {
+            outLeft[key] = left[key];
+        }
+        else {
+            delete outRight[key];
+            outEquals = left[key];
+        }
+    }
+    return {
+        equal: outEquals,
+        leftOnly: outLeft,
+        rightOnly: outRight,
+    };
+}
+exports.trifurcate = trifurcate;
 function uniq(xs) {
     return [...new Set(xs)];
 }
@@ -401,6 +455,10 @@ function uniqBy(xs, fn) {
     return out;
 }
 exports.uniqBy = uniqBy;
+function union(xs, ys) {
+    return [...new Set([].concat(xs, ys))];
+}
+exports.union = union;
 function unnest(xs) {
     return makeFlat(xs, false);
 }
