@@ -28,7 +28,6 @@ export function appendKeys<T, K extends keyof T>(
   return result
 }
 
-// type Moo<T, U> = (valueOrArray: T[], fn: (item: T) => U) => U[] | ((valueOrArray: T, fn: (item: T) => U) => U);
 export function applyOrMap<T, U>(valueOrArray: T[], fn: (item: T) => U): U[]
 export function applyOrMap<T, U>(valueOrArray: T, fn: (item: T) => U): U
 export function applyOrMap(valueOrArray, fn) {
@@ -290,11 +289,11 @@ export function overPath(obj, path, fn) {
   }
 }
 
-export function omitKeys<T>(
-  obj: { [k: string]: T },
+export function omitKeys<T, K extends keyof T>(
+  obj: { K: T },
   nix: string[],
-): { [k: string]: T } {
-  let out = {}
+): { K: T } {
+  let out = {} as { K: T }
   for (let key of Object.keys(obj)) {
     if (!nix.includes(key)) {
       out[key] = obj[key]

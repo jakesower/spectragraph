@@ -108,12 +108,24 @@ export interface NormalizedResources {
   [k: string]: { [k: string]: ResourceAttributes };
 }
 
+export interface UpsertOperation {
+  type: "create" | "update";
+  resource: Resource;
+}
+
+export interface DeleteOperation {
+  type: "delete";
+  resource: ResourceRef;
+}
+
+export type Operation = UpsertOperation | DeleteOperation;
+
 // should a store be a CLASS constructed with a schema or a FUNCTION that takes a schema?
 // let's start with FUNCTION until there's a reason to change
 
 export interface Store {
   // crud level
-  fetchResource: (type: string, id: string) => Promise<Resource>;
+  read: (resourceRef: ResourceRef) => Promise<Resource>;
   create: (resource: Resource) => Promise<any>;
   update: (resource: Resource) => Promise<any>;
   upsert: (resource: Resource) => Promise<any>;
@@ -124,6 +136,7 @@ export interface Store {
   // query: ((query: QueryWithId) => Promise<Graph>) | ((query: QueryWithoutId) => Promise<Graph[]>)
   query: (query: Query) => Promise<Graph | Graph[]>;
   replace: (query: Query, graph: Graph) => Promise<any>;
+  transaction: (operations: Operation[]) => Promise<any>;
 
   // are these relationship methods replaceable with merge/replace above?
   // replaceRelationship({ type: 'bear', id: '1', relationship: 'home', foreignId: '2' })
