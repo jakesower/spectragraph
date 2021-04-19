@@ -94,10 +94,10 @@ export declare function mergeWith<T, U, V>(base: {
     [k: string]: T | U | V;
 };
 export declare function overPath(obj: any, path: any, fn: any): any;
-export declare function omitKeys<T>(obj: {
-    [k: string]: T;
+export declare function omitKeys<T, K extends keyof T>(obj: {
+    K: T;
 }, nix: string[]): {
-    [k: string]: T;
+    K: T;
 };
 export declare function parseQueryParams(rawParams: any): {};
 export declare function pathOr(obj: any, path: any, otherwise: any): any;

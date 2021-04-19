@@ -80,11 +80,10 @@ const grumpyBear = {
   },
 };
 
-const attrs = (type, id) => normalizedData[type][id];
-const resource = (type, id) => ({
+const resource = (type, id, overrides) => ({
   id,
   type,
-  attributes: normalizedData[type][id],
+  attributes: { ...normalizedData[type][id], ...overrides },
 });
 
 test.beforeEach(async (t) => {
@@ -278,248 +277,27 @@ test("handles relationships between the same type", async (t) => {
   ]);
 });
 
-test("creates new objects without relationships", async (t) => {
-  const lonelyGrumpy = {
-    ...grumpyBear,
-    attributes: { ...grumpyBear.attributes, home: null, powers: [] },
-  };
-  await t.context.store.create(lonelyGrumpy);
-
-  const result = await t.context.store.query({
-    type: "bears",
-    id: "4",
-  });
-
-  t.deepEqual(result, lonelyGrumpy);
-});
-
-test("creates new objects with a relationship", async (t) => {
-  const homelyGrumpy = {
-    ...grumpyBear,
-    attributes: { ...grumpyBear.attributes, home: "2", powers: [] },
-  };
-  await t.context.store.create(homelyGrumpy);
-
-  const result = await t.context.store.query({
-    type: "bears",
-    id: "4",
-    relationships: { home: {} },
-  });
-
-  t.deepEqual(result, {
-    type: "bears",
-    id: "4",
-    attributes: {
-      ...homelyGrumpy.attributes,
-      home: {
-        type: "homes",
-        id: "2",
-        attributes: { ...normalizedData.homes["2"], bears: ["4"] },
-      },
-    },
-  });
-});
-
-test("creates new objects that have their inverses updated", async (t) => {
-  const homelyGrumpy = {
-    ...grumpyBear,
-    attributes: { ...grumpyBear.attributes, home: "2", powers: [] },
-  };
-  await t.context.store.create(homelyGrumpy);
-
-  const result = await t.context.store.query({
-    type: "homes",
-    id: "2",
-    relationships: { bears: {} },
-  });
-
-  t.deepEqual(result, {
-    type: "homes",
-    id: "2",
-    attributes: {
-      ...normalizedData.homes["2"],
-      bears: [homelyGrumpy],
-    },
-  });
-});
-
-test("updates existing objects", async (t) => {
-  await t.context.store.update({
-    type: "bears",
-    id: "2",
-    attributes: { fur_color: "just pink" },
-  });
-
-  const result = await t.context.store.query({
-    type: "bears",
-    id: "2",
-  });
-
-  t.deepEqual(result, {
-    type: "bears",
-    id: "2",
-    attributes: {
-      ...normalizedData.bears["2"],
-      fur_color: "just pink",
-    },
-  });
-});
-
-test("updates with one-to-many relationship", async (t) => {
-  await t.context.store.update({
-    type: "bears",
-    id: "1",
-    attributes: { home: "2" },
-  });
-
-  const result = await t.context.store.query({
-    type: "bears",
-    id: "1",
-    relationships: { home: {} },
-  });
-
-  t.deepEqual(result, {
-    type: "bears",
-    id: "1",
-    attributes: {
-      ...normalizedData.bears["1"],
-      home: {
-        type: "homes",
-        id: "2",
-        attributes: { ...normalizedData.homes["2"], bears: ["1"] },
-      },
-    },
-  });
-});
-
-test("updates with a many-to-one relationship", async (t) => {
-  await t.context.store.update({
-    type: "homes",
-    id: "1",
-    attributes: { bears: ["1"] },
-  });
-
-  const result = await t.context.store.query({
-    type: "homes",
-    id: "1",
-    relationships: { bears: {} },
-  });
-
-  t.deepEqual(result, {
-    type: "homes",
-    id: "1",
-    attributes: {
-      ...normalizedData.homes["1"],
-      bears: [
-        {
-          type: "bears",
-          id: "1",
-          attributes: normalizedData.bears["1"],
-        },
-      ],
-    },
-  });
-});
-
-test("updates with many-to-many relationship", async (t) => {
-  await t.context.store.update({
-    type: "powers",
-    id: "makeWish",
-    attributes: { bears: ["3"] },
-  });
-
-  const result = await t.context.store.query({
-    type: "powers",
-    id: "makeWish",
-    relationships: { bears: {} },
-  });
-
-  t.deepEqual(result, {
-    type: "powers",
-    id: "makeWish",
-    attributes: {
-      ...normalizedData.powers.makeWish,
-      bears: [
-        {
-          type: "bears",
-          id: "3",
-          attributes: {
-            ...normalizedData.bears["3"],
-            powers: ["careBearStare", "makeWish"],
-          },
-        },
-      ],
-    },
-  });
-
-  const result2 = await t.context.store.query({
-    type: "bears",
-    id: "3",
-    relationships: { powers: {} },
-  });
-
-  t.deepEqual(result2, {
-    type: "bears",
-    id: "3",
-    attributes: {
-      ...normalizedData.bears["3"],
-      powers: [
-        {
-          type: "powers",
-          id: "careBearStare",
-          attributes: normalizedData.powers.careBearStare,
-        },
-        {
-          type: "powers",
-          id: "makeWish",
-          attributes: { ...normalizedData.powers.makeWish, bears: ["3"] },
-        },
-      ],
-    },
-  });
-});
-
-test("deletes objects", async (t) => {
-  await t.context.store.delete({ type: "bears", id: "1" });
-  const result = await t.context.store.query({
-    type: "homes",
-    id: "1",
-    relationships: { bears: {} },
-  });
-
-  t.deepEqual(result, {
-    type: "homes",
-    id: "1",
-    attributes: {
-      ...normalizedData.homes["1"],
-      bears: [resource("bears", "2"), resource("bears", "3")],
-    },
-  });
-});
-
 // merge stuff
 
-test.skip("creates new objects without relationships via merge", async (t) => {
-  await t.context.store.merge(grumpyBear);
+test("creates new objects without relationships via merge", async (t) => {
+  await t.context.store.merge({ type: "bears" }, [grumpyBear]);
 
   const result = await t.context.store.query({
     type: "bears",
     id: "4",
   });
 
-  t.deepEqual(result, {
-    type: "bears",
-    id: "4",
-    attributes: grumpyBear.attributes,
-    relationships: {},
-  });
+  t.deepEqual(result, grumpyBear);
 });
 
-test.skip("creates new objects with a relationship via merge", async (t) => {
-  await t.context.store.merge({
-    ...grumpyBear,
-    relationships: { home: "1" },
-  });
+test("creates new objects with a relationship via merge", async (t) => {
+  await t.context.store.merge(
+    { type: "bears", id: "4" },
+    {
+      ...grumpyBear,
+      relationships: { home: "1" },
+    }
+  );
 
   const result = await t.context.store.query({
     type: "bears",
@@ -530,24 +308,29 @@ test.skip("creates new objects with a relationship via merge", async (t) => {
   t.deepEqual(result, {
     type: "bears",
     id: "4",
-    attributes: grumpyBear.attributes,
-    relationships: {
+    attributes: {
+      ...grumpyBear.attributes,
       home: {
         type: "homes",
         id: "1",
-        attributes: normalizedData.homes["1"],
-        relationships: {},
+        attributes: {
+          ...resource("homes", "1").attributes,
+          bears: [...resource("homes", "1").attributes.bears, "4"],
+        },
       },
     },
   });
 });
 
-test.skip("merges into existing objects", async (t) => {
-  await t.context.store.merge({
-    type: "bears",
-    id: "2",
-    attributes: { fur_color: "just pink" },
-  });
+test("merges into existing objects", async (t) => {
+  await t.context.store.merge(
+    { type: "bears", id: "2" },
+    {
+      type: "bears",
+      id: "2",
+      attributes: { fur_color: "just pink" },
+    }
+  );
 
   const result = await t.context.store.query({
     type: "bears",
@@ -558,16 +341,18 @@ test.skip("merges into existing objects", async (t) => {
     type: "bears",
     id: "2",
     attributes: { ...normalizedData.bears["2"], fur_color: "just pink" },
-    relationships: {},
   });
 });
 
-test.skip("merges into one-to-many relationship", async (t) => {
-  await t.context.store.merge({
-    type: "bears",
-    id: "1",
-    relationships: { home: "2" },
-  });
+test("merges into one-to-many relationship", async (t) => {
+  await t.context.store.merge(
+    { type: "bears", id: "1" },
+    {
+      type: "bears",
+      id: "1",
+      attributes: { home: "2" },
+    }
+  );
 
   const result = await t.context.store.query({
     type: "bears",
@@ -575,27 +360,22 @@ test.skip("merges into one-to-many relationship", async (t) => {
     relationships: { home: {} },
   });
 
-  t.deepEqual(result, {
-    type: "bears",
-    id: "1",
-    attributes: normalizedData.bears["1"],
-    relationships: {
-      home: {
-        type: "homes",
-        id: "2",
-        relationships: {},
-        attributes: normalizedData.homes["2"],
-      },
-    },
-  });
+  t.deepEqual(
+    result,
+    resource("bears", "1", {
+      home: resource("homes", "2", { bears: ["1"] }),
+    })
+  );
 });
 
-test.skip("merges into many-to-one relationship", async (t) => {
-  await t.context.store.merge({
-    type: "homes",
-    id: "1",
-    relationships: { bears: ["1"] },
-  });
+test("merges into many-to-one relationship", async (t) => {
+  await t.context.store.merge(
+    {
+      type: "homes",
+      id: "1",
+    },
+    resource("homes", "1", { bears: ["1"] })
+  );
 
   const result = await t.context.store.query({
     type: "homes",
@@ -603,29 +383,22 @@ test.skip("merges into many-to-one relationship", async (t) => {
     relationships: { bears: {} },
   });
 
-  t.deepEqual(result, {
-    type: "homes",
-    id: "1",
-    attributes: normalizedData.homes["1"],
-    relationships: {
-      bears: [
-        {
-          type: "bears",
-          id: "1",
-          relationships: {},
-          attributes: normalizedData.bears["1"],
-        },
-      ],
-    },
-  });
+  t.deepEqual(
+    result,
+    resource("homes", "1", {
+      bears: [resource("bears", "1", { home: "1" })],
+    })
+  );
 });
 
-test.skip("merges into many-to-many relationship", async (t) => {
-  await t.context.store.merge({
-    type: "powers",
-    id: "makeWish",
-    relationships: { bears: ["3"] },
-  });
+test("merges into many-to-many relationship", async (t) => {
+  await t.context.store.merge(
+    {
+      type: "powers",
+      id: "makeWish",
+    },
+    resource("powers", "makeWish", { bears: ["3"] })
+  );
 
   const result = await t.context.store.query({
     type: "powers",
@@ -633,49 +406,25 @@ test.skip("merges into many-to-many relationship", async (t) => {
     relationships: { bears: {} },
   });
 
-  t.deepEqual(result, {
-    type: "powers",
-    id: "makeWish",
-    attributes: normalizedData.powers.makeWish,
-    relationships: {
+  t.deepEqual(
+    result,
+    resource("powers", "makeWish", {
       bears: [
-        {
-          type: "bears",
-          id: "3",
-          relationships: {},
-          attributes: normalizedData.bears["3"],
-        },
+        resource("bears", "3", { powers: ["careBearStare", "makeWish"] }),
       ],
-    },
+    })
+  );
+});
+
+// replace tests
+test("replaces data en masse with replace", async (t) => {
+  await t.context.store.replace({ type: "bears" }, [grumpyBear]);
+
+  const result = await t.context.store.query({
+    type: "bears",
   });
 
-  const result2 = await t.context.store.query({
-    type: "bears",
-    id: "3",
-    relationships: { powers: {} },
-  });
-
-  t.deepEqual(result2, {
-    type: "bears",
-    id: "3",
-    attributes: normalizedData.bears["3"],
-    relationships: {
-      powers: [
-        {
-          type: "powers",
-          id: "careBearStare",
-          relationships: {},
-          attributes: normalizedData.powers.careBearStare,
-        },
-        {
-          type: "powers",
-          id: "makeWish",
-          relationships: {},
-          attributes: normalizedData.powers.makeWish,
-        },
-      ],
-    },
-  });
+  t.deepEqual(result, [grumpyBear]);
 });
 
 test.skip("replaces a one-to-one relationship", async (t) => {
