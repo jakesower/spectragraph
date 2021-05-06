@@ -18,50 +18,52 @@ interface QueryWithoutId {
 
 export type Query = QueryWithId | QueryWithoutId;
 
-export interface Schema {
-  resources: { [k: string]: SchemaResource };
-  title?: string;
-  meta?: any;
-}
-
-export interface SchemaResource {
+interface SchemaResourceDefinition {
   singular: string;
   plural: string;
-  attributes: { [k: string]: SchemaAttribute | SchemaRelationship };
+  attributes: {
+    [k: string]: SchemaAttributeDefinition | SchemaRelationshipDefinition;
+  };
   meta?: any;
 }
 
-export interface SchemaAttribute {
+interface SchemaAttributeDefinition {
   type: string;
   meta?: any;
 }
 
-export interface SchemaRelationship {
+interface SchemaRelationshipDefinition {
   cardinality: "one" | "many";
   type: string;
   inverse?: string;
   meta?: any;
 }
 
-export interface FullSchema extends Schema {
-  resources: { [k: string]: FullSchemaResource };
+export interface SchemaDefinition {
+  resources: { [k: string]: SchemaResourceDefinition };
+  title?: string;
+  meta?: any;
 }
 
-export interface FullSchemaResource extends SchemaResource {
-  attributes: { [k: string]: FullSchemaAttribute | FullSchemaRelationship };
+export interface SchemaResource extends SchemaResourceDefinition {
+  attributes: { [k: string]: SchemaAttribute | SchemaRelationship };
   name: string;
 }
 
-export interface FullSchemaAttribute extends SchemaAttribute {
+export interface SchemaAttribute extends SchemaAttributeDefinition {
   name: string;
 }
 
-export interface FullSchemaRelationship extends SchemaRelationship {
+export interface SchemaRelationship extends SchemaRelationshipDefinition {
   name: string;
 }
 
-// Graphs don't distinguish between attributes and relationships, but queries do (mitigated with graphql syntax)
-export interface Graph {
+export interface SchemaInterface extends SchemaDefinition {
+  resources: { [k: string]: SchemaResource };
+}
+
+// Trees don't distinguish between attributes and relationships, but queries do (mitigated with graphql syntax)
+export interface Tree {
   type: string;
   id: string;
   attributes: { [k: string]: any };
@@ -108,17 +110,26 @@ export interface NormalizedResources {
   [k: string]: { [k: string]: ResourceAttributes };
 }
 
-export interface UpsertOperation {
-  type: "create" | "update";
+export interface MutatingResources {
+  [k: string]: { [k: string]: ResourceAttributes | Symbol };
+}
+
+export interface CreateOperation {
+  operation: "create";
+  resource: Resource;
+}
+
+export interface UpdateOperation {
+  operation: "update";
   resource: Resource;
 }
 
 export interface DeleteOperation {
-  type: "delete";
+  operation: "delete";
   resource: ResourceRef;
 }
 
-export type Operation = UpsertOperation | DeleteOperation;
+export type Operation = CreateOperation | DeleteOperation | UpdateOperation;
 
 // should a store be a CLASS constructed with a schema or a FUNCTION that takes a schema?
 // let's start with FUNCTION until there's a reason to change
@@ -132,10 +143,10 @@ export interface Store {
   delete?: (resource: Resource) => Promise<any>;
 
   // pg level
-  merge: (query: Query, graph: Graph) => Promise<any>;
+  merge: (query: Query, graph: Tree) => Promise<any>;
   // query: ((query: QueryWithId) => Promise<Graph>) | ((query: QueryWithoutId) => Promise<Graph[]>)
-  query: (query: Query) => Promise<Graph | Graph[]>;
-  replace: (query: Query, graph: Graph) => Promise<any>;
+  query: (query: Query) => Promise<Tree | Tree[]>;
+  replace: (query: Query, graph: Tree) => Promise<any>;
   transaction: (operations: Operation[]) => Promise<any>;
 
   // are these relationship methods replaceable with merge/replace above?

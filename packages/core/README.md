@@ -10,6 +10,7 @@ This repository is the source of the glue that attempts to hold all of the adapt
 - Store
 - Query
 - Mutation
+- Tree
 - Graph
 
 ### Stores
@@ -24,7 +25,7 @@ All polygraph stores require a schema to describe the shape and type of the data
 
 Schemata are defined fully in JSON.
 
-### Query
+### Queries
 
 Queries are declarative JSON objects that correspond to a question that the store can answer. There are adapters that allow for a diversity of expression forms, but these are ultimately made uniform before being given to a store. Query capabilities:
 
@@ -40,7 +41,7 @@ Desired capabilities:
 
 ### Mutation
 
-Mutations are declarative JSON objects that represent changes to be made in the store.
+Mutations are JSON objects that represent changes to be made in the store.
 
 - `create` a new node, possibly with relationships
 - `update` an existing node's attributes (TODO: combine replaceRelationship(s) with this?)
@@ -55,7 +56,7 @@ Additionally, `merge` incorporates a number of the other operations in its funct
 
 (Should the CUD operations only function on nodes?)
 
-### Graph
+### Tree
 
 Data within Polygraph is modeled on graphs. In particular, graphs that result from queries have one or more roots. From those roots, other nodes may be traversed to, depending on what was returned.
 

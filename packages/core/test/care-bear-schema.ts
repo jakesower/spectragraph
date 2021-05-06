@@ -6,11 +6,13 @@ export const schema: Schema = {
     bears: {
       singular: "bear",
       plural: "bears",
-      attributes: {
+      properties: {
         name: { type: "string" },
         gender: { type: "string" },
         belly_badge: { type: "string" },
         fur_color: { type: "string" },
+      },
+      relationships: {
         home: {
           type: "homes",
           cardinality: "one",
@@ -32,10 +34,12 @@ export const schema: Schema = {
     homes: {
       singular: "home",
       plural: "homes",
-      attributes: {
+      properties: {
         name: { type: "string" },
         location: { type: "string" },
         caring_meter: { type: "number" },
+      },
+      relationships: {
         bears: {
           type: "bears",
           cardinality: "many",
@@ -47,9 +51,11 @@ export const schema: Schema = {
     powers: {
       singular: "power",
       plural: "powers",
-      attributes: {
+      properties: {
         name: { type: "string" },
         description: { type: "text" },
+      },
+      relationships: {
         bears: {
           type: "bears",
           cardinality: "many",
