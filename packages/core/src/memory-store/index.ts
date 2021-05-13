@@ -10,9 +10,6 @@ import {
   pick,
 } from "@polygraph/utils";
 import {
-  SchemaInterface,
-  SchemaAttribute,
-  SchemaRelationship,
   MutatingResources,
   NormalizedResources,
   Store,
@@ -24,13 +21,12 @@ import {
   CreateOperation,
   Query,
 } from "../types";
+import { SchemaType } from "../data-structures/schema";
 import { operations } from "./operations";
+import { refsEqual, applyMapOrNull } from "../utils";
+import { ScopedQuiver } from "../data-structures/scoped-quiver";
 
-function isInvertableRelationship(attribute): attribute is SchemaRelationship {
-  return attribute.inverse;
-}
-
-function makeEmptyData(schema: SchemaInterface): NormalizedResources {
+function makeEmptyData(schema: SchemaType): NormalizedResources {
   const out = {};
   Object.keys(schema.resources).forEach((resourceName) => {
     out[resourceName] = {};
@@ -39,17 +35,17 @@ function makeEmptyData(schema: SchemaInterface): NormalizedResources {
 }
 
 // performs a deep clone and ensures all invertable relationships line up
+// this is memorystore stuff
 function copyAndClean(
-  schema: SchemaInterface,
+  schema: SchemaType,
   data: NormalizedResources
 ): NormalizedResources {
   Object.keys(data).forEach((resourceType) => {
-    const relationshipAttributes = Object.values(
-      schema.resources[resourceType].attributes
-    ).filter(isInvertableRelationship);
+    const relationshipProperties =
+      schema.resources[resourceType].relationshipsArray;
 
     Object.entries(data[resourceType]).forEach(([resourceId, resource]) => {
-      relationshipAttributes.forEach((relAttr) => {
+      relationshipProperties.forEach((relAttr) => {
         applyOrMap(resource[relAttr.name], (foreignId) => {
           if (foreignId) {
             const foreignInverses =
@@ -72,98 +68,56 @@ function copyAndClean(
   return deepClone(data);
 }
 
-function partitionAttributes(
-  schema: SchemaInterface,
-  type: string
-): [SchemaAttribute[], SchemaRelationship[]] {
-  return partition(
-    Object.values(schema.resources[type].attributes),
-    (attribute) => !("cardinality" in attribute)
-  ) as [SchemaAttribute[], SchemaRelationship[]];
-}
-
-type RelationshipCardinality =
-  | "one-to-one"
-  | "one-to-many"
-  | "one-to-none"
-  | "many-to-one"
-  | "many-to-many"
-  | "many-to-none";
-function fullCardinality(
-  schema: SchemaInterface,
-  type: string,
-  relationshipName: string
-): RelationshipCardinality {
-  const relDefinition = schema.resources[type].attributes[
-    relationshipName
-  ] as SchemaRelationship;
-
-  if ("inverse" in relDefinition) {
-    const invDefinition = schema.resources[relDefinition.type].attributes[
-      relDefinition.inverse
-    ] as SchemaRelationship;
-
-    return `${relDefinition.cardinality}-to-${invDefinition.cardinality}` as RelationshipCardinality;
-  }
-
-  return `${relDefinition.cardinality}-to-none` as RelationshipCardinality;
-}
-
 export function MemoryStore(
-  schema: SchemaInterface,
+  schema: SchemaType,
   { initialData = {} }: { initialData: NormalizedResources }
 ): Store {
   let data = copyAndClean(schema, initialData);
   const contextualOperations = operations(schema, data);
-
-  function fleshedRelationship(type, relationship) {
-    console.log({ type, relationship });
-    return schema.resources[type].attributes[
-      relationship
-    ] as SchemaRelationship;
-  }
 
   // PLAN ?:
   // 0. (Validation) - Ensure tree and query comport (should be somewhere else)
   // 1. Convert the (query, tree) pair into graph assertions
   // 2. Ensure the graph assertions are internally consistent
   // 3. Convert the graph assertions into operations and apply them
+
+  // Assume tree has been pruned to the schema (and a query)
   function treeToGraphAssertions(tree: Tree | Tree[]) {
     if (Array.isArray(tree)) return tree.flatMap(treeToGraphAssertions);
 
     const { id, type } = tree;
-    const [typeAttrs, typeRels] = partitionAttributes(schema, type);
+    const schemaResDef = schema.resources[type];
     const assertNode = {
       assertion: "node",
       type,
       id,
-      attributes: pick(
+      properties: pick(
         tree.attributes,
-        typeAttrs.map((attr) => attr.name)
+        schemaResDef.propertiesArray.map((attr) => attr.name)
       ),
     };
 
     const usedRelationships = pick(
       tree.attributes,
-      typeRels.map((rel) => rel.name)
+      schemaResDef.relationshipsArray.map((rel) => rel.name)
     );
+
     const assertRelationships = Object.entries(
-      usedRelationships.map(([relationshipName, relationshipValue]) => {
-        const cardinality = fullCardinality(schema, type, relationshipName);
+      usedRelationships.map(([relName, relValue]) => {
+        const cardinality = schema.fullCardinality(type, relName);
 
         return {
           assertion:
             cardinality === "one-to-many"
               ? "assert-relationship"
               : "set-relationships",
-          label: relationshipName,
+          label: relName,
           source: { type, id },
-          target: { type: relationshipValue.type, id: relationshipValue.id },
+          target: { type: relValue.type, id: relValue.id },
         };
       })
     );
 
-    // would be nice to have traversal handled elsewhere...
     const relatedAssertions = Object.values(usedRelationships).map(
       treeToGraphAssertions
     );
@@ -172,77 +126,37 @@ export function MemoryStore(
   }
 
   function graphAssertionsToOperations(graphAssertions) {
-    const FINAL = Symbol("final");
-    const nodes = makeEmptyData(schema);
-    const arrows = makeEmptyData(schema);
+    const quiver = new ScopedQuiver(schema);
 
     graphAssertions.forEach((assertionObj) => {
       const { type, id, assertion } = assertionObj;
       switch (assertion) {
         case "node": {
-          if (id in nodes[type]) {
-            const conflictKey = Object.keys(nodes[type][id]).find(
-              (key) => nodes[type][id][key] !== assertionObj.attributes[key]
+          const existingNode = quiver.getNode({ type, id });
+          if (existingNode) {
+            const conflictingKey = Object.keys(existingNode).find(
+              (key) => existingNode[key] !== assertionObj.properties[key]
             );
 
-            if (conflictKey) {
-              const v1 = nodes[type][id][conflictKey];
-              const v2 = assertionObj.attributes[conflictKey];
+            if (conflictingKey) {
+              const v1 = existingNode[conflictingKey];
+              const v2 = assertionObj.properties[conflictingKey];
               throw new Error(
-                `There is an inconsistency in the graph. (${type}, ${id}, ${conflictKey}) is marked as both ${v1} and ${v2}`
+                `There is an inconsistency in the graph. (${type}, ${id}, ${conflictingKey}) is marked as both ${v1} and ${v2}`
               );
             }
-
-            nodes[type][id] = {
-              ...nodes[type][id],
-              ...assertionObj.attributes,
-            };
-          } else {
-            nodes[type][id] = assertionObj.attributes;
           }
+
+          quiver.addNode({ type, id, properties: assertionObj.properties });
+
           break;
         }
 
         case "assert-relationship": {
           const { source, target, label } = assertionObj;
-          const relDefinition = schema.resources[type].attributes[
-            label
-          ] as SchemaRelationship;
+          const arrowExists = quiver.arrowExists({ source, target, label });
 
-          const arrowExists = () => {
-            const equalRefs = (left, right) =>
-              left.type === right.type && left.id === right.id;
-            const includesOrIs = (maybeArray, item) =>
-              Array.isArray(maybeArray)
-                ? maybeArray.some((ref) => equalRefs(ref, item))
-                : equalRefs(maybeArray, item);
-
-            if (
-              source.id in arrows[relDefinition.type] &&
-              includesOrIs(arrows[type][id][label], source)
-            ) {
-              return true;
-            }
-
-            if ("inverse" in relDefinition) {
-              const invDefinition = schema.resources[relDefinition.type]
-                .attributes[relDefinition.inverse] as SchemaRelationship;
-
-              if (
-                target.id in arrows[relDefinition.type] &&
-                includesOrIs(
-                  arrows[relDefinition.type][target.id][invDefinition.name],
-                  source
-                )
-              ) {
-                return true;
-              }
-            }
-
-            return false;
-          };
-
-          if (arrowExists()) {
+          if (arrowExists) {
           }
         }
 
@@ -252,7 +166,7 @@ export function MemoryStore(
     });
   }
 
-  // create/update resources/attributes
+  // create/update resources/properties
   // create/update relationships
   async function extractOperations(
     updatedResourceOrResources: Resource | Resource[] | null,
@@ -342,7 +256,7 @@ export function MemoryStore(
     ): Tree | Tree[] => {
       const resource = data[type][id];
       const relatedType =
-        schema.resources[type].attributes[relationshipName].type;
+        schema.resources[type].properties[relationshipName].type;
 
       return applyOrMap(resource[relationshipName], (relatedId) =>
         expandResource(relationshipDefinition, relatedType, relatedId)
@@ -360,8 +274,8 @@ export function MemoryStore(
         return null;
       }
 
-      const attributes = subQuery.attributes
-        ? pick(resource.attributes, subQuery.attributes)
+      const properties = subQuery.properties
+        ? pick(resource.properties, subQuery.properties)
         : resource;
       const relationships =
         "relationships" in subQuery
@@ -380,7 +294,7 @@ export function MemoryStore(
       return {
         id,
         type,
-        attributes: { ...attributes, ...relationships },
+        properties: { ...properties, ...relationships },
       };
     };
 
