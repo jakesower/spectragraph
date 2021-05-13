@@ -1,66 +1,19 @@
 export interface QueryRelationship {
-  attributes?: [string];
-  relationships?: { [k: string]: QueryRelationship };
-}
-
-interface QueryWithId {
-  type: string;
-  id: string;
-  attributes?: [string];
+  properties?: [string];
   relationships?: { [k: string]: QueryRelationship };
 }
 
 interface QueryWithoutId {
   type: string;
-  attributes?: [string];
+  properties?: [string];
   relationships?: { [k: string]: QueryRelationship };
 }
 
+interface QueryWithId extends QueryWithoutId {
+  id: string;
+}
+
 export type Query = QueryWithId | QueryWithoutId;
-
-interface SchemaResourceDefinition {
-  singular: string;
-  plural: string;
-  attributes: {
-    [k: string]: SchemaAttributeDefinition | SchemaRelationshipDefinition;
-  };
-  meta?: any;
-}
-
-interface SchemaAttributeDefinition {
-  type: string;
-  meta?: any;
-}
-
-interface SchemaRelationshipDefinition {
-  cardinality: "one" | "many";
-  type: string;
-  inverse?: string;
-  meta?: any;
-}
-
-export interface SchemaDefinition {
-  resources: { [k: string]: SchemaResourceDefinition };
-  title?: string;
-  meta?: any;
-}
-
-export interface SchemaResource extends SchemaResourceDefinition {
-  attributes: { [k: string]: SchemaAttribute | SchemaRelationship };
-  name: string;
-}
-
-export interface SchemaAttribute extends SchemaAttributeDefinition {
-  name: string;
-}
-
-export interface SchemaRelationship extends SchemaRelationshipDefinition {
-  name: string;
-}
-
-export interface SchemaInterface extends SchemaDefinition {
-  resources: { [k: string]: SchemaResource };
-}
 
 // Trees don't distinguish between attributes and relationships, but queries do (mitigated with graphql syntax)
 export interface Tree {
@@ -75,7 +28,7 @@ export interface ResourceRef {
 }
 
 export interface Resource extends ResourceRef {
-  attributes: ResourceAttributes;
+  properties: ResourceAttributes;
 }
 
 export interface RelationshipReplacement {
