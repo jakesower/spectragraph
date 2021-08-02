@@ -39,6 +39,11 @@ function arraySetDifference(xs, ys) {
     return xs.filter((x) => !ySet.has(x));
 }
 exports.arraySetDifference = arraySetDifference;
+function arraySetDifferenceBy(xs, ys, fn) {
+    const ySet = new Set(ys.map(fn));
+    return xs.filter((x) => !ySet.has(fn(x)));
+}
+exports.arraySetDifferenceBy = arraySetDifferenceBy;
 function assignChildren(objs) {
     let out = {};
     objs.forEach((obj) => {
@@ -121,6 +126,17 @@ function flatten(xs) {
     return makeFlat(xs, true);
 }
 exports.flatten = flatten;
+function groupBy(items, fn) {
+    const out = {};
+    const l = items.length;
+    for (let i = 0; i < l; i += 1) {
+        const group = fn(items[i]);
+        out[group] = out[group] || [];
+        out[group][out[group].length] = items[i];
+    }
+    return out;
+}
+exports.groupBy = groupBy;
 function indexOn(xs, keys) {
     let out = {};
     const [first, ...rest] = keys;
@@ -139,11 +155,11 @@ function indexOn(xs, keys) {
 }
 exports.indexOn = indexOn;
 // e.g. {a: {inner: 'thing'}, b: {other: 'item'}} => {a: {key: 'a', inner: 'thing'}, b: {key: 'b', other: 'item'}}
-function inlineKey(obj) {
+function inlineKey(obj, keyProp) {
     let result = {};
     const keys = Object.keys(obj);
     for (let key of keys) {
-        result[key] = Object.assign({}, obj[key], { key });
+        result[key] = Object.assign({}, obj[key], { [keyProp]: key });
     }
     return result;
 }
@@ -226,16 +242,14 @@ function overPath(obj, path, fn) {
     return Object.assign(Object.assign({}, obj), { [head]: overPath(obj[head], tail, fn) });
 }
 exports.overPath = overPath;
-function omitKeys(obj, nix) {
-    let out = {};
-    for (let key of Object.keys(obj)) {
-        if (!nix.includes(key)) {
-            out[key] = obj[key];
-        }
+function omit(obj, keys) {
+    let out = Object.assign({}, obj);
+    for (let key of keys) {
+        delete out[key];
     }
     return out;
 }
-exports.omitKeys = omitKeys;
+exports.omit = omit;
 function parseQueryParams(rawParams) {
     let out = {};
     const indexRegex = /^([^[]+)\[([^\]]+)\]$/;
@@ -253,6 +267,21 @@ function parseQueryParams(rawParams) {
     return out;
 }
 exports.parseQueryParams = parseQueryParams;
+function partition(items, predicateFn) {
+    const l = items.length;
+    let outTrue = [];
+    let outFalse = [];
+    for (let i = 0; i < l; i += 1) {
+        if (predicateFn(items[i])) {
+            outTrue[outTrue.length] = items[i];
+        }
+        else {
+            outFalse[outFalse.length] = items[i];
+        }
+    }
+    return [outTrue, outFalse];
+}
+exports.partition = partition;
 function pathOr(obj, path, otherwise) {
     if (path.length === 0)
         return true;
@@ -413,31 +442,6 @@ function sortWithAll(fns, xs) {
     ];
 }
 exports.sortWithAll = sortWithAll;
-function trifurcate(left, right) {
-    const leftKeys = Object.keys(left);
-    let outEquals = {};
-    let outLeft = {};
-    let outRight = Object.assign({}, right);
-    for (let i = 0; i < leftKeys.length; i += 1) {
-        const key = leftKeys[i];
-        if (!(key in right)) {
-            outLeft[key] = left[key];
-        }
-        if (!deep_equal_1.default(left[key], right[key])) {
-            outLeft[key] = left[key];
-        }
-        else {
-            delete outRight[key];
-            outEquals = left[key];
-        }
-    }
-    return {
-        equal: outEquals,
-        leftOnly: outLeft,
-        rightOnly: outRight,
-    };
-}
-exports.trifurcate = trifurcate;
 function uniq(xs) {
     return [...new Set(xs)];
 }

@@ -1,12 +1,24 @@
+type QueryParam = unknown;
+export type QueryParams = { [k: string]: QueryParam };
+
+export interface Operation {
+  $first?: boolean;
+  $id?: string;
+  $not?: Operation;
+  [k: string]: Operation | string | number | boolean;
+}
+
 export interface QueryRelationship {
-  properties?: [string];
+  properties?: string[];
   relationships?: { [k: string]: QueryRelationship };
+  params?: { [k: string]: QueryParam }
 }
 
 interface QueryWithoutId {
   type: string;
-  properties?: [string];
+  properties?: string[];
   relationships?: { [k: string]: QueryRelationship };
+  params?: { [k: string]: QueryParam }
 }
 
 interface QueryWithId extends QueryWithoutId {
@@ -15,11 +27,22 @@ interface QueryWithId extends QueryWithoutId {
 
 export type Query = QueryWithId | QueryWithoutId;
 
-// Trees don't distinguish between attributes and relationships, but queries do (mitigated with graphql syntax)
-export interface Tree {
+export type CompiledQuery = {
+  type: string;
+  properties: string[];
+  relationships: { [k: string]: CompiledQuery };
+  params: { [k: string]: QueryParam }
+}
+
+export interface ResourceTree {
   type: string;
   id: string;
-  attributes: { [k: string]: any };
+  properties: { [k: string]: unknown };
+  relationships: { [k: string]: ResourceTree[] };
+}
+
+export type DataTree = {
+  [k: string]: unknown | DataTree | DataTree[] | null
 }
 
 export interface ResourceRef {
@@ -27,8 +50,23 @@ export interface ResourceRef {
   id: string;
 }
 
+export interface ResourceAttributes {
+  [k: string]: unknown;
+}
+
+export interface DividedResource extends ResourceRef {
+  properties: { [k: string]: unknown };
+  relationships: { [k: string]: unknown };
+}
+
 export interface Resource extends ResourceRef {
-  properties: ResourceAttributes;
+  attributes: ResourceAttributes;
+}
+
+export interface Relationship {
+  source: ResourceRef;
+  target: ResourceRef;
+  label: string;
 }
 
 export interface RelationshipReplacement {
@@ -55,51 +93,43 @@ interface MultiDeleteInterface extends DeleteInterface {
   foreignIds: string[];
 }
 
-export interface ResourceAttributes {
-  [k: string]: any;
-}
-
 export interface NormalizedResources {
   [k: string]: { [k: string]: ResourceAttributes };
 }
 
 export interface MutatingResources {
-  [k: string]: { [k: string]: ResourceAttributes | Symbol };
+  [k: string]: { [k: string]: ResourceAttributes | symbol };
 }
 
-export interface CreateOperation {
-  operation: "create";
-  resource: Resource;
+export interface PolygraphStore {
+  match: (query: Query) => Promise<DataTree | DataTree[]>;
+  mergeOne: (query: Query, tree: DataTree, params?: QueryParams) => Promise<any>;
+  mergeMany: (query: Query, trees: DataTree[], params?: QueryParams) => Promise<any>;
+  replaceOne: (query: Query, tree: DataTree, params?: QueryParams) => Promise<any>;
+  replaceMany: (query: Query, trees: DataTree[], params?: QueryParams) => Promise<any>;
 }
-
-export interface UpdateOperation {
-  operation: "update";
-  resource: Resource;
-}
-
-export interface DeleteOperation {
-  operation: "delete";
-  resource: ResourceRef;
-}
-
-export type Operation = CreateOperation | DeleteOperation | UpdateOperation;
 
 // should a store be a CLASS constructed with a schema or a FUNCTION that takes a schema?
 // let's start with FUNCTION until there's a reason to change
 
-export interface Store {
-  // crud level
-  read: (resourceRef: ResourceRef) => Promise<Resource>;
+export interface CrudStore {
+  find: (type: string, criteria?: { [k: string]: unknown }) => Promise<Resource[]>;
+  findOne: (resourceRef: ResourceRef) => Promise<Resource>;
   create: (resource: Resource) => Promise<any>;
   update: (resource: Resource) => Promise<any>;
   upsert: (resource: Resource) => Promise<any>;
-  delete?: (resource: Resource) => Promise<any>;
+  delete: (resource: Resource) => Promise<any>;
+  createRelationship: (source: ResourceRef, target: ResourceRef, type: string) => Promise<any>;
+  deleteRelationship: (source: ResourceRef, target: ResourceRef, type: string) => Promise<any>;
+  updateRelationship: (source: ResourceRef, target: ResourceRef, type: string) => Promise<any>;
+  upsertRelationship: (source: ResourceRef, target: ResourceRef, type: string) => Promise<any>;
+}
 
+export interface Store extends CrudStore {
   // pg level
-  merge: (query: Query, graph: Tree) => Promise<any>;
-  // query: ((query: QueryWithId) => Promise<Graph>) | ((query: QueryWithoutId) => Promise<Graph[]>)
-  query: (query: Query) => Promise<Tree | Tree[]>;
-  replace: (query: Query, graph: Tree) => Promise<any>;
+  match: (query: Query) => Promise<DataTree | DataTree[]>;
+  merge: (query: Query, tree: Tree) => Promise<any>;
+  replace: (query: Query, tree: Tree) => Promise<any>;
   transaction: (operations: Operation[]) => Promise<any>;
 
   // are these relationship methods replaceable with merge/replace above?
@@ -111,8 +141,8 @@ export interface Store {
   // ~NOT equivalent to~
   // merge({ type: 'bear', id: '1' }, { type: 'bears', id: '1', powers: ['2'] })
 
-  // it appears that the singular e.g. "replaceRelationship" can go, while "replaceRelationships" should stay,
-  // but there's no harm in keeping them all?
+  // it appears that the singular e.g. "replaceRelationship" can go, while "replaceRelationships"
+  // should stay, but there's no harm in keeping them all?
 
   replaceRelationship?: (resource: RelationshipReplacement) => Promise<any>;
   replaceRelationships?: (resource: RelationshipReplacements) => Promise<any>;

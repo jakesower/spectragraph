@@ -1,17 +1,6 @@
 import equals from 'deep-equal';
 export { equals };
 declare type Ord = number | string | boolean | Date;
-interface Trifurcated<T, K extends keyof T> {
-    equal: {
-        K: T[K];
-    };
-    leftOnly: {
-        K: T[K];
-    };
-    rightOnly: {
-        K: T[K];
-    };
-}
 export declare function append<T, U>(xs: T[], ys: U[]): (T | U)[];
 export declare function appendKeys<T, K extends keyof T>(base: {
     [k: string]: T[K][];
@@ -23,6 +12,7 @@ export declare function appendKeys<T, K extends keyof T>(base: {
 export declare function applyOrMap<T, U>(valueOrArray: T[], fn: (item: T) => U): U[];
 export declare function applyOrMap<T, U>(valueOrArray: T, fn: (item: T) => U): U;
 export declare function arraySetDifference<T>(xs: T[], ys: T[]): T[];
+export declare function arraySetDifferenceBy<T, U>(xs: T[], ys: T[], fn: (val: T) => U): T[];
 export declare function assignChildren(objs: {
     [k: string]: {
         [k: string]: any;
@@ -52,11 +42,12 @@ export declare function forEachObj<T, U>(obj: {
     [k in string]: T;
 }, fn: (x: T, idx: string) => any): void;
 export declare function flatten<T>(xs: T[][]): T[];
+export declare function groupBy<T>(items: T[], fn: (item: T) => string): {
+    [k: string]: T[];
+};
 export declare function indexOn(xs: any, keys: any): any;
-export declare function inlineKey<T, K extends keyof T>(obj: T): {
-    [k: string]: T[K] & {
-        key: string;
-    };
+export declare function inlineKey<T>(obj: T, keyProp: string): {
+    [k: string]: any;
 };
 export declare function mapObj<T, U>(obj: {
     [k in string]: T;
@@ -94,18 +85,11 @@ export declare function mergeWith<T, U, V>(base: {
     [k: string]: T | U | V;
 };
 export declare function overPath(obj: any, path: any, fn: any): any;
-export declare function omitKeys<T, K extends keyof T>(obj: {
-    K: T;
-}, nix: string[]): {
-    K: T;
-};
+export declare function omit<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K>;
 export declare function parseQueryParams(rawParams: any): {};
+export declare function partition<T>(items: T[], predicateFn: (val: T) => boolean): [T[], T[]];
 export declare function pathOr(obj: any, path: any, otherwise: any): any;
-export declare function pick<T>(obj: {
-    [k: string]: T;
-}, keys: string[]): {
-    [k: string]: T;
-};
+export declare function pick<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K>;
 export declare function pipe(fns: ((x: any) => any)[]): (x: any) => any;
 export declare function pipeMw(init: any, mws: any): Promise<any>;
 export declare function pipeThru(val: any, fns: ((x: any) => any)[]): any;
@@ -121,7 +105,6 @@ export declare function sortBy<T>(fn: (a: T, b: T) => number, xs: T[]): T[];
 export declare function sortByAll<T>(fns: ((a: T, b: T) => number)[], xs: T[]): T[];
 export declare function sortWith<T>(fn: (a: T) => Ord, xs: T[]): T[];
 export declare function sortWithAll<T>(fns: ((a: T) => Ord)[], xs: T[]): T[];
-export declare function trifurcate<T, K extends keyof T>(left: T, right: T): Trifurcated<T, K>;
 export declare function uniq<T>(xs: T[]): T[];
 export declare function uniqBy<T>(xs: T[], fn: (x: T) => Ord): T[];
 export declare function union<T, U>(xs: T[], ys: U[]): (T | U)[];
