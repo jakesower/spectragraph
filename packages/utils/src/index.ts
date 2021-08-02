@@ -3,11 +3,6 @@ import equals from 'deep-equal'
 export { equals }
 
 type Ord = number | string | boolean | Date
-interface Trifurcated<T, K extends keyof T> {
-  equal: { K: T[K] }
-  leftOnly: { K: T[K] }
-  rightOnly: { K: T[K] }
-}
 
 export function append<T, U>(xs: T[], ys: U[]): (T | U)[] {
   return [...xs, ...ys]
@@ -40,6 +35,15 @@ export function applyOrMap(valueOrArray, fn) {
 export function arraySetDifference<T>(xs: T[], ys: T[]): T[] {
   const ySet = new Set(ys)
   return xs.filter((x) => !ySet.has(x))
+}
+
+export function arraySetDifferenceBy<T, U>(
+  xs: T[],
+  ys: T[],
+  fn: (val: T) => U,
+): T[] {
+  const ySet = new Set(ys.map(fn))
+  return xs.filter((x) => !ySet.has(fn(x)))
 }
 
 export function assignChildren(
@@ -142,6 +146,22 @@ export function flatten<T>(xs: T[][]): T[] {
   return makeFlat(xs, true)
 }
 
+export function groupBy<T>(
+  items: T[],
+  fn: (item: T) => string,
+): { [k: string]: T[] } {
+  const out = {}
+  const l = items.length
+
+  for (let i = 0; i < l; i += 1) {
+    const group = fn(items[i])
+    out[group] = out[group] || []
+    out[group][out[group].length] = items[i]
+  }
+
+  return out
+}
+
 export function indexOn(xs, keys) {
   let out = {}
   const [first, ...rest] = keys
@@ -164,13 +184,11 @@ export function indexOn(xs, keys) {
 }
 
 // e.g. {a: {inner: 'thing'}, b: {other: 'item'}} => {a: {key: 'a', inner: 'thing'}, b: {key: 'b', other: 'item'}}
-export function inlineKey<T, K extends keyof T>(
-  obj: T,
-): { [k: string]: T[K] & { key: string } } {
+export function inlineKey<T>(obj: T, keyProp: string): { [k: string]: any } {
   let result = {}
   const keys = Object.keys(obj)
   for (let key of keys) {
-    result[key] = Object.assign({}, obj[key], { key })
+    result[key] = Object.assign({}, obj[key], { [keyProp]: key })
   }
   return result
 }
@@ -289,15 +307,10 @@ export function overPath(obj, path, fn) {
   }
 }
 
-export function omitKeys<T, K extends keyof T>(
-  obj: { K: T },
-  nix: string[],
-): { K: T } {
-  let out = {} as { K: T }
-  for (let key of Object.keys(obj)) {
-    if (!nix.includes(key)) {
-      out[key] = obj[key]
-    }
+export function omit<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
+  let out = { ...obj }
+  for (let key of keys) {
+    delete out[key]
   }
   return out
 }
@@ -321,6 +334,25 @@ export function parseQueryParams(rawParams) {
   return out
 }
 
+export function partition<T>(
+  items: T[],
+  predicateFn: (val: T) => boolean,
+): [T[], T[]] {
+  const l = items.length
+  let outTrue = []
+  let outFalse = []
+
+  for (let i = 0; i < l; i += 1) {
+    if (predicateFn(items[i])) {
+      outTrue[outTrue.length] = items[i]
+    } else {
+      outFalse[outFalse.length] = items[i]
+    }
+  }
+
+  return [outTrue, outFalse]
+}
+
 export function pathOr(obj, path, otherwise) {
   if (path.length === 0) return true
 
@@ -329,12 +361,9 @@ export function pathOr(obj, path, otherwise) {
   return first in obj ? pathOr(obj[first], rest, otherwise) : otherwise
 }
 
-export function pick<T>(
-  obj: { [k: string]: T },
-  keys: string[],
-): { [k: string]: T } {
+export function pick<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
   const l = keys.length
-  let out = {}
+  let out = {} as Pick<T, K>;
 
   for (let i = 0; i < l; i += 1) {
     if (keys[i] in obj) out[keys[i]] = obj[keys[i]]
@@ -500,37 +529,6 @@ export function sortWithAll<T>(fns: ((a: T) => Ord)[], xs: T[]): T[] {
     ...sortWithAll(restFns, eqs),
     ...sortWithAll(fns, gts),
   ]
-}
-
-export function trifurcate<T, K extends keyof T>(
-  left: T,
-  right: T,
-): Trifurcated<T, K> {
-  const leftKeys = Object.keys(left)
-
-  let outEquals = {} as { K: T[K] }
-  let outLeft = {} as { K: T[K] }
-  let outRight = ({ ...right } as unknown) as { K: T[K] }
-
-  for (let i = 0; i < leftKeys.length; i += 1) {
-    const key = leftKeys[i]
-    if (!(key in right)) {
-      outLeft[key] = left[key]
-    }
-
-    if (!equals(left[key], right[key])) {
-      outLeft[key] = left[key]
-    } else {
-      delete outRight[key]
-      outEquals = left[key]
-    }
-  }
-
-  return {
-    equal: outEquals,
-    leftOnly: outLeft,
-    rightOnly: outRight,
-  }
 }
 
 export function uniq<T>(xs: T[]): T[] {

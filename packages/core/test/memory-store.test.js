@@ -330,7 +330,7 @@ test("merges into existing objects", async (t) => {
       id: "2",
       attributes: { fur_color: "just pink" },
     }
-  );
+  );;;;;;;;
 
   const result = await t.context.store.query({
     type: "bears",
