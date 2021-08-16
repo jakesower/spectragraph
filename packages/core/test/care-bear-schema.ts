@@ -53,7 +53,7 @@ export const schema: Schema = {
       plural: "powers",
       properties: {
         name: { type: "string" },
-        description: { type: "text" },
+        description: { type: "string" },
       },
       relationships: {
         bears: {

@@ -1,8 +1,7 @@
 import { arraySetDifferenceBy, groupBy, omit } from "@polygraph/utils";
 import { sha1 } from "object-hash";
-import { refsEqual, refStr } from "../utils";
+import { refsEqual, formatRef } from "../utils";
 import { ResourceRef } from "../types";
-import { SchemaType } from "./schema";
 
 const DELETED = Symbol("deleted");
 const EXISTS = Symbol("exists");
@@ -19,7 +18,7 @@ const stateStrs = {
  */
 
 type NodeRef = ResourceRef;
-type NodeProps = { [k: string]: unknown};
+type NodeProps = Record<string, unknown>;
 
 interface Node extends NodeRef {
   properties: NodeProps;
@@ -86,8 +85,8 @@ const makeArrowGroupKey = (sourceNode: NodeRef, relType: string): string => (
 
 const relStr = (arrow: ArrowLike) => {
   const { source, target, label } = arrow;
-  const sourceStr = source ? refStr(source) : "X";
-  const targetStr = target ? refStr(target) : "X";
+  const sourceStr = source ? formatRef(source) : "X";
+  const targetStr = target ? formatRef(target) : "X";
 
   return `${sourceStr}--(${label})-->${targetStr}`;
 };
@@ -115,7 +114,7 @@ export class WorkingQuiver implements WorkingQuiverType {
     if (existingNode) {
       if (existingNode.state === DELETED) {
         throw new Error(
-          `There is an inconsistency in the graph. ${refStr(
+          `There is an inconsistency in the graph. ${formatRef(
             node,
           )} has been marked as both existing and deleted.`,
         );
@@ -149,7 +148,7 @@ export class WorkingQuiver implements WorkingQuiverType {
 
     if (existingNode && existingNode.state !== DELETED) {
       throw new Error(
-        `There is an inconsistency in the graph. ${refStr(
+        `There is an inconsistency in the graph. ${formatRef(
           node,
         )} has been marked as both existing and deleted.`,
       );
@@ -168,7 +167,7 @@ export class WorkingQuiver implements WorkingQuiverType {
 
         if (refsEqual(node, source)) {
           throw new Error(
-            `There is an inconsistency in the graph. ${refStr(
+            `There is an inconsistency in the graph. ${formatRef(
               node,
             )} is marked as being deleted, but a relationship ${relStr(
               problemArrow,
