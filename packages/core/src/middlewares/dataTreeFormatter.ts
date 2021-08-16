@@ -1,65 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { mapObj, pick } from "@polygraph/utils";
 import {
-  CompiledQuery,
-  CompiledSchema,
-  DataTree, Query, QueryRelationship, ResourceRef, ResourceTree,
-} from "./types";
+  CompiledQuery, CompiledSchema, DataTree, ResourceTree,
+} from "../types";
+import { asArray } from "../utils";
 
-export function asArray<T>(maybeArray: null | T | T[]): T[] {
-  return maybeArray === null
-    ? []
-    : Array.isArray(maybeArray)
-      ? [...maybeArray]
-      : [maybeArray];
-}
+type Middleware<T, U> = (val: T, next: (nextVal: T) => U) => U;
 
-// TODO:
-// Integrate params?
-export function compileQuery(schema: CompiledSchema, query: Query): CompiledQuery {
-  const errors = [];
-
-  const expand = (subQuery: QueryRelationship, type: string): CompiledQuery => {
-    const resSchemaDef = schema.resources[type];
-
-    // validate
-    (subQuery.properties || []).forEach((prop) => {
-      if (!resSchemaDef.propertyNamesSet.has(prop)) {
-        errors.push(`${prop} is not a property defined on type ${type}`);
-      }
-    });
-
-    Object.keys(subQuery.relationships || {}).forEach((relType) => {
-      if (!resSchemaDef.relationshipNamesSet.has(relType)) {
-        errors.push(`${relType} is not a relationship defined on type ${type}`);
-      }
-    });
-
-    const properties = subQuery.properties
-      ? subQuery.properties.filter((prop) => resSchemaDef.propertyNamesSet.has(prop))
-      : Array.from(resSchemaDef.propertyNames);
-    const relationships = mapObj(subQuery.relationships || {}, (queryRel, relType) => {
-      const relDef = resSchemaDef.relationships[relType];
-      return expand(queryRel, relDef.type);
-    });
-
-    return {
-      id: query.id || null,
-      type,
-      properties,
-      relationships,
-    };
-  };
-
-  const output = expand(query, query.type);
-
-  if (errors.length > 0) throw new Error(JSON.stringify(errors));
-
-  return output;
-}
-
-export function convertDataTreeToResourceTree(
+export function dataTreeToResourceTree(
   schema: CompiledSchema,
   query: CompiledQuery,
   dataTree: DataTree,
@@ -94,7 +41,7 @@ export function convertDataTreeToResourceTree(
   return expand(dataTree, query, query.type);
 }
 
-export function convertResourceTreeToDataTree(
+export function resourceTreeToDataTree(
   schema: CompiledSchema,
   query: CompiledQuery,
   resourceTree: ResourceTree,
@@ -125,17 +72,19 @@ export function convertResourceTreeToDataTree(
 
     return {
       type,
-      properties,
-      relationships: relatedResourceTrees,
+      ...properties,
+      ...relatedResourceTrees,
     };
   };
 
   return expand(resourceTree, query, query.type);
 }
 
-// please let tuples/records come soon
-export const refsEqual = (left: ResourceRef, right: ResourceRef): boolean => (
-  left.type === right.type && left.id === right.id
-);
+export function makeDataTreeToResourceTreeMW(schema: CompiledSchema, query: CompiledQuery) {
+  return async function dataTreeToResourceTreeMW(dataTree: DataTree, next): Promise<DataTree> {
+    const resourceTree = dataTreeToResourceTree(schema, query, dataTree);
+    const result = await next(resourceTree);
 
-export const formatRef = (ref: ResourceRef): string => `(${ref.type}, ${ref.id})`;
+    return resourceTreeToDataTree(schema, query, result);
+  };
+}

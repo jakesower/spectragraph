@@ -1,152 +1,127 @@
-type QueryParam = unknown;
-export type QueryParams = { [k: string]: QueryParam };
+/* eslint-disable max-len */
 
-export interface Operation {
-  $first?: boolean;
-  $id?: string;
-  $not?: Operation;
-  [k: string]: Operation | string | number | boolean;
-}
-
-export interface QueryRelationship {
-  properties?: string[];
-  relationships?: { [k: string]: QueryRelationship };
-  params?: { [k: string]: QueryParam }
-}
-
-interface QueryWithoutId {
-  type: string;
-  properties?: string[];
-  relationships?: { [k: string]: QueryRelationship };
-  params?: { [k: string]: QueryParam }
-}
-
-interface QueryWithId extends QueryWithoutId {
-  id: string;
-}
-
-export type Query = QueryWithId | QueryWithoutId;
-
-export type CompiledQuery = {
-  type: string;
-  properties: string[];
-  relationships: { [k: string]: CompiledQuery };
-  params: { [k: string]: QueryParam }
-}
-
-export interface ResourceTree {
-  type: string;
-  id: string;
-  properties: { [k: string]: unknown };
-  relationships: { [k: string]: ResourceTree[] };
-}
-
-export type DataTree = {
-  [k: string]: unknown | DataTree | DataTree[] | null
-}
-
+// Data
 export interface ResourceRef {
   type: string;
   id: string;
 }
 
-export interface ResourceAttributes {
-  [k: string]: unknown;
-}
-
-export interface DividedResource extends ResourceRef {
-  properties: { [k: string]: unknown };
-  relationships: { [k: string]: unknown };
-}
-
 export interface Resource extends ResourceRef {
-  attributes: ResourceAttributes;
+  properties: Record<string, unknown>;
+  relationships: Record<string, ResourceRef[]>;
 }
 
-export interface Relationship {
-  source: ResourceRef;
-  target: ResourceRef;
-  label: string;
+export interface ResourceTree extends Resource {
+  relationships: Record<string, ResourceTree[]>;
 }
 
-export interface RelationshipReplacement {
+export type NormalizedResources = Record<string, Record<string, Resource>>;
+export type NormalizedResourceUpdates = Record<string, Record<string, Resource | null>>;
+
+export type DataTree = Record<string, unknown>;
+
+// Schema
+type SchemaPropertyType = "string" | "number" | "boolean";
+
+interface SchemaProperty {
+  type: SchemaPropertyType;
+  meta?: unknown;
+}
+
+interface SchemaRelationship {
+  cardinality: "one" | "many";
   type: string;
-  id: string;
-  relationship: string;
-  foreignId: string;
+  inverse?: string;
+  meta?: unknown;
 }
 
-export interface RelationshipReplacements {
+interface SchemaResource {
+  singular: string;
+  plural: string;
+  idField?: string;
+  properties: {
+    [k: string]: SchemaProperty;
+  };
+  relationships: {
+    [k: string]: SchemaRelationship;
+  };
+  meta?: unknown;
+}
+
+export interface Schema {
+  resources: { [k: string]: SchemaResource };
+  title?: string;
+  meta?: unknown;
+}
+
+export interface CompiledSchemaProperty extends SchemaProperty {
+  name: string;
+}
+
+export interface CompiledSchemaRelationship extends SchemaRelationship {
+  name: string;
+}
+
+type CompiledSchemaAttribute = CompiledSchemaProperty | CompiledSchemaRelationship;
+type CompiledSchemaAttributeObj = { [k: string]: CompiledSchemaAttribute };
+
+export interface CompiledSchemaResource extends SchemaResource {
+  attributes: CompiledSchemaAttributeObj;
+  attributesArray: CompiledSchemaAttribute[];
+  name: string;
+  idField: string;
+  properties: { [k: string]: CompiledSchemaProperty };
+  propertiesArray: CompiledSchemaProperty[];
+  propertyNames: string[];
+  propertyNamesSet: Set<string>;
+  relationships: { [k: string]: CompiledSchemaRelationship };
+  relationshipsArray: CompiledSchemaRelationship[];
+  relationshipNames: string[];
+  relationshipNamesSet: Set<string>;
+}
+
+export interface CompiledSchema {
+  resources: Record<string, CompiledSchemaResource>;
+}
+
+// Queries
+export interface QueryParams {
+  $first?: boolean;
+  $id?: string;
+  $not?: QueryParams;
+  [k: string]: QueryParams | string | number | boolean;
+}
+
+export interface QueryRelationship {
+  properties?: string[];
+  relationships?: Record<string, QueryRelationship>;
+  params?: Record<string, QueryParams>;
+}
+
+export interface Query {
+  id?: string;
   type: string;
-  id: string;
-  relationship: string;
-  foreignIds: string[];
+  properties?: string[];
+  relationships?: Record<string, QueryRelationship>;
+  params?: Record<string, QueryParams>;
 }
 
-interface DeleteInterface {
+export type CompiledQuery = {
+  id: string | null; // it's a PITA not to have this
   type: string;
-  id: string;
-  relationship: string;
+  properties: string[];
+  relationships: Record<string, CompiledQuery>;
 }
 
-interface MultiDeleteInterface extends DeleteInterface {
-  foreignIds: string[];
-}
-
-export interface NormalizedResources {
-  [k: string]: { [k: string]: ResourceAttributes };
-}
-
-export interface MutatingResources {
-  [k: string]: { [k: string]: ResourceAttributes | symbol };
-}
-
+// Store -- TODO: deal with wrapping/unwrapping the DataTree <-> ResourceTree
 export interface PolygraphStore {
-  match: (query: Query) => Promise<DataTree | DataTree[]>;
-  mergeOne: (query: Query, tree: DataTree, params?: QueryParams) => Promise<any>;
-  mergeMany: (query: Query, trees: DataTree[], params?: QueryParams) => Promise<any>;
-  replaceOne: (query: Query, tree: DataTree, params?: QueryParams) => Promise<any>;
-  replaceMany: (query: Query, trees: DataTree[], params?: QueryParams) => Promise<any>;
+  // TODO: distinguish queries returning one vs many results
+  get: (query: Query, params?: QueryParams) => Promise<DataTree | DataTree[]>;
+  replaceOne: (query: Query, tree: DataTree, params?: QueryParams) => Promise<NormalizedResourceUpdates>;
+  replaceMany: (query: Query, trees: DataTree[], params?: QueryParams) => Promise<NormalizedResourceUpdates>;
 }
 
-// should a store be a CLASS constructed with a schema or a FUNCTION that takes a schema?
-// let's start with FUNCTION until there's a reason to change
-
-export interface CrudStore {
-  find: (type: string, criteria?: { [k: string]: unknown }) => Promise<Resource[]>;
-  findOne: (resourceRef: ResourceRef) => Promise<Resource>;
-  create: (resource: Resource) => Promise<any>;
-  update: (resource: Resource) => Promise<any>;
-  upsert: (resource: Resource) => Promise<any>;
-  delete: (resource: Resource) => Promise<any>;
-  createRelationship: (source: ResourceRef, target: ResourceRef, type: string) => Promise<any>;
-  deleteRelationship: (source: ResourceRef, target: ResourceRef, type: string) => Promise<any>;
-  updateRelationship: (source: ResourceRef, target: ResourceRef, type: string) => Promise<any>;
-  upsertRelationship: (source: ResourceRef, target: ResourceRef, type: string) => Promise<any>;
-}
-
-export interface Store extends CrudStore {
-  // pg level
-  match: (query: Query) => Promise<DataTree | DataTree[]>;
-  merge: (query: Query, tree: Tree) => Promise<any>;
-  replace: (query: Query, tree: Tree) => Promise<any>;
-  transaction: (operations: Operation[]) => Promise<any>;
-
-  // are these relationship methods replaceable with merge/replace above?
-  // replaceRelationship({ type: 'bear', id: '1', relationship: 'home', foreignId: '2' })
-  // ~equivalent to~
-  // replace({ type: 'bear', id: '1' }, { type: 'bears', id: '1', home: '2' })
-
-  // appendRelationships({ type: 'bear', id: '1', relationship: 'powers', foreignIds: ['2'] })
-  // ~NOT equivalent to~
-  // merge({ type: 'bear', id: '1' }, { type: 'bears', id: '1', powers: ['2'] })
-
-  // it appears that the singular e.g. "replaceRelationship" can go, while "replaceRelationships"
-  // should stay, but there's no harm in keeping them all?
-
-  replaceRelationship?: (resource: RelationshipReplacement) => Promise<any>;
-  replaceRelationships?: (resource: RelationshipReplacements) => Promise<any>;
-  appendRelationships?: (resource: RelationshipReplacements) => Promise<any>;
-  deleteRelationship?: (resource: DeleteInterface) => Promise<any>;
-  deleteRelationships?: (resource: MultiDeleteInterface) => Promise<any>;
+// Memory Store: TODO: separate package
+export interface MemoryStore extends PolygraphStore {
+  replaceResources: (resources: NormalizedResources) => Promise<NormalizedResources>;
 }

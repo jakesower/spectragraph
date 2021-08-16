@@ -1,4 +1,5 @@
 import equals from 'deep-equal';
+export * from './transducers';
 export { equals };
 declare type Ord = number | string | boolean | Date;
 export declare function append<T, U>(xs: T[], ys: U[]): (T | U)[];
@@ -49,6 +50,7 @@ export declare function indexOn(xs: any, keys: any): any;
 export declare function inlineKey<T>(obj: T, keyProp: string): {
     [k: string]: any;
 };
+export declare function keyBy<T>(items: T[], fn: (item: T) => string): Record<string, T>;
 export declare function mapObj<T, U>(obj: {
     [k in string]: T;
 }, fn: (x: T, idx: string) => U): {
