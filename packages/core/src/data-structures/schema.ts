@@ -1,4 +1,4 @@
-import { inlineKey, mapObj } from "@polygraph/utils";
+import { inlineKey, keyByProp, mapObj } from "@polygraph/utils";
 import {
   CompiledSchema,
   CompiledSchemaProperty,
@@ -35,6 +35,7 @@ export function compileSchema(schemaDefinition: Schema): CompiledSchema {
         propertyNamesSet: new Set(Object.keys(properties)),
         relationships,
         relationshipsArray: Object.values(relationships),
+        relationshipsByType: keyByProp(Object.values(relationships), "type"),
         relationshipNames: Object.keys(relationships),
         relationshipNamesSet: new Set(Object.keys(relationships)),
       };

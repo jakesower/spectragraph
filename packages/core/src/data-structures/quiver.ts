@@ -1,4 +1,4 @@
-import { formatRef } from "../utils";
+import { formatRef, toRef } from "../utils";
 import { ResourceRef } from "../types";
 
 /**
@@ -40,6 +40,8 @@ export interface Quiver {
   addedNodes: Record<string, Node>;
   removedNodes: Record<string, NodeRef>;
   touchedNodes: Record<string, NodeRef>;
+  isAdded: (ref: ResourceRef) => boolean;
+  isRemoved: (ref: ResourceRef) => boolean;
   // addedArrows: Record<string, Arrow>;
   // removedArrows: Record<string, Arrow>;
   // arrowsBySourceAndLabel: Record<string, Set<string>>;
@@ -68,6 +70,7 @@ export function makeQuiver(): Quiver {
   const addedNodes: Record<string, Node> = {};
   const removedNodes: Record<string, NodeRef> = {};
   const touchedNodes: Record<string, NodeRef> = {};
+  const labelsByType: Record<string, Set<string>> = {};
 
   // internal -- some accessed by getters (plz let there be Records/Tuples soon...)
   const arrowGroups: Set<string> = new Set();
@@ -207,9 +210,12 @@ export function makeQuiver(): Quiver {
     addedArrows[key] = arrow;
     nodesWithExtantArrows.add(sourceKey);
     nodesWithExtantArrows.add(targetKey);
+    labelsByType[arrow.source.type] = labelsByType[arrow.source.type]
+      ? labelsByType[arrow.source.type].add(arrow.label)
+      : new Set([arrow.label]);
     addedArrowsBySourceAndLabel[groupKey] = addedArrowsBySourceAndLabel[groupKey]
-      ? [...addedArrowsBySourceAndLabel[groupKey], arrow.target]
-      : [arrow.target];
+      ? [...addedArrowsBySourceAndLabel[groupKey], toRef(arrow.target)]
+      : [toRef(arrow.target)];
   };
 
   const removeArrow = (arrow: Arrow): void => {
@@ -221,19 +227,22 @@ export function makeQuiver(): Quiver {
     touchNode(arrow.source);
     removedArrows[key] = arrow;
     removedArrowsBySourceAndLabel[groupKey] = removedArrowsBySourceAndLabel[groupKey]
-      ? [...removedArrowsBySourceAndLabel[groupKey], arrow.target]
-      : [arrow.target];
+      ? [...removedArrowsBySourceAndLabel[groupKey], toRef(arrow.target)]
+      : [toRef(arrow.target)];
   };
 
   const setArrowGroup = (source: NodeRef, targets: NodeRef[], label: string): void => {
     const groupKey = makeArrowGroupKey({ source, label });
 
     checkArrowGroupExistingExclusions(source, targets, label);
-    setArrowsBySourceAndLabel[groupKey] = targets;
+    setArrowsBySourceAndLabel[groupKey] = targets.map(toRef);
     targets.forEach((target) => addArrow({ source, target, label }));
 
     arrowGroups.add(groupKey);
   };
+
+  const isAdded = (ref: NodeRef) => makeNodeKey(ref) in removedNodes;
+  const isRemoved = (ref: NodeRef) => makeNodeKey(ref) in removedNodes;
 
   const getAddedArrowsBySourceAndLabel = (source: NodeRef, label: string): NodeRef[] => {
     const groupKey = makeArrowGroupKey({ source, label });
@@ -259,6 +268,8 @@ export function makeQuiver(): Quiver {
     addedNodes,
     removedNodes,
     touchedNodes,
+    isAdded,
+    isRemoved,
     getAddedArrowsBySourceAndLabel,
     getRemovedArrowsBySourceAndLabel,
     getSetArrowsBySourceAndLabel,

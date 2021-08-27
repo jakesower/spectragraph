@@ -1,5 +1,5 @@
 import { CompiledSchema, Resource, ResourceRef } from "../types";
-import { formatRef } from "../utils";
+import { asArray, formatRef } from "../utils";
 import { makeQuiver, Node } from "./quiver";
 
 /**
@@ -7,21 +7,33 @@ import { makeQuiver, Node } from "./quiver";
  * inverses.
  */
 
-export interface ResourceQuiver {
+export interface ResourceQuiverBuilder {
   // useful when constructing
   addResource: (resource: Resource) => void;
   removeResource: (resourceRef: ResourceRef) => void;
-  touchedNodes: Record<string, ResourceRef>;
+}
 
+export interface ResourceQuiverResult {
   // useful as the result
   addedNodes: Record<string, Node>;
+  touchedNodes: Record<string, Node | ResourceRef>;
   removedNodes: Record<string, ResourceRef>;
+  isAdded: (ref: ResourceRef) => boolean;
+  isRemoved: (ref: ResourceRef) => boolean;
   getSetArrowsBySourceAndLabel: (source: ResourceRef, label: string) => ResourceRef[] | undefined;
   getAddedArrowsBySourceAndLabel: (source: ResourceRef, label: string) => ResourceRef[];
   getRemovedArrowsBySourceAndLabel: (source: ResourceRef, label: string) => ResourceRef[];
 }
 
-export function makeResourceQuiver(schema: CompiledSchema): ResourceQuiver {
+export type ResourceQuiverFn = (
+  schema: CompiledSchema,
+  builderFn: (builderFns: ResourceQuiverBuilder) => void
+) => ResourceQuiverResult;
+
+export function makeResourceQuiver(
+  schema: CompiledSchema,
+  builderFn: (builder: ResourceQuiverBuilder) => void,
+): ResourceQuiverResult {
   const quiver = makeQuiver();
 
   const inverseOf = (resourceRef: ResourceRef, relName: string): string => {
@@ -33,7 +45,8 @@ export function makeResourceQuiver(schema: CompiledSchema): ResourceQuiver {
 
   const addResource = (resource: Resource) => {
     quiver.addNode(resource);
-    Object.entries(resource.relationships).forEach(([label, targets]) => {
+    Object.entries(resource.relationships || {}).forEach(([label, baseTargets]) => {
+      const targets = asArray(baseTargets);
       quiver.setArrowGroup(resource, targets, label);
       targets.forEach((target) => {
         const inverse = inverseOf(resource, label);
@@ -48,7 +61,8 @@ export function makeResourceQuiver(schema: CompiledSchema): ResourceQuiver {
     }
 
     quiver.removeNode(resource);
-    Object.entries(resource.relationships).forEach(([label, existingTargets]) => {
+    Object.entries(resource.relationships || {}).forEach(([label, baseExistingTargets]) => {
+      const existingTargets = asArray(baseExistingTargets);
       quiver.setArrowGroup(resource, [], label);
       existingTargets.forEach((existingTarget) => {
         const inverse = inverseOf(resource, label);
@@ -57,9 +71,7 @@ export function makeResourceQuiver(schema: CompiledSchema): ResourceQuiver {
     });
   };
 
-  return {
-    ...quiver,
-    addResource,
-    removeResource,
-  };
+  builderFn({ addResource, removeResource });
+
+  return quiver;
 }

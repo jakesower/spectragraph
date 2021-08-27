@@ -1,5 +1,5 @@
 import equals from 'deep-equal'
-export * from './transducers'
+// export * from './transducers'
 
 export { equals }
 
@@ -199,6 +199,15 @@ export function keyBy<T>(items: T[], fn: (item: T) => string): Record<string, T>
   const l = items.length;
   for (let i = 0; i < l; i += 1) {
     output[fn(items[i])] = items[i];
+  }
+  return output;
+}
+
+export function keyByProp<T, K extends keyof T>(items: T[], key: K): Record<K, T> {
+  const output = {} as Record<K, T>;
+  const l = items.length;
+  for (let i = 0; i < l; i += 1) {
+    output[key] = items[i];
   }
   return output;
 }

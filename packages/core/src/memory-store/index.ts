@@ -1,7 +1,7 @@
 import {
   keyBy, mapObj,
 } from "../../../utils/dist";
-import { makeResourceQuiver, ResourceQuiver } from "../data-structures/resource-quiver";
+import { makeResourceQuiver, ResourceQuiverResult } from "../data-structures/resource-quiver";
 import {
   CompiledSchema,
   ResourceTree,
@@ -14,9 +14,10 @@ import {
   CompiledQuery,
   ResourceRef,
   DataTree,
+  CompiledSchemaRelationship,
 } from "../types";
 import {
-  asArray, compileQuery, convertDataTreeToResourceTree, refsEqual,
+  asArray, compileQuery, convertDataTreeToResourceTree, refsEqual, toRef,
 } from "../utils";
 
 interface MemoryStore extends PolygraphStore {
@@ -45,47 +46,68 @@ function makeEmptyResource(schema: CompiledSchema, type: string, id: string): Re
     type,
     id,
     properties: mapObj(resDef.properties, () => undefined),
-    relationships: mapObj(resDef.relationships, () => []),
+    relationships: mapObj(resDef.relationships, (relDef) => (relDef.cardinality === "one" ? null : [])),
   };
 }
 
+function cardinalize(rels: ResourceRef[], relDef: CompiledSchemaRelationship):
+  ResourceRef | ResourceRef[] {
+  return relDef.cardinality === "one"
+    ? rels.length === 0 ? null : rels[0]
+    : rels;
+}
+
 export async function makeMemoryStore(
-  schema: CompiledSchema, options: MemoryStoreOptions,
+  schema: CompiledSchema,
+  options: MemoryStoreOptions,
 ): Promise<MemoryStore> {
   let store = makeEmptyStore(schema);
 
-  const applyQuiver = (quiver: ResourceQuiver): NormalizedResourceUpdates => {
+  const applyQuiver = (quiver: ResourceQuiverResult): NormalizedResourceUpdates => {
     const affected = makeEmptyStore(schema);
-
-    Object.values(quiver.touchedNodes).forEach(({ type, id }) => {
-      affected[type][id] = store[type][id] || null;
-    });
 
     // first handle removing stuff, then adding it
     // TODO: validate
-    Object.values(quiver.removedNodes).forEach(({ type, id }) => {
-      delete store[type][id];
-      affected[type][id] = null;
-    });
+    Object.values(quiver.touchedNodes).forEach((nodeOrRef) => {
+      const { type, id } = nodeOrRef;
 
-    need to add logic in for updating the relationships of *TOUCHED* nodes!
+      if (quiver.isRemoved(nodeOrRef)) {
+        delete store[type][id];
+        affected[type][id] = null;
+        return;
+      }
 
-    Object.values(quiver.addedNodes).forEach((node) => {
-      const { type, id } = node;
-      const existingRes = store[type][id] || makeEmptyResource(schema, type, id);
-      const nextProps = { ...existingRes.properties, ...node.properties };
+      const existingOrNewRes = store[type][id] || makeEmptyResource(schema, type, id);
 
-      const nextRels = mapObj(existingRes.relationships, (existingRels, label) => {
-        const setRefs = quiver.getSetArrowsBySourceAndLabel(node, label);
-        if (setRefs) return setRefs;
+      // sometimes there are nodes that were identified by the quiver, but could not be marked as
+      // added or deleted--these may have had the rels updated, but never their props
+      const nextProps = ("properties" in nodeOrRef)
+        ? { ...existingOrNewRes.properties, ...nodeOrRef.properties }
+        : existingOrNewRes.properties;
 
-        const addedRefs = quiver.getAddedArrowsBySourceAndLabel(node, label);
-        const removedRefs = quiver.getRemovedArrowsBySourceAndLabel(node, label);
-        const survivingRefs = existingRels.filter(
-          (rel) => !removedRefs.some((removedRef) => refsEqual(rel, removedRef)),
+      // const allRels = ("relationships" in node) ?
+      //   combineRels(existingRes, node.relationships || {})
+      //   : existingRes.relationships;
+
+      const nextRels = mapObj(existingOrNewRes.relationships, (existingRels, label) => {
+        const relDef = schema.resources[type].relationships[label];
+        const normalizedExistingRels = asArray(existingRels);
+        const setRefs = quiver.getSetArrowsBySourceAndLabel(nodeOrRef, label);
+
+        if (setRefs) {
+          return cardinalize(setRefs.map(toRef), relDef);
+        }
+
+        const addedRels = quiver.getAddedArrowsBySourceAndLabel(nodeOrRef, label);
+        const removedRels = quiver.getRemovedArrowsBySourceAndLabel(nodeOrRef, label);
+        const survivingRels = normalizedExistingRels.filter(
+          (rel) => !removedRels.some((removedRef) => refsEqual(rel, removedRef)),
         );
+        // console.log({
+        //   type, id, label, addedRefs, removedRefs, survivingRefs,
+        // });
 
-        return [...survivingRefs, ...addedRefs];
+        return cardinalize([...survivingRels, ...addedRels].map(toRef), relDef);
       });
 
       const nextRes = {
@@ -100,16 +122,15 @@ export async function makeMemoryStore(
   };
 
   const replaceResources = async (updated: NormalizedResourceUpdates) => {
-    // build up a quiver of changes, checking for inconsistencies (mutate for performance)
-    const quiver = makeResourceQuiver(schema);
-
-    Object.entries(updated).forEach(([type, typedResources]) => {
-      Object.entries(typedResources).forEach(([id, updatedRes]) => {
-        if (updatedRes === null) {
-          quiver.removeResource(store[type][id]);
-        } else {
-          quiver.addResource(updatedRes);
-        }
+    const quiver = makeResourceQuiver(schema, ({ addResource, removeResource }) => {
+      Object.entries(updated).forEach(([type, typedResources]) => {
+        Object.entries(typedResources).forEach(([id, updatedRes]) => {
+          if (updatedRes === null) {
+            removeResource(store[type][id]);
+          } else {
+            addResource(updatedRes);
+          }
+        });
       });
     });
 
@@ -124,9 +145,14 @@ export async function makeMemoryStore(
       const resource = store[type][id];
 
       if (!resource) return null;
+      if (subQuery.referencesOnly === true) {
+        return {
+          type, id, relationships: {}, properties: {},
+        };
+      }
 
       const expanededRels = mapObj(subQuery.relationships, (relQuery, relName) => {
-        const rels = resource.relationships[relName];
+        const rels = asArray(resource.relationships[relName]);
         return rels.map((rel) => walk(relQuery, rel));
       });
 
@@ -156,10 +182,13 @@ export async function makeMemoryStore(
       const resource = store[type][id];
 
       if (!resource) return null;
+      if (subQuery.referencesOnly === true) {
+        return { type, id };
+      }
 
-      const expanededRels = mapObj(subQuery.relationships, (relQuery, relName) => {
+      const expandedRels = mapObj(subQuery.relationships, (relQuery, relName) => {
         const relDef = schema.resources[type].relationships[relName];
-        const rels = resource.relationships[relName];
+        const rels = asArray(resource.relationships[relName]);
         const expanded = rels.map((rel) => walk(relQuery, rel));
 
         return relDef.cardinality === "one"
@@ -168,7 +197,7 @@ export async function makeMemoryStore(
       });
 
       return {
-        id, type, ...resource.properties, ...expanededRels,
+        id, type, ...resource.properties, ...expandedRels,
       };
     };
 
@@ -182,9 +211,16 @@ export async function makeMemoryStore(
       .map((res) => walk(compiledQuery, res));
   };
 
-  const replaceStep = (tree: ResourceTree, quiver: ResourceQuiver) => {
-    quiver.addResource(tree);
-    Object.values(tree.relationships).flat().forEach((subTree) => replaceStep(subTree, quiver));
+  const replaceStep = (tree: ResourceTree, addResource) => {
+    addResource(tree);
+
+    if (tree && ("relationships" in tree)) {
+      Object.values(tree.relationships)
+        .flat()
+        .forEach((subTree) => {
+          if ("relationships" in subTree) replaceStep(subTree, addResource);
+        });
+    }
   };
 
   const replaceMany = async (
@@ -192,31 +228,35 @@ export async function makeMemoryStore(
     trees: DataTree[],
     params: QueryParams = {},
   ): Promise<NormalizedResourceUpdates> => {
+    console.log("@#$@#_____");
     const compiledQuery = compileQuery(schema, query);
     const resourceTrees = trees.map(
       (tree) => convertDataTreeToResourceTree(schema, compiledQuery, tree),
     );
-    const quiver = makeResourceQuiver(schema);
+    console.log(resourceTrees);
 
     const topLevelQuery = {
       type: query.type,
       id: null,
       properties: [],
       relationships: {},
+      referencesOnly: true,
     };
-
     const refAsStr = (ref: ResourceRef): string => `${ref.type}-${ref.id}`;
     const topLevelRess = await getWithCompiled(topLevelQuery, params);
-    const possiblyToDelete = keyBy(asArray(topLevelRess), refAsStr);
 
-    resourceTrees.forEach((tree) => {
-      replaceStep(tree, quiver);
-      delete possiblyToDelete[refAsStr(tree)];
+    const quiver = makeResourceQuiver(schema, ({ addResource, removeResource }) => {
+      const possiblyToDelete = keyBy(asArray(topLevelRess), refAsStr);
+
+      resourceTrees.forEach((tree) => {
+        replaceStep(tree, addResource);
+        delete possiblyToDelete[refAsStr(tree)];
+      });
+
+      Object.values(possiblyToDelete).forEach(
+        (res) => { removeResource(store[res.type][res.id]); },
+      );
     });
-
-    Object.values(possiblyToDelete).forEach(
-      (res) => { quiver.removeResource(store[res.type][res.id]); },
-    );
 
     return applyQuiver(quiver);
   };
@@ -225,12 +265,13 @@ export async function makeMemoryStore(
     const compiledQuery = compileQuery(schema, query);
     const resourceTree = convertDataTreeToResourceTree(schema, compiledQuery, tree);
 
-    const quiver = makeResourceQuiver(schema);
-    if (tree === null) {
-      quiver.removeResource(resourceTree);
-    } else {
-      replaceStep(resourceTree, quiver);
-    }
+    const quiver = makeResourceQuiver(schema, ({ addResource, removeResource }) => {
+      if (tree === null) {
+        removeResource(resourceTree);
+      } else {
+        replaceStep(resourceTree, addResource);
+      }
+    });
 
     return applyQuiver(quiver);
   };

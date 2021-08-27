@@ -132,7 +132,8 @@ const grumpyBear = {
     fur_color: "blue",
   },
   relationships: {
-    home: [{ type: "homes", id: "1" }],
+    best_friend: null,
+    home: { type: "homes", id: "1" },
     powers: [{ type: "powers", id: "careBearStare" }],
   },
 };
@@ -144,7 +145,7 @@ const grumpyBearDT = {
   gender: "male",
   belly_badge: "raincloud",
   fur_color: "blue",
-  home: [{ type: "homes", id: "1" }],
+  home: { type: "homes", id: "1" },
   powers: [{ type: "powers", id: "careBearStare" }],
 };
 
@@ -168,12 +169,18 @@ const fullResourceFromRef = (type, id, relOverrides) => (
   fullResource(normalizedData[type][id], relOverrides)
 );
 
-const dataTree = (res, rels = []) => ({
-  type: res.type,
-  id: res.id,
-  ...res.properties,
-  ...pick(res.relationships, rels),
-});
+const dataTree = (res, rels = null) => {
+  const { id, type, properties } = res;
+  const resSchemaDef = schema.resources[type];
+
+  const allRels = rels || resSchemaDef.relationshipNames;
+  return {
+    type,
+    id,
+    ...properties,
+    ...pick(res.relationships, allRels),
+  };
+};
 
 function makeEmptyStore(): NormalizedResources {
   const resources: NormalizedResources = {};
@@ -189,30 +196,34 @@ test.beforeEach(async (t) => {
 test("replaces data en masse with replace", async (t) => {
   const query = {
     type: "bears",
+    // NEXT UP: REL REFS VS EXPANDED RELS
   };
 
-  // , { home: [{ type: "homes", id: "1" }], powers: [{ type: "powers", id: "careBearStare" }] }
   const replaceResult = await t.context.store.replaceMany(query, [grumpyBearDT]);
   const replaceExpected = {
     bears: {
       1: null,
       2: null,
       3: null,
-      4: fullResource(grumpyBear, { home: [], powers: [] }),
+      4: fullResource(grumpyBear, {
+        best_friend: null,
+        home: { type: "homes", id: "1" },
+        powers: [{ type: "powers", id: "careBearStare" }],
+      }),
       5: null,
     },
     homes: {
       1: fullResourceFromRef("homes", "1", {
-        relationships: [{ bears: [{ type: "bears", id: "4" }] }],
+        bears: [{ type: "bears", id: "4" }],
       }),
     },
     powers: {
       careBearStare: fullResourceFromRef("powers", "careBearStare", {
-        relationships: { bears: [{ type: "bears", id: "4" }] },
+        bears: [{ type: "bears", id: "4" }],
       }),
     },
   };
-  // t.deepEqual(replaceResult, replaceExpected);
+  t.deepEqual(replaceResult, replaceExpected);
 
   const getResult = await t.context.store.get({
     type: "bears",

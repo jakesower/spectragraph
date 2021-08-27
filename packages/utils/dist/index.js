@@ -8,16 +8,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-function __export(m) {
-    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
-}
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const deep_equal_1 = __importDefault(require("deep-equal"));
 exports.equals = deep_equal_1.default;
-__export(require("./transducers"));
 function append(xs, ys) {
     return [...xs, ...ys];
 }
@@ -177,6 +173,15 @@ function keyBy(items, fn) {
     return output;
 }
 exports.keyBy = keyBy;
+function keyByProp(items, key) {
+    const output = {};
+    const l = items.length;
+    for (let i = 0; i < l; i += 1) {
+        output[key] = items[i];
+    }
+    return output;
+}
+exports.keyByProp = keyByProp;
 function mapObj(obj, fn) {
     const [keys, vals] = [Object.keys(obj), Object.values(obj)];
     const mappedVals = vals.map((v, idx) => fn(v, keys[idx]));

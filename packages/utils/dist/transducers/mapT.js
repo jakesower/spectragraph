@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-// export function mapT<T, U>((fn: (val: T) => U) => ((next) => U)) {
-function mapT(fn) {
-    return (val, next) => next(fn(val));
-}
-exports.mapT = mapT;
+// import { Transducer } from "./transduce";
+// export function mapT<T, U, V>(fn: (val: T) => U): Transducer<T, U, V> {
+//   return (val: T, next: (nextVal: U) => V[]): V[] => next(fn(val));
+// }

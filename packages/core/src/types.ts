@@ -1,4 +1,4 @@
-/* eslint-disable max-len */
+/* eslint-disable max-len, no-use-before-define */
 
 // Data
 export interface ResourceRef {
@@ -8,12 +8,19 @@ export interface ResourceRef {
 
 export interface Resource extends ResourceRef {
   properties: Record<string, unknown>;
-  relationships: Record<string, ResourceRef[]>;
+  relationships: Record<string, ResourceRef | ResourceRef[]>;
 }
 
-export interface ResourceTree extends Resource {
+export interface ResourceTreeRef extends ResourceRef {
+  properties: Record<string, never>;
+  relationships: Record<string, never>;
+}
+
+export interface ExpandedResourceTree extends Resource {
   relationships: Record<string, ResourceTree[]>;
 }
+
+export type ResourceTree = ResourceTreeRef | ExpandedResourceTree;
 
 export type NormalizedResources = Record<string, Record<string, Resource>>;
 export type NormalizedResourceUpdates = Record<string, Record<string, Resource | null>>;
@@ -76,6 +83,7 @@ export interface CompiledSchemaResource extends SchemaResource {
   propertyNamesSet: Set<string>;
   relationships: { [k: string]: CompiledSchemaRelationship };
   relationshipsArray: CompiledSchemaRelationship[];
+  relationshipsByType: Record<string, CompiledSchemaRelationship>;
   relationshipNames: string[];
   relationshipNamesSet: Set<string>;
 }
@@ -95,6 +103,7 @@ export interface QueryParams {
 export interface QueryRelationship {
   properties?: string[];
   relationships?: Record<string, QueryRelationship>;
+  referencesOnly?: boolean;
   params?: Record<string, QueryParams>;
 }
 
@@ -102,23 +111,33 @@ export interface Query {
   id?: string;
   type: string;
   properties?: string[];
+  referencesOnly?: boolean;
   relationships?: Record<string, QueryRelationship>;
   params?: Record<string, QueryParams>;
 }
 
-export type CompiledQuery = {
-  id: string | null; // it's a PITA not to have this
+type CompiledExpandedQuery = {
+  id: string | null;
   type: string;
   properties: string[];
+  referencesOnly: false;
   relationships: Record<string, CompiledQuery>;
 }
+
+type CompiledRefQuery = {
+  id: string | null;
+  type: string;
+  referencesOnly: true;
+}
+
+export type CompiledQuery = CompiledExpandedQuery | CompiledRefQuery;
 
 // Store -- TODO: deal with wrapping/unwrapping the DataTree <-> ResourceTree
 export interface PolygraphStore {
   // TODO: distinguish queries returning one vs many results
   get: (query: Query, params?: QueryParams) => Promise<DataTree | DataTree[]>;
-  replaceOne: (query: Query, tree: DataTree, params?: QueryParams) => Promise<NormalizedResourceUpdates>;
-  replaceMany: (query: Query, trees: DataTree[], params?: QueryParams) => Promise<NormalizedResourceUpdates>;
+  replaceOne: (query: Query, tree: DataTree, params?: QueryParams) => Promise<NormalizedResources>;
+  replaceMany: (query: Query, trees: DataTree[], params?: QueryParams) => Promise<NormalizedResources>;
 }
 
 // Memory Store: TODO: separate package
