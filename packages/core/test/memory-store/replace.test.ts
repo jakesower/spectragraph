@@ -23,7 +23,7 @@ const normalizedData = {
         fur_color: "tan",
       },
       relationships: {
-        home: [{ type: "homes", id: "1" }],
+        home: { type: "homes", id: "1" },
         powers: [{ type: "powers", id: "careBearStare" }],
       },
     },
@@ -37,9 +37,9 @@ const normalizedData = {
         fur_color: "carnation pink",
       },
       relationships: {
-        home: [{ type: "homes", id: "1" }],
+        home: { type: "homes", id: "1" },
         powers: [{ type: "powers", id: "careBearStare" }],
-        best_friend: [{ type: "bears", id: "3" }],
+        best_friend: { type: "bears", id: "3" },
       },
     },
     3: {
@@ -52,9 +52,9 @@ const normalizedData = {
         fur_color: "turquoise",
       },
       relationships: {
-        home: [{ type: "homes", id: "1" }],
+        home: { type: "homes", id: "1" },
         powers: [{ type: "powers", id: "careBearStare" }],
-        best_friend: [{ type: "bears", id: "2" }],
+        best_friend: { type: "bears", id: "2" },
       },
     },
     5: {
@@ -67,7 +67,7 @@ const normalizedData = {
         fur_color: "pink",
       },
       relationships: {
-        home: [],
+        home: null,
         powers: [{ type: "powers", id: "careBearStare" }],
       },
     },
@@ -231,30 +231,49 @@ test("replaces data en masse with replace", async (t) => {
   t.deepEqual(getResult, [dataTree(grumpyBear)]);
 });
 
-// test.skip("replaces a one-to-one relationship", async (t) => {
-//   await t.context.store.replaceRelationship({
-//     type: "bears",
-//     id: "2",
-//     relationship: "home",
-//     foreignId: "2",
-//   });
+test.only("replaces a one-to-one relationship", async (t) => {
+  const replaceResult = await t.context.store.replaceOne(
+    {
+      type: "bears",
+      id: "2",
+      relationships: { home: {} },
+    },
+    { type: "bears", id: "2", home: { type: "homes", id: "2" } },
+  );
 
-//   const bearResult = await t.context.store.get({
-//     type: "bears",
-//     id: "2",
-//     relationships: { home: {} },
-//   });
+  const replaceExpected = {
+    bears: {
+      2: fullResourceFromRef("bears", "2",
+        { home: { type: "homes", id: "2" } }),
+    },
+    homes: {
+      1: fullResourceFromRef("homes", "1", {
+        bears: [{ type: "bears", id: "1" }, { type: "bears", id: "3" }],
+      }),
+      2: fullResourceFromRef("homes", "2", {
+        bears: [{ type: "bears", id: "2" }],
+      }),
+    },
+    powers: {},
+  };
+  t.deepEqual(replaceResult, replaceExpected);
 
-//   t.is(bearResult.relationships.home.attributes.name, "Forest of Feelings");
+  // const bearResult = await t.context.store.get({
+  //   type: "bears",
+  //   id: "2",
+  //   relationships: { home: {} },
+  // });
 
-//   const careALotResult = await t.context.store.get({
-//     type: "homes",
-//     id: "1",
-//     relationships: { bears: {} },
-//   });
+  // t.is(bearResult.home.name, "Forest of Feelings");
 
-//   t.is(careALotResult.relationships.bears.length, 2);
-// });
+  // const careALotResult = await t.context.store.get({
+  //   type: "homes",
+  //   id: "1",
+  //   relationships: { bears: {} },
+  // });
+
+  // t.is(careALotResult.relationships.bears.length, 2);
+});
 
 // test.skip("replaces a one-to-many-relationship", async (t) => {
 //   await t.context.store.replaceRelationships({

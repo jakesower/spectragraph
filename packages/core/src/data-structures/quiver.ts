@@ -1,4 +1,4 @@
-import { formatRef, toRef } from "../utils";
+import { formatRef, refsEqual, toRef } from "../utils";
 import { ResourceRef } from "../types";
 
 /**
@@ -6,14 +6,19 @@ import { ResourceRef } from "../types";
  * and arrows created by assertions. It is meant to be mutated, preferably
  * within a single function. It functions relatively transparently, with each
  * method having a corresponding value in the state, e.g.,
- * addNode<->addedNodes. The utility is in the validation.
+ * assertNode<->assertedNodes. The utility is in the validation.
  */
 
 type NodeRef = ResourceRef;
 type NodeProps = Record<string, unknown>;
+type NodeRefString = string;
 
 export interface Node extends NodeRef {
   properties: NodeProps;
+}
+
+interface NodeWithState extends Node {
+  state: "asserted" | "related" | "retracted";
 }
 
 interface Arrow {
@@ -28,26 +33,20 @@ interface ArrowLike {
   label: string;
 }
 
+// type ArrowChanges = { hasChanges: false } | { hasChanges: true, present: NodeRef[] };
+
 export interface Quiver {
   // useful when constructing
-  addNode: (node: Node) => void;
-  removeNode: (nodeRef: NodeRef) => void;
-  addArrow: (arrow: Arrow) => void;
-  removeArrow: (arrow: Arrow) => void;
-  setArrowGroup: (source: NodeRef, targets: NodeRef[], label: string) => void;
+  assertNode: (node: Node) => void;
+  retractNode: (nodeRef: NodeRef) => void;
+  assertArrow: (arrow: Arrow) => void;
+  retractArrow: (arrow: Arrow) => void;
+  markArrow: (arrow: Arrow) => void;
+  assertArrowGroup: (source: NodeRef, targets: NodeRef[], label: string) => void;
 
   // useful as the result
-  addedNodes: Record<string, Node>;
-  removedNodes: Record<string, NodeRef>;
-  touchedNodes: Record<string, NodeRef>;
-  isAdded: (ref: ResourceRef) => boolean;
-  isRemoved: (ref: ResourceRef) => boolean;
-  // addedArrows: Record<string, Arrow>;
-  // removedArrows: Record<string, Arrow>;
-  // arrowsBySourceAndLabel: Record<string, Set<string>>;
-  getSetArrowsBySourceAndLabel: (source: ResourceRef, label: string) => NodeRef[] | undefined;
-  getAddedArrowsBySourceAndLabel: (source: ResourceRef, label: string) => NodeRef[];
-  getRemovedArrowsBySourceAndLabel: (source: ResourceRef, label: string) => NodeRef[];
+  getArrows: (ref: NodeRef) => Record<string, NodeRef[]>;
+  getNodes: () => Map<NodeRef, (null | Node | NodeRef)>;
 }
 
 // ideally these can be replaced by Records/Tuples in upcoming ECMA scripts
@@ -65,21 +64,28 @@ const makeArrowGroupKey = (arrow) => JSON.stringify([
   arrow.label,
 ]);
 
+const readNodeKey = (key: string): NodeRef => {
+  const [type, id] = JSON.parse(key);
+  return { type, id };
+};
+
 export function makeQuiver(): Quiver {
   // exported
-  const addedNodes: Record<string, Node> = {};
-  const removedNodes: Record<string, NodeRef> = {};
-  const touchedNodes: Record<string, NodeRef> = {};
+  const assertedNodes: Record<string, Node> = {};
+  const retractedNodes: Record<string, NodeRef> = {};
+  const touchedNodes: Set<string> = new Set();
+  const nodes: Record<string, NodeWithState>;
   const labelsByType: Record<string, Set<string>> = {};
 
   // internal -- some accessed by getters (plz let there be Records/Tuples soon...)
   const arrowGroups: Set<string> = new Set();
   const nodesWithExtantArrows: Set<string> = new Set();
-  const addedArrows: Record<string, Arrow> = {};
-  const removedArrows: Record<string, Arrow> = {};
+  const assertedArrows: Record<string, Arrow> = {};
+  const retractedArrows: Record<string, Arrow> = {};
+  const extantArrows: Record<string, Record<string, Set<NodeRefString>>> = {}; // source -> label
   const setArrowsBySourceAndLabel: Record<string, NodeRef[]> = {};
-  const addedArrowsBySourceAndLabel: Record<string, NodeRef[]> = {};
-  const removedArrowsBySourceAndLabel: Record<string, NodeRef[]> = {};
+  const assertedArrowsBySourceAndLabel: Record<string, NodeRef[]> = {};
+  const retractedArrowsBySourceAndLabel: Record<string, NodeRef[]> = {};
 
   const relStr = (arrow: ArrowLike) => {
     const { source, target, label } = arrow;
@@ -92,7 +98,7 @@ export function makeQuiver(): Quiver {
   // checks
   const checkConflictingKeys = (node) => {
     const key = makeNodeKey(node);
-    const existing = addedNodes[key];
+    const existing = assertedNodes[key];
 
     if (existing) {
       const diff = Object.keys(node.properties)
@@ -108,28 +114,28 @@ export function makeQuiver(): Quiver {
 
   const checkNodeNotAdded = (node) => {
     const key = makeNodeKey(node);
-    if (key in addedNodes) {
+    if (key in assertedNodes) {
       throw new Error(`${formatRef(node)} is marked as both created and removed`);
     }
   };
 
   const checkNodeNotRemoved = (node) => {
     const key = makeNodeKey(node);
-    if (key in removedNodes) {
+    if (key in retractedNodes) {
       throw new Error(`${formatRef(node)} is marked as both created and removed`);
     }
   };
 
   const checkArrowNotAdded = (arrow) => {
     const key = makeArrowKey(arrow);
-    if (key in addedArrows) {
+    if (key in assertedArrows) {
       throw new Error(`${relStr(arrow)} is marked as both created and removed`);
     }
   };
 
   const checkArrowNotRemoved = (arrow) => {
     const key = makeArrowKey(arrow);
-    if (key in removedArrows) {
+    if (key in retractedArrows) {
       throw new Error(`${relStr(arrow)} is marked as both created and removed`);
     }
   };
@@ -138,7 +144,7 @@ export function makeQuiver(): Quiver {
     const key = makeArrowKey(arrow);
     const groupKey = makeArrowGroupKey(arrow);
 
-    if (arrowGroups.has(groupKey) && !(key in addedArrows)) {
+    if (arrowGroups.has(groupKey) && !(key in assertedArrows)) {
       throw new Error(`${formatRef(arrow.source)} had a complete set of relationships set, but ${relStr(arrow)} was added as well`);
     }
   };
@@ -165,36 +171,49 @@ export function makeQuiver(): Quiver {
     }
   };
 
-  const touchNode = (ref: ResourceRef) => {
-    touchedNodes[makeNodeKey(ref)] = ref;
+  const touchNode = (ref: NodeRef) => {
+    touchedNodes.add(makeNodeKey(ref));
   };
 
-  const addNode = (node: Node): void => {
+  const assertNode = (node: Node): void => {
     const key = makeNodeKey(node);
-    const existing = addedNodes[key];
+    const existing = assertedNodes[key];
 
     checkNodeNotRemoved(node);
     checkConflictingKeys(node);
 
     const existingProps = existing ? existing.properties : {};
-    addedNodes[key] = {
+    assertedNodes[key] = {
       ...node,
       properties: { ...node.properties, ...existingProps },
     };
     touchNode(node);
   };
 
-  const removeNode = (nodeRef: NodeRef): void => {
+  const retractNode = (nodeRef: NodeRef): void => {
     const key = makeNodeKey(nodeRef);
 
     checkNodeNotAdded(nodeRef);
     checkNoConnectingArrows(nodeRef);
 
     touchNode(nodeRef);
-    removedNodes[key] = nodeRef;
+    retractedNodes[key] = nodeRef;
   };
 
-  const addArrow = (arrow: Arrow): void => {
+  const touchArrow = (arrow: Arrow): void => {
+    const { source, target, label } = arrow;
+    const sourceKey = makeNodeKey(source);
+    const targetRef = makeNodeKey(target);
+
+    touchNode(source);
+    touchNode(target);
+    extantArrows[sourceKey] = extantArrows[sourceKey] || {};
+    extantArrows[sourceKey][label] = extantArrows[sourceKey][label]
+      ? extantArrows[sourceKey][label].add(targetRef)
+      : new Set([targetRef]);
+  };
+
+  const assertArrow = (arrow: Arrow): void => {
     const key = makeArrowKey(arrow);
     const groupKey = makeArrowGroupKey(arrow);
     const sourceKey = makeNodeKey(arrow.source);
@@ -203,31 +222,30 @@ export function makeQuiver(): Quiver {
     checkArrowNotRemoved(arrow);
     checkArrowGroupExclusions(arrow);
 
-    addNode({ ...arrow.source, properties: {} }); // checks endpoint existence
-    addNode({ ...arrow.target, properties: {} }); // checks endpoint existence
-    touchNode(arrow.source);
-    touchNode(arrow.target);
-    addedArrows[key] = arrow;
+    assertNode({ ...arrow.source, properties: {} }); // checks endpoint existence
+    assertNode({ ...arrow.target, properties: {} }); // checks endpoint existence
+    touchArrow(arrow);
+    assertedArrows[key] = arrow;
     nodesWithExtantArrows.add(sourceKey);
     nodesWithExtantArrows.add(targetKey);
     labelsByType[arrow.source.type] = labelsByType[arrow.source.type]
       ? labelsByType[arrow.source.type].add(arrow.label)
       : new Set([arrow.label]);
-    addedArrowsBySourceAndLabel[groupKey] = addedArrowsBySourceAndLabel[groupKey]
-      ? [...addedArrowsBySourceAndLabel[groupKey], toRef(arrow.target)]
+    assertedArrowsBySourceAndLabel[groupKey] = assertedArrowsBySourceAndLabel[groupKey]
+      ? [...assertedArrowsBySourceAndLabel[groupKey], toRef(arrow.target)]
       : [toRef(arrow.target)];
   };
 
-  const removeArrow = (arrow: Arrow): void => {
+  const retractArrow = (arrow: Arrow): void => {
     const key = makeArrowKey(arrow);
     const groupKey = makeArrowGroupKey(arrow);
 
     checkArrowNotAdded(arrow);
 
-    touchNode(arrow.source);
-    removedArrows[key] = arrow;
-    removedArrowsBySourceAndLabel[groupKey] = removedArrowsBySourceAndLabel[groupKey]
-      ? [...removedArrowsBySourceAndLabel[groupKey], toRef(arrow.target)]
+    touchArrow(arrow);
+    retractedArrows[key] = arrow;
+    retractedArrowsBySourceAndLabel[groupKey] = retractedArrowsBySourceAndLabel[groupKey]
+      ? [...retractedArrowsBySourceAndLabel[groupKey], toRef(arrow.target)]
       : [toRef(arrow.target)];
   };
 
@@ -236,42 +254,98 @@ export function makeQuiver(): Quiver {
 
     checkArrowGroupExistingExclusions(source, targets, label);
     setArrowsBySourceAndLabel[groupKey] = targets.map(toRef);
-    targets.forEach((target) => addArrow({ source, target, label }));
+    targets.forEach((target) => assertArrow({ source, target, label }));
 
     arrowGroups.add(groupKey);
   };
 
-  const isAdded = (ref: NodeRef) => makeNodeKey(ref) in removedNodes;
-  const isRemoved = (ref: NodeRef) => makeNodeKey(ref) in removedNodes;
+  const isAdded = (ref: NodeRef) => makeNodeKey(ref) in retractedNodes;
+  const isRemoved = (ref: NodeRef) => makeNodeKey(ref) in retractedNodes;
 
-  const getAddedArrowsBySourceAndLabel = (source: NodeRef, label: string): NodeRef[] => {
-    const groupKey = makeArrowGroupKey({ source, label });
-    return addedArrowsBySourceAndLabel[groupKey] || [];
+  // Return outgoing arrows on a per-label basis, but only for those that have changed
+  const getChangedArrows = (source: NodeRef): Record<string, NodeRef[]> => {
+    // Let A = Asserted, R = Retracted, S = Set, T = Touched, E = Extant
+    // Let AS = (if (S = ∅) then A else S), then A ⊆ AS, S ⊆ AS, AS ∩ R = ∅
+    // changes have been made if (T − AS) ∪ R ≠ ∅ or (AS ∩ T) ∪ R ≠ ∅
+    // more succinctly, (A ∩ T) ∪ (S ∩ T) ∪ R ≠ ∅,
+    // more plainly, changes have been made if (A ∩ T), (S ∩ T), or R is not empty
+    // alternatively, (A − E) ∪ (S − E) ∪ R ≠ ∅, implying change to (A − E), (S − E) or R
+    // further, A ⊆ T, so (S − T) ⊆ (A − T), so no need to check for (S − T)
+    // |A| ≠ |T|, then changes must have been made
+    // if |A| = |T|, then |R| = 0 or changes have been made
+
+    // Added = AS
+    // Removed = R ∪ (T − S)
+    // Present = if S then S else
+    //           if Rest then (T ∪ A) - R else (A ∪ (T − R))
+    // TODO: Rest
+    // Everything else is ignored or an error dealt with elsewhere
+    const sourceKey = makeNodeKey(source);
+
+    if (!extantArrows[sourceKey]) {
+      return {};
+    }
+
+    const output = {} as Record<string, NodeRef[]>;
+    Object.entries(extantArrows[sourceKey]).forEach(([label, rawTouched]) => {
+      const groupKey = makeArrowGroupKey({ source, label });
+
+      // TODO: affirm uniqueness -- I NEED RECORDS AND TUPLES DAMMIT!
+      const touched = [...rawTouched].map(readNodeKey) as NodeRef[];
+      const asserted = assertedArrowsBySourceAndLabel[groupKey] || [];
+      const retracted = retractedArrowsBySourceAndLabel[groupKey] || [];
+      const set = setArrowsBySourceAndLabel[groupKey] || [];
+      console.log({
+        source, touched, asserted, retracted, set,
+      });
+      if (retracted.length > 0 || asserted.length > touched.length) {
+        // console.log("enh?", source, { asserted, set })
+        if (set.length > 0) {
+          output[label] = set;
+        } else {
+          const surviving = Array.from(touched)
+            .filter((touchedRef) => !retracted.some((setRef) => refsEqual(touchedRef, setRef)));
+
+          output[label] = [...asserted, ...surviving]; 4;
+        }
+      }
+    });
+
+    return output;
   };
 
-  const getRemovedArrowsBySourceAndLabel = (source: NodeRef, label: string): NodeRef[] => {
-    const groupKey = makeArrowGroupKey({ source, label });
-    return removedArrowsBySourceAndLabel[groupKey] || [];
-  };
+  // These are any nodes referenced anywhere in the quiver
+  const getNodes = (): Map<NodeRef, (null | Node | NodeRef)> => {
+    const output = new Map();
 
-  const getSetArrowsBySourceAndLabel = (source: NodeRef, label: string): NodeRef[] => {
-    const groupKey = makeArrowGroupKey({ source, label });
-    return setArrowsBySourceAndLabel[groupKey];
+    // eslint-disable-next-line no-restricted-syntax
+    for (const touchedNodeKey of touchedNodes) {
+      const nodeRef = readNodeKey(touchedNodeKey);
+      const value = assertedNodes[touchedNodeKey]
+        ? assertedNodes[touchedNodeKey]
+        : retractedNodes[touchedNodeKey]
+          ? null
+          : nodeRef;
+
+      output.set(nodeRef, value);
+    }
+
+    return output;
   };
 
   return {
-    addNode,
-    removeNode,
-    addArrow,
-    removeArrow,
+    assertNode,
+    retractNode,
+    assertArrow,
+    retractArrow,
     setArrowGroup,
-    addedNodes,
-    removedNodes,
+    assertedNodes,
+    retractedNodes,
     touchedNodes,
     isAdded,
     isRemoved,
-    getAddedArrowsBySourceAndLabel,
-    getRemovedArrowsBySourceAndLabel,
-    getSetArrowsBySourceAndLabel,
+    getChangedArrows,
+    getNodes,
+    touchArrow,
   };
 }

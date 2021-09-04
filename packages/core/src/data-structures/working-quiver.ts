@@ -61,9 +61,9 @@ interface ChangesObject {
 }
 
 export interface WorkingQuiverType {
-  addNode: (node: Node) => void;
+  assertNode: (node: Node) => void;
   deleteNode: (node: Node, existingArrows: Arrow[]) => void;
-  addArrow: (arrow: Arrow) => void;
+  assertArrow: (arrow: Arrow) => void;
   deleteArrow: (arrow: Arrow) => void;
   setOutgoingArrows: (
     sourceNode: NodeRef,
@@ -106,7 +106,7 @@ export class WorkingQuiver implements WorkingQuiverType {
     this.completeOutgoingArrows = new Set();
   }
 
-  addNode(node: Node): void {
+  assertNode(node: Node): void {
     const { type, id, properties } = node;
     const key = makeNodeKey(type, id);
     const existingNode = this.nodes[key];
@@ -188,7 +188,7 @@ export class WorkingQuiver implements WorkingQuiverType {
     });
   }
 
-  addArrow(arrow: Arrow): void {
+  assertArrow(arrow: Arrow): void {
     const { source, target, label } = arrow;
     const key = makeArrowKey(arrow);
     const relDef = this.schema.resources[source.type].relationships[label];

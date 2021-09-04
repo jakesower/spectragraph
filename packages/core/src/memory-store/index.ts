@@ -15,9 +15,12 @@ import {
   ResourceRef,
   DataTree,
   CompiledSchemaRelationship,
+  GetFn,
+  QueryWithoutId,
+  QueryWithId,
 } from "../types";
 import {
-  asArray, compileQuery, convertDataTreeToResourceTree, refsEqual, toRef,
+  asArray, compileQuery, convertDataTreeToResourceTree, toRef,
 } from "../utils";
 
 interface MemoryStore extends PolygraphStore {
@@ -68,10 +71,11 @@ export async function makeMemoryStore(
 
     // first handle removing stuff, then adding it
     // TODO: validate
-    Object.values(quiver.touchedNodes).forEach((nodeOrRef) => {
-      const { type, id } = nodeOrRef;
+    // eslint-disable-next-line no-restricted-syntax
+    for (const [ref, value] of quiver.getResources()) {
+      const { type, id } = ref;
 
-      if (quiver.isRemoved(nodeOrRef)) {
+      if (value == null) {
         delete store[type][id];
         affected[type][id] = null;
         return;
@@ -81,54 +85,50 @@ export async function makeMemoryStore(
 
       // sometimes there are nodes that were identified by the quiver, but could not be marked as
       // added or deleted--these may have had the rels updated, but never their props
-      const nextProps = ("properties" in nodeOrRef)
-        ? { ...existingOrNewRes.properties, ...nodeOrRef.properties }
+      const nextProps = ("properties" in value)
+        ? { ...existingOrNewRes.properties, ...value.properties }
         : existingOrNewRes.properties;
 
-      // const allRels = ("relationships" in node) ?
-      //   combineRels(existingRes, node.relationships || {})
-      //   : existingRes.relationships;
+      const hasPropChanges = ("properties" in value)
+        && Object.entries(value.properties)
+          .some(([name, newValue]) => existingOrNewRes[name] !== newValue);
 
-      const nextRels = mapObj(existingOrNewRes.relationships, (existingRels, label) => {
-        const relDef = schema.resources[type].relationships[label];
-        const normalizedExistingRels = asArray(existingRels);
-        const setRefs = quiver.getSetArrowsBySourceAndLabel(nodeOrRef, label);
+      const changedRelationships = quiver.getChangedRelationships(ref);
+      const hasRelChanges = Object.keys(changedRelationships).length > 0;
 
-        if (setRefs) {
-          return cardinalize(setRefs.map(toRef), relDef);
-        }
+      // console.log({changedRelationships, ref, value})
 
-        const addedRels = quiver.getAddedArrowsBySourceAndLabel(nodeOrRef, label);
-        const removedRels = quiver.getRemovedArrowsBySourceAndLabel(nodeOrRef, label);
-        const survivingRels = normalizedExistingRels.filter(
-          (rel) => !removedRels.some((removedRef) => refsEqual(rel, removedRef)),
-        );
-        // console.log({
-        //   type, id, label, addedRefs, removedRefs, survivingRefs,
-        // });
+      const changedRels = mapObj(changedRelationships, (newRels, relType) => {
+        const relDef = schema.resources[type].relationships[relType];
 
-        return cardinalize([...survivingRels, ...addedRels].map(toRef), relDef);
+        return cardinalize(newRels.map(toRef), relDef);
       });
 
       const nextRes = {
-        type, id, properties: nextProps, relationships: nextRels,
+        type,
+        id,
+        properties: nextProps,
+        relationships: { ...existingOrNewRes.relationships, ...changedRels },
       };
 
-      store[type][id] = nextRes;
-      affected[type][id] = nextRes;
-    });
+      if (hasPropChanges || hasRelChanges) {
+        store[type][id] = nextRes;
+        affected[type][id] = nextRes;
+      }
+    }
 
+    // eslint-disable-next-line consistent-return
     return affected;
   };
 
   const replaceResources = async (updated: NormalizedResourceUpdates) => {
-    const quiver = makeResourceQuiver(schema, ({ addResource, removeResource }) => {
+    const quiver = makeResourceQuiver(schema, ({ assertResource, retractResource }) => {
       Object.entries(updated).forEach(([type, typedResources]) => {
         Object.entries(typedResources).forEach(([id, updatedRes]) => {
           if (updatedRes === null) {
-            removeResource(store[type][id]);
+            retractResource(store[type][id]);
           } else {
-            addResource(updatedRes);
+            assertResource(updatedRes);
           }
         });
       });
@@ -174,7 +174,7 @@ export async function makeMemoryStore(
       .map((res) => walk(compiledQuery, res));
   };
 
-  const get = async (query: Query, params: QueryParams = {}): Promise<DataTree | DataTree[]> => {
+  const get = ((query: QueryWithoutId | QueryWithId, params: QueryParams = {}) => {
     const compiledQuery = compileQuery(schema, query);
 
     const walk = (subQuery: CompiledQuery, ref: ResourceRef): DataTree => {
@@ -201,24 +201,37 @@ export async function makeMemoryStore(
       };
     };
 
-    if (query.id) {
-      return walk(compiledQuery, compiledQuery);
+    if ("id" in query) {
+      const out = Promise.resolve(walk(compiledQuery, compiledQuery));
+      return out;
     }
 
     // TODO: transduce - lol typescript (could it somehow piggy back on pipe?)
-    return Object.values(store[query.type])
+    const results = Object.values(store[query.type])
       .filter(() => true)
       .map((res) => walk(compiledQuery, res));
-  };
 
-  const replaceStep = (tree: ResourceTree, addResource) => {
-    addResource(tree);
+    const out = Promise.resolve(results);
+    return out;
+  }) as GetFn;
+
+  const replaceStep = (tree: ResourceTree, { assertResource, touchRelationship }) => {
+    assertResource(tree);
 
     if (tree && ("relationships" in tree)) {
-      Object.values(tree.relationships)
-        .flat()
-        .forEach((subTree) => {
-          if ("relationships" in subTree) replaceStep(subTree, addResource);
+      Object.entries(tree.relationships)
+        .forEach(([relType, rels]) => {
+          rels.forEach((subTree) => {
+            if ("relationships" in subTree) replaceStep(subTree, { assertResource, touchRelationship });
+          });
+
+          const existing = store[tree.type][tree.id];
+
+          // console.log({ existing, tree })
+          if (existing?.relationships[relType]) {
+            asArray(existing.relationships[relType])
+              .forEach((related) => touchRelationship(relType, existing, related));
+          }
         });
     }
   };
@@ -233,7 +246,6 @@ export async function makeMemoryStore(
     const resourceTrees = trees.map(
       (tree) => convertDataTreeToResourceTree(schema, compiledQuery, tree),
     );
-    console.log(resourceTrees);
 
     const topLevelQuery = {
       type: query.type,
@@ -245,16 +257,16 @@ export async function makeMemoryStore(
     const refAsStr = (ref: ResourceRef): string => `${ref.type}-${ref.id}`;
     const topLevelRess = await getWithCompiled(topLevelQuery, params);
 
-    const quiver = makeResourceQuiver(schema, ({ addResource, removeResource }) => {
+    const quiver = makeResourceQuiver(schema, (quiverMethods) => {
       const possiblyToDelete = keyBy(asArray(topLevelRess), refAsStr);
 
       resourceTrees.forEach((tree) => {
-        replaceStep(tree, addResource);
+        replaceStep(tree, quiverMethods);
         delete possiblyToDelete[refAsStr(tree)];
       });
 
       Object.values(possiblyToDelete).forEach(
-        (res) => { removeResource(store[res.type][res.id]); },
+        (res) => { quiverMethods.retractResource(store[res.type][res.id]); },
       );
     });
 
@@ -262,14 +274,15 @@ export async function makeMemoryStore(
   };
 
   const replaceOne = async (query: Query, tree: DataTree) => {
+    console.log("@#$@#___########__");
     const compiledQuery = compileQuery(schema, query);
     const resourceTree = convertDataTreeToResourceTree(schema, compiledQuery, tree);
 
-    const quiver = makeResourceQuiver(schema, ({ addResource, removeResource }) => {
+    const quiver = makeResourceQuiver(schema, (quiverMethods) => {
       if (tree === null) {
-        removeResource(resourceTree);
+        quiverMethods.retractResource(resourceTree);
       } else {
-        replaceStep(resourceTree, addResource);
+        replaceStep(resourceTree, quiverMethods);
       }
     });
 

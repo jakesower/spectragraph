@@ -65,7 +65,7 @@ export function compileQuery(schema: CompiledSchema, query: Query): CompiledQuer
     );
 
     return {
-      id: query.id || null, // sus
+      id: ("id" in query) ? query.id : null, // sus
       type,
       properties,
       referencesOnly: false,
