@@ -48,7 +48,7 @@ export async function makeReplace(schema: Schema, store: CrudStore): MergeFn {
       ) as { [k: string]: Tree | Tree[] };
 
       // set node/arrows for this
-      quiver.addNode({ type, id, properties });
+      quiver.assertNode({ type, id, properties });
       Object.entries(relationships).forEach(([relName, relValue]) => {
         const source = { type, id };
         const existingTargets = existingNode.attributes[relName] as string | string[];

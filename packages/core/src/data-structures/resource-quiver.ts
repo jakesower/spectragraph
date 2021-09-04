@@ -7,22 +7,27 @@ import { makeQuiver, Node } from "./quiver";
  * inverses.
  */
 
+type RelationshipChanges = { hasChanges: false } | { hasChanges: true, present: ResourceRef[] };
+
 export interface ResourceQuiverBuilder {
   // useful when constructing
-  addResource: (resource: Resource) => void;
-  removeResource: (resourceRef: ResourceRef) => void;
+  assertResource: (resource: Resource) => void;
+  retractResource: (resourceRef: ResourceRef) => void;
+  touchRelationship: (
+    relationshipType: string,
+    resource: ResourceRef,
+    relatedResource: ResourceRef) => void;
 }
 
 export interface ResourceQuiverResult {
   // useful as the result
-  addedNodes: Record<string, Node>;
-  touchedNodes: Record<string, Node | ResourceRef>;
-  removedNodes: Record<string, ResourceRef>;
+  assertedNodes: Record<string, Node>;
+  retractedNodes: Record<string, ResourceRef>;
   isAdded: (ref: ResourceRef) => boolean;
   isRemoved: (ref: ResourceRef) => boolean;
-  getSetArrowsBySourceAndLabel: (source: ResourceRef, label: string) => ResourceRef[] | undefined;
-  getAddedArrowsBySourceAndLabel: (source: ResourceRef, label: string) => ResourceRef[];
-  getRemovedArrowsBySourceAndLabel: (source: ResourceRef, label: string) => ResourceRef[];
+  getChangedRelationships: (ref: ResourceRef) => Record<string, ResourceRef[]>;
+  // getTouchedResources: (Resource | ResourceRef)[];
+  getResources: () => Map<ResourceRef, (null | ResourceRef | Resource)>;
 }
 
 export type ResourceQuiverFn = (
@@ -43,35 +48,54 @@ export function makeResourceQuiver(
     return inverse;
   };
 
-  const addResource = (resource: Resource) => {
-    quiver.addNode(resource);
+  const assertResource = (resource: Resource) => {
+    quiver.assertNode(resource);
     Object.entries(resource.relationships || {}).forEach(([label, baseTargets]) => {
       const targets = asArray(baseTargets);
       quiver.setArrowGroup(resource, targets, label);
       targets.forEach((target) => {
         const inverse = inverseOf(resource, label);
-        quiver.addArrow({ source: target, target: resource, label: inverse });
+        quiver.assertArrow({ source: target, target: resource, label: inverse });
       });
     });
   };
 
-  const removeResource = (resource: Resource) => {
+  const retractResource = (resource: Resource) => {
     if (!resource) {
       throw new Error(`Resources that do not exist cannot be deleted: ${formatRef(resource)}`);
     }
 
-    quiver.removeNode(resource);
+    quiver.retractNode(resource);
     Object.entries(resource.relationships || {}).forEach(([label, baseExistingTargets]) => {
       const existingTargets = asArray(baseExistingTargets);
       quiver.setArrowGroup(resource, [], label);
       existingTargets.forEach((existingTarget) => {
         const inverse = inverseOf(resource, label);
-        quiver.removeArrow({ source: existingTarget, target: resource, label: inverse });
+        quiver.retractArrow({ source: existingTarget, target: resource, label: inverse });
       });
     });
   };
 
-  builderFn({ addResource, removeResource });
+  const touchRelationship = (
+    relationshipType: string,
+    resource: ResourceRef,
+    relatedResource: ResourceRef,
+  ) => {
+    quiver.touchArrow({ source: resource, target: relatedResource, label: relationshipType });
+    console.log({ relatedResource, resource, relationshipType });
 
-  return quiver;
+    const inverse = inverseOf(resource, relationshipType);
+    if (inverse) {
+      console.log({ inverse });
+      quiver.touchArrow({ source: relatedResource, target: resource, label: inverse });
+    }
+  };
+
+  builderFn({ assertResource, retractResource, touchRelationship });
+
+  return {
+    ...quiver,
+    getChangedRelationships: quiver.getChangedArrows,
+    getResources: quiver.getNodes,
+  };
 }

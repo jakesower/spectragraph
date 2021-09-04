@@ -107,14 +107,19 @@ export interface QueryRelationship {
   params?: Record<string, QueryParams>;
 }
 
-export interface Query {
-  id?: string;
+export interface QueryWithoutId {
   type: string;
   properties?: string[];
   referencesOnly?: boolean;
   relationships?: Record<string, QueryRelationship>;
   params?: Record<string, QueryParams>;
 }
+
+export interface QueryWithId extends QueryWithoutId {
+  id: string;
+}
+
+export type Query = QueryWithId | QueryWithoutId;
 
 type CompiledExpandedQuery = {
   id: string | null;
@@ -132,10 +137,15 @@ type CompiledRefQuery = {
 
 export type CompiledQuery = CompiledExpandedQuery | CompiledRefQuery;
 
+type GetOneFn = (query: QueryWithId, params?: QueryParams) => Promise<DataTree>;
+type GetManyFn = (query: QueryWithoutId, params?: QueryParams) => Promise<DataTree[]>;
+
+export type GetFn = GetOneFn & GetManyFn;
+
 // Store -- TODO: deal with wrapping/unwrapping the DataTree <-> ResourceTree
 export interface PolygraphStore {
   // TODO: distinguish queries returning one vs many results
-  get: (query: Query, params?: QueryParams) => Promise<DataTree | DataTree[]>;
+  get: GetFn;
   replaceOne: (query: Query, tree: DataTree, params?: QueryParams) => Promise<NormalizedResources>;
   replaceMany: (query: Query, trees: DataTree[], params?: QueryParams) => Promise<NormalizedResources>;
 }

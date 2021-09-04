@@ -19,7 +19,8 @@ const normalizedData = {
         fur_color: "tan",
       },
       relationships: {
-        home: [{ type: "homes", id: "1" }],
+        best_friend: null,
+        home: { type: "homes", id: "1" },
         powers: [{ type: "powers", id: "careBearStare" }],
       },
     },
@@ -33,9 +34,9 @@ const normalizedData = {
         fur_color: "carnation pink",
       },
       relationships: {
-        home: [{ type: "homes", id: "1" }],
+        home: { type: "homes", id: "1" },
         powers: [{ type: "powers", id: "careBearStare" }],
-        best_friend: [{ type: "bears", id: "3" }],
+        best_friend: { type: "bears", id: "3" },
       },
     },
     3: {
@@ -48,9 +49,9 @@ const normalizedData = {
         fur_color: "turquoise",
       },
       relationships: {
-        home: [{ type: "homes", id: "1" }],
+        home: { type: "homes", id: "1" },
         powers: [{ type: "powers", id: "careBearStare" }],
-        best_friend: [{ type: "bears", id: "2" }],
+        best_friend: { type: "bears", id: "2" },
       },
     },
     5: {
@@ -63,7 +64,8 @@ const normalizedData = {
         fur_color: "pink",
       },
       relationships: {
-        home: [],
+        best_friend: null,
+        home: null,
         powers: [{ type: "powers", id: "careBearStare" }],
       },
     },
@@ -118,10 +120,11 @@ const normalizedData = {
   },
 };
 
-const resource = (type, id, overrides = {}) => ({
+const resource = (type, id, getRels = true, overrides = {}) => ({
   id,
   type,
   ...normalizedData[type][id].properties,
+  ...(getRels ? normalizedData[type][id].relationships : {}),
   ...overrides,
 });
 
@@ -155,7 +158,7 @@ test("fetches a single resource with a single relationship", async (t) => {
     relationships: { home: {} },
   });
 
-  t.deepEqual(result, resource("bears", "1", { home: resource("homes", "1") }));
+  t.deepEqual(result, resource("bears", "1", false, { home: resource("homes", "1") }));
 });
 
 test("fetches a single resource with many-to-many relationship", async (t) => {
@@ -165,7 +168,7 @@ test("fetches a single resource with many-to-many relationship", async (t) => {
     relationships: { powers: {} },
   });
 
-  t.deepEqual(result, resource("bears", "1", { powers: [resource("powers", "careBearStare")] }));
+  t.deepEqual(result, resource("bears", "1", false, { powers: [resource("powers", "careBearStare")] }));
 });
 
 test("fetches multiple relationships of various types", async (t) => {
@@ -182,8 +185,8 @@ test("fetches multiple relationships of various types", async (t) => {
     },
   });
 
-  t.deepEqual(result, resource("bears", "1", {
-    home: resource("homes", "1", { bears: ["1", "2", "3"].map((id) => resource("bears", id)) }),
+  t.deepEqual(result, resource("bears", "1",false,  {
+    home: resource("homes", "1", false, { bears: ["1", "2", "3"].map((id) => resource("bears", id)) }),
     powers: [resource("powers", "careBearStare")],
   }));
 });
@@ -197,9 +200,9 @@ test("handles relationships between the same type", async (t) => {
   });
 
   t.deepEqual(result, [
-    resource("bears", "1", { best_friend: null }),
-    resource("bears", "2", { best_friend: resource("bears", "3") }),
-    resource("bears", "3", { best_friend: resource("bears", "2") }),
-    resource("bears", "5", { best_friend: null }),
+    resource("bears", "1", false, { best_friend: null }),
+    resource("bears", "2", false, { best_friend: resource("bears", "3") }),
+    resource("bears", "3", false, { best_friend: resource("bears", "2") }),
+    resource("bears", "5", false, { best_friend: null }),
   ]);
 });

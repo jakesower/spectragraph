@@ -24,7 +24,7 @@ import {
 import { SchemaType } from "../data-structures/schema";
 import { operations } from "./operations";
 import { refsEqual, applyMapOrNull } from "../utils";
-import { QuiverType, ScopedQuiver } from "../data-structures/working-quiver";
+import { QuiverType, ScopedQuiver } from "../data-structures/old-working-quiver";
 
 function makeEmptyData(schema: SchemaType): NormalizedResources {
   const out = {};
@@ -107,7 +107,7 @@ export function MemoryStore(
       );
 
       // set node/arrows for this
-      quiver.addNode({ type, id, properties });
+      quiver.assertNode({ type, id, properties });
       Object.entries(relationships).forEach(([relName, relValue]) => {
         const source = { type, id };
         const existingTargets = existingNode.attributes[relName];
