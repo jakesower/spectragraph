@@ -194,10 +194,7 @@ test.beforeEach(async (t) => {
 });
 
 test("replaces data en masse with replace", async (t) => {
-  const query = {
-    type: "bears",
-    // NEXT UP: REL REFS VS EXPANDED RELS
-  };
+  const query = { type: "bears" };
 
   const replaceResult = await t.context.store.replaceMany(query, [grumpyBearDT]);
   const replaceExpected = {
@@ -231,57 +228,59 @@ test("replaces data en masse with replace", async (t) => {
   t.deepEqual(getResult, [dataTree(grumpyBear)]);
 });
 
-test.only("replaces a one-to-one relationship", async (t) => {
-  const replaceResult = await t.context.store.replaceOne(
-    {
-      type: "bears",
-      id: "2",
-      relationships: { home: {} },
-    },
-    { type: "bears", id: "2", home: { type: "homes", id: "2" } },
-  );
+// test("replaces a one-to-one relationship", async (t) => {
+//   const replaceResult = await t.context.store.replaceOne(
+//     {
+//       type: "bears",
+//       id: "2",
+//       relationships: { home: {} },
+//     },
+//     { type: "bears", id: "2", home: { type: "homes", id: "2" } },
+//   );
 
-  const replaceExpected = {
-    bears: {
-      2: fullResourceFromRef("bears", "2",
-        { home: { type: "homes", id: "2" } }),
-    },
-    homes: {
-      1: fullResourceFromRef("homes", "1", {
-        bears: [{ type: "bears", id: "1" }, { type: "bears", id: "3" }],
-      }),
-      2: fullResourceFromRef("homes", "2", {
-        bears: [{ type: "bears", id: "2" }],
-      }),
-    },
-    powers: {},
-  };
-  t.deepEqual(replaceResult, replaceExpected);
+//   const replaceExpected = {
+//     bears: {
+//       2: fullResourceFromRef("bears", "2",
+//         { home: { type: "homes", id: "2" } }),
+//     },
+//     homes: {
+//       1: fullResourceFromRef("homes", "1", {
+//         bears: [{ type: "bears", id: "1" }, { type: "bears", id: "3" }],
+//       }),
+//       2: fullResourceFromRef("homes", "2", {
+//         bears: [{ type: "bears", id: "2" }],
+//       }),
+//     },
+//     powers: {},
+//   };
+//   t.deepEqual(replaceResult, replaceExpected);
 
-  // const bearResult = await t.context.store.get({
-  //   type: "bears",
-  //   id: "2",
-  //   relationships: { home: {} },
-  // });
+//   const bearResult = await t.context.store.get({
+//     type: "bears",
+//     id: "2",
+//     relationships: { home: {} },
+//   }) as any;
 
-  // t.is(bearResult.home.name, "Forest of Feelings");
+//   t.is(bearResult.home.name, "Forest of Feelings");
 
-  // const careALotResult = await t.context.store.get({
-  //   type: "homes",
-  //   id: "1",
-  //   relationships: { bears: {} },
-  // });
-
-  // t.is(careALotResult.relationships.bears.length, 2);
-});
-
-// test.skip("replaces a one-to-many-relationship", async (t) => {
-//   await t.context.store.replaceRelationships({
+//   const careALotResult = await t.context.store.get({
 //     type: "homes",
 //     id: "1",
-//     relationship: "bears",
-//     foreignIds: ["1", "5"],
-//   });
+//     relationships: { bears: {} },
+//   }) as any;
+
+//   t.is(careALotResult.bears.length, 2);
+// });
+
+// test("replaces a one-to-many-relationship", async (t) => {
+//   await t.context.store.replaceOne(
+//     { type: "bears", id: "1" },
+//     {
+//       type: "homes",
+//       id: "1",
+//       bears: ["1", "5"],
+//     },
+//   );
 
 //   const bearResult = await t.context.store.get({
 //     type: "bears",

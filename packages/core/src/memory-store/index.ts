@@ -53,11 +53,29 @@ function makeEmptyResource(schema: CompiledSchema, type: string, id: string): Re
   };
 }
 
+function toRefStr(ref: ResourceRef): string {
+  return JSON.stringify({ type: ref.type, id: ref.id });
+}
+
+function strToRef(refStr: string): ResourceRef {
+  return JSON.parse(refStr);
+}
+
 function cardinalize(rels: ResourceRef[], relDef: CompiledSchemaRelationship):
   ResourceRef | ResourceRef[] {
   return relDef.cardinality === "one"
     ? rels.length === 0 ? null : rels[0]
     : rels;
+}
+
+type RelatedResource = null | ResourceRef | ResourceRef[];
+function asRefSet(
+  resources: RelatedResource,
+  fn: (val: Set<string>) => Set<string>,
+): ResourceRef[] {
+  const set = new Set(asArray(resources).map(toRefStr));
+  const nextSet = fn(set);
+  return [...nextSet].map(strToRef);
 }
 
 export async function makeMemoryStore(
@@ -78,7 +96,7 @@ export async function makeMemoryStore(
       if (value == null) {
         delete store[type][id];
         affected[type][id] = null;
-        return;
+        continue; // eslint-disable-line no-continue
       }
 
       const existingOrNewRes = store[type][id] || makeEmptyResource(schema, type, id);
@@ -93,15 +111,32 @@ export async function makeMemoryStore(
         && Object.entries(value.properties)
           .some(([name, newValue]) => existingOrNewRes[name] !== newValue);
 
-      const changedRelationships = quiver.getChangedRelationships(ref);
+      const changedRelationships = quiver.getRelationshipChanges(ref);
       const hasRelChanges = Object.keys(changedRelationships).length > 0;
 
-      // console.log({changedRelationships, ref, value})
-
-      const changedRels = mapObj(changedRelationships, (newRels, relType) => {
+      // TODO: Apply new rel change format
+      const changedRels = mapObj(changedRelationships, (relsToChange, relType) => {
         const relDef = schema.resources[type].relationships[relType];
+        if ("present" in relsToChange) {
+          return cardinalize(
+            [...relsToChange.present].map((relStr) => JSON.parse(relStr)),
+            relDef,
+          );
+        }
 
-        return cardinalize(newRels.map(toRef), relDef);
+        const newRelSet = asRefSet(existingOrNewRes.relationships[relType], (relSet) => {
+          Object.entries(relsToChange.changes).forEach(([relRef, keep]) => {
+            if (keep) {
+              relSet.add(relRef);
+            } else {
+              relSet.delete(relRef);
+            }
+          });
+
+          return relSet;
+        });
+
+        return cardinalize([...newRelSet].map(toRef), relDef);
       });
 
       const nextRes = {
@@ -215,22 +250,21 @@ export async function makeMemoryStore(
     return out;
   }) as GetFn;
 
-  const replaceStep = (tree: ResourceTree, { assertResource, touchRelationship }) => {
+  const replaceStep = (tree: ResourceTree, { assertResource, markRelationship }) => {
     assertResource(tree);
 
     if (tree && ("relationships" in tree)) {
       Object.entries(tree.relationships)
         .forEach(([relType, rels]) => {
           rels.forEach((subTree) => {
-            if ("relationships" in subTree) replaceStep(subTree, { assertResource, touchRelationship });
+            if ("relationships" in subTree) replaceStep(subTree, { assertResource, markRelationship });
           });
 
           const existing = store[tree.type][tree.id];
 
-          // console.log({ existing, tree })
           if (existing?.relationships[relType]) {
             asArray(existing.relationships[relType])
-              .forEach((related) => touchRelationship(relType, existing, related));
+              .forEach((related) => markRelationship(relType, existing, related));
           }
         });
     }
@@ -241,7 +275,7 @@ export async function makeMemoryStore(
     trees: DataTree[],
     params: QueryParams = {},
   ): Promise<NormalizedResourceUpdates> => {
-    console.log("@#$@#_____");
+    console.log("\n\n@#$@#_____-MANY\n\n");
     const compiledQuery = compileQuery(schema, query);
     const resourceTrees = trees.map(
       (tree) => convertDataTreeToResourceTree(schema, compiledQuery, tree),
@@ -274,7 +308,7 @@ export async function makeMemoryStore(
   };
 
   const replaceOne = async (query: Query, tree: DataTree) => {
-    console.log("@#$@#___########__");
+    console.log("\n\n@#$@#___########__-ONE\n\n");
     const compiledQuery = compileQuery(schema, query);
     const resourceTree = convertDataTreeToResourceTree(schema, compiledQuery, tree);
 

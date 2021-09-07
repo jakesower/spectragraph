@@ -102,7 +102,7 @@ export function convertDataTreeToResourceTree(
     const properties = pick(subTree, subQuery.properties);
 
     const relDefs = resSchemaDef.relationshipsArray
-      .filter((rel) => rel.name in subQuery.relationships);
+      .filter((rel) => (rel.name in subQuery.relationships) && (rel.name in subTree));
     const expandedRelationships = Object.fromEntries(relDefs.map((relDef) => {
       const relatedRess = asArray(subTree[relDef.name]) as DataTree[];
       const nextSubQuery = subQuery.relationships[relDef.name];
