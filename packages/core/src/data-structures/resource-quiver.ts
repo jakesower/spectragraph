@@ -1,32 +1,26 @@
 import { CompiledSchema, Resource, ResourceRef } from "../types";
 import { asArray, formatRef } from "../utils";
-import { makeQuiver, Node } from "./quiver";
+import { makeQuiver } from "./quiver";
 
 /**
  * This wraps a generic quiver. It is aware of the schema and resources in order to calculate
  * inverses.
  */
 
-type RelationshipChanges = { hasChanges: false } | { hasChanges: true, present: ResourceRef[] };
-
 export interface ResourceQuiverBuilder {
   // useful when constructing
   assertResource: (resource: Resource) => void;
   retractResource: (resourceRef: ResourceRef) => void;
-  touchRelationship: (
+  markRelationship: (
     relationshipType: string,
     resource: ResourceRef,
     relatedResource: ResourceRef) => void;
 }
 
+type RelationshipChanges = { present: Set<string> } | { changes: Record<string, boolean> };
+
 export interface ResourceQuiverResult {
-  // useful as the result
-  assertedNodes: Record<string, Node>;
-  retractedNodes: Record<string, ResourceRef>;
-  isAdded: (ref: ResourceRef) => boolean;
-  isRemoved: (ref: ResourceRef) => boolean;
-  getChangedRelationships: (ref: ResourceRef) => Record<string, ResourceRef[]>;
-  // getTouchedResources: (Resource | ResourceRef)[];
+  getRelationshipChanges: (ref: ResourceRef) => Record<string, RelationshipChanges>;
   getResources: () => Map<ResourceRef, (null | ResourceRef | Resource)>;
 }
 
@@ -52,7 +46,7 @@ export function makeResourceQuiver(
     quiver.assertNode(resource);
     Object.entries(resource.relationships || {}).forEach(([label, baseTargets]) => {
       const targets = asArray(baseTargets);
-      quiver.setArrowGroup(resource, targets, label);
+      quiver.assertArrowGroup(resource, targets, label);
       targets.forEach((target) => {
         const inverse = inverseOf(resource, label);
         quiver.assertArrow({ source: target, target: resource, label: inverse });
@@ -68,7 +62,7 @@ export function makeResourceQuiver(
     quiver.retractNode(resource);
     Object.entries(resource.relationships || {}).forEach(([label, baseExistingTargets]) => {
       const existingTargets = asArray(baseExistingTargets);
-      quiver.setArrowGroup(resource, [], label);
+      quiver.assertArrowGroup(resource, [], label);
       existingTargets.forEach((existingTarget) => {
         const inverse = inverseOf(resource, label);
         quiver.retractArrow({ source: existingTarget, target: resource, label: inverse });
@@ -76,26 +70,23 @@ export function makeResourceQuiver(
     });
   };
 
-  const touchRelationship = (
+  // marks relationships from existing related nodes to a resource about to be traversed
+  const markRelationship = (
     relationshipType: string,
     resource: ResourceRef,
     relatedResource: ResourceRef,
   ) => {
-    quiver.touchArrow({ source: resource, target: relatedResource, label: relationshipType });
-    console.log({ relatedResource, resource, relationshipType });
-
     const inverse = inverseOf(resource, relationshipType);
     if (inverse) {
-      console.log({ inverse });
-      quiver.touchArrow({ source: relatedResource, target: resource, label: inverse });
+      quiver.markArrow({ source: relatedResource, target: resource, label: inverse });
     }
   };
 
-  builderFn({ assertResource, retractResource, touchRelationship });
+  builderFn({ assertResource, retractResource, markRelationship });
 
   return {
     ...quiver,
-    getChangedRelationships: quiver.getChangedArrows,
+    getRelationshipChanges: quiver.getArrowChanges,
     getResources: quiver.getNodes,
   };
 }

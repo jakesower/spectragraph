@@ -13,6 +13,7 @@ export declare function applyOrMap<T, U>(valueOrArray: T[], fn: (item: T) => U):
 export declare function applyOrMap<T, U>(valueOrArray: T, fn: (item: T) => U): U;
 export declare function arraySetDifference<T>(xs: T[], ys: T[]): T[];
 export declare function arraySetDifferenceBy<T, U>(xs: T[], ys: T[], fn: (val: T) => U): T[];
+export declare function arrayUnion<T, U>(xs: T[], ys: U[]): (T | U)[];
 export declare function assignChildren(objs: {
     [k: string]: {
         [k: string]: any;
@@ -25,6 +26,7 @@ export declare function assignChildren(objs: {
 export declare function chainPipeThru(val: any, fns: ((x: any) => any)[]): any;
 export declare function cmp(a: Ord, b: Ord): number;
 export declare function deepClone<T>(obj: T): T;
+export declare function difference<T>(left: Set<T>, right: Set<T>): Set<T>;
 export declare function fgo(generator: any): any;
 export declare function fillObject<T>(keys: string[], value: T): {
     [k: string]: T;
@@ -109,7 +111,7 @@ export declare function sortWith<T>(fn: (a: T) => Ord, xs: T[]): T[];
 export declare function sortWithAll<T>(fns: ((a: T) => Ord)[], xs: T[]): T[];
 export declare function uniq<T>(xs: T[]): T[];
 export declare function uniqBy<T>(xs: T[], fn: (x: T) => Ord): T[];
-export declare function union<T, U>(xs: T[], ys: U[]): (T | U)[];
+export declare function union<T>(left: Set<T>, right: Set<T>): Set<T>;
 export declare function unnest<T>(xs: T[][]): T[];
 export declare function xprod<T, U>(xs: T[], ys: U[]): [T, U][];
 export declare function zipObj<T>(keys: string[], vals: T[]): {

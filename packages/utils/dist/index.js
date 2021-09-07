@@ -44,6 +44,10 @@ function arraySetDifferenceBy(xs, ys, fn) {
     return xs.filter((x) => !ySet.has(fn(x)));
 }
 exports.arraySetDifferenceBy = arraySetDifferenceBy;
+function arrayUnion(xs, ys) {
+    return [...new Set([].concat(xs, ys))];
+}
+exports.arrayUnion = arrayUnion;
 function assignChildren(objs) {
     let out = {};
     objs.forEach((obj) => {
@@ -74,6 +78,10 @@ function deepClone(obj) {
     return out;
 }
 exports.deepClone = deepClone;
+function difference(left, right) {
+    return new Set(Array.from(left).filter((leftElt) => !right.has(leftElt)));
+}
+exports.difference = difference;
 function fgo(generator) {
     const recur = ({ value, done }, gen) => {
         if (done) {
@@ -477,8 +485,8 @@ function uniqBy(xs, fn) {
     return out;
 }
 exports.uniqBy = uniqBy;
-function union(xs, ys) {
-    return [...new Set([].concat(xs, ys))];
+function union(left, right) {
+    return new Set([...left, ...right]);
 }
 exports.union = union;
 function unnest(xs) {

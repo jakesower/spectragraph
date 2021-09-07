@@ -47,6 +47,11 @@ export function arraySetDifferenceBy<T, U>(
   return xs.filter((x) => !ySet.has(fn(x)))
 }
 
+export function arrayUnion<T, U>(xs: T[], ys: U[]): (T | U)[] {
+  return [...new Set([].concat(xs, ys))]
+}
+
+
 export function assignChildren(
   objs: { [k: string]: { [k: string]: any } }[],
 ): { [k: string]: { [k: string]: any } } {
@@ -80,6 +85,10 @@ export function deepClone<T>(obj: T): T {
   }
 
   return out as T
+}
+
+export function difference<T>(left: Set<T>, right: Set<T>): Set<T> {
+  return new Set(Array.from(left).filter((leftElt) => !right.has(leftElt)));
 }
 
 export function fgo(generator) {
@@ -569,8 +578,8 @@ export function uniqBy<T>(xs: T[], fn: (x: T) => Ord): T[] {
   return out
 }
 
-export function union<T, U>(xs: T[], ys: U[]): (T | U)[] {
-  return [...new Set([].concat(xs, ys))]
+export function union<T>(left: Set<T>, right: Set<T>): Set<T> {
+  return new Set([...left, ...right])
 }
 
 export function unnest<T>(xs: T[][]): T[] {
