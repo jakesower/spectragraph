@@ -4,7 +4,7 @@ import { mapObj, pick } from "@polygraph/utils";
 import {
   CompiledQuery,
   CompiledSchema,
-  DataTree, Query, QueryRelationship, ResourceRef, ResourceTree,
+  DataTree, Query, QueryRelationship, ResourceRef, ResourceTree, Schema,
 } from "./types";
 
 export function asArray<T>(maybeArray: null | T | T[]): T[] {
@@ -21,7 +21,10 @@ const defaultRels = (names: string[]): [string, QueryRelationship][] => (
 
 // TODO:
 // Integrate params?
-export function compileQuery(schema: CompiledSchema, query: Query): CompiledQuery {
+export function compileQuery<S extends Schema>(
+  schema: CompiledSchema<S>,
+  query: Query,
+): CompiledQuery {
   const errors = [];
 
   const expand = (subQuery: QueryRelationship, type: string): CompiledQuery => {
@@ -79,8 +82,8 @@ export function compileQuery(schema: CompiledSchema, query: Query): CompiledQuer
   return output;
 }
 
-export function convertDataTreeToResourceTree(
-  schema: CompiledSchema,
+export function convertDataTreeToResourceTree<S extends Schema>(
+  schema: CompiledSchema<S>,
   query: CompiledQuery,
   dataTree: DataTree,
 ): ResourceTree {
@@ -124,8 +127,8 @@ export function convertDataTreeToResourceTree(
   return expand(dataTree, query, query.type);
 }
 
-export function convertResourceTreeToDataTree(
-  schema: CompiledSchema,
+export function convertResourceTreeToDataTree<S extends Schema>(
+  schema: CompiledSchema<S>,
   query: CompiledQuery,
   resourceTree: ResourceTree,
 ): DataTree {
