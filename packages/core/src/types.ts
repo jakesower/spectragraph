@@ -25,7 +25,7 @@ export type ResourceTree = ResourceTreeRef | ExpandedResourceTree;
 export type NormalizedResources = Record<string, Record<string, Resource>>;
 export type NormalizedResourceUpdates = Record<string, Record<string, Resource | null>>;
 
-export type DataTree = Record<string, unknown>;
+export type DataTree = Record<string, any>;
 
 // Schema
 type SchemaPropertyType = "string" | "number" | "boolean";

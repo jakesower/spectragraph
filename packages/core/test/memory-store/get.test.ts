@@ -185,7 +185,7 @@ test("fetches multiple relationships of various types", async (t) => {
     },
   });
 
-  t.deepEqual(result, resource("bears", "1",false,  {
+  t.deepEqual(result, resource("bears", "1", false, {
     home: resource("homes", "1", false, { bears: ["1", "2", "3"].map((id) => resource("bears", id)) }),
     powers: [resource("powers", "careBearStare")],
   }));
