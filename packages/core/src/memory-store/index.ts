@@ -18,6 +18,7 @@ import {
   GetFn,
   QueryWithoutId,
   QueryWithId,
+  Schema,
 } from "../types";
 import {
   asArray, compileQuery, convertDataTreeToResourceTree, toRef,
@@ -36,13 +37,17 @@ interface MemoryStoreOptions {
  * - Some queries guarantee no internal inconsistencies, a good place for optimization.
  */
 
-function makeEmptyStore(schema: CompiledSchema): NormalizedResources {
+function makeEmptyStore<S extends Schema>(schema: CompiledSchema<S>): NormalizedResources {
   const resources: NormalizedResources = {};
   Object.keys(schema.resources).forEach((resourceName) => { resources[resourceName] = {}; });
   return resources;
 }
 
-function makeEmptyResource(schema: CompiledSchema, type: string, id: string): Resource {
+function makeEmptyResource<S extends Schema>(
+  schema: CompiledSchema<S>,
+  type: string,
+  id: string,
+): Resource {
   const resDef = schema.resources[type];
 
   return {
@@ -61,7 +66,7 @@ function strToRef(refStr: string): ResourceRef {
   return JSON.parse(refStr);
 }
 
-function cardinalize(rels: ResourceRef[], relDef: CompiledSchemaRelationship):
+function cardinalize<S extends Schema>(rels: ResourceRef[], relDef: CompiledSchemaRelationship<S>):
   ResourceRef | ResourceRef[] {
   return relDef.cardinality === "one"
     ? rels.length === 0 ? null : rels[0]
@@ -78,8 +83,8 @@ function asRefSet(
   return [...nextSet].map(strToRef);
 }
 
-export async function makeMemoryStore(
-  schema: CompiledSchema,
+export async function makeMemoryStore<S extends Schema>(
+  schema: CompiledSchema<S>,
   options: MemoryStoreOptions,
 ): Promise<MemoryStore> {
   let store = makeEmptyStore(schema);

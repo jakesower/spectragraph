@@ -31,65 +31,67 @@ export type DataTree = Record<string, any>;
 type SchemaPropertyType = "string" | "number" | "boolean";
 
 interface SchemaProperty {
-  type: SchemaPropertyType;
+  type: string;
   meta?: unknown;
 }
 
 interface SchemaRelationship {
-  cardinality: "one" | "many";
+  cardinality: string; // gets enforced to "one" | "many" programatically
   type: string;
   inverse?: string;
   meta?: unknown;
 }
 
-interface SchemaResource {
-  singular: string;
-  plural: string;
+export interface SchemaResource {
+  singular?: string;
+  plural?: string;
   idField?: string;
-  properties: {
-    [k: string]: SchemaProperty;
-  };
-  relationships: {
-    [k: string]: SchemaRelationship;
-  };
+  properties: Record<string, SchemaProperty>;
+  relationships: Record<string, SchemaRelationship>;
   meta?: unknown;
 }
 
 export interface Schema {
-  resources: { [k: string]: SchemaResource };
+  resources: Record<string, SchemaResource>;
   title?: string;
   meta?: unknown;
 }
 
 export interface CompiledSchemaProperty extends SchemaProperty {
   name: string;
+  type: SchemaPropertyType;
 }
 
-export interface CompiledSchemaRelationship extends SchemaRelationship {
+export interface CompiledSchemaRelationship<S extends Schema> {
+  cardinality: "one" | "many";
   name: string;
+  inverse?: string;
+  type: keyof S["resources"];
 }
 
-type CompiledSchemaAttribute = CompiledSchemaProperty | CompiledSchemaRelationship;
-type CompiledSchemaAttributeObj = { [k: string]: CompiledSchemaAttribute };
+type CompiledSchemaAttribute<S extends Schema> = CompiledSchemaProperty | CompiledSchemaRelationship<S>;
+type CompiledSchemaAttributeObj<S extends Schema> = Record<string, CompiledSchemaAttribute<S>>;
 
-export interface CompiledSchemaResource extends SchemaResource {
-  attributes: CompiledSchemaAttributeObj;
-  attributesArray: CompiledSchemaAttribute[];
-  name: string;
+export interface CompiledSchemaResource<S extends Schema, ResName extends keyof S["resources"]> {
+  attributes: CompiledSchemaAttributeObj<S>;
+  attributesArray: CompiledSchemaAttribute<S>[];
+  name: keyof S["resources"];
   idField: string;
-  properties: { [k: string]: CompiledSchemaProperty };
+  properties: Record<string, CompiledSchemaProperty>;
   propertiesArray: CompiledSchemaProperty[];
-  propertyNames: string[];
+  propertyNames: (keyof S["resources"][ResName]["properties"])[];
   propertyNamesSet: Set<string>;
-  relationships: { [k: string]: CompiledSchemaRelationship };
-  relationshipsArray: CompiledSchemaRelationship[];
-  relationshipsByType: Record<string, CompiledSchemaRelationship>;
+  relationships: Record<string, CompiledSchemaRelationship<S>>;
+  relationshipsArray: CompiledSchemaRelationship<S>[];
+  relationshipsByType: Record<string, CompiledSchemaRelationship<S>>;
   relationshipNames: string[];
   relationshipNamesSet: Set<string>;
 }
 
-export interface CompiledSchema {
-  resources: Record<string, CompiledSchemaResource>;
+export interface CompiledSchema<S extends Schema> {
+  resources: {
+    [ResName in keyof S["resources"]]: CompiledSchemaResource<S, ResName>;
+  }
 }
 
 // Queries

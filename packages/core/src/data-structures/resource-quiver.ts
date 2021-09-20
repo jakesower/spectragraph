@@ -1,4 +1,6 @@
-import { CompiledSchema, Resource, ResourceRef } from "../types";
+import {
+  CompiledSchema, Resource, ResourceRef, Schema,
+} from "../types";
 import { asArray, formatRef } from "../utils";
 import { makeQuiver } from "./quiver";
 
@@ -24,13 +26,13 @@ export interface ResourceQuiverResult {
   getResources: () => Map<ResourceRef, (null | ResourceRef | Resource)>;
 }
 
-export type ResourceQuiverFn = (
-  schema: CompiledSchema,
+export type ResourceQuiverFn<S extends Schema> = (
+  schema: CompiledSchema<S>,
   builderFn: (builderFns: ResourceQuiverBuilder) => void
 ) => ResourceQuiverResult;
 
-export function makeResourceQuiver(
-  schema: CompiledSchema,
+export function makeResourceQuiver<S extends Schema>(
+  schema: CompiledSchema<S>,
   builderFn: (builder: ResourceQuiverBuilder) => void,
 ): ResourceQuiverResult {
   const quiver = makeQuiver();

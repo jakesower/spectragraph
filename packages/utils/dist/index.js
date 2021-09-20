@@ -191,9 +191,14 @@ function keyByProp(items, key) {
 }
 exports.keyByProp = keyByProp;
 function mapObj(obj, fn) {
-    const [keys, vals] = [Object.keys(obj), Object.values(obj)];
-    const mappedVals = vals.map((v, idx) => fn(v, keys[idx]));
-    return zipObj(keys, mappedVals);
+    const keys = Object.keys(obj);
+    const output = {};
+    const l = keys.length;
+    for (let i = 0; i < l; i += 1) {
+        const val = obj[keys[i]];
+        output[keys[i]] = fn(val, keys[i]);
+    }
+    return output;
 }
 exports.mapObj = mapObj;
 function mapObjToArray(obj, fn) {

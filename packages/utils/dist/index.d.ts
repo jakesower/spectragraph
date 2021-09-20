@@ -53,11 +53,7 @@ export declare function inlineKey<T>(obj: T, keyProp: string): {
 };
 export declare function keyBy<T>(items: T[], fn: (item: T) => string): Record<string, T>;
 export declare function keyByProp<T, K extends keyof T>(items: T[], key: K): Record<K, T>;
-export declare function mapObj<T, U>(obj: {
-    [k in string]: T;
-}, fn: (x: T, idx: string) => U): {
-    [k in string]: U;
-};
+export declare function mapObj<T, U, K extends keyof T>(obj: T, fn: (x: T[K], idx: K) => U): Record<K, U>;
 export declare function mapObjToArray<T, U>(obj: {
     [k in string]: T;
 }, fn: (x: T, idx: string) => U): U[];

@@ -221,13 +221,17 @@ export function keyByProp<T, K extends keyof T>(items: T[], key: K): Record<K, T
   return output;
 }
 
-export function mapObj<T, U>(
-  obj: { [k in string]: T },
-  fn: (x: T, idx: string) => U,
-): { [k in string]: U } {
-  const [keys, vals] = [Object.keys(obj), Object.values(obj)]
-  const mappedVals = vals.map((v, idx) => fn(v, keys[idx]))
-  return zipObj(keys, mappedVals)
+export function mapObj<T, U, K extends keyof T>(obj: T, fn: (x: T[K], idx: K) => U): Record<K, U> {
+  const keys = Object.keys(obj) as K[];
+  const output = {} as Record<K, U>;
+  const l = keys.length;
+
+  for (let i = 0; i < l; i += 1) {
+    const val = obj[keys[i]];
+    output[keys[i]] = fn(val, keys[i]);
+  }
+
+  return output;
 }
 
 export function mapObjToArray<T, U>(
