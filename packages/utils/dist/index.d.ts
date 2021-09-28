@@ -1,5 +1,6 @@
 import equals from 'deep-equal';
 export { equals };
+export { pick } from "./pick";
 declare type Ord = number | string | boolean | Date;
 export declare function append<T, U>(xs: T[], ys: U[]): (T | U)[];
 export declare function appendKeys<T, K extends keyof T>(base: {
@@ -53,7 +54,7 @@ export declare function inlineKey<T>(obj: T, keyProp: string): {
 };
 export declare function keyBy<T>(items: T[], fn: (item: T) => string): Record<string, T>;
 export declare function keyByProp<T, K extends keyof T>(items: T[], key: K): Record<K, T>;
-export declare function mapObj<T, U, K extends keyof T>(obj: T, fn: (x: T[K], idx: K) => U): Record<K, U>;
+export declare function mapObj<T, U>(obj: T, fn: (val: T[keyof T], key: keyof T) => U): Record<keyof T, U>;
 export declare function mapObjToArray<T, U>(obj: {
     [k in string]: T;
 }, fn: (x: T, idx: string) => U): U[];
@@ -89,7 +90,6 @@ export declare function omit<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K
 export declare function parseQueryParams(rawParams: any): {};
 export declare function partition<T>(items: T[], predicateFn: (val: T) => boolean): [T[], T[]];
 export declare function pathOr(obj: any, path: any, otherwise: any): any;
-export declare function pick<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K>;
 export declare function pipe(fns: ((x: any) => any)[]): (x: any) => any;
 export declare function pipeMw(init: any, mws: any): Promise<any>;
 export declare function pipeThru(val: any, fns: ((x: any) => any)[]): any;

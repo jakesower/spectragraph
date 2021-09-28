@@ -2,6 +2,7 @@ import equals from 'deep-equal'
 // export * from './transducers'
 
 export { equals }
+export { pick } from "./pick";
 
 type Ord = number | string | boolean | Date
 
@@ -221,9 +222,9 @@ export function keyByProp<T, K extends keyof T>(items: T[], key: K): Record<K, T
   return output;
 }
 
-export function mapObj<T, U, K extends keyof T>(obj: T, fn: (x: T[K], idx: K) => U): Record<K, U> {
-  const keys = Object.keys(obj) as K[];
-  const output = {} as Record<K, U>;
+export function mapObj<T, U>(obj: T, fn: (val: T[keyof T], key: keyof T) => U): Record<keyof T, U> {
+  const keys = Object.keys(obj) as (keyof T)[];
+  const output = {} as Record<keyof T, U>;
   const l = keys.length;
 
   for (let i = 0; i < l; i += 1) {
@@ -391,17 +392,6 @@ export function pathOr(obj, path, otherwise) {
   const [first, ...rest] = path
 
   return first in obj ? pathOr(obj[first], rest, otherwise) : otherwise
-}
-
-export function pick<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
-  const l = keys.length
-  let out = {} as Pick<T, K>;
-
-  for (let i = 0; i < l; i += 1) {
-    if (keys[i] in obj) out[keys[i]] = obj[keys[i]]
-  }
-
-  return out
 }
 
 export function pipe(fns: ((x: any) => any)[]): (x: any) => any {

@@ -14,6 +14,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const deep_equal_1 = __importDefault(require("deep-equal"));
 exports.equals = deep_equal_1.default;
+var pick_1 = require("./pick");
+exports.pick = pick_1.pick;
 function append(xs, ys) {
     return [...xs, ...ys];
 }
@@ -320,16 +322,6 @@ function pathOr(obj, path, otherwise) {
     return first in obj ? pathOr(obj[first], rest, otherwise) : otherwise;
 }
 exports.pathOr = pathOr;
-function pick(obj, keys) {
-    const l = keys.length;
-    let out = {};
-    for (let i = 0; i < l; i += 1) {
-        if (keys[i] in obj)
-            out[keys[i]] = obj[keys[i]];
-    }
-    return out;
-}
-exports.pick = pick;
 function pipe(fns) {
     return fns.reduce((acc, fn) => (val) => fn(acc(val)), (x) => x);
 }

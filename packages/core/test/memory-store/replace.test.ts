@@ -4,12 +4,13 @@ import { schema as rawSchema } from "../care-bear-schema";
 import { makeMemoryStore } from "../../src/memory-store";
 import { compileSchema } from "../../src/data-structures/schema";
 import {
-  MemoryStore,
+  MemoryStore, NormalizedResources, NormalizedResourceUpdates, ResourceOfType,
 } from "../../src/types";
 
-const test = anyTest as TestInterface<{ store: MemoryStore }>;
-
 const schema = compileSchema(rawSchema);
+
+type S = typeof rawSchema;
+
 const normalizedData = {
   bears: {
     1: {
@@ -22,6 +23,7 @@ const normalizedData = {
         fur_color: "tan",
       },
       relationships: {
+        best_friend: null,
         home: { type: "homes", id: "1" },
         powers: [{ type: "powers", id: "careBearStare" }],
       },
@@ -66,6 +68,7 @@ const normalizedData = {
         fur_color: "pink",
       },
       relationships: {
+        best_friend: null,
         home: null,
         powers: [{ type: "powers", id: "careBearStare" }],
       },
@@ -119,7 +122,7 @@ const normalizedData = {
       },
     },
   },
-};
+} as NormalizedResources<S>;
 
 const grumpyBear = {
   type: "bears",
@@ -135,7 +138,7 @@ const grumpyBear = {
     home: { type: "homes", id: "1" },
     powers: [{ type: "powers", id: "careBearStare" }],
   },
-};
+} as ResourceOfType<S, "bears">;
 
 const grumpyBearDT = {
   type: "bears",
@@ -148,7 +151,7 @@ const grumpyBearDT = {
   powers: [{ type: "powers", id: "careBearStare" }],
 };
 
-const fullResource = (resource, relOverrides = {}) => {
+const fullResource = <ResType extends keyof S["resources"]>(resource: ResourceOfType<S, ResType>, relOverrides = {}) => {
   const { id, type, properties } = resource;
   const resSchemaDef = schema.resources[type];
   const relationships = {
@@ -161,7 +164,7 @@ const fullResource = (resource, relOverrides = {}) => {
     type,
     properties,
     relationships,
-  };
+  } as ResourceOfType<S, ResType>;
 };
 
 const fullResourceFromRef = (type, id, relOverrides) => (
@@ -181,16 +184,18 @@ const dataTree = (res, rels = null) => {
   };
 };
 
+const test = anyTest as TestInterface<{ store: MemoryStore<S> }>;
+
 test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign
   t.context = { store: await makeMemoryStore(schema, { initialData: normalizedData }) };
 });
 
 test("replaces data en masse with replace", async (t) => {
-  const query = { type: "bears" };
+  const query = { type: "bears" } as const;
 
   const replaceResult = await t.context.store.replaceMany(query, [grumpyBearDT]);
-  const replaceExpected = {
+  const replaceExpected: NormalizedResourceUpdates<S> = {
     bears: {
       1: null,
       2: null,
@@ -203,16 +208,32 @@ test("replaces data en masse with replace", async (t) => {
       5: null,
     },
     homes: {
-      1: fullResourceFromRef("homes", "1", {
-        bears: [{ type: "bears", id: "4" }],
-      }),
+      1: {
+        type: "homes",
+        id: "1",
+        properties: {
+          name: "Care-a-Lot",
+          location: "Kingdom of Caring",
+          caring_meter: 1,
+        },
+        relationships: {
+          bears: [{ type: "bears", id: "4" }],
+        },
+      },
     },
     powers: {
-      careBearStare: fullResourceFromRef("powers", "careBearStare", {
-        bears: [{ type: "bears", id: "4" }],
-      }),
+      careBearStare: {
+        type: "powers",
+        id: "careBearStare",
+        properties: {
+          name: "Care Bear Stare",
+          description: "Purges evil.",
+        },
+        relationships: { bears: [{ type: "bears", id: "4" }] },
+      },
     },
   };
+
   t.deepEqual(replaceResult, replaceExpected);
 
   const getResult = await t.context.store.get({
@@ -246,7 +267,7 @@ test("replaces a one-to-one relationship", async (t) => {
     },
     powers: {},
   };
-  t.deepEqual(replaceResult, replaceExpected);
+  // t.deepEqual(replaceResult, replaceExpected);
 
   const bearResult = await t.context.store.get({
     type: "bears",

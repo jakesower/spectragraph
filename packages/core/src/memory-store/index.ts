@@ -7,29 +7,23 @@ import {
   ResourceTree,
   NormalizedResources,
   NormalizedResourceUpdates,
-  PolygraphStore,
   Query,
   QueryParams,
   Resource,
   CompiledQuery,
   ResourceRef,
   DataTree,
-  CompiledSchemaRelationship,
   GetFn,
-  QueryWithoutId,
-  QueryWithId,
   Schema,
+  MemoryStore,
+  ExpandedResourceTree,
 } from "../types";
 import {
   asArray, compileQuery, convertDataTreeToResourceTree, toRef,
 } from "../utils";
 
-interface MemoryStore extends PolygraphStore {
-  replaceResources: (updates: NormalizedResourceUpdates) => Promise<NormalizedResources>;
-}
-
-interface MemoryStoreOptions {
-  initialData?: NormalizedResources;
+interface MemoryStoreOptions<S extends Schema> {
+  initialData?: NormalizedResourceUpdates<S>;
 }
 
 /**
@@ -37,17 +31,22 @@ interface MemoryStoreOptions {
  * - Some queries guarantee no internal inconsistencies, a good place for optimization.
  */
 
-function makeEmptyStore<S extends Schema>(schema: CompiledSchema<S>): NormalizedResources {
-  const resources: NormalizedResources = {};
-  Object.keys(schema.resources).forEach((resourceName) => { resources[resourceName] = {}; });
-  return resources;
+function makeEmptyStore<S extends Schema>(schema: CompiledSchema<S>): NormalizedResources<S> {
+  const resources = {} as Record<keyof S["resources"], Record<string, Resource<S>>>;
+  const ResTypes = Object.keys(schema.resources) as (keyof S["resources"])[];
+  ResTypes.forEach(
+    <ResType extends keyof S["resources"]>(resourceName: ResType) => {
+      resources[resourceName] = {} as Record<string, Resource<S>>;
+    },
+  );
+  return resources as NormalizedResources<S>;
 }
 
 function makeEmptyResource<S extends Schema>(
   schema: CompiledSchema<S>,
-  type: string,
+  type: keyof S["resources"],
   id: string,
-): Resource {
+): Resource<S> {
   const resDef = schema.resources[type];
 
   return {
@@ -58,26 +57,31 @@ function makeEmptyResource<S extends Schema>(
   };
 }
 
-function toRefStr(ref: ResourceRef): string {
+function toRefStr<S extends Schema>(ref: ResourceRef<S>): string {
   return JSON.stringify({ type: ref.type, id: ref.id });
 }
 
-function strToRef(refStr: string): ResourceRef {
+function strToRef<S extends Schema>(refStr: string): ResourceRef<S> {
   return JSON.parse(refStr);
 }
 
-function cardinalize<S extends Schema>(rels: ResourceRef[], relDef: CompiledSchemaRelationship<S>):
-  ResourceRef | ResourceRef[] {
+function cardinalize<
+  S extends Schema,
+  CardType extends { cardinality: "one" | "many" },
+>(
+  rels: ResourceRef<S>[],
+  relDef: CardType,
+): ResourceRef<S> | ResourceRef<S>[] {
   return relDef.cardinality === "one"
     ? rels.length === 0 ? null : rels[0]
     : rels;
 }
 
-type RelatedResource = null | ResourceRef | ResourceRef[];
-function asRefSet(
-  resources: RelatedResource,
+type RelatedResource<S extends Schema> = null | ResourceRef<S> | ResourceRef<S>[];
+function asRefSet<S extends Schema>(
+  resources: RelatedResource<S>,
   fn: (val: Set<string>) => Set<string>,
-): ResourceRef[] {
+): ResourceRef<S>[] {
   const set = new Set(asArray(resources).map(toRefStr));
   const nextSet = fn(set);
   return [...nextSet].map(strToRef);
@@ -85,12 +89,14 @@ function asRefSet(
 
 export async function makeMemoryStore<S extends Schema>(
   schema: CompiledSchema<S>,
-  options: MemoryStoreOptions,
-): Promise<MemoryStore> {
-  let store = makeEmptyStore(schema);
+  options: MemoryStoreOptions<S>,
+): Promise<MemoryStore<S>> {
+  const store = makeEmptyStore(schema);
 
-  const applyQuiver = (quiver: ResourceQuiverResult): NormalizedResourceUpdates => {
-    const affected = makeEmptyStore(schema);
+  const applyQuiver = (
+    quiver: ResourceQuiverResult<S>,
+  ): NormalizedResourceUpdates<S> => {
+    const affected = makeEmptyStore(schema) as NormalizedResourceUpdates<S>;
 
     // first handle removing stuff, then adding it
     // TODO: validate
@@ -100,7 +106,8 @@ export async function makeMemoryStore<S extends Schema>(
 
       if (value == null) {
         delete store[type][id];
-        affected[type][id] = null;
+        const typeAffected = affected[type] as Record<string, Resource<S> | null>;
+        typeAffected[id] = null;
         continue; // eslint-disable-line no-continue
       }
 
@@ -152,8 +159,12 @@ export async function makeMemoryStore<S extends Schema>(
       };
 
       if (hasPropChanges || hasRelChanges) {
-        store[type][id] = nextRes;
-        affected[type][id] = nextRes;
+        // TS ugliness...
+        const typeStore = store[type] as Record<string, Resource<S>>;
+        typeStore[id] = nextRes;
+
+        const typeAffected = affected[type] as Record<string, Resource<S>>;
+        typeAffected[id] = nextRes;
       }
     }
 
@@ -161,14 +172,14 @@ export async function makeMemoryStore<S extends Schema>(
     return affected;
   };
 
-  const replaceResources = async (updated: NormalizedResourceUpdates) => {
+  const replaceResources = async (updated: NormalizedResourceUpdates<S>) => {
     const quiver = makeResourceQuiver(schema, ({ assertResource, retractResource }) => {
       Object.entries(updated).forEach(([type, typedResources]) => {
         Object.entries(typedResources).forEach(([id, updatedRes]) => {
           if (updatedRes === null) {
             retractResource(store[type][id]);
           } else {
-            assertResource(updatedRes);
+            assertResource(updatedRes as Resource<S>);
           }
         });
       });
@@ -177,10 +188,14 @@ export async function makeMemoryStore<S extends Schema>(
     return applyQuiver(quiver);
   };
 
-  const getWithCompiled = async (
-    compiledQuery: CompiledQuery, params: QueryParams = {},
-  ) : Promise<ResourceTree | ResourceTree[]> => {
-    const walk = (subQuery: CompiledQuery, ref: ResourceRef): ResourceTree => {
+  const getWithCompiled = async <TopResType extends keyof S["resources"]>(
+    compiledQuery: CompiledQuery<S, TopResType>,
+    params: QueryParams = {},
+  ) : Promise<ResourceTree<S> | ResourceTree<S>[]> => {
+    const walk = <ResType extends keyof S["resources"]>(
+      subQuery: CompiledQuery<S, ResType>,
+      ref: ResourceRef<S>,
+    ): ResourceTree<S> => {
       const { type, id } = ref;
       const resource = store[type][id];
 
@@ -214,10 +229,13 @@ export async function makeMemoryStore<S extends Schema>(
       .map((res) => walk(compiledQuery, res));
   };
 
-  const get = ((query: QueryWithoutId | QueryWithId, params: QueryParams = {}) => {
+  const get = ((query: Query, params: QueryParams = {}) => {
     const compiledQuery = compileQuery(schema, query);
 
-    const walk = (subQuery: CompiledQuery, ref: ResourceRef): DataTree => {
+    const walk = <ResType extends keyof S["resources"]>(
+      subQuery: CompiledQuery<S, ResType>,
+      ref: ResourceRef<S>,
+    ): DataTree => {
       const { type, id } = ref;
       const resource = store[type][id];
 
@@ -255,14 +273,16 @@ export async function makeMemoryStore<S extends Schema>(
     return out;
   }) as GetFn;
 
-  const replaceStep = (tree: ResourceTree, { assertResource, markRelationship }) => {
+  const replaceStep = (tree: ResourceTree<S>, { assertResource, markRelationship }) => {
     assertResource(tree);
 
     if (tree && ("relationships" in tree)) {
       Object.entries(tree.relationships)
         .forEach(([relType, rels]) => {
-          rels.forEach((subTree) => {
-            if ("relationships" in subTree) replaceStep(subTree, { assertResource, markRelationship });
+          asArray(rels).forEach((subTree) => {
+            if ("relationships" in subTree) {
+              replaceStep(subTree as ExpandedResourceTree<S>, { assertResource, markRelationship });
+            }
           });
 
           const existing = store[tree.type][tree.id];
@@ -279,25 +299,25 @@ export async function makeMemoryStore<S extends Schema>(
     query: Query,
     trees: DataTree[],
     params: QueryParams = {},
-  ): Promise<NormalizedResourceUpdates> => {
+  ): Promise<NormalizedResourceUpdates<S>> => {
     console.log("\n\n@#$@#_____-MANY\n\n");
     const compiledQuery = compileQuery(schema, query);
     const resourceTrees = trees.map(
       (tree) => convertDataTreeToResourceTree(schema, compiledQuery, tree),
     );
 
-    const topLevelQuery = {
+    const topLevelResourcesQuery = {
       type: query.type,
       id: null,
       properties: [],
       relationships: {},
       referencesOnly: true,
-    };
-    const refAsStr = (ref: ResourceRef): string => `${ref.type}-${ref.id}`;
-    const topLevelRess = await getWithCompiled(topLevelQuery, params);
+    } as const;
+    const refAsStr = (ref: ResourceRef<S>): string => `${ref.type}-${ref.id}`;
+    const topLevelResources = await getWithCompiled(topLevelResourcesQuery, params);
 
     const quiver = makeResourceQuiver(schema, (quiverMethods) => {
-      const possiblyToDelete = keyBy(asArray(topLevelRess), refAsStr);
+      const possiblyToDelete = keyBy(asArray(topLevelResources), refAsStr);
 
       resourceTrees.forEach((tree) => {
         replaceStep(tree, quiverMethods);
@@ -328,7 +348,7 @@ export async function makeMemoryStore<S extends Schema>(
     return applyQuiver(quiver);
   };
 
-  store = await replaceResources(options.initialData);
+  await replaceResources(options.initialData);
 
   return {
     get,
