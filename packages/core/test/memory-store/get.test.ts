@@ -2,9 +2,7 @@ import anyTest, { TestInterface } from "ava";
 import { schema as rawSchema } from "../care-bear-schema";
 import { makeMemoryStore } from "../../src/memory-store";
 import { compileSchema } from "../../src/data-structures/schema";
-import { MemoryStore } from "../../src/types";
-
-const test = anyTest as TestInterface<{ store: MemoryStore }>;
+import { MemoryStore, NormalizedResources, Resource } from "../../src/types";
 
 const schema = compileSchema(rawSchema);
 const normalizedData = {
@@ -118,7 +116,61 @@ const normalizedData = {
       },
     },
   },
+} as NormalizedResources<typeof rawSchema>;
+
+type S = typeof schema;
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const empty: NormalizedResources<S> = {
+  bears: {},
+  homes: {},
+  powers: {},
 };
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const emptyBear: Resource<S> = {
+  type: "bears",
+  id: "3",
+  properties: {
+    name: "Tenderheart",
+    belly_badge: "heart",
+    gender: "male",
+    fur_color: "tan",
+  },
+  relationships: {
+    best_friend: null,
+    home: null,
+    powers: [],
+  },
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const almostEmpty: NormalizedResources<S> = {
+  ...empty,
+  bears: {
+    3: emptyBear,
+  },
+} as const;
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const bearWithHome: Resource<S> = {
+  ...emptyBear,
+  relationships: {
+    ...emptyBear.relationships,
+    home: { type: "homes", id: "33223" },
+  },
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const bearWithBadHome: Resource<S> = {
+  ...emptyBear,
+  relationships: {
+    ...emptyBear.relationships,
+    home: { type: "bears", id: "33223" }, // SHOULD NOT BE VALID!
+  },
+};
+
+const test = anyTest as TestInterface<{ store: MemoryStore<typeof rawSchema> }>;
 
 const resource = (type, id, getRels = true, overrides = {}) => ({
   id,

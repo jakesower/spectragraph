@@ -113,10 +113,10 @@ export type SubQuery<S extends Schema, ResType extends keyof S["resources"]> = {
 type SRWithResType<S extends Schema, RelDef extends SchemaRelationship> = (
   RelDef extends { type: keyof S["resources"] } ? RelDef : never
 );
-type ResDef<S extends Schema, ResName extends string> = ResName extends keyof S["resources"] ?
-  S["resources"][ResName] : never;
+type ResDef<S extends Schema, ResType extends string> = ResType extends keyof S["resources"] ?
+  S["resources"][ResType] : never;
 
-// RelDef[K]["type"] is defined as string rather than keyof S[ResName]
+// RelDef[K]["type"] is defined as string rather than keyof S[ResType]
 // export type QueryRelationships<S extends Schema, RelDef extends Record<string, SchemaRelationship>> = {
 //   [K in keyof RelDef]: SubQuery<S, ResDef<S, RelDef[K]["type"]>>;
 // }
@@ -124,17 +124,17 @@ export type QueryRelationships<S extends Schema, RelDef extends Record<string, S
   [K in keyof RelDef]: SubQuery<S, RelDef[K]["type"]>;
 }
 
-// type QueryRelationships<S extends Schema, ResRecord extends Record<ResName, ResDef>> = {
+// type QueryRelationships<S extends Schema, ResRecord extends Record<ResType, ResDef>> = {
 //   [RelType in keyof S["resources"][ResType]["relationships"]]:
 //     SubQuery<S, S["resources"][ResType]["relationships"][RelType]>
 // }
 
 type RootQueryResource<S extends Schema> = {
-  [ResName in keyof S["resources"]]: {
-    type: ResName;
+  [ResType in keyof S["resources"]]: {
+    type: ResType;
     id?: string;
-    properties?: keyof S["resources"][ResName]["properties"];
-    relationships?: QueryRelationships<S, S["resources"][ResName]["relationships"]>
+    properties?: keyof S["resources"][ResType]["properties"];
+    relationships?: QueryRelationships<S, S["resources"][ResType]["relationships"]>
     referencesOnly?: boolean;
   }
 }
@@ -305,3 +305,5 @@ export interface PolygraphStore<S extends Schema> {
 export type MemoryStore<S extends Schema, Base = PolygraphStore<S>> =
   { [P in keyof Base]: Base[P] }
   & { replaceResources: (resources: NormalizedResources<S>) => Promise<NormalizedResources<S>> };
+
+// type X<T extends Record<string, string>> = 

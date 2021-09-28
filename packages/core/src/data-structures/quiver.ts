@@ -1,5 +1,4 @@
-import { formatRef, toRef } from "../utils";
-import { ResourceRef } from "../types";
+import { formatRef } from "../utils";
 import { difference } from "../../../utils/dist";
 
 /**
@@ -10,7 +9,7 @@ import { difference } from "../../../utils/dist";
  * assertNode<->assertedNodes. The utility is in the validation.
  */
 
-type NodeRef = ResourceRef;
+type NodeRef = { type: any, id: string };
 type NodeProps = Record<string, unknown>;
 type NodeRefString = string;
 

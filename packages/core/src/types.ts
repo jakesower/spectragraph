@@ -1,36 +1,79 @@
 /* eslint-disable max-len, no-use-before-define */
 
+// Helpers
+export type OneOf<T> = T[keyof T];
+export type KeyRecord<T> = {
+  [K in keyof T]: T[K]
+}
+
 // Data
-export interface ResourceRef {
-  type: string;
+export type ResourceRef<S extends Schema> = Readonly<{
+  type: keyof S["resources"];
   id: string;
+}>
+
+export type ResourceOfType<S extends Schema, ResType extends keyof S["resources"]> = {
+  type: ResType;
+  id: string;
+  properties: Record<keyof S["resources"][ResType]["properties"], unknown>;
+  relationships: Record<keyof S["resources"][ResType]["relationships"], ResourceRef<S> | ResourceRef<S>[]>;
 }
 
-export interface Resource extends ResourceRef {
-  properties: Record<string, unknown>;
-  relationships: Record<string, ResourceRef | ResourceRef[]>;
-}
+export type Resource<S extends Schema> = OneOf<{
+  [ResType in keyof S["resources"]]: {
+    type: ResType;
+    id: string;
+    properties: Record<keyof S["resources"][ResType]["properties"], unknown>;
+    relationships: Record<keyof S["resources"][ResType]["relationships"], ResourceRef<S> | ResourceRef<S>[]>;
+  }
+}>;
 
-export interface ResourceTreeRef extends ResourceRef {
+export interface ResourceTreeRef<S extends Schema> extends ResourceRef<S> {
   properties: Record<string, never>;
   relationships: Record<string, never>;
 }
 
-export interface ExpandedResourceTree extends Resource {
-  relationships: Record<string, ResourceTree[]>;
+// same as Resource<S>?
+export type ExpandedResourceTree<S extends Schema> = OneOf<{
+  [ResType in keyof S["resources"]]: {
+    type: ResType;
+    id: string;
+    properties: Record<keyof S["resources"][ResType]["properties"], unknown>;
+    relationships: Record<keyof S["resources"][ResType]["relationships"], ResourceRef<S> | ResourceRef<S>[]>;
+  }
+}>
+
+export type ExpandedResourceTreeOfType<S extends Schema, ResType extends keyof S["resources"]> = {
+  type: ResType;
+  id: string;
+  properties: Record<keyof S["resources"][ResType]["properties"], unknown>;
+  relationships: Record<keyof S["resources"][ResType]["relationships"], ResourceRef<S> | ResourceRef<S>[]>;
 }
 
-export type ResourceTree = ResourceTreeRef | ExpandedResourceTree;
+export type ResourceTree<S extends Schema> = ResourceTreeRef<S> | ExpandedResourceTree<S>;
 
-export type NormalizedResources = Record<string, Record<string, Resource>>;
-export type NormalizedResourceUpdates = Record<string, Record<string, Resource | null>>;
+export type NormalizedResources<S extends Schema> = {
+  [ResType in keyof S["resources"]]: Record<string, ResourceOfType<S, ResType>>;
+}
+export type NormalizedResourceUpdates<S extends Schema> = {
+  [ResType in keyof S["resources"]]:
+    null |
+    Record<string, {
+      type: ResType;
+      id: string;
+      properties?: Partial<Record<keyof S["resources"][ResType]["properties"], unknown>>;
+      relationships?: Partial<Record<keyof S["resources"][ResType]["relationships"], ResourceRef<S> | ResourceRef<S>[]>>;
+      }
+    >;
+};
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DataTree = Record<string, any>;
 
 // Schema
 type SchemaPropertyType = "string" | "number" | "boolean";
 
-interface SchemaProperty {
+export interface SchemaProperty {
   type: string;
   meta?: unknown;
 }
@@ -57,40 +100,44 @@ export interface Schema {
   meta?: unknown;
 }
 
-export interface CompiledSchemaProperty extends SchemaProperty {
-  name: string;
-  type: SchemaPropertyType;
+export type CompiledSchemaProperties<S extends Schema, ResType extends keyof S["resources"]> = {
+  [PropType in keyof S["resources"][ResType]["properties"]]: {
+    name: PropType;
+    type: SchemaPropertyType;
+  }
 }
 
-export interface CompiledSchemaRelationship<S extends Schema> {
-  cardinality: "one" | "many";
-  name: string;
-  inverse?: string;
-  type: keyof S["resources"];
+export type CompiledSchemaRelationships<S extends Schema, ResType extends keyof S["resources"]> = {
+  [RelType in keyof S["resources"][ResType]["relationships"]]: {
+    cardinality: "one" | "many";
+    name: RelType;
+    inverse?: string;
+    type: keyof S["resources"][ResType]["relationships"][RelType]["type"] & keyof S["resources"] & string;
+  }
 }
 
-type CompiledSchemaAttribute<S extends Schema> = CompiledSchemaProperty | CompiledSchemaRelationship<S>;
-type CompiledSchemaAttributeObj<S extends Schema> = Record<string, CompiledSchemaAttribute<S>>;
+// type CompiledSchemaAttribute<S extends Schema> = CompiledSchemaProperty | CompiledSchemaRelationship<S>;
+// type CompiledSchemaAttributeObj<S extends Schema> = Record<string, CompiledSchemaAttribute<S>>;
 
-export interface CompiledSchemaResource<S extends Schema, ResName extends keyof S["resources"]> {
-  attributes: CompiledSchemaAttributeObj<S>;
-  attributesArray: CompiledSchemaAttribute<S>[];
+export interface CompiledSchemaResource<S extends Schema, ResType extends keyof S["resources"]> {
+  // attributes: CompiledSchemaAttributeObj<S>;
+  // attributesArray: CompiledSchemaAttribute<S>[];
   name: keyof S["resources"];
-  idField: string;
-  properties: Record<string, CompiledSchemaProperty>;
-  propertiesArray: CompiledSchemaProperty[];
-  propertyNames: (keyof S["resources"][ResName]["properties"])[];
-  propertyNamesSet: Set<string>;
-  relationships: Record<string, CompiledSchemaRelationship<S>>;
-  relationshipsArray: CompiledSchemaRelationship<S>[];
-  relationshipsByType: Record<string, CompiledSchemaRelationship<S>>;
-  relationshipNames: string[];
-  relationshipNamesSet: Set<string>;
+  idField: keyof S["resources"][ResType]["properties"];
+  properties: CompiledSchemaProperties<S, ResType>;
+  propertiesArray: OneOf<CompiledSchemaProperties<S, ResType>>[];
+  propertyNames: (keyof S["resources"][ResType]["properties"])[];
+  propertyNamesSet: Set<keyof S["resources"][ResType]["properties"]>;
+  relationships: CompiledSchemaRelationships<S, ResType>;
+  relationshipsArray: OneOf<CompiledSchemaRelationships<S, ResType>>[];
+  relationshipsByType: Record<string, CompiledSchemaRelationships<S, ResType>>;
+  relationshipNames: (keyof S["resources"][ResType]["relationships"])[];
+  relationshipNamesSet: Set<keyof S["resources"][ResType]["relationships"]>;
 }
 
 export interface CompiledSchema<S extends Schema> {
   resources: {
-    [ResName in keyof S["resources"]]: CompiledSchemaResource<S, ResName>;
+    [ResType in keyof S["resources"]]: CompiledSchemaResource<S, ResType>;
   }
 }
 
@@ -123,21 +170,27 @@ export interface QueryWithId extends QueryWithoutId {
 
 export type Query = QueryWithId | QueryWithoutId;
 
-type CompiledExpandedQuery = {
+export type CompiledExpandedQuery<S extends Schema, ResType extends keyof S["resources"]> = {
   id: string | null;
-  type: string;
-  properties: string[];
+  type: ResType;
+  properties: (keyof S["resources"][ResType]["properties"])[];
   referencesOnly: false;
-  relationships: Record<string, CompiledQuery>;
-}
+  relationships: {
+    [RelType in keyof S["resources"][ResType]["relationships"]]:
+      CompiledQuery<S, S["resources"][ResType]["relationships"][RelType]["type"]>
+  }
+};
 
-type CompiledRefQuery = {
+export type CompiledRefQuery<S extends Schema, ResType extends keyof S["resources"]> = {
   id: string | null;
-  type: string;
+  type: ResType;
   referencesOnly: true;
-}
+};
 
-export type CompiledQuery = CompiledExpandedQuery | CompiledRefQuery;
+// export type CompiledQuery<S extends Schema> = CompiledExpandedQuery<S> | CompiledRefQuery<S>;
+export type CompiledQuery<S extends Schema, ResType extends keyof S["resources"]> = (
+  CompiledExpandedQuery<S, ResType> | CompiledRefQuery<S, ResType>
+)
 
 type GetOneFn = (query: QueryWithId, params?: QueryParams) => Promise<DataTree>;
 type GetManyFn = (query: QueryWithoutId, params?: QueryParams) => Promise<DataTree[]>;
@@ -145,14 +198,14 @@ type GetManyFn = (query: QueryWithoutId, params?: QueryParams) => Promise<DataTr
 export type GetFn = GetOneFn & GetManyFn;
 
 // Store -- TODO: deal with wrapping/unwrapping the DataTree <-> ResourceTree
-export interface PolygraphStore {
+export interface PolygraphStore<S extends Schema> {
   // TODO: distinguish queries returning one vs many results
   get: GetFn;
-  replaceOne: (query: Query, tree: DataTree, params?: QueryParams) => Promise<NormalizedResources>;
-  replaceMany: (query: Query, trees: DataTree[], params?: QueryParams) => Promise<NormalizedResources>;
+  replaceOne: (query: Query, tree: DataTree, params?: QueryParams) => Promise<NormalizedResourceUpdates<S>>;
+  replaceMany: (query: Query, trees: DataTree[], params?: QueryParams) => Promise<NormalizedResourceUpdates<S>>;
 }
 
 // Memory Store: TODO: separate package
-export interface MemoryStore extends PolygraphStore {
-  replaceResources: (resources: NormalizedResources) => Promise<NormalizedResources>;
+export interface MemoryStore<S extends Schema> extends PolygraphStore<S> {
+  replaceResources: (resources: NormalizedResources<S>) => Promise<NormalizedResourceUpdates<S>>;
 }

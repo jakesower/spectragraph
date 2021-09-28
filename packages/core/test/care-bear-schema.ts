@@ -1,6 +1,4 @@
-import { Schema } from "../src/types";
-
-export const schema: Schema = {
+export const schema = {
   title: "Care Bear Schema",
   resources: {
     bears: {
