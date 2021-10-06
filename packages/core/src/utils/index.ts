@@ -2,10 +2,9 @@
 
 import { mapObj, pick } from "@polygraph/utils";
 import {
-  CompiledExpandedQuery,
   CompiledQuery,
   CompiledSchema,
-  DataTree, ExpandedResourceTree, Query, QueryRelationship, ResourceRef, ResourceTree, Schema,
+  DataTree, ExpandedResourceTree, Query, SubQuery, ResourceRef, ResourceTree, Schema,
 } from "../types";
 
 export { asArray } from "./asArray";

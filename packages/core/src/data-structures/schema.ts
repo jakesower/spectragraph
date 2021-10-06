@@ -1,11 +1,8 @@
 import { keyByProp, mapObj } from "@polygraph/utils";
 import {
   CompiledSchema,
-  CompiledSchemaProperties,
-  CompiledSchemaRelationships,
   CompiledSchemaResource,
   Schema,
-  SchemaProperty,
   SchemaResource,
 } from "../types";
 

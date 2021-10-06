@@ -1,7 +1,7 @@
 import { Resource } from '@polygraph/data-graph/dist/types';
-interface QueryRelationship {
+interface SubQuery {
     relationships?: {
-        [k: string]: QueryRelationship;
+        [k: string]: SubQuery;
     };
 }
 export interface Query {
@@ -11,7 +11,7 @@ export interface Query {
         [k: string]: any;
     };
     relationships?: {
-        [k: string]: QueryRelationship;
+        [k: string]: SubQuery;
     };
 }
 export interface Schema {
