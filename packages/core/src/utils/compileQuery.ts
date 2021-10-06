@@ -1,31 +1,25 @@
 import { mapObj } from "@polygraph/utils";
 import {
-  CompiledQuery, CompiledSchema, Query, QueryRelationship, Schema,
+  CompiledQuery,
+  CompiledSchema,
+  CompiledSchemaRelationships,
+  CompiledSubQuery,
+  Query,
+  SubQuery,
+  Schema,
 } from "../types";
 
-export function compileQuery<S extends Schema, TopResType extends keyof S["resources"]>(
-  schema: CompiledSchema<S>,
-  query: Query,
-): CompiledQuery<S, TopResType> {
-  // // for when query.relationships isn't specified
-  // const defaultRels = <ResType extends keyof S["resources"]>(
-  //   resType: ResType,
-  // ): Record<keyof S["resources"][ResType]["relationships"], CompiledQuery<S>> => (
-  //     mapObj(schema.resources[resType].relationships, (relDef) => ({
-  //       id: null,
-  //       referencesOnly: true,
-  //       type: relDef.type,
-  //     }))
-  //   );
-
+export function compileQuery<S extends Schema, CS extends CompiledSchema<S>, TopResType extends keyof CS["resources"]>(
+  schema: CS,
+  query: Query<CS, TopResType>,
+): CompiledQuery<CS, TopResType> {
   const errors = [];
-  const expand = <ResType extends keyof S["resources"]>(
-    subQuery: QueryRelationship,
+  const expand = <ResType extends keyof CS["resources"]>(
+    subQuery: SubQuery<CS, ResType>,
     resType: ResType,
-  ): CompiledQuery<S, ResType> => {
+  ): CompiledSubQuery<CS, ResType> => {
     if (subQuery.referencesOnly) {
       return {
-        id: null,
         referencesOnly: true,
         type: resType,
       };
@@ -52,16 +46,12 @@ export function compileQuery<S extends Schema, TopResType extends keyof S["resou
 
     if (!("relationships" in subQuery)) {
       const relDefs = schema.resources[resType].relationships;
-      const relationships = mapObj(relDefs, (relDef) => (
-        {
-          id: ("id" in query) ? query.id : null,
-          referencesOnly: true,
-          type: relDef.type,
-        } as const
-      ));
+      const relationships = mapObj(
+        relDefs,
+        (relDef) => ({ referencesOnly: true, type: relDef.type } as const),
+      );
 
       return {
-        id: ("id" in query) ? query.id : null, // sus
         type: resType,
         properties,
         referencesOnly: false,
@@ -70,7 +60,7 @@ export function compileQuery<S extends Schema, TopResType extends keyof S["resou
     }
 
     const relationships = mapObj(
-      subQuery.relationships as Record<keyof S["resources"][ResType]["relationships"], QueryRelationship>,
+      subQuery.relationships,
       (queryRel, relType) => {
         const relDef = schema.resources[resType].relationships[relType];
         return expand(queryRel, relDef.type);
@@ -78,15 +68,17 @@ export function compileQuery<S extends Schema, TopResType extends keyof S["resou
     );
 
     return {
-      id: ("id" in query) ? query.id : null, // sus
       type: resType,
       properties,
       referencesOnly: false,
       relationships,
-    } as const;
+    };
   };
 
-  const output = expand(query as Query & { type: TopResType }, query.type as TopResType);
+  const output = {
+    ...expand(query as Query<CS, TopResType> & { type: TopResType }, query.type as TopResType),
+    id: ("id" in query) ? query.id : null,
+  };
   if (errors.length > 0) throw new Error(JSON.stringify(errors));
 
   return output;

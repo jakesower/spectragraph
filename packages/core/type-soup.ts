@@ -102,7 +102,7 @@ export type CompiledSchema<S extends Schema> = {
 // type WithKeyOf<T, K> = K extends keyof T ? T : never;
 export type SubQuery<S extends Schema, ResType extends keyof S["resources"]> = {
   properties?: (keyof S["resources"][ResType]["properties"])[];
-  relationships?: QueryRelationships<S, S["resources"][ResType]["relationships"]>;
+  relationships?: SubQuerys<S, S["resources"][ResType]["relationships"]>;
   referencesOnly?: boolean;
 }
 
@@ -117,14 +117,14 @@ type ResDef<S extends Schema, ResType extends string> = ResType extends keyof S[
   S["resources"][ResType] : never;
 
 // RelDef[K]["type"] is defined as string rather than keyof S[ResType]
-// export type QueryRelationships<S extends Schema, RelDef extends Record<string, SchemaRelationship>> = {
+// export type SubQuerys<S extends Schema, RelDef extends Record<string, SchemaRelationship>> = {
 //   [K in keyof RelDef]: SubQuery<S, ResDef<S, RelDef[K]["type"]>>;
 // }
-export type QueryRelationships<S extends Schema, RelDef extends Record<string, SchemaRelationship>> = {
+export type SubQuerys<S extends Schema, RelDef extends Record<string, SchemaRelationship>> = {
   [K in keyof RelDef]: SubQuery<S, RelDef[K]["type"]>;
 }
 
-// type QueryRelationships<S extends Schema, ResRecord extends Record<ResType, ResDef>> = {
+// type SubQuerys<S extends Schema, ResRecord extends Record<ResType, ResDef>> = {
 //   [RelType in keyof S["resources"][ResType]["relationships"]]:
 //     SubQuery<S, S["resources"][ResType]["relationships"][RelType]>
 // }
@@ -134,7 +134,7 @@ type RootQueryResource<S extends Schema> = {
     type: ResType;
     id?: string;
     properties?: keyof S["resources"][ResType]["properties"];
-    relationships?: QueryRelationships<S, S["resources"][ResType]["relationships"]>
+    relationships?: SubQuerys<S, S["resources"][ResType]["relationships"]>
     referencesOnly?: boolean;
   }
 }

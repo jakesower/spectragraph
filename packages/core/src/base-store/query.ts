@@ -1,14 +1,14 @@
 import { applyOrMap, mapObj, pick } from "@polygraph/utils";
 import { Schema } from "../data-structures/schema";
 import {
-  CrudStore, Query, QueryRelationship, DataTree,
+  CrudStore, Query, SubQuery, DataTree,
 } from "../types";
 
 type QueryFn = (queryObj: Query) => Promise<Tree | Tree[]>;
 export function query(schema: Schema, store: CrudStore): QueryFn {
   async function expandRelationship(
     relationshipName: string,
-    relationshipDefinition: QueryRelationship,
+    relationshipDefinition: SubQuery,
     type: string,
     id: string,
   ): Promise<DataTree | DataTree[]> {
@@ -22,7 +22,7 @@ export function query(schema: Schema, store: CrudStore): QueryFn {
   }
 
   async function expandResource(
-    subQuery: QueryRelationship,
+    subQuery: SubQuery,
     type: string,
     id: string,
   ): Promise<DataTree> {
@@ -54,7 +54,7 @@ export function query(schema: Schema, store: CrudStore): QueryFn {
     };
   }
 
-  async function expandResources(subQuery: QueryRelationship, type: string): Promise<DataTree[]> {
+  async function expandResources(subQuery: SubQuery, type: string): Promise<DataTree[]> {
     const resources = await store.find(type);
     return Promise.all(Object.keys(resources).map((id) => expandResource(subQuery, type, id)));
   }
