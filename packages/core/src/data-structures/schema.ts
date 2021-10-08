@@ -70,5 +70,5 @@ export function compileSchema<S extends Schema>(schemaDefinition: S): CompiledSc
   return {
     ...schemaDefinition,
     resources,
-  };
+  } as unknown as CompiledSchema<S>;
 }

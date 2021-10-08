@@ -14,7 +14,7 @@ export function compileQuery<S extends Schema, CS extends CompiledSchema<S>, Top
   query: Query<CS, TopResType>,
 ): CompiledQuery<CS, TopResType> {
   const errors = [];
-  const expand = <ResType extends keyof CS["resources"]>(
+  const expand = <ResType extends keyof S["resources"]>(
     subQuery: SubQuery<CS, ResType>,
     resType: ResType,
   ): CompiledSubQuery<CS, ResType> => {
@@ -48,7 +48,7 @@ export function compileQuery<S extends Schema, CS extends CompiledSchema<S>, Top
       const relDefs = schema.resources[resType].relationships;
       const relationships = mapObj(
         relDefs,
-        (relDef) => ({ referencesOnly: true, type: relDef.type } as const),
+        (relDef) => ({ referencesOnly: true, type: relDef.name } as const),
       );
 
       return {

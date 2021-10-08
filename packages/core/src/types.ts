@@ -9,7 +9,7 @@ type WithCardinality<T, U extends ("one" | "many")> = U extends "many" ? T[] : T
 
 type Primitive = string | number | boolean | bigint | symbol | null | undefined;
 export type Expand<T> = T extends Primitive ? T : { [K in keyof T]: T[K] };
-type Equals<X, Y> =
+export type Equals<X, Y> =
     (<T>() => T extends X ? 1 : 2) extends
     (<T>() => T extends Y ? 1 : 2) ? true : false;
 
@@ -76,90 +76,91 @@ export type UnionAll<T extends any[]> = (
 // ----Schema--------------------------------------------------------------------------------------
 type SchemaPropertyType = "string" | "number" | "boolean";
 
-export interface SchemaProperty {
-  type: "string" | "number" | "boolean" | string;
+export type SchemaProperty = Readonly<{
+  type: string;
   meta?: unknown;
-}
+}>
 
-interface SchemaRelationship {
+type SchemaRelationship = Readonly<{
   cardinality: string; // gets enforced to "one" | "many" programatically
   type: string;
   inverse?: string;
   meta?: unknown;
-}
+}>
 
-export interface SchemaResource {
+export type SchemaResource = Readonly<{
   singular?: string;
   plural?: string;
   idField?: string;
-  properties: Record<string, SchemaProperty>;
-  relationships: Record<string, SchemaRelationship>;
+  properties: Readonly<Record<string, SchemaProperty>>;
+  relationships: Readonly<Record<string, SchemaRelationship>>;
   meta?: unknown;
-}
+}>;
 
-export interface Schema {
+export type Schema = Readonly<{
   resources: Readonly<Record<string, SchemaResource>>;
   title?: string;
   meta?: unknown;
-}
+}>
 
 // ----Compiled Schema-----------------------------------------------------------------------------
-export type CompiledSchemaProperties<S extends Schema, ResType extends keyof S["resources"]> = {
-  [PropType in keyof S["resources"][ResType]["properties"]]: {
-    name: PropType;
+export type CompiledSchemaProperties<S extends Schema, ResType extends keyof S["resources"]> = Readonly<{
+  [PropType in keyof S["resources"][ResType]["properties"]]: Readonly<{
+    name: PropType & string;
     type: SchemaPropertyType;
-  }
-}
+  }>
+}>
 
 // export type CompiledSchemaRelationshipsGeneric<S extends Schema> = Record<string, any>;
-export type CompiledSchemaRelationshipsGeneric<S extends Schema> = Record<
-  any,
-  {
+// export type CompiledSchemaRelationshipsGeneric<S extends Schema> = Record<
+//   any,
+//   {
+//     cardinality: "one" | "many";
+//     name: string;
+//     inverse?: string;
+//     type: keyof S["resources"] & string;
+//   }
+// >;
+export type CompiledSchemaRelationshipGeneric<
+  S extends Schema,
+  ResType extends keyof S["resources"],
+  RelType extends keyof S["resources"][ResType]["relationships"]
+> = Readonly<{
     cardinality: "one" | "many";
     name: string;
     inverse?: string;
-    type: keyof S["resources"] & string;
+    type: S["resources"][ResType]["relationships"][RelType]["type"] & string;
   }
 >;
+
 export type CompiledSchemaRelationships<S extends Schema, ResType extends keyof S["resources"]> = (
-  // CompiledSchemaRelationshipsGeneric<S> &
   {
-    [RelType in keyof S["resources"][ResType]["relationships"]]: {
-      cardinality: "one" | "many";
-      name: RelType & string;
-      inverse?: string;
-      type: S["resources"][ResType]["relationships"][RelType]["type"] & keyof S["resources"] & string;
-    }
+    [RelType in keyof S["resources"][ResType]["relationships"]]: Readonly<
+      CompiledSchemaRelationshipGeneric<S, ResType, RelType> &
+      {
+        cardinality: "one" | "many";
+        name: RelType & string;
+        inverse?: string;
+        type: S["resources"][ResType]["relationships"][RelType]["type"] & keyof S["resources"] & string;
+      }
+    >
   }
 )
 
-export interface CompiledSchemaResourceGeneric<S extends Schema> {
-  name: keyof S["resources"];
-  idField: string;
-  properties: Record<string, any>;
-  propertiesArray: any;
-  propertyNames: string[];
-  propertyNamesSet: Set<string>;
-  relationships: CompiledSchemaRelationshipsGeneric<S>;
-  relationshipsArray: CompiledSchemaRelationshipsGeneric<S>[];
-  relationshipsByType: CompiledSchemaRelationshipsGeneric<S>;
-  relationshipNames: string[];
-  relationshipNamesSet: Set<string>;
-}
 export type CompiledSchemaResource<S extends Schema, ResType extends keyof S["resources"]> = (
   // CompiledSchemaResourceGeneric<S> &
-  {
-    name: keyof S["resources"];
-    idField: keyof S["resources"][ResType]["properties"];
-    properties: CompiledSchemaProperties<S, ResType>;
+  Readonly<{
+    name: ResType & string;
+    idField: string;
+    properties: Readonly<CompiledSchemaProperties<S, ResType>>;
     propertiesArray: OneOf<CompiledSchemaProperties<S, ResType>>[];
-    propertyNames: (keyof S["resources"][ResType]["properties"])[];
-    propertyNamesSet: Set<keyof S["resources"][ResType]["properties"]>;
-    relationships: CompiledSchemaRelationships<S, ResType>// & CompiledSchemaRelationshipsGeneric<S>;
+    propertyNames: (keyof S["resources"][ResType]["properties"])[] & string[];
+    propertyNamesSet: Set<keyof S["resources"][ResType]["properties"]> & Set<string>;
+    relationships: Readonly<CompiledSchemaRelationships<S, ResType>>;
     relationshipsArray: OneOf<CompiledSchemaRelationships<S, ResType>>[];
-    relationshipNames: (keyof S["resources"][ResType]["relationships"])[];
-    relationshipNamesSet: Set<keyof S["resources"][ResType]["relationships"]>;
-  }
+    relationshipNames: (keyof S["resources"][ResType]["relationships"])[] & string[];
+    relationshipNamesSet: Set<keyof S["resources"][ResType]["relationships"]> & Set<string>;
+  }>
 )
 
 export type CompiledSchema<S extends Schema> = {
@@ -204,26 +205,27 @@ export type QueryParams<CS extends CompiledSchema<any>> = {
 }
 
 // TODO: expand with ResType
-export type SubQuery<CS extends CompiledSchema<any>, ResType extends keyof CS["resources"]> = {
-  properties?: (keyof CS["resources"][ResType]["properties"])[];
-  relationships?: {
-    [RelType in keyof CS["resources"][ResType]["relationships"]]:
-      SubQuery<CS, CS["resources"][ResType]["relationships"][RelType]["type"]>
-  }
+export type SubQuery<CS extends CompiledSchema<any>> = {
+  properties?: string[];
+  // relationships?: {
+  //   [RelType in keyof CS["resources"][ResType]["relationships"]]:
+  //     SubQuery<CS, CS["resources"][ResType]["relationships"][RelType]["type"]>
+  // }
+  relationships?: Record<string, SubQuery<CS>>
   referencesOnly?: boolean;
   params?: Record<string, QueryParams<CS>>;
 }
 
-export type QueryWithoutId<CS extends CompiledSchema<any>, ResType extends keyof CS["resources"]> = (
-  SubQuery<CS, ResType> & { type: ResType }
+export type QueryWithoutId<CS extends CompiledSchema<any>> = (
+  Readonly<SubQuery<CS> & { type: string }>
 );
 
-export type QueryWithId<CS extends CompiledSchema<any>, ResType extends keyof CS["resources"]> = (
-  QueryWithoutId<CS, ResType> & { id: string }
+export type QueryWithId<CS extends CompiledSchema<any>> = (
+  Readonly<QueryWithoutId<CS> & { id: string }>
 );
 
-export type Query<CS extends CompiledSchema<any>, ResType extends keyof CS["resources"]> = (
-  QueryWithId<CS, ResType> | QueryWithoutId<CS, ResType>
+export type Query<CS extends CompiledSchema<any>> = (
+  QueryWithId<CS> | QueryWithoutId<CS>
 );
 
 export type CompiledRefSubQuery<CS extends CompiledSchema<any>, ResType extends keyof CS["resources"]> = Readonly<{
@@ -274,17 +276,26 @@ export type QueryResultProperties<CS extends CompiledSchema<any>, ResType extend
 //   }
 // );
 
-export type QueryResult<CS extends CompiledSchema<any>, ResType extends keyof CS["resources"]> = (
+// export type QueryResult<CS extends CompiledSchema<any>, ResType extends keyof CS["resources"]> = (
+//   null
+//   | (
+//       { type: ResType; id: string; }
+//       & Partial<UnionAll<[
+//         { type: ResType & string; id: string; },
+//         QueryResultProperties<CS, ResType>,
+//         // & QueryResultRelationships<S, ResType>
+//       ]>>
+//   )
+// );
+
+export type QueryResult<CS extends CompiledSchema<any>, ResType extends keyof CS["resources"]> = Readonly<(
   null
   | (
       { type: ResType; id: string; }
-      & Partial<UnionAll<[
-        { type: ResType; id: string; },
-        QueryResultProperties<CS, ResType>,
+      & Partial<QueryResultProperties<CS, ResType>>
         // & QueryResultRelationships<S, ResType>
-      ]>>
   )
-);
+)>;
 
 // ----Resources-----------------------------------------------------------------------------------
 export type ResourceRef<S extends Schema> = Readonly<{
@@ -307,7 +318,7 @@ export type ResourceOfType<S extends Schema, ResType extends keyof S["resources"
   {
     type: ResType;
     id: string;
-    properties: Record<keyof S["resources"][ResType]["properties"], any>;
+    properties: Readonly<Record<keyof S["resources"][ResType]["properties"], any>>;
     relationships: {
       [RelType in keyof S["resources"][ResType]["relationships"]]:
         ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["type"]>
@@ -394,25 +405,29 @@ export type NormalizedResourceUpdates<S extends Schema> = {
     }>;
 };
 
-type GetOneFn<CS extends CompiledSchema<any>> = <ResType extends keyof CS["resources"]>(
-  query: QueryWithId<CS, ResType>,
+type GetOneFn<CS extends CompiledSchema<any>> = <ResType extends keyof CS["resources"], Q extends QueryWithId<CS, ResType>>(
+  query: Q,
   params?: QueryParams<CS>
-) => Promise<QueryResult<CS, ResType>>;
-type GetManyFn<CS extends CompiledSchema<any>> = <ResType extends keyof CS["resources"]>(
-  query: QueryWithoutId<CS, ResType>,
+) => "id" extends keyof Q ? Promise<QueryResult<CS, ResType>> : Promise<QueryResult<CS, ResType>[]>;
+type GetManyFn<CS extends CompiledSchema<any>> = <ResType extends keyof CS["resources"], Q extends QueryWithoutId<CS, ResType>>(
+  query: Q,
   params?: QueryParams<CS>
-) => Promise<QueryResult<CS, ResType>[]>;
+) => "id" extends keyof Q ? Promise<QueryResult<CS, ResType>> : Promise<QueryResult<CS, ResType>[]>;
 
-export type GetFn<CS extends CompiledSchema<any>> = GetOneFn<CS> & GetManyFn<CS>;
+export type GetFn<CS extends CompiledSchema<any>, ResType extends keyof CS["resources"], Q extends QueryWithId<CS, ResType>> = (
+  "id" extends keyof Q
+    ? GetOneFn<CS>
+    : GetManyFn<CS>
+)
 
 // Store -- TODO: deal with wrapping/unwrapping the DataTree <-> ResourceTree
 export interface PolygraphStore<S extends Schema> {
   // TODO: distinguish queries returning one vs many results
   // get: GetFn<S>;
-  get: <CS extends CompiledSchema<S>, ResType extends keyof CS["resources"]>(
+  get: <CS extends CompiledSchema<S>, ResType extends keyof CS["resources"], Q extends Query<CS, ResType>>(
     query: Query<CS, ResType>,
     params?: QueryParams<CS>
-  ) => Promise<QueryResult<CS, ResType>>,
+  ) => "id" extends keyof Q ? Promise<QueryResult<CS, ResType>> : Promise<QueryResult<CS, ResType>[]>,
 
   replaceOne: <CS extends CompiledSchema<S>, ResType extends keyof CS["resources"]>(
     query: Query<CS, ResType>,
