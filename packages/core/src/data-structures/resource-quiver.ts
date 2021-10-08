@@ -1,5 +1,5 @@
 import {
-  CompiledSchema, Resource, ResourceRef, Schema,
+  CompiledSchema, ResourceOfType, ResourceRef, ResourceRefOfType, Schema,
 } from "../types";
 import { asArray, formatRef } from "../utils";
 import { makeQuiver } from "./quiver";
@@ -11,19 +11,22 @@ import { makeQuiver } from "./quiver";
 
 export interface ResourceQuiverBuilder<S extends Schema> {
   // useful when constructing
-  assertResource: (resource: Resource<S>) => void;
-  retractResource: (resourceRef: ResourceRef<S>) => void;
+  assertResource: (resource: ResourceOfType<S, keyof S["resources"]>) => void;
+  retractResource: (resourceRef: ResourceRefOfType<S, keyof S["resources"]>) => void;
   markRelationship: (
     relationshipType: string,
-    resource: ResourceRef<S>,
-    relatedResource: ResourceRef<S>) => void;
+    resource: ResourceRefOfType<S, keyof S["resources"]>,
+    relatedResource: ResourceRefOfType<S, keyof S["resources"]>) => void;
 }
 
 type RelationshipChanges = { present: Set<string> } | { changes: Record<string, boolean> };
 
 export interface ResourceQuiverResult<S extends Schema> {
   getRelationshipChanges: (ref: ResourceRef<S>) => Record<string, RelationshipChanges>;
-  getResources: () => Map<ResourceRef<S>, (null | ResourceRef<S> | Resource<S>)>;
+  getResources: () => Map<
+    ResourceRef<S>,
+    (null | ResourceRefOfType<S, keyof S["resources"]> | ResourceOfType<S, keyof S["resources"]>)
+  >;
 }
 
 export type ResourceQuiverFn<S extends Schema> = (
@@ -44,7 +47,7 @@ export function makeResourceQuiver<S extends Schema>(
     return inverse;
   };
 
-  const assertResource = (resource: Resource<S>) => {
+  const assertResource = (resource: ResourceOfType<S, keyof S["resources"]>) => {
     quiver.assertNode(resource);
     Object.entries(resource.relationships || {}).forEach(([label, baseTargets]) => {
       const targets = asArray(baseTargets);
@@ -56,7 +59,7 @@ export function makeResourceQuiver<S extends Schema>(
     });
   };
 
-  const retractResource = (resource: Resource<S>) => {
+  const retractResource = (resource: ResourceOfType<S, keyof S["resources"]>) => {
     if (!resource) {
       throw new Error(`Resources that do not exist cannot be deleted: ${formatRef(resource)}`);
     }

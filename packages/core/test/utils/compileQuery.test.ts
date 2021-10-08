@@ -4,11 +4,12 @@ import { schema as rawSchema } from "../care-bear-schema";
 import { compileSchema } from "../../src/data-structures/schema";
 import { compileQuery } from "../../src/utils";
 import {
-  CompiledQuery, CompiledSchemaResource, CompiledSchemaResourceGeneric, Expand, Schema,
+  CompiledSchemaRelationshipGeneric,
 } from "../../src/types";
 
 const schema = compileSchema(rawSchema);
-type S = typeof schema;
+type S = typeof rawSchema;
+type CS = typeof schema;
 
 function mapObj<T, U>(
   obj: T,
@@ -28,40 +29,28 @@ function mapObj<T, U>(
   return output;
 }
 
-const getRefOnlyRels = <ResType extends keyof S["resources"]>(
+const getRefOnlyRels = <ResType extends keyof CS["resources"]>(
   resType: ResType,
 ) => {
-  // const rels = schema.resources[resType].relationships as
-  //   Record<keyof S["resources"][ResType]["relationships"], CompiledSchemaResourceGeneric<S>>;
-  // type R = Expand<typeof rels>
-  // type RK = keyof (typeof rels)
-  // type RKE = keyof R;
-  // const ks = Object.keys(rels) as RK[];
-
   const out = mapObj(
     schema.resources[resType].relationships,
-    (relDef) => ({ referencesOnly: true, type: relDef.name }),
+    (relDef: CompiledSchemaRelationshipGeneric<S, ResType, any>) => (
+      { referencesOnly: true, type: relDef.name }
+    ),
   );
 
   return out;
 };
 
 test("compiles a query for a single resource", async (t) => {
-  const ro = getRefOnlyRels("bears");
-  console.log(">>", ro);
-  // return;
+  const result = await compileQuery(schema, { type: "bears", id: "1" });
+  const expected = {
+    type: "bears",
+    id: "1",
+    properties: schema.resources.bears.propertyNames,
+    referencesOnly: false,
+    relationships: getRefOnlyRels("bears"),
+  } as const;
 
-  // const result = await compileQuery<S, "bears">(schema, { type: "bears", id: "1" });
-  // const expected: CompiledQuery<S, "bears"> = {
-  //   type: "bears",
-  //   id: "1",
-  //   properties: schema.resources.bears.propertyNames,
-  //   referencesOnly: false,
-  //   relationships: {},
-  // };
-
-  // type R = Expand<typeof result>;
-  // console.log(result);
-
-  // t.deepEqual(result, expected);
+  t.deepEqual(result, expected);
 });

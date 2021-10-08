@@ -1,25 +1,26 @@
 import { mapObj, pick } from "@polygraph/utils";
 import { asArray } from "./asArray";
 import {
-  CompiledExpandedQuery,
+  CompiledExpandedSubQuery,
   CompiledQuery,
   CompiledSchema,
   CompiledSchemaResource,
+  CompiledSubQuery,
   DataTree,
   ExpandedResourceTreeOfType,
   ResourceTree,
   Schema,
 } from "../types";
 
-export function convertResourceTreeToDataTree<S extends Schema, TopResType extends keyof S["resources"]>(
-  schema: CompiledSchema<S>,
-  query: CompiledQuery<S, TopResType>,
+export function convertResourceTreeToDataTree<S extends Schema, CS extends CompiledSchema<S>, TopResType extends keyof S["resources"]>(
+  schema: CS,
+  query: CompiledQuery<CS, TopResType>,
   resourceTree: ResourceTree<S>,
 ): DataTree {
   // the relationship type is inferred from the relationship at the level up and must be passed
   const expand = <ResType extends keyof S["resources"]>(
     subTree: ResourceTree<S>,
-    subQuery: CompiledQuery<S, ResType>,
+    subQuery: CompiledSubQuery<CS, ResType>,
     type: ResType,
   ): DataTree => {
     if (!("properties" in subTree) || subQuery.referencesOnly === true) {
@@ -27,7 +28,7 @@ export function convertResourceTreeToDataTree<S extends Schema, TopResType exten
     }
 
     const expandedSubTree = subTree as ExpandedResourceTreeOfType<S, ResType>;
-    const expandedSubQuery = subQuery as unknown as CompiledExpandedQuery<S, ResType>;
+    const expandedSubQuery = subQuery as CompiledExpandedSubQuery<CS, ResType>;
 
     const resSchemaDef = schema.resources[type] as CompiledSchemaResource<S, ResType>;
     const idField = { [resSchemaDef.idField]: subTree.id };

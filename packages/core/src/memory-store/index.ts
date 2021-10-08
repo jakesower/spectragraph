@@ -307,23 +307,15 @@ export async function makeMemoryStore<S extends Schema, CS extends CompiledSchem
     const compiledQuery = compileQuery(schema, query);
 
     const walk = <ResType extends keyof S["resources"]>(
-      subQuery: CompiledSubQuery<S, ResType>,
+      subQuery: CompiledSubQuery<CS, ResType>,
       ref: ResourceRefOfType<S, ResType>,
     ): QueryResult<CS, ResType> => {
-      type QR = QueryResult<S, ResType>;
-      type P1 = Partial<QueryResultProperties<S, ResType>>;
-
       const { type, id } = ref;
       const resource = store[type][id];
 
       if (!resource) return null;
       if (subQuery.referencesOnly === true) {
-        const q1: QR = "foo";
-
-        const p1: P1 = {};
-        const p2 = resource.properties;
-
-        return { type, id };
+        return { type, id } as QueryResult<CS, ResType>;
       }
 
       const expandedRels = mapObj(subQuery.relationships, (relQuery, relName) => {
@@ -341,35 +333,70 @@ export async function makeMemoryStore<S extends Schema, CS extends CompiledSchem
         type,
         ...resource.properties,
         ...expandedRels,
-      } as QueryResult<S, ResType>;
+      } as QueryResult<CS, ResType>;
     };
 
     const out = Promise.resolve(
-      walk(compiledQuery, compiledQuery) as QueryResult<S, TopResType>,
+      walk(compiledQuery, compiledQuery) as QueryResult<CS, TopResType>,
     );
+
     return out;
   };
 
-  const getMany = <TopResType extends keyof S["resources"], Q extends QueryWithoutId<S, TopResType>>(
+  const getMany = <TopResType extends keyof CS["resources"], Q extends QueryWithoutId<CS, TopResType>>(
     query: Q,
-    params: QueryParams<S>,
-  ): Promise<QueryResult<S, TopResType>[]> => {
-    throw new Error("not implemented");
+    params: QueryParams<CS>,
+  ): Promise<QueryResult<CS, TopResType>[]> => {
+    const compiledQuery = compileQuery(schema, query);
+
+    const walk = <ResType extends keyof S["resources"]>(
+      subQuery: CompiledSubQuery<CS, ResType>,
+      ref: ResourceRefOfType<S, ResType>,
+    ): QueryResult<CS, ResType> => {
+      const { type, id } = ref;
+      const resource = store[type][id];
+
+      if (!resource) return null;
+      if (subQuery.referencesOnly === true) {
+        return { type, id } as QueryResult<CS, ResType>;
+      }
+
+      const expandedRels = mapObj(subQuery.relationships, (relQuery, relName) => {
+        const relDef = schema.resources[type].relationships[relName];
+        const rels = asArray(resource.relationships[relName]);
+        const expanded = rels.map((rel) => walk(relQuery, rel));
+
+        return relDef.cardinality === "one"
+          ? (expanded.length === 0 ? null : expanded[0])
+          : expanded;
+      });
+
+      return {
+        id,
+        type,
+        ...resource.properties,
+        ...expandedRels,
+      } as QueryResult<CS, ResType>;
+    };
+
+    const results = Object.values(store[query.type])
+      .filter(() => true)
+      .map((res) => walk(compiledQuery, res));
+
+    const out = Promise.resolve(results);
+
+    return out;
   };
 
-  type GetReturnType<ResType extends keyof S["resources"], Q extends Query<S, ResType>> = (
-    Q extends { id: any } ? Promise<QueryResult<S, ResType>> : Promise<QueryResult<S, ResType>[]>
-  );
-
-  const get = <ResType extends keyof S["resources"], Q extends Query<S, ResType>>(
+  const get = <ResType extends keyof CS["resources"], Q extends Query<CS, ResType>>(
     query: Q,
-    params: QueryParams<S>,
-  ): GetReturnType<ResType, Q> => {
-    if ("id" in query) {
-      return getOne(query, params);
-    }
+    params: QueryParams<CS>,
+  ): "id" extends keyof Q ? Promise<QueryResult<CS, ResType>> : Promise<QueryResult<CS, ResType>[]> => {
+    const out = ("id" in query)
+      ? getOne(query, params)
+      : getMany(query, params);
 
-    return Promise.resolve([]);
+    return out as "id" extends keyof Q ? Promise<QueryResult<CS, ResType>> : Promise<QueryResult<CS, ResType>[]>;
   };
 
   const replaceStep = (tree: ResourceTree<S>, { assertResource, markRelationship }) => {
@@ -394,57 +421,62 @@ export async function makeMemoryStore<S extends Schema, CS extends CompiledSchem
     }
   };
 
-  const replaceMany = async (
-    query: Query,
+  const replaceMany = async <TopResType extends keyof CS["resources"], Q extends QueryWithoutId<CS, TopResType>>(
+    query: Q,
     trees: DataTree[],
-    params: QueryParams = {},
+    params: QueryParams<CS> = {},
   ): Promise<NormalizedResourceUpdates<S>> => {
-    console.log("\n\n@#$@#_____-MANY\n\n");
-    const compiledQuery = compileQuery(schema, query);
-    const resourceTrees = trees.map(
-      (tree) => convertDataTreeToResourceTree(schema, compiledQuery, tree),
-    );
+    throw new Error("not yet implemented");
+    // console.log("\n\n@#$@#_____-MANY\n\n");
+    // const compiledQuery = compileQuery(schema, query);
+    // const resourceTrees = trees.map(
+    //   (tree) => convertDataTreeToResourceTree(schema, compiledQuery, tree),
+    // );
 
-    const topLevelResourcesQuery = {
-      type: query.type,
-      id: null,
-      properties: [],
-      relationships: {},
-      referencesOnly: true,
-    } as const;
-    const refAsStr = (ref: ResourceRef<S>): string => `${ref.type}-${ref.id}`;
-    const topLevelResources = await getWithCompiled(topLevelResourcesQuery, params);
+    // const topLevelResourcesQuery = {
+    //   type: query.type,
+    //   id: null,
+    //   properties: [],
+    //   relationships: {},
+    //   referencesOnly: true,
+    // } as const;
+    // const refAsStr = (ref: ResourceRef<S>): string => `${ref.type}-${ref.id}`;
+    // const topLevelResources = await getWithCompiled(topLevelResourcesQuery, params);
 
-    const quiver = makeResourceQuiver(schema, (quiverMethods) => {
-      const possiblyToDelete = keyBy(asArray(topLevelResources), refAsStr);
+    // const quiver = makeResourceQuiver(schema, (quiverMethods) => {
+    //   const possiblyToDelete = keyBy(asArray(topLevelResources), refAsStr);
 
-      resourceTrees.forEach((tree) => {
-        replaceStep(tree, quiverMethods);
-        delete possiblyToDelete[refAsStr(tree)];
-      });
+    //   resourceTrees.forEach((tree) => {
+    //     replaceStep(tree, quiverMethods);
+    //     delete possiblyToDelete[refAsStr(tree)];
+    //   });
 
-      Object.values(possiblyToDelete).forEach(
-        (res) => { quiverMethods.retractResource(store[res.type][res.id]); },
-      );
-    });
+    //   Object.values(possiblyToDelete).forEach(
+    //     (res) => { quiverMethods.retractResource(store[res.type][res.id]); },
+    //   );
+    // });
 
-    return applyQuiver(quiver);
+    // return applyQuiver(quiver);
   };
 
-  const replaceOne = async (query: Query, tree: DataTree) => {
-    console.log("\n\n@#$@#___########__-ONE\n\n");
-    const compiledQuery = compileQuery(schema, query);
-    const resourceTree = convertDataTreeToResourceTree(schema, compiledQuery, tree);
+  const replaceOne = async <TopResType extends keyof CS["resources"], Q extends QueryWithId<CS, TopResType>>(
+    query: Q,
+    tree: DataTree,
+  ) => {
+    throw new Error("not yet implemented");
+    //   console.log("\n\n@#$@#___########__-ONE\n\n");
+    //   const compiledQuery = compileQuery(schema, query);
+    //   const resourceTree = convertDataTreeToResourceTree(schema, compiledQuery, tree);
 
-    const quiver = makeResourceQuiver(schema, (quiverMethods) => {
-      if (tree === null) {
-        quiverMethods.retractResource(resourceTree);
-      } else {
-        replaceStep(resourceTree, quiverMethods);
-      }
-    });
+    //   const quiver = makeResourceQuiver(schema, (quiverMethods) => {
+    //     if (tree === null) {
+    //       quiverMethods.retractResource(resourceTree);
+    //     } else {
+    //       replaceStep(resourceTree, quiverMethods);
+    //     }
+    //   });
 
-    return applyQuiver(quiver);
+  //   return applyQuiver(quiver);
   };
 
   await replaceResources(options.initialData);
@@ -454,5 +486,5 @@ export async function makeMemoryStore<S extends Schema, CS extends CompiledSchem
     replaceOne,
     replaceMany,
     replaceResources,
-  };
+  } as MemoryStore<S>;
 }

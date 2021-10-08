@@ -3,19 +3,24 @@ import { asArray } from "./asArray";
 import {
   CompiledQuery,
   CompiledSchema,
+  CompiledSubQuery,
   DataTree,
   ResourceTree,
   Schema,
 } from "../types";
 
-export function convertDataTreeToResourceTree<S extends Schema, TopResType extends keyof S["resources"]>(
-  schema: CompiledSchema<S>,
-  query: CompiledQuery<S, TopResType>,
+export function convertDataTreeToResourceTree<
+  S extends Schema,
+  CS extends CompiledSchema<S>,
+  TopResType extends keyof CS["resources"]
+>(
+  schema: CS,
+  query: CompiledQuery<CS, TopResType>,
   dataTree: DataTree,
 ): ResourceTree<S> {
   const expand = <ResType extends keyof S["resources"]>(
     subTree: DataTree,
-    subQuery: CompiledQuery<S, ResType>,
+    subQuery: CompiledSubQuery<CS, ResType>,
     resType: ResType,
   ): ResourceTree<S> => {
     const resSchemaDef = schema.resources[resType];
