@@ -18,6 +18,7 @@ module.exports = {
     curly: ["error", "multi-line"],
     eqeqeq: ["error", "always", { null: "ignore" }],
     "func-names": "off",
+    "function-paren-newline": "off",
     "import/extensions": [
       "error",
       "ignorePackages",

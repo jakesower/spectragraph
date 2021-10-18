@@ -8,6 +8,7 @@ import {
 } from "../types";
 
 export { asArray } from "./asArray";
+export { cardinalize } from "./cardinalize";
 export { compileQuery } from "./compileQuery";
 export { convertDataTreeToResourceTree } from "./convertDataTreeToResourceTree";
 export { convertResourceTreeToDataTree } from "./convertResourceTreeToDataTree";

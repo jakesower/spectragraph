@@ -49,8 +49,10 @@ export declare function groupBy<T>(items: T[], fn: (item: T) => string): {
     [k: string]: T[];
 };
 export declare function indexOn(xs: any, keys: any): any;
-export declare function inlineKey<T>(obj: T, keyProp: string): {
-    [k: string]: any;
+export declare function inlineKey<T extends Record<string, Record<string, any>>, K extends string>(obj: T, keyProp: K): {
+    [P in keyof T]: T[P] & {
+        [k in K]: string;
+    };
 };
 export declare function keyBy<T>(items: T[], fn: (item: T) => string): Record<string, T>;
 export declare function keyByProp<T, K extends keyof T>(items: T[], key: K): Record<K, T>;

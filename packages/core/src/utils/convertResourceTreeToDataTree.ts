@@ -4,7 +4,6 @@ import {
   CompiledExpandedSubQuery,
   CompiledQuery,
   CompiledSchema,
-  CompiledSchemaResource,
   CompiledSubQuery,
   DataTree,
   ExpandedResourceTreeOfType,
@@ -30,7 +29,7 @@ export function convertResourceTreeToDataTree<S extends Schema, CS extends Compi
     const expandedSubTree = subTree as ExpandedResourceTreeOfType<S, ResType>;
     const expandedSubQuery = subQuery as CompiledExpandedSubQuery<CS, ResType>;
 
-    const resSchemaDef = schema.resources[type] as CompiledSchemaResource<S, ResType>;
+    const resSchemaDef = schema.resources[type];
     const idField = { [resSchemaDef.idField]: subTree.id };
     const nonIdFields = pick(expandedSubTree.properties, expandedSubQuery.properties);
     const properties = { ...nonIdFields, ...idField };

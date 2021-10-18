@@ -1,5 +1,5 @@
 import {
-  CompiledSchema, ResourceOfType, ResourceRef, ResourceRefOfType, Schema,
+  ResourceOfType, ResourceRef, ResourceRefOfType, Schema,
 } from "../types";
 import { asArray, formatRef } from "../utils";
 import { makeQuiver } from "./quiver";
@@ -30,12 +30,12 @@ export interface ResourceQuiverResult<S extends Schema> {
 }
 
 export type ResourceQuiverFn<S extends Schema> = (
-  schema: CompiledSchema<S>,
+  schema: S,
   builderFn: (builderFns: ResourceQuiverBuilder<S>) => void
 ) => ResourceQuiverResult<S>;
 
 export function makeResourceQuiver<S extends Schema>(
-  schema: CompiledSchema<S>,
+  schema: S,
   builderFn: (builder: ResourceQuiverBuilder<S>) => void,
 ): ResourceQuiverResult<S> {
   const quiver = makeQuiver();
