@@ -195,13 +195,16 @@ export function indexOn(xs, keys) {
 }
 
 // e.g. {a: {inner: 'thing'}, b: {other: 'item'}} => {a: {key: 'a', inner: 'thing'}, b: {key: 'b', other: 'item'}}
-export function inlineKey<T>(obj: T, keyProp: string): { [k: string]: any } {
+export function inlineKey<T extends Record<string, Record<string, any>>, K extends string>(
+  obj: T,
+  keyProp: K
+): { [P in keyof T]: T[P] & { [k in K]: string } } {
   let result = {}
   const keys = Object.keys(obj)
   for (let key of keys) {
     result[key] = Object.assign({}, obj[key], { [keyProp]: key })
   }
-  return result
+  return result as { [P in keyof T]: T[P] & { [k in K]: string } };
 }
 
 export function keyBy<T>(items: T[], fn: (item: T) => string): Record<string, T> {

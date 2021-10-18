@@ -1,53 +1,47 @@
 import test from "ava";
 // import { mapObj } from "@polygraph/utils";
-import { schema as rawSchema } from "../care-bear-schema";
+import { mapObj } from "@polygraph/utils";
+import { schema } from "../care-bear-schema";
 import { compileSchema } from "../../src/data-structures/schema";
 import { compileQuery } from "../../src/utils";
 import {
-  CompiledSchemaRelationshipGeneric,
+  Expand, ExpandedSchema, CompiledQuery, CompiledSubQuery, Query, SubQuery,
 } from "../../src/types";
 
-const schema = compileSchema(rawSchema);
-type S = typeof rawSchema;
-type CS = typeof schema;
+// const schema = compileSchema(rawSchema);
+// type S = typeof rawSchema;
+// type SR = typeof rawSchema.resources.bears.relationships
+type S = typeof schema;
+type XS = ExpandedSchema<S>;
+const expandedSchema = schema as XS;
+type SchemaRelationships<ResType extends keyof S["resources"]> = XS["resources"][ResType]["relationships"];
 
-function mapObj<T, U>(
-  obj: T,
-  fn: (val: T[keyof T], key: keyof T) => U,
-): Record<keyof T, U> {
-  const k1 = Object.keys(obj);
-  const keys = Object.keys(obj) as (keyof T)[];
-  const output = {} as Record<keyof T, U>;
-  const l = keys.length;
-
-  for (let i = 0; i < l; i += 1) {
-    const key = keys[i];
-    const val = obj[key];
-    output[keys[i]] = fn(val, key);
-  }
-
-  return output;
-}
-
-const getRefOnlyRels = <ResType extends keyof CS["resources"]>(
+const getRefOnlyRels = <ResType extends keyof S["resources"]>(
   resType: ResType,
 ) => {
   const out = mapObj(
-    schema.resources[resType].relationships,
-    (relDef: CompiledSchemaRelationshipGeneric<S, ResType, any>) => (
-      { referencesOnly: true, type: relDef.name }
+    expandedSchema.resources[resType].relationships,
+    (_, type) => (
+      { referencesOnly: true, type } as const
     ),
   );
 
   return out;
 };
 
+const propertyNames = <ResType extends keyof S["resources"]>(resType: ResType) => (
+  Object.keys(schema.resources[resType].properties) as (keyof S["resources"][ResType]["properties"])[]
+);
+
 test("compiles a query for a single resource", async (t) => {
-  const result = await compileQuery(schema, { type: "bears", id: "1" });
+  const rawQuery = { type: "bears", id: "1" };
+  const query = rawQuery as Query<S, "bears">;
+  const result = compileQuery(schema, query);
+
   const expected = {
     type: "bears",
     id: "1",
-    properties: schema.resources.bears.propertyNames,
+    properties: propertyNames("bears"),
     referencesOnly: false,
     relationships: getRefOnlyRels("bears"),
   } as const;

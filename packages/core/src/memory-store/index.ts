@@ -5,7 +5,6 @@ import {
 } from "@polygraph/utils";
 import { makeResourceQuiver, ResourceQuiverResult } from "../data-structures/resource-quiver";
 import {
-  CompiledSchema,
   ResourceTree,
   NormalizedResources,
   NormalizedResourceUpdates,
@@ -14,27 +13,21 @@ import {
   CompiledQuery,
   ResourceRef,
   DataTree,
-  GetFn,
   Schema,
   MemoryStore,
   ExpandedResourceTree,
   QueryResult,
   QueryWithId,
   ResourceRefOfType,
-  QueryResultProperties,
-  UnionAll,
-  Union,
-  KnownProperties,
-  StringPropertyType,
-  Expand,
-  CombinedStringKeys,
   QueryWithoutId,
   CompiledSubQuery,
   ResourceOfType,
   ResourceTreeOfType,
+  ExpandedSchema,
+  SubQueryResult,
 } from "../types";
 import {
-  asArray, compileQuery, convertDataTreeToResourceTree, toRef,
+  asArray, cardinalize, compileQuery, convertDataTreeToResourceTree, toRef,
 } from "../utils";
 
 interface MemoryStoreOptions<S extends Schema> {
@@ -45,7 +38,7 @@ interface MemoryStoreOptions<S extends Schema> {
  * TODOS:
  * - Some queries guarantee no internal inconsistencies, a good place for optimization.
  */
-function makeEmptyStore<S extends Schema>(schema: CompiledSchema<S>): NormalizedResources<S> {
+function makeEmptyStore<S extends Schema>(schema: S): NormalizedResources<S> {
   const resources = {} as Record<keyof S["resources"], Record<string, ResourceOfType<S, keyof S["resources"]>>>;
   const ResTypes = Object.keys(schema.resources) as (keyof S["resources"])[];
   ResTypes.forEach(
@@ -62,11 +55,12 @@ type UnionToIntersection<U extends Record<string, unknown>> = {
 }
 
 function makeEmptyResource<S extends Schema, ResType extends keyof S["resources"]>(
-  schema: CompiledSchema<S>,
-  type: ResType,
+  schema: S,
+  type: ResType & string,
   id: string,
 ): ResourceOfType<S, ResType> {
-  const resDef = schema.resources[type];
+  const expandedSchema = schema as ExpandedSchema<S>;
+  const resDef = expandedSchema.resources[type];
   const properties = mapObj(resDef.properties, () => undefined);
   const relationships = mapObj(resDef.relationships, (relDef) => cardinalize([], relDef));
 
@@ -86,19 +80,6 @@ function strToRef<S extends Schema>(refStr: string): ResourceRef<S> {
   return JSON.parse(refStr);
 }
 
-function cardinalize<
-  S extends Schema,
-  ResType extends keyof S["resources"],
-  CardType extends { cardinality: "one" | "many" },
->(
-  rels: ResourceRefOfType<S, ResType>[],
-  relDef: CardType,
-): ResourceRefOfType<S, ResType> | ResourceRefOfType<S, ResType>[] {
-  return relDef.cardinality === "one"
-    ? rels.length === 0 ? null : rels[0]
-    : rels;
-}
-
 type RelatedResource<S extends Schema> = null | ResourceRef<S> | ResourceRef<S>[];
 function asRefSet<S extends Schema>(
   resources: RelatedResource<S>,
@@ -109,11 +90,13 @@ function asRefSet<S extends Schema>(
   return [...nextSet].map(strToRef);
 }
 
-export async function makeMemoryStore<S extends Schema, CS extends CompiledSchema<S>>(
-  schema: CS,
+export async function makeMemoryStore<S extends Schema>(
+  schema: S,
   options: MemoryStoreOptions<S>,
 ): Promise<MemoryStore<S>> {
   const store = makeEmptyStore(schema);
+  const expandedSchema = schema as ExpandedSchema<S>;
+  type XS = ExpandedSchema<S>;
 
   const applyQuiver = (
     quiver: ResourceQuiverResult<S>,
@@ -213,11 +196,11 @@ export async function makeMemoryStore<S extends Schema, CS extends CompiledSchem
   };
 
   const getWithCompiled = async <TopResType extends keyof S["resources"]>(
-    compiledQuery: CompiledQuery<CS, TopResType>,
-    params: QueryParams<CS> = {},
+    compiledQuery: CompiledQuery<S, TopResType & string>,
+    params: QueryParams<S> = {},
   ): Promise<ResourceTreeOfType<S, TopResType> | ResourceTreeOfType<S, TopResType>[]> => {
     const walk = <ResType extends keyof S["resources"]>(
-      subQuery: CompiledSubQuery<CS, ResType>,
+      subQuery: CompiledSubQuery<S, ResType>,
       ref: ResourceRefOfType<S, ResType>,
     ): ResourceTreeOfType<S, ResType> => {
       const { type, id } = ref;
@@ -300,26 +283,26 @@ export async function makeMemoryStore<S extends Schema, CS extends CompiledSchem
   //   return out;
   // };
 
-  const getOne = <TopResType extends keyof CS["resources"], Q extends QueryWithId<CS, TopResType>>(
+  const getOne = <TopResType extends keyof S["resources"], Q extends QueryWithId<S, TopResType & string>>(
     query: Q,
-    params: QueryParams<CS> = {},
-  ): Promise<QueryResult<CS, TopResType>> => {
+    params: QueryParams<S> = {},
+  ): Promise<QueryResult<S, Q, TopResType & string>> => {
     const compiledQuery = compileQuery(schema, query);
 
-    const walk = <ResType extends keyof S["resources"]>(
-      subQuery: CompiledSubQuery<CS, ResType>,
+    const walk = <ResType extends keyof S["resources"], SQ extends CompiledSubQuery<S, ResType>>(
+      subQuery: SQ,
       ref: ResourceRefOfType<S, ResType>,
-    ): QueryResult<CS, ResType> => {
+    ): SubQueryResult<S, SQ, ResType> => {
       const { type, id } = ref;
       const resource = store[type][id];
 
       if (!resource) return null;
       if (subQuery.referencesOnly === true) {
-        return { type, id } as QueryResult<CS, ResType>;
+        return { type, id } as SubQueryResult<S, SQ, ResType>;
       }
 
       const expandedRels = mapObj(subQuery.relationships, (relQuery, relName) => {
-        const relDef = schema.resources[type].relationships[relName];
+        const relDef = schema.resources[type].relationships[relName as string];
         const rels = asArray(resource.relationships[relName]);
         const expanded = rels.map((rel) => walk(relQuery, rel));
 
@@ -333,70 +316,77 @@ export async function makeMemoryStore<S extends Schema, CS extends CompiledSchem
         type,
         ...resource.properties,
         ...expandedRels,
-      } as QueryResult<CS, ResType>;
+      } as SubQueryResult<S, SQ, ResType>;
     };
 
     const out = Promise.resolve(
-      walk(compiledQuery, compiledQuery) as QueryResult<CS, TopResType>,
+      walk(compiledQuery, compiledQuery) as QueryResult<S, Q, TopResType>,
     );
 
     return out;
   };
 
-  const getMany = <TopResType extends keyof CS["resources"], Q extends QueryWithoutId<CS, TopResType>>(
-    query: Q,
-    params: QueryParams<CS>,
-  ): Promise<QueryResult<CS, TopResType>[]> => {
+  const getMany = <
+    TopResType extends keyof S["resources"],
+    Q extends QueryWithoutId<S, TopResType>
+  >(
+      query: Q,
+      params: QueryParams<S>,
+    ): Promise<QueryResult<S, Q, TopResType>[]> => {
     const compiledQuery = compileQuery(schema, query);
 
-    const walk = <ResType extends keyof S["resources"]>(
-      subQuery: CompiledSubQuery<CS, ResType>,
+    const walk = <ResType extends keyof S["resources"], SQ extends CompiledSubQuery<S, ResType>>(
+      subQuery: SQ,
       ref: ResourceRefOfType<S, ResType>,
-    ): QueryResult<CS, ResType> => {
+    ): QueryResult<S, SQ, ResType> => {
       const { type, id } = ref;
       const resource = store[type][id];
 
       if (!resource) return null;
       if (subQuery.referencesOnly === true) {
-        return { type, id } as QueryResult<CS, ResType>;
+        return { type, id } as QueryResult<S, SQ, ResType>;
       }
 
-      const expandedRels = mapObj(subQuery.relationships, (relQuery, relName) => {
-        const relDef = schema.resources[type].relationships[relName];
-        const rels = asArray(resource.relationships[relName]);
-        const expanded = rels.map((rel) => walk(relQuery, rel));
+      const expandedRels = mapObj(
+        subQuery.relationships,
+        <RelType extends keyof S["resources"][ResType]["relationships"]>(relQuery, relName: RelType) => {
+          const relDef = schema.resources[type].relationships[relName as string];
+          const rels = asArray(resource.relationships[relName]);
+          const expanded = rels.map((rel) => walk(relQuery, rel));
 
-        return relDef.cardinality === "one"
-          ? (expanded.length === 0 ? null : expanded[0])
-          : expanded;
-      });
+          return relDef.cardinality === "one"
+            ? (expanded.length === 0 ? null : expanded[0])
+            : expanded;
+        },
+      );
 
       return {
         id,
         type,
         ...resource.properties,
         ...expandedRels,
-      } as QueryResult<CS, ResType>;
+      } as QueryResult<S, ResType, any>;
     };
 
-    const results = Object.values(store[query.type])
-      .filter(() => true)
-      .map((res) => walk(compiledQuery, res));
+    const allResources = Object.values(store[query.type]);
+    const results = allResources.map((res) => walk(compiledQuery, res));
 
-    const out = Promise.resolve(results);
+    const out = Promise.resolve(
+      results as QueryResult<S, TopResType, any>[],
+    );
 
     return out;
   };
 
-  const get = <ResType extends keyof CS["resources"], Q extends Query<CS, ResType>>(
+  const get = <ResType extends keyof S["resources"], Q extends Query<S, ResType>>(
     query: Q,
-    params: QueryParams<CS>,
-  ): "id" extends keyof Q ? Promise<QueryResult<CS, ResType>> : Promise<QueryResult<CS, ResType>[]> => {
+    params: QueryParams<S>,
+  ): "id" extends keyof Q ? Promise<QueryResult<S, ResType, any>> : Promise<QueryResult<S, ResType, any>[]> => {
     const out = ("id" in query)
-      ? getOne(query, params)
-      : getMany(query, params);
+      ? getOne(query as QueryWithId<S, ResType>, params)
+      : getMany(query as QueryWithoutId<S, ResType>, params);
 
-    return out as "id" extends keyof Q ? Promise<QueryResult<CS, ResType>> : Promise<QueryResult<CS, ResType>[]>;
+    return out as "id" extends keyof Q ? Promise<QueryResult<S, ResType, any>> : Promise<QueryResult<S, ResType, any>[]>;
   };
 
   const replaceStep = (tree: ResourceTree<S>, { assertResource, markRelationship }) => {
@@ -421,62 +411,60 @@ export async function makeMemoryStore<S extends Schema, CS extends CompiledSchem
     }
   };
 
-  const replaceMany = async <TopResType extends keyof CS["resources"], Q extends QueryWithoutId<CS, TopResType>>(
+  const replaceMany = async <TopResType extends keyof S["resources"], Q extends QueryWithoutId<S, TopResType & string>>(
     query: Q,
     trees: DataTree[],
-    params: QueryParams<CS> = {},
+    params: QueryParams<S> = {},
   ): Promise<NormalizedResourceUpdates<S>> => {
-    throw new Error("not yet implemented");
-    // console.log("\n\n@#$@#_____-MANY\n\n");
-    // const compiledQuery = compileQuery(schema, query);
-    // const resourceTrees = trees.map(
-    //   (tree) => convertDataTreeToResourceTree(schema, compiledQuery, tree),
-    // );
+    console.log("\n\n@#$@#_____-MANY\n\n");
+    const compiledQuery = compileQuery(schema, query);
+    const resourceTrees = trees.map(
+      (tree) => convertDataTreeToResourceTree(schema, compiledQuery, tree),
+    );
 
-    // const topLevelResourcesQuery = {
-    //   type: query.type,
-    //   id: null,
-    //   properties: [],
-    //   relationships: {},
-    //   referencesOnly: true,
-    // } as const;
-    // const refAsStr = (ref: ResourceRef<S>): string => `${ref.type}-${ref.id}`;
-    // const topLevelResources = await getWithCompiled(topLevelResourcesQuery, params);
+    const topLevelResourcesQuery = {
+      type: query.type,
+      id: null,
+      properties: [],
+      relationships: {},
+      referencesOnly: true,
+    } as const;
+    const refAsStr = (ref: ResourceRef<S>): string => `${ref.type}-${ref.id}`;
+    const topLevelResources = await getWithCompiled(topLevelResourcesQuery, params);
 
-    // const quiver = makeResourceQuiver(schema, (quiverMethods) => {
-    //   const possiblyToDelete = keyBy(asArray(topLevelResources), refAsStr);
+    const quiver = makeResourceQuiver(schema, (quiverMethods) => {
+      const possiblyToDelete = keyBy(asArray(topLevelResources), refAsStr);
 
-    //   resourceTrees.forEach((tree) => {
-    //     replaceStep(tree, quiverMethods);
-    //     delete possiblyToDelete[refAsStr(tree)];
-    //   });
+      resourceTrees.forEach((tree) => {
+        replaceStep(tree, quiverMethods);
+        delete possiblyToDelete[refAsStr(tree)];
+      });
 
-    //   Object.values(possiblyToDelete).forEach(
-    //     (res) => { quiverMethods.retractResource(store[res.type][res.id]); },
-    //   );
-    // });
+      Object.values(possiblyToDelete).forEach(
+        (res) => { quiverMethods.retractResource(store[res.type][res.id]); },
+      );
+    });
 
-    // return applyQuiver(quiver);
+    return applyQuiver(quiver);
   };
 
-  const replaceOne = async <TopResType extends keyof CS["resources"], Q extends QueryWithId<CS, TopResType>>(
+  const replaceOne = async <TopResType extends keyof S["resources"], Q extends QueryWithId<S, TopResType & string>>(
     query: Q,
     tree: DataTree,
   ) => {
-    throw new Error("not yet implemented");
-    //   console.log("\n\n@#$@#___########__-ONE\n\n");
-    //   const compiledQuery = compileQuery(schema, query);
-    //   const resourceTree = convertDataTreeToResourceTree(schema, compiledQuery, tree);
+    console.log("\n\n@#$@#___########__-ONE\n\n");
+    const compiledQuery = compileQuery(schema, query);
+    const resourceTree = convertDataTreeToResourceTree(schema, compiledQuery, tree);
 
-    //   const quiver = makeResourceQuiver(schema, (quiverMethods) => {
-    //     if (tree === null) {
-    //       quiverMethods.retractResource(resourceTree);
-    //     } else {
-    //       replaceStep(resourceTree, quiverMethods);
-    //     }
-    //   });
+    const quiver = makeResourceQuiver(schema, (quiverMethods) => {
+      if (tree === null) {
+        quiverMethods.retractResource(resourceTree);
+      } else {
+        replaceStep(resourceTree, quiverMethods);
+      }
+    });
 
-  //   return applyQuiver(quiver);
+    return applyQuiver(quiver);
   };
 
   await replaceResources(options.initialData);

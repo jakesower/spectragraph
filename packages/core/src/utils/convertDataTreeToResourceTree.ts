@@ -1,30 +1,34 @@
-import { pick } from "@polygraph/utils";
+import { inlineKey, mapObj, pick } from "@polygraph/utils";
 import { asArray } from "./asArray";
 import {
   CompiledQuery,
   CompiledSchema,
   CompiledSubQuery,
   DataTree,
+  ExpandedSchema,
   ResourceTree,
   Schema,
 } from "../types";
 
 export function convertDataTreeToResourceTree<
   S extends Schema,
-  CS extends CompiledSchema<S>,
-  TopResType extends keyof CS["resources"]
+  XS extends ExpandedSchema<S>,
+  TopResType extends keyof S["resources"]
 >(
-  schema: CS,
-  query: CompiledQuery<CS, TopResType>,
+  schema: S,
+  query: CompiledQuery<S, TopResType & string>,
   dataTree: DataTree,
 ): ResourceTree<S> {
   const expand = <ResType extends keyof S["resources"]>(
     subTree: DataTree,
-    subQuery: CompiledSubQuery<CS, ResType>,
-    resType: ResType,
+    subQuery: CompiledSubQuery<S, ResType>,
+    resType: ResType & string,
   ): ResourceTree<S> => {
     const resSchemaDef = schema.resources[resType];
-    const id = subTree[resSchemaDef.idField as string] as string;
+    // const keyedRels = mapObj(resSchemaDef.relationships, (rel) => inlineKey(rel, "name"));
+    const keyedRels = inlineKey(resSchemaDef.relationships, "name");
+    const relationshipsArray = Object.values(keyedRels);
+    const id = "idField" in subTree ? subTree[resSchemaDef.idField as string] : subTree.id;
 
     if (!id) throw new Error(`id field missing on a resource (${resType}, ???)`);
 
@@ -39,7 +43,7 @@ export function convertDataTreeToResourceTree<
       any // todo
     >;
 
-    const relDefs = resSchemaDef.relationshipsArray
+    const relDefs = relationshipsArray
       .filter((rel) => (rel.name in subQuery.relationships) && (rel.name in subTree));
     const expandedRelationships = Object.fromEntries(relDefs.map((relDef) => {
       const relatedRess = asArray(subTree[relDef.name as string]) as DataTree[];

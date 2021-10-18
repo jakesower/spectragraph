@@ -1,9 +1,7 @@
 import { keyByProp, mapObj } from "@polygraph/utils";
 import {
   CompiledSchema,
-  CompiledSchemaResource,
   Schema,
-  SchemaResource,
 } from "../types";
 
 // function compileResource()
@@ -13,8 +11,8 @@ const validCardinalities = ["one", "many"];
 // TODO: Validate schema structure with json-schema
 export function compileSchema<S extends Schema>(schemaDefinition: S): CompiledSchema<S> {
   const resources = mapObj(
-    schemaDefinition.resources as Record<keyof S["resources"], SchemaResource>,
-    <ResType extends keyof S["resources"]>(resourceDef, resourceName: ResType) => {
+    schemaDefinition.resources,
+    <ResType extends keyof S["resources"]>(resourceDef: S["resources"][ResType], resourceName: ResType) => {
       const properties = mapObj(
         resourceDef.properties,
         <PropType extends keyof S["resources"][ResType]["properties"]>(prop, name: PropType) => {
@@ -39,8 +37,10 @@ export function compileSchema<S extends Schema>(schemaDefinition: S): CompiledSc
             throw new Error(`relationship cardinality ${resourceName}.${name} is invalid; "${rel.cardinality}" is not one of ("${validCardinalities.join("\", \"")}")`);
           }
 
+          // return rel;
           return { ...rel, name };
         },
+      // );
       );
 
       const resource = {
@@ -63,7 +63,7 @@ export function compileSchema<S extends Schema>(schemaDefinition: S): CompiledSc
         relationshipNamesSet: new Set(Object.keys(relationships)),
       };
 
-      return resource as CompiledSchemaResource<S, ResType>;
+      return resource;
     },
   );
 

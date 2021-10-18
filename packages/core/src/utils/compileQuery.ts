@@ -1,23 +1,26 @@
 import { mapObj } from "@polygraph/utils";
 import {
   CompiledQuery,
-  CompiledSchema,
-  CompiledSchemaRelationships,
   CompiledSubQuery,
   Query,
   SubQuery,
   Schema,
+  ExpandedSchema,
 } from "../types";
 
-export function compileQuery<S extends Schema, CS extends CompiledSchema<S>, TopResType extends keyof CS["resources"]>(
-  schema: CS,
-  query: Query<CS, TopResType>,
-): CompiledQuery<CS, TopResType> {
+export function compileQuery<
+  S extends Schema,
+  TopResType extends keyof S["resources"],
+>(
+  schema: S,
+  query: Query<S, TopResType>): CompiledQuery<S, TopResType> {
   const errors = [];
-  const expand = <ResType extends keyof S["resources"]>(
-    subQuery: SubQuery<CS, ResType>,
-    resType: ResType,
-  ): CompiledSubQuery<CS, ResType> => {
+  const fullSchema = schema as ExpandedSchema<S>;
+
+  const expand = <
+    ResType extends keyof S["resources"],
+    SQ extends SubQuery<S, ResType>,
+  >(subQuery: SQ, resType: ResType & string): CompiledSubQuery<S, ResType> => {
     if (subQuery.referencesOnly) {
       return {
         referencesOnly: true,
@@ -25,30 +28,34 @@ export function compileQuery<S extends Schema, CS extends CompiledSchema<S>, Top
       };
     }
 
-    const resSchemaDef = schema.resources[resType];
+    const resSchemaDef = fullSchema.resources[resType];
+    const propertyNamesSet = new Set(Object.keys(resSchemaDef.properties));
+    const relationshipNamesSet = new Set(Object.keys(resSchemaDef.relationships));
 
     // validate
     (subQuery.properties || []).forEach((prop) => {
-      if (!resSchemaDef.propertyNamesSet.has(prop)) {
-        errors.push(`${prop} is not a property defined on type ${resType}`);
+      if (!propertyNamesSet.has(prop)) {
+        errors.push(`${prop} is not a property on type ${resType}`);
       }
     });
 
     Object.keys(subQuery.relationships || {}).forEach((relType) => {
-      if (!resSchemaDef.relationshipNamesSet.has(relType)) {
+      if (!relationshipNamesSet.has(relType)) {
         errors.push(`${relType} is not a relationship defined on type ${resType}`);
       }
     });
 
-    const properties = (subQuery.properties
-      ? subQuery.properties.filter((prop) => resSchemaDef.propertyNamesSet.has(prop))
-      : Array.from(resSchemaDef.propertyNames));
+    const properties = (
+      subQuery.properties
+        ? subQuery.properties.filter((prop) => propertyNamesSet.has(prop))
+        : Object.keys(resSchemaDef.properties)
+    );
 
     if (!("relationships" in subQuery)) {
-      const relDefs = schema.resources[resType].relationships;
+      const relDefs = fullSchema.resources[resType].relationships;
       const relationships = mapObj(
         relDefs,
-        (relDef) => ({ referencesOnly: true, type: relDef.name } as const),
+        (_, type: string) => ({ referencesOnly: true, type } as const),
       );
 
       return {
@@ -62,7 +69,7 @@ export function compileQuery<S extends Schema, CS extends CompiledSchema<S>, Top
     const relationships = mapObj(
       subQuery.relationships,
       (queryRel, relType) => {
-        const relDef = schema.resources[resType].relationships[relType];
+        const relDef = fullSchema.resources[resType].relationships[relType];
         return expand(queryRel, relDef.type);
       },
     );
@@ -76,10 +83,14 @@ export function compileQuery<S extends Schema, CS extends CompiledSchema<S>, Top
   };
 
   const output = {
-    ...expand(query as Query<CS, TopResType> & { type: TopResType }, query.type as TopResType),
+    ...expand(
+      query as Query<S, TopResType> & { type: TopResType },
+      query.type as TopResType & string,
+    ),
     id: ("id" in query) ? query.id : null,
   };
+
   if (errors.length > 0) throw new Error(JSON.stringify(errors));
 
-  return output;
+  return output as CompiledQuery<S, TopResType>;
 }
