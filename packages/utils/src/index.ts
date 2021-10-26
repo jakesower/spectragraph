@@ -227,7 +227,7 @@ export function keyByProp<T, K extends keyof T>(items: T[], key: K): Record<K, T
 
 export function mapObj<T extends Record<string, any>, U>(
   obj: T,
-  fn: (val: T[keyof T], key: keyof T) => U
+  fn: (val: T[keyof T], key: keyof T & string) => U
 ): { [K in keyof T]: U } {
   const keys = Object.keys(obj);
   const output = {} as Record<any, any>;
@@ -235,7 +235,7 @@ export function mapObj<T extends Record<string, any>, U>(
 
   for (let i = 0; i < l; i += 1) {
     const val = obj[keys[i]];
-    output[keys[i]] = fn(val, keys[i] as keyof T);
+    output[keys[i]] = fn(val, keys[i] as keyof T & string);
   }
 
   return output as { [K in keyof T]: U };

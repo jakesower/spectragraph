@@ -14,7 +14,9 @@ import {
 type S = typeof schema;
 type XS = ExpandedSchema<S>;
 const expandedSchema = schema as XS;
-type SchemaRelationships<ResType extends keyof S["resources"]> = XS["resources"][ResType]["relationships"];
+type SchemaRelationships<ResType extends keyof S["resources"]> = (
+  XS["resources"][ResType]["relationships"]
+);
 
 const getRefOnlyRels = <ResType extends keyof S["resources"]>(
   resType: ResType,
@@ -30,7 +32,9 @@ const getRefOnlyRels = <ResType extends keyof S["resources"]>(
 };
 
 const propertyNames = <ResType extends keyof S["resources"]>(resType: ResType) => (
-  Object.keys(schema.resources[resType].properties) as (keyof S["resources"][ResType]["properties"])[]
+  Object.keys(schema.resources[resType].properties) as (
+    (keyof S["resources"][ResType]["properties"])[]
+  )
 );
 
 test("compiles a query for a single resource", async (t) => {
@@ -45,6 +49,23 @@ test("compiles a query for a single resource", async (t) => {
     referencesOnly: false,
     relationships: getRefOnlyRels("bears"),
   } as const;
+
+  t.deepEqual(result, expected);
+});
+
+test("compiles a query for a single resource with specified properties", async (t) => {
+  const rawQuery = { type: "bears", id: "1", properties: ["name", "fur_color"] } as const;
+  const result = compileQuery(schema, rawQuery);
+
+  const expected = {
+    type: "bears",
+    id: "1",
+    properties: ["name", "fur_color"],
+    referencesOnly: false,
+    relationships: getRefOnlyRels("bears"),
+  } as typeof result;
+
+  type RE = Expand<typeof result>;
 
   t.deepEqual(result, expected);
 });

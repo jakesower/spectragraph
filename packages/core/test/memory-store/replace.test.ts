@@ -115,7 +115,14 @@ const normalizedData = {
         name: "Care Bear Stare",
         description: "Purges evil.",
       },
-      relationships: { bears: [{ type: "bears", id: "1" }, { type: "bears", id: "2" }, { type: "bears", id: "3" }, { type: "bears", id: "5" }] },
+      relationships: {
+        bears: [
+          { type: "bears", id: "1" },
+          { type: "bears", id: "2" },
+          { type: "bears", id: "3" },
+          { type: "bears", id: "5" },
+        ],
+      },
     },
     makeWish: {
       type: "powers",
@@ -281,7 +288,7 @@ test("replaces a one-to-one relationship", async (t) => {
     },
     powers: {},
   };
-  // t.deepEqual(replaceResult, replaceExpected);
+  t.deepEqual(replaceResult, replaceExpected as typeof replaceResult);
 
   const bearResult = await t.context.store.get({
     type: "bears",

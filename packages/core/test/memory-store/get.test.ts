@@ -1,13 +1,13 @@
 import anyTest, { TestInterface } from "ava";
 import { schema } from "../care-bear-schema";
 import { makeMemoryStore } from "../../src/memory-store";
-import { compileSchema } from "../../src/data-structures/schema";
 import {
-  MemoryStore, NormalizedResources, ResourceOfType,
+  MemoryStore,
+  NormalizedResources,
+  QueryResultResource,
+  ResourceOfType,
 } from "../../src/types";
-import { compileQuery } from "../../src/utils";
 
-// const schema = compileSchema(rawSchema);
 const normalizedData = {
   bears: {
     1: {
@@ -105,7 +105,14 @@ const normalizedData = {
         name: "Care Bear Stare",
         description: "Purges evil.",
       },
-      relationships: { bears: [{ type: "bears", id: "1" }, { type: "bears", id: "2" }, { type: "bears", id: "3" }, { type: "bears", id: "5" }] },
+      relationships: {
+        bears: [
+          { type: "bears", id: "1" },
+          { type: "bears", id: "2" },
+          { type: "bears", id: "3" },
+          { type: "bears", id: "5" },
+        ],
+      },
     },
     makeWish: {
       type: "powers",
@@ -173,20 +180,36 @@ const bearWithBadHome: ResourceOfType<S, "bears"> = {
   },
 };
 
+// Helper functions
+
 const test = anyTest as TestInterface<{ store: MemoryStore<S> }>;
 
-const resource = (type, id, getRels = true, overrides = {}): ResourceOfType<S, typeof type> => ({
-  id,
-  type,
-  ...normalizedData[type][id].properties,
-  ...(getRels ? normalizedData[type][id].relationships : {}),
-  ...overrides,
-});
+const resource = <ResType extends keyof S["resources"]>(
+  type: ResType & string,
+  id: string,
+  getRels = true,
+  overrides = {},
+): QueryResultResource<S, ResType> => {
+  const stored = normalizedData[type][id];
+  const { properties, relationships } = stored;
+
+  return {
+    id,
+    type,
+    ...properties,
+    ...(getRels ? relationships : {}),
+    ...overrides,
+  } as unknown as QueryResultResource<S, ResType>; // TODO: revisit this
+};
+
+// Test Setup
 
 test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign
   t.context = { store: await makeMemoryStore(schema, { initialData: normalizedData }) };
 });
+
+// Actual Tests
 
 test("fetches a single resource", async (t) => {
   const result = await t.context.store.get({ type: "bears", id: "1" });
@@ -207,6 +230,12 @@ test("fetches multiple resources", async (t) => {
   t.deepEqual(result, expected);
 });
 
+test("fetches a single resource specifying no relationships desired", async (t) => {
+  const result = await t.context.store.get({ type: "bears", id: "1", relationships: {} });
+
+  t.deepEqual(result, resource("bears", "1", false));
+});
+
 test("fetches a single resource with a single relationship", async (t) => {
   const q = {
     type: "bears",
@@ -219,6 +248,44 @@ test("fetches a single resource with a single relationship", async (t) => {
   t.deepEqual(result, resource("bears", "1", false, { home: resource("homes", "1") }));
 });
 
+test("fetches a single resource with a subset of properties", async (t) => {
+  const result = await t.context.store.get({
+    type: "bears",
+    id: "1",
+    properties: ["name", "fur_color"],
+    relationships: {},
+  });
+
+  t.deepEqual(
+    result,
+    {
+      type: "bears", id: "1", name: "Tenderheart Bear", fur_color: "tan",
+    } as typeof result,
+  );
+});
+
+// TODO: make types work on nested relationship properties, e.g. result.bears.home.name shouldn't exist
+test("fetches a single resource with a subset of properties on a relationship", async (t) => {
+  const q = {
+    type: "bears",
+    id: "1",
+    relationships: { home: { properties: ["caring_meter"] } },
+  } as const;
+
+  const result = await t.context.store.get(q);
+
+  t.like(
+    result,
+    resource("bears", "1", false, {
+      home: {
+        type: "homes",
+        id: "1",
+        caring_meter: 1,
+      },
+    }),
+  );
+});
+
 test("fetches a single resource with many-to-many relationship", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
@@ -226,7 +293,10 @@ test("fetches a single resource with many-to-many relationship", async (t) => {
     relationships: { powers: {} },
   });
 
-  t.deepEqual(result, resource("bears", "1", false, { powers: [resource("powers", "careBearStare")] }));
+  t.deepEqual(
+    result,
+    resource("bears", "1", false, { powers: [resource("powers", "careBearStare")] }),
+  );
 });
 
 test("fetches multiple relationships of various types", async (t) => {
@@ -244,7 +314,9 @@ test("fetches multiple relationships of various types", async (t) => {
   });
 
   t.deepEqual(result, resource("bears", "1", false, {
-    home: resource("homes", "1", false, { bears: ["1", "2", "3"].map((id) => resource("bears", id)) }),
+    home: resource("homes", "1", false, {
+      bears: ["1", "2", "3"].map((id) => resource("bears", id)),
+    }),
     powers: [resource("powers", "careBearStare")],
   }));
 });
