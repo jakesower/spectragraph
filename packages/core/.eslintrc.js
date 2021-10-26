@@ -2,7 +2,10 @@ module.exports = {
   env: {
     es2021: true,
   },
-  extends: ["eslint:recommended", "airbnb-base", "plugin:@typescript-eslint/eslint-recommended",
+  extends: [
+    "eslint:recommended",
+    "airbnb-base",
+    "plugin:@typescript-eslint/eslint-recommended",
     "plugin:@typescript-eslint/recommended"],
   parser: "@typescript-eslint/parser",
   parserOptions: {
@@ -34,6 +37,7 @@ module.exports = {
     indent: ["error", 2, {
       flatTernaryExpressions: true,
     }],
+    "max-len": ["error", { code: 100, comments: 125 }],
     "no-nested-ternary": "off",
     "no-param-reassign": "error",
     "no-use-before-define": ["error", { functions: false }],
