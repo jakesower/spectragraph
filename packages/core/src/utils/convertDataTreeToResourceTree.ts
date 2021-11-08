@@ -2,17 +2,14 @@ import { inlineKey, mapObj, pick } from "@polygraph/utils";
 import { asArray } from "./asArray";
 import {
   CompiledQuery,
-  CompiledSchema,
   CompiledSubQuery,
   DataTree,
-  ExpandedSchema,
   ResourceTree,
   Schema,
 } from "../types";
 
 export function convertDataTreeToResourceTree<
   S extends Schema,
-  XS extends ExpandedSchema<S>,
   TopResType extends keyof S["resources"]
 >(
   schema: S,
@@ -30,6 +27,7 @@ export function convertDataTreeToResourceTree<
     const relationshipsArray = Object.values(keyedRels);
     const id = "idField" in subTree ? subTree[resSchemaDef.idField as string] : subTree.id;
 
+    // TODO: the ID can possibly be sussed out for to-one relationships when unspecified
     if (!id) throw new Error(`id field missing on a resource (${resType}, ???)`);
 
     if (subQuery.referencesOnly === true) {

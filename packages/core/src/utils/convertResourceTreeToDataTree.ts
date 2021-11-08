@@ -11,7 +11,9 @@ import {
   Schema,
 } from "../types";
 
-export function convertResourceTreeToDataTree<S extends Schema, CS extends CompiledSchema<S>, TopResType extends keyof S["resources"]>(
+export function convertResourceTreeToDataTree<
+  S extends Schema, CS extends CompiledSchema<S>, TopResType extends keyof S["resources"]
+>(
   schema: CS,
   query: CompiledQuery<CS, TopResType>,
   resourceTree: ResourceTree<S>,
@@ -44,7 +46,8 @@ export function convertResourceTreeToDataTree<S extends Schema, CS extends Compi
       (relatedValues, relType) => {
         const schemaRelDef = schema.resources[type].relationships[relType];
         const allRelVals = asArray(relatedValues);
-        return (schemaRelDef.cardinality === "one") // TODO: make card "one" avoid the need for extra check
+        // TODO: make card "one" avoid the need for extra check
+        return (schemaRelDef.cardinality === "one")
           ? (allRelVals.length === 0)
             ? null
             : expand(

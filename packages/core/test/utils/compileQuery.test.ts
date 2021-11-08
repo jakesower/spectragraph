@@ -1,7 +1,7 @@
 import test from "ava";
 // import { mapObj } from "@polygraph/utils";
 import { mapObj } from "@polygraph/utils";
-import { schema } from "../care-bear-schema";
+import { schema } from "../fixtures/care-bear-schema";
 import { compileSchema } from "../../src/data-structures/schema";
 import { compileQuery } from "../../src/utils";
 import {

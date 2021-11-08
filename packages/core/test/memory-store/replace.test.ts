@@ -1,142 +1,18 @@
 import anyTest, { TestInterface } from "ava";
 import { mapObj, pick } from "@polygraph/utils";
-import { schema } from "../care-bear-schema";
+import { schema } from "../fixtures/care-bear-schema";
 import { makeMemoryStore } from "../../src/memory-store";
 import {
-  CompiledExpandedQuery,
-  CompiledExpandedSubQuery,
-  CompiledQuery,
-  CompiledRefQuery,
-  CompiledSubQuery,
-  Expand,
   ExpandedSchema,
-  MemoryStore, NormalizedResources, NormalizedResourceUpdates, ResourceOfType,
+  MemoryStore,
+  NormalizedResourceUpdates,
+  ResourceOfType,
 } from "../../src/types";
 import { cardinalize } from "../../src/utils";
+import { careBearData } from "../fixtures/care-bears-data";
 
 type S = typeof schema;
 const expandedSchema = schema as ExpandedSchema<S>;
-type XS = typeof expandedSchema;
-
-const normalizedData = {
-  bears: {
-    1: {
-      type: "bears",
-      id: "1",
-      properties: {
-        name: "Tenderheart Bear",
-        gender: "male",
-        belly_badge: "heart",
-        fur_color: "tan",
-      },
-      relationships: {
-        best_friend: null,
-        home: { type: "homes", id: "1" },
-        powers: [{ type: "powers", id: "careBearStare" }],
-      },
-    },
-    2: {
-      type: "bears",
-      id: "2",
-      properties: {
-        name: "Cheer Bear",
-        gender: "female",
-        belly_badge: "rainbow",
-        fur_color: "carnation pink",
-      },
-      relationships: {
-        home: { type: "homes", id: "1" },
-        powers: [{ type: "powers", id: "careBearStare" }],
-        best_friend: { type: "bears", id: "3" },
-      },
-    },
-    3: {
-      type: "bears",
-      id: "3",
-      properties: {
-        name: "Wish Bear",
-        gender: "female",
-        belly_badge: "shooting star",
-        fur_color: "turquoise",
-      },
-      relationships: {
-        home: { type: "homes", id: "1" },
-        powers: [{ type: "powers", id: "careBearStare" }],
-        best_friend: { type: "bears", id: "2" },
-      },
-    },
-    5: {
-      type: "bears",
-      id: "5",
-      properties: {
-        name: "Wonderheart Bear",
-        gender: "female",
-        belly_badge: "three hearts",
-        fur_color: "pink",
-      },
-      relationships: {
-        best_friend: null,
-        home: null,
-        powers: [{ type: "powers", id: "careBearStare" }],
-      },
-    },
-  },
-  homes: {
-    1: {
-      type: "homes",
-      id: "1",
-      properties: {
-        name: "Care-a-Lot",
-        location: "Kingdom of Caring",
-        caring_meter: 1,
-      },
-      relationships: {
-        bears: [{ type: "bears", id: "1" }, { type: "bears", id: "2" }, { type: "bears", id: "3" }],
-      },
-    },
-    2: {
-      type: "homes",
-      id: "2",
-      properties: {
-        name: "Forest of Feelings",
-        location: "Kingdom of Caring",
-        caring_meter: 1,
-      },
-      relationships: {
-        bears: [],
-      },
-    },
-  },
-  powers: {
-    careBearStare: {
-      type: "powers",
-      id: "careBearStare",
-      properties: {
-        name: "Care Bear Stare",
-        description: "Purges evil.",
-      },
-      relationships: {
-        bears: [
-          { type: "bears", id: "1" },
-          { type: "bears", id: "2" },
-          { type: "bears", id: "3" },
-          { type: "bears", id: "5" },
-        ],
-      },
-    },
-    makeWish: {
-      type: "powers",
-      id: "makeWish",
-      properties: {
-        name: "Make a Wish",
-        description: "Makes a wish on Twinkers",
-      },
-      relationships: {
-        bears: [],
-      },
-    },
-  },
-} as NormalizedResources<S>;
 
 const grumpyBear = {
   type: "bears",
@@ -189,7 +65,7 @@ const fullResource = <ResType extends keyof S["resources"]>(
 };
 
 const fullResourceFromRef = (type, id, relOverrides) => (
-  fullResource(normalizedData[type][id], relOverrides)
+  fullResource(careBearData[type][id], relOverrides)
 );
 
 const dataTree = (res, rels = null) => {
@@ -205,63 +81,191 @@ const dataTree = (res, rels = null) => {
   };
 };
 
+type PickRef = [keyof S["resources"], string];
+type PickRefWithOverrides = [
+  keyof S["resources"],
+  string,
+  null | {
+    properties?: Record<any, any>,
+    relationships?: Record<string, string | string[]>,
+    [k: string]: any,
+  },
+];
+
+type PickInput = PickRef | PickRefWithOverrides | ResourceOfType<S, any>;
+
+const pickResources = (resInputs: PickInput[]): NormalizedResourceUpdates<S> => {
+  const subGraph = { bears: {}, homes: {}, powers: {} };
+
+  resInputs.forEach((input) => {
+    if (!Array.isArray(input)) {
+      subGraph[input.type][input.id] = input;
+    } else {
+      const [type, id, overrides = {}] = input;
+
+      if (overrides === null) {
+        subGraph[type][id] = null;
+      } else {
+        const base = careBearData[type][id];
+        const overrideRels = mapObj(
+          overrides.relationships || {},
+          (relIds, relType) => {
+            const resDef = schema.resources[type].relationships[relType];
+            const toRef = (idOrRef) => ((typeof idOrRef === "string")
+              ? { type: resDef.type, id: idOrRef }
+              : idOrRef);
+            return Array.isArray(relIds)
+              ? relIds.map(toRef)
+              : toRef(relIds);
+          },
+        );
+
+        subGraph[type][id] = {
+          ...base,
+          properties: { ...base.properties, ...(overrides.properties || {}) },
+          relationships: { ...base.relationships, ...overrideRels },
+        };
+      }
+    }
+  });
+
+  return subGraph;
+};
+
 const test = anyTest as TestInterface<{ store: MemoryStore<S> }>;
 
 test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign
-  t.context = { store: await makeMemoryStore(schema, { initialData: normalizedData }) };
+  t.context = { store: await makeMemoryStore(schema, { initialData: careBearData }) };
+  // console.log("\n\n\nmade store\n\n\n");
 });
 
-test("replaces data en masse with replace", async (t) => {
+// ----General-------------------------------------------------------------------------------------
+
+test("id mismatches between query and data fails", async (t) => {
+  const replaceResult = await t.context.store.replaceOne(
+    { type: "bears", id: "5" },
+    { type: "bears", id: "mismatched", gender: "male" },
+  );
+
+  t.deepEqual(replaceResult.isValid, false);
+});
+
+// ----Properties----------------------------------------------------------------------------------
+
+test("replaces a property", async (t) => {
+  const replaceResult = await t.context.store.replaceOne(
+    { type: "bears", id: "5" },
+    { type: "bears", id: "5", gender: "male" },
+  );
+  const replaceExpected = pickResources([
+    ["bears", "5", { properties: { gender: "male" } }],
+  ]);
+
+  t.deepEqual(replaceResult.isValid && replaceResult.data, replaceExpected);
+});
+
+test("replaces a property deep in the graph", async (t) => {
+  const replaceResult = await t.context.store.replaceOne(
+    { type: "bears", id: "1", relationships: { home: {} } },
+    { type: "bears", id: "1", home: { id: "1", caring_meter: 0.4 } },
+  );
+
+  const replaceExpected = pickResources([
+    ["bears", "1"],
+    ["homes", "1", { properties: { caring_meter: 0.4 } }],
+  ]);
+
+  t.deepEqual(replaceResult.isValid && replaceResult.data, replaceExpected);
+});
+
+test("creates a relationship and replaces a property deep in the graph", async (t) => {
+  const replaceResult = await t.context.store.replaceOne(
+    { type: "bears", id: "5", relationships: { home: {} } },
+    { type: "bears", id: "5", home: { id: "1", caring_meter: 0.3 } },
+  );
+
+  const replaceExpected = pickResources([
+    ["bears", "5", { relationships: { home: "1" } }],
+    ["homes", "1", {
+      properties: { caring_meter: 0.3 },
+      relationships: { bears: ["1", "2", "3", "5"] },
+    }],
+  ]);
+
+  t.deepEqual(replaceResult.isValid && replaceResult.data, replaceExpected);
+});
+
+test("resources can have properties named type that can be updated", async (t) => {
+  const replaceResult = await t.context.store.replaceOne(
+    { type: "powers", id: "careBearStare" },
+    { id: "careBearStare", type: "bear power" },
+  );
+
+  const replaceExpected = pickResources([
+    ["powers", "careBearStare", { properties: { type: "bear power" } }],
+  ]);
+
+  t.deepEqual(replaceResult.isValid && replaceResult.data, replaceExpected);
+
+  const getResult = await t.context.store.get({
+    type: "powers",
+    id: "careBearStare",
+  });
+
+  const expectedRes = { ...dataTree(careBearData.powers.careBearStare), type: "bear power" };
+  t.deepEqual(getResult, expectedRes);
+});
+
+// ----Replacement---------------------------------------------------------------------------------
+
+test("replaces existing data completely given a new resource", async (t) => {
   const query = { type: "bears" } as const;
 
   const replaceResult = await t.context.store.replaceMany(query, [grumpyBearDT]);
-  const replaceExpected: NormalizedResourceUpdates<S> = {
-    bears: {
-      1: null,
-      2: null,
-      3: null,
-      4: fullResource(grumpyBear, {
-        best_friend: null,
-        home: { type: "homes", id: "1" },
-        powers: [{ type: "powers", id: "careBearStare" }],
-      }),
-      5: null,
-    },
-    homes: {
-      1: {
-        type: "homes",
-        id: "1",
-        properties: {
-          name: "Care-a-Lot",
-          location: "Kingdom of Caring",
-          caring_meter: 1,
-        },
-        relationships: {
-          bears: [{ type: "bears", id: "4" }],
-        },
-      },
-    },
-    powers: {
-      careBearStare: {
-        type: "powers",
-        id: "careBearStare",
-        properties: {
-          name: "Care Bear Stare",
-          description: "Purges evil.",
-        },
-        relationships: { bears: [{ type: "bears", id: "4" }] },
-      },
-    },
-  };
+  const replaceExpected = pickResources([
+    ["bears", "1", null],
+    ["bears", "2", null],
+    ["bears", "3", null],
+    grumpyBear,
+    ["bears", "5", null],
+    ["homes", "1", { relationships: { bears: ["4"] } }],
+    ["powers", "careBearStare", { relationships: { bears: ["4"] } }],
+  ]);
 
-  t.deepEqual(replaceResult, replaceExpected);
+  t.deepEqual(replaceResult.isValid && replaceResult.data, replaceExpected);
 
   const getResult = await t.context.store.get({
     type: "bears",
   });
-  // t.deepEqual(getResult, [dataTree(grumpyBear)]);
+  t.deepEqual(getResult, [dataTree(grumpyBear)]);
 });
+
+test("replaces or keeps existing data given a new resources", async (t) => {
+  const query = { type: "bears" } as const;
+
+  const replaceResult = await t.context.store.replaceMany(
+    query,
+    [grumpyBearDT, careBearData.bears["1"]],
+  );
+  const replaceExpected: NormalizedResourceUpdates<S> = pickResources([
+    ["bears", "2", null],
+    ["bears", "3", null],
+    grumpyBear,
+    ["bears", "5", null],
+    ["homes", "1", { relationships: { bears: ["1", "4"] } }],
+    ["powers", "careBearStare", { relationships: { bears: ["1", "4"] } }],
+  ]);
+
+  t.deepEqual(replaceResult.isValid && replaceResult.data, replaceExpected);
+
+  const getResult = await t.context.store.get({
+    type: "bears",
+  });
+  t.deepEqual(getResult, [dataTree(careBearData.bears["1"]), dataTree(grumpyBear)]);
+});
+
+// ----Relationships-------------------------------------------------------------------------------
 
 test("replaces a one-to-one relationship", async (t) => {
   const replaceResult = await t.context.store.replaceOne(
@@ -272,6 +276,7 @@ test("replaces a one-to-one relationship", async (t) => {
     },
     { type: "bears", id: "2", home: { type: "homes", id: "2" } },
   );
+  const replaceData = replaceResult.isValid && replaceResult.data;
 
   const replaceExpected = {
     bears: {
@@ -288,7 +293,7 @@ test("replaces a one-to-one relationship", async (t) => {
     },
     powers: {},
   };
-  t.deepEqual(replaceResult, replaceExpected as typeof replaceResult);
+  t.deepEqual(replaceData, replaceExpected as typeof replaceData);
 
   const bearResult = await t.context.store.get({
     type: "bears",
@@ -326,13 +331,13 @@ test("replaces a one-to-many-relationship", async (t) => {
 
   t.is(bearResult.home, null);
 
-  const wonderheartResult = await t.context.store.get({
+  const funshineResult = await t.context.store.get({
     type: "bears",
     id: "5",
     relationships: { home: {} },
   });
 
-  t.is(wonderheartResult.home.name, "Care-a-Lot");
+  t.is(funshineResult.home.name, "Care-a-Lot");
 
   const careALotResult = await t.context.store.get({
     type: "homes",

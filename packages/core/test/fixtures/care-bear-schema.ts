@@ -9,6 +9,7 @@ export const schema = {
         gender: { type: "string" },
         belly_badge: { type: "string" },
         fur_color: { type: "string" },
+
       },
       relationships: {
         home: {
@@ -36,6 +37,7 @@ export const schema = {
         name: { type: "string" },
         location: { type: "string" },
         caring_meter: { type: "number" },
+        is_in_clouds: { type: "boolean" },
       },
       relationships: {
         bears: {
@@ -52,6 +54,7 @@ export const schema = {
       properties: {
         name: { type: "string" },
         description: { type: "string" },
+        type: { type: "string" },
       },
       relationships: {
         bears: {

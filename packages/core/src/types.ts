@@ -18,6 +18,8 @@ export type AsArray<T extends readonly any[]> = Readonly<(
       ? (U | AsArray<R>)[]
       : T
 )>;
+export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+export type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> };
 
 type Primitive = string | number | boolean | bigint | symbol | null | undefined;
 export type Expand<T> = T extends Primitive ? T : { [K in keyof T]: T[K] };
@@ -329,6 +331,49 @@ export type QueryResultResource<
   }>
 )>
 
+// ----Validations---------------------------------------------------------------------------------
+export type BaseValidationError = {
+  message: string;
+  validationName: string;
+  [k: string]: any;
+}
+
+export type ResourceValidationError<S extends Schema> = (
+  BaseValidationError
+  & {
+    type: keyof S["resources"] & string,
+    id: string,
+    validationType: "resource",
+  }
+);
+
+export type GraphValidationError = BaseValidationError
+  & {
+    validationType: "graph",
+  }
+
+export type GraphValidation = {
+  validate: <S extends Schema, ResType extends keyof S["resources"]>(
+    newGraph: QueryResultResource<S, ResType>,
+    oldGraph: QueryResultResource<S, ResType>,
+    options: {
+      schema: S,
+    },
+  ) => null | GraphValidationError[];
+}
+
+export type ResourceValidation = {
+  validate: <S extends Schema, ResType extends keyof S["resources"]>(
+    newResource: ResourceOfType<S, ResType>,
+    oldResource: ResourceOfType<S, ResType>,
+    options: {
+      schema: ExpandedSchema<S>,
+    },
+  ) => null | ResourceValidationError<S>[];
+}
+
+export type ValidationError<S extends Schema> = ResourceValidationError<S> | GraphValidationError;
+
 // ----Resources-----------------------------------------------------------------------------------
 export type ResourceRef<S extends Schema> = Readonly<{
   type: keyof S["resources"] & string;
@@ -399,23 +444,31 @@ export type ResourceTreeOfType<S extends Schema, ResType extends keyof S["resour
 );
 
 export type NormalizedResources<S extends Schema> = Readonly<{
-  [ResType in keyof S["resources"]]: Record<string, ResourceOfType<S, ResType>>;
+  [ResType in keyof S["resources"]]: Record<string, ResourceOfType<S, ResType & string>>;
 }>
+
+// TODO: args can/should be Res extends ResourceOfType<any, any> ?
+export type ResourceUpdate<S extends Schema, ResType extends keyof S["resources"], Res extends ResourceOfType<S, ResType>> = {
+  type: Res["type"];
+  id: string;
+  properties?: Partial<Res["properties"]>;
+  relationships?: Partial<Res["relationships"]>;
+};
 
 export type NormalizedResourceUpdates<S extends Schema> = {
   [ResType in keyof S["resources"]]:
-    null |
-    Record<string, {
-      type: ResType;
-      id: string;
-      properties?: Partial<Record<keyof S["resources"][ResType]["properties"], unknown>>;
-      relationships?: Partial<{
-        [RelType in keyof S["resources"][ResType]["relationships"]]:
-          ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["type"]>
-          | ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["type"]>[]
-      }>;
-    }>;
+    Record<string, null | ResourceUpdate<S, ResType, ResourceOfType<S, ResType>>>
 };
+
+export type ReplacementErrors<S extends Schema> = Readonly<{
+  isValid: false;
+  errors: ValidationError<S>[];
+}>;
+
+export type ReplacementResponse<S extends Schema> = (
+  { data: NormalizedResourceUpdates<S>, isValid: true }
+  | ReplacementErrors<S>
+);
 
 // ----Store---------------------------------------------------------------------------------------
 export interface PolygraphStore<S extends Schema> {
@@ -433,16 +486,16 @@ export interface PolygraphStore<S extends Schema> {
     query: Query<ExpandedSchema<S>, ResType>,
     tree: DataTree,
     params?: QueryParams<S>
-  ) => Promise<NormalizedResourceUpdates<S>>;
+  ) => Promise<ReplacementResponse<S>>;
 
   replaceMany: <ResType extends keyof S["resources"]>(
     query: Query<ExpandedSchema<S>, ResType>,
     trees: DataTree[],
     params?: QueryParams<S>
-  ) => Promise<NormalizedResourceUpdates<S>>;
+  ) => Promise<ReplacementResponse<S>>;
 }
 
 // Memory Store: TODO: separate package
 export interface MemoryStore<S extends Schema> extends PolygraphStore<S> {
-  replaceResources: (resources: NormalizedResources<S>) => Promise<NormalizedResourceUpdates<S>>;
+  replaceResources: (resources: NormalizedResources<S>) => Promise<ReplacementResponse<S>>;
 }

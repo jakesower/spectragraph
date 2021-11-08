@@ -37,12 +37,12 @@ module.exports = {
     indent: ["error", 2, {
       flatTernaryExpressions: true,
     }],
-    "max-len": ["error", { code: 100, comments: 125 }],
+    "max-len": ["error", { code: 100, comments: 125, ignoreTemplateLiterals: true }],
     "no-nested-ternary": "off",
     "no-param-reassign": "error",
     "no-use-before-define": ["error", { functions: false }],
     "prefer-destructuring": ["warn", { array: false, object: true }],
-    quotes: ["error", "double"],
+    quotes: ["error", "double", { avoidEscape: true }],
     semi: ["error", "always"],
     // "sort-imports": ["error", {
     //   allowSeparatedGroups: true,
