@@ -19,7 +19,7 @@ const grumpyBear = {
   id: "4",
   properties: {
     name: "Grumpy Bear",
-    gender: "male",
+    year_introduced: 1982,
     belly_badge: "raincloud",
     fur_color: "blue",
   },
@@ -95,7 +95,9 @@ type PickRefWithOverrides = [
 type PickInput = PickRef | PickRefWithOverrides | ResourceOfType<S, any>;
 
 const pickResources = (resInputs: PickInput[]): NormalizedResourceUpdates<S> => {
-  const subGraph = { bears: {}, homes: {}, powers: {} };
+  const subGraph = {
+    bears: {}, companions: {}, homes: {}, powers: {},
+  };
 
   resInputs.forEach((input) => {
     if (!Array.isArray(input)) {
@@ -132,6 +134,12 @@ const pickResources = (resInputs: PickInput[]): NormalizedResourceUpdates<S> => 
   return subGraph;
 };
 
+function resultData(result) {
+  return result.isValid
+    ? result.data
+    : result;
+}
+
 const test = anyTest as TestInterface<{ store: MemoryStore<S> }>;
 
 test.beforeEach(async (t) => {
@@ -153,6 +161,65 @@ test("id mismatches between query and data fails", async (t) => {
 
 // ----Properties----------------------------------------------------------------------------------
 
+test("uses defaults when creating a resource missing the property", async (t) => {
+  const createResult = await t.context.store.replaceOne(
+    { type: "companions", id: "nobody" },
+    { type: "companions", id: "nobody", name: "Friend" },
+  );
+  const createExpected = {
+    companions: {
+      nobody: {
+        properties: {
+          name: "Friend",
+          recurs: false,
+        },
+      },
+    },
+  };
+
+  t.like(resultData(createResult), createExpected);
+});
+
+test("does not use defaults when creating a resource has the property", async (t) => {
+  const createResult = await t.context.store.replaceOne(
+    { type: "companions", id: "nobody" },
+    {
+      type: "companions", id: "nobody", name: "Friend", recurs: true,
+    },
+  );
+  const createExpected = {
+    companions: {
+      nobody: {
+        properties: {
+          name: "Friend",
+          recurs: true,
+        },
+      },
+    },
+  };
+
+  t.like(resultData(createResult), createExpected);
+});
+
+test("does not fail when creating a resource without an optional property", async (t) => {
+  const createResult = await t.context.store.replaceOne(
+    { type: "companions", id: "nobody" },
+    { type: "companions", id: "nobody" },
+  );
+  const createExpected = {
+    companions: {
+      nobody: {
+        properties: {
+          name: undefined,
+          recurs: false,
+        },
+      },
+    },
+  };
+
+  t.like(resultData(createResult), createExpected);
+});
+
 test("replaces a property", async (t) => {
   const replaceResult = await t.context.store.replaceOne(
     { type: "bears", id: "5" },
@@ -163,6 +230,31 @@ test("replaces a property", async (t) => {
   ]);
 
   t.deepEqual(replaceResult.isValid && replaceResult.data, replaceExpected);
+});
+
+test("keeps values with default when replacing other properties", async (t) => {
+  await t.context.store.replaceOne(
+    { type: "companions", id: "nobody" },
+    {
+      type: "companions", id: "nobody", name: "Alice", recurs: true,
+    },
+  );
+  const replaceResult = await t.context.store.replaceOne(
+    { type: "companions", id: "nobody" },
+    { type: "companions", id: "nobody", name: "Bob" },
+  );
+  const replaceExpected = {
+    companions: {
+      nobody: {
+        properties: {
+          name: "Bob",
+          recurs: true,
+        },
+      },
+    },
+  };
+
+  t.like(replaceResult.isValid && replaceResult.data, replaceExpected);
 });
 
 test("replaces a property deep in the graph", async (t) => {
@@ -283,6 +375,7 @@ test("replaces a one-to-one relationship", async (t) => {
       2: fullResourceFromRef("bears", "2",
         { home: { type: "homes", id: "2" } }),
     },
+    companions: {},
     homes: {
       1: fullResourceFromRef("homes", "1", {
         bears: [{ type: "bears", id: "1" }, { type: "bears", id: "3" }],

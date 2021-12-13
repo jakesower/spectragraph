@@ -45,22 +45,65 @@ test("allows partial initial data", async (t) => {
   });
 });
 
-test.only("doesn't allow bad initial data", async (t) => {
+test("doesn't allow bad initial data", async (t) => {
   const error = await t.throwsAsync(async () => {
     await makeStore({
       initialData: {
         bears: {
           1: {
             ...tenderheart,
-            name: 500,
+            properties: { ...tenderheart.properties, name: 500 },
+            relationships: {},
           },
         },
       },
     });
   });
+
+  t.deepEqual(
+    error.message,
+    'Invalid initial data.\n\nvalidation "propertyTypes" failed: "500" is not a valid value for "name"',
+  );
 });
 
 // ----Consistency-Level---------------------------------------------------------------------------
+
+test.only("does allow resource creation from branch nodes on query", async (t) => {
+  const store = await makeStore();
+  const replaceResult = await store.replaceOne(
+    { type: "bears", id: "1", relationships: { home: { relationships: { bears: {} } } } },
+    {
+      ...tenderheart,
+      home: {
+        ...careALot,
+        relationships: {
+          ...careALot.relationships,
+          bears: [careBearData.bears["1"], careBearData.bears["2"]],
+        },
+      },
+    },
+  );
+  console.log(replaceResult.isValid && replaceResult.data.bears[1].relationships);
+
+  t.like(replaceResult.isValid && replaceResult.data, {
+    bears: {
+      1: {
+        relationships: { home: { type: "homes", id: "1" } },
+      },
+      3: {
+        home: null,
+      },
+    },
+    homes: {
+      1: {
+        bears: [{ type: "bears", id: 1 }, { type: "bears", id: 2 }],
+      },
+    },
+  });
+});
+
+test.todo("does not allow resource creation from leaf nodes on query");
+test.todo("strings and numbers are clearly differentiated in error messages");
 
 // ----Resource-Level------------------------------------------------------------------------------
 

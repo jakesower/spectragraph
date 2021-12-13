@@ -8,8 +8,8 @@ export const careBearData = {
       id: "1",
       properties: {
         name: "Tenderheart Bear",
-        gender: "male",
-        belly_badge: "heart",
+        year_introduced: 1982,
+        belly_badge: "red heart with pink outline",
         fur_color: "tan",
       },
       relationships: {
@@ -23,7 +23,7 @@ export const careBearData = {
       id: "2",
       properties: {
         name: "Cheer Bear",
-        gender: "female",
+        year_introduced: 1982,
         belly_badge: "rainbow",
         fur_color: "carnation pink",
       },
@@ -38,7 +38,7 @@ export const careBearData = {
       id: "3",
       properties: {
         name: "Wish Bear",
-        gender: "female",
+        year_introduced: 1982,
         belly_badge: "shooting star",
         fur_color: "turquoise",
       },
@@ -52,10 +52,10 @@ export const careBearData = {
       type: "bears",
       id: "5",
       properties: {
-        name: "Funshine Bear",
-        gender: "female",
-        belly_badge: "three hearts",
-        fur_color: "pink",
+        name: "Smart Heart Bear",
+        year_introduced: 2005,
+        belly_badge: "red apple with a small white heart-shaped shine",
+        fur_color: "watermelon pink",
       },
       relationships: {
         best_friend: null,
@@ -123,4 +123,5 @@ export const careBearData = {
       },
     },
   },
+  companions: {},
 } as NormalizedResources<typeof schema>;

@@ -62,14 +62,17 @@ function makeEmptyUpdatesObj<S extends Schema>(schema: S): NormalizedResourceUpd
   return mapObj(schema.resources, () => ({})) as NormalizedResourceUpdates<S>;
 }
 
-function makeEmptyResource<S extends Schema, ResType extends keyof S["resources"]>(
+function makeNewResource<S extends Schema, ResType extends keyof S["resources"]>(
   schema: S,
   type: ResType & string,
   id: string,
 ): ResourceOfType<S, ResType> {
   const expandedSchema = schema as ExpandedSchema<S>;
   const resDef = expandedSchema.resources[type];
-  const properties = mapObj(resDef.properties, () => undefined);
+  const properties = mapObj(
+    resDef.properties,
+    (prop) => prop.default ?? undefined,
+  );
   const relationships = mapObj(resDef.relationships, (relDef) => cardinalize([], relDef));
 
   return {
@@ -98,18 +101,6 @@ function asRefSet<S extends Schema>(
   return [...nextSet].map(strToRef);
 }
 
-function applyResourceUpdate<S extends Schema, ResType extends keyof S["resources"]>(
-  resource: ResourceOfType<S, ResType>,
-  update: ResourceUpdate<S, ResType, ResourceOfType<S, ResType>>,
-): ResourceOfType<S, ResType> {
-  return {
-    id: resource.id,
-    type: resource.type,
-    properties: { ...resource.properties, ...(update.properties || {}) },
-    relationships: { ...resource.relationships, ...(update.relationships || {}) },
-  };
-}
-
 export async function makeMemoryStore<S extends Schema>(
   schema: S,
   options: MemoryStoreOptions<S> = {},
@@ -123,6 +114,7 @@ export async function makeMemoryStore<S extends Schema>(
     let allValid = true;
     const allValidationErrors = [];
     const resUpdates = makeEmptyStore(schema);
+    console.log(quiver.getResources())
 
     // eslint-disable-next-line no-restricted-syntax
     for (const [ref, value] of quiver.getResources()) {
@@ -135,7 +127,7 @@ export async function makeMemoryStore<S extends Schema>(
         continue; // eslint-disable-line no-continue
       }
 
-      const existingOrNewRes = store[type][id] || makeEmptyResource(schema, type, id);
+      const existingOrNewRes = store[type][id] ?? makeNewResource(schema, type, id);
 
       const changedProps = ("properties" in value)
         ? filterObj(value.properties, (newVal, key: string) => existingOrNewRes[key] !== newVal)
@@ -170,8 +162,9 @@ export async function makeMemoryStore<S extends Schema>(
 
       const hasPropChanges = Object.keys(changedProps).length > 0;
       const hasRelChanges = Object.keys(changedQuiverRelationships).length > 0;
+      const isNewResource = !store[type][id];
 
-      if (hasPropChanges || hasRelChanges) {
+      if (hasPropChanges || hasRelChanges || isNewResource) {
         const nextRes = {
           type,
           id,
@@ -217,6 +210,8 @@ export async function makeMemoryStore<S extends Schema>(
     };
   };
 
+  // TODO: do not allow this to be valid if a resource is missing from both the updates or the store
+  // (imagine a case where no props are required--it might be fine in a tree, but not a res update)
   const replaceResources = async (updated: NormalizedResourceUpdates<S>): Promise<ReplacementResponse<S>> => {
     const quiver = makeResourceQuiver(schema, ({ assertResource, retractResource }) => {
       Object.entries(updated).forEach(([type, typedResources]) => {
@@ -461,6 +456,7 @@ export async function makeMemoryStore<S extends Schema>(
   ): Promise<ReplacementResponse<S>> => {
     const compiledQuery = compileQuery(schema, query);
     const resourceTree = convertDataTreeToResourceTree(schema, compiledQuery, tree);
+    console.log(tree)
 
     const quiver = makeResourceQuiver(schema, (quiverMethods) => {
       if (tree === null) {

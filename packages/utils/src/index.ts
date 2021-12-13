@@ -1,8 +1,12 @@
 import equals from 'deep-equal'
+import { pipe } from './pipe';
 // export * from './transducers'
 
-export { equals }
+export { equals };
+export { intersection } from './intersection';
+export { lazy } from './lazy';
 export { pick } from "./pick";
+export { pipe };
 
 type Ord = number | string | boolean | Date
 
@@ -115,17 +119,22 @@ export function fillObject<T>(keys: string[], value: T): { [k: string]: T } {
   return out
 }
 
-export function filterObj<T>(
-  obj: { [k: string]: T },
-  predicateFn: (x: T) => boolean,
-): { [k: string]: T } {
-  let out = {}
-  for (const key of Object.keys(obj)) {
-    if (predicateFn(obj[key])) {
-      out[key] = obj[key]
+export function filterObj<T extends Record<string, any>>(
+  obj: T,
+  fn: (val: T[keyof T], key: keyof T & string) => boolean
+): Partial<T> {
+  const keys = Object.keys(obj);
+  const output = {} as Record<any, any>;
+  const l = keys.length;
+
+  for (let i = 0; i < l; i += 1) {
+    const val = obj[keys[i]];
+    if (fn(val, keys[i] as keyof T & string)) {
+      output[keys[i]] = val;
     }
   }
-  return out
+
+  return output as Partial<T>;
 }
 
 export function findObj<T>(
@@ -145,12 +154,17 @@ export function flatMap<T>(xs: T[], fn: (x: T) => T[]): T[] {
   return makeFlat(xs.map(fn), false)
 }
 
-export function forEachObj<T, U>(
-  obj: { [k in string]: T },
-  fn: (x: T, idx: string) => any,
+export function forEachObj<T extends Record<string, any>>(
+  obj: T,
+  fn: (val: T[keyof T], key: keyof T & string) => any
 ): void {
-  const keys = Object.keys(obj)
-  keys.forEach((k) => fn(obj[k], k))
+  const keys = Object.keys(obj);
+  const l = keys.length;
+
+  for (let i = 0; i < l; i += 1) {
+    const val = obj[keys[i]];
+    fn(val, keys[i] as keyof T & string);
+  }
 }
 
 export function flatten<T>(xs: T[][]): T[] {
@@ -398,13 +412,6 @@ export function pathOr(obj, path, otherwise) {
   const [first, ...rest] = path
 
   return first in obj ? pathOr(obj[first], rest, otherwise) : otherwise
-}
-
-export function pipe(fns: ((x: any) => any)[]): (x: any) => any {
-  return fns.reduce(
-    (acc, fn) => (val) => fn(acc(val)),
-    (x) => x,
-  )
 }
 
 export async function pipeMw(init, mws) {
