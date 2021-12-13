@@ -36,6 +36,7 @@ export const resourceValidationDefs: Record<string, ResourceValidationDef> = {
     validate: (res, _, { schema }) => {
       const propDefs = Object.entries(schema.resources[res.type].properties);
       return propDefs
+        .filter(([name, { optional }]) => !(optional && res.properties[name] === undefined))
         .filter(([name, { type }]) => !propertyTypeChecks[type](res.properties[name]))
         .map(([badPropName]) => ({
           message: `"${res.properties[badPropName]}" is not a valid value for "${badPropName}"`,

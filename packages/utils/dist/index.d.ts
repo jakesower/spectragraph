@@ -1,6 +1,10 @@
 import equals from 'deep-equal';
+import { pipe } from './pipe';
 export { equals };
+export { intersection } from './intersection';
+export { lazy } from './lazy';
 export { pick } from "./pick";
+export { pipe };
 declare type Ord = number | string | boolean | Date;
 export declare function append<T, U>(xs: T[], ys: U[]): (T | U)[];
 export declare function appendKeys<T, K extends keyof T>(base: {
@@ -32,18 +36,12 @@ export declare function fgo(generator: any): any;
 export declare function fillObject<T>(keys: string[], value: T): {
     [k: string]: T;
 };
-export declare function filterObj<T>(obj: {
-    [k: string]: T;
-}, predicateFn: (x: T) => boolean): {
-    [k: string]: T;
-};
+export declare function filterObj<T extends Record<string, any>>(obj: T, fn: (val: T[keyof T], key: keyof T & string) => boolean): Partial<T>;
 export declare function findObj<T>(obj: {
     [k: string]: T;
 }, predicateFn: (x: T) => boolean): T | null;
 export declare function flatMap<T>(xs: T[], fn: (x: T) => T[]): T[];
-export declare function forEachObj<T, U>(obj: {
-    [k in string]: T;
-}, fn: (x: T, idx: string) => any): void;
+export declare function forEachObj<T extends Record<string, any>>(obj: T, fn: (val: T[keyof T], key: keyof T & string) => any): void;
 export declare function flatten<T>(xs: T[][]): T[];
 export declare function groupBy<T>(items: T[], fn: (item: T) => string): {
     [k: string]: T[];
@@ -94,7 +92,6 @@ export declare function omit<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K
 export declare function parseQueryParams(rawParams: any): {};
 export declare function partition<T>(items: T[], predicateFn: (val: T) => boolean): [T[], T[]];
 export declare function pathOr(obj: any, path: any, otherwise: any): any;
-export declare function pipe(fns: ((x: any) => any)[]): (x: any) => any;
 export declare function pipeMw(init: any, mws: any): Promise<any>;
 export declare function pipeThru(val: any, fns: ((x: any) => any)[]): any;
 export declare function pluckKeys<T>(obj: {

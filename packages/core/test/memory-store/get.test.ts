@@ -16,6 +16,7 @@ type S = typeof schema;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const empty: NormalizedResources<S> = {
   bears: {},
+  companions: {},
   homes: {},
   powers: {},
 };
@@ -27,7 +28,7 @@ const emptyBear: ResourceOfType<S, "bears"> = {
   properties: {
     name: "Tenderheart",
     belly_badge: "heart",
-    gender: "male",
+    year_introduced: 1982,
     fur_color: "tan",
   },
   relationships: {

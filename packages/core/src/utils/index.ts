@@ -14,6 +14,7 @@ export { convertDataTreeToResourceTree } from "./convertDataTreeToResourceTree";
 export { convertResourceTreeToDataTree } from "./convertResourceTreeToDataTree";
 export { formatRef } from "./format-ref";
 export { formatValidationError } from "./format-validation-error";
+export { queryTree } from "./query-tree";
 
 // please let tuples/records come soon
 export const refsEqual = (left: ResourceRef<any>, right: ResourceRef<any>): boolean => (

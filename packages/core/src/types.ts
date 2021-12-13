@@ -48,6 +48,20 @@ export type Union<T extends Record<string, any>, U extends Record<string, any>> 
   // & CombinedNumberKeys<T, U>
 )>;
 
+type AnyFunction = (...args: any[]) => any;
+type ImmutableArray<T> = ReadonlyArray<Immutable<T>>;
+type ImmutableMap<K, V> = ReadonlyMap<Immutable<K>, Immutable<V>>;
+type ImmutableSet<T> = ReadonlySet<Immutable<T>>;
+type ImmutableObject<T> = { readonly [K in keyof T]: Immutable<T[K]> };
+
+export type Immutable<T> = (
+  T extends AnyFunction | Primitive ? T :
+  T extends Array<infer U> ? ImmutableArray<U> :
+  T extends Map<infer K, infer V> ? ImmutableMap<K, V> :
+  T extends Set<infer M> ? ImmutableSet<M>
+  : ImmutableObject<T>
+);
+
 // ----Schema--------------------------------------------------------------------------------------
 type SchemaPropertyType = "string" | "number" | "boolean";
 
@@ -60,6 +74,8 @@ export type Schema = Readonly<{
       idField?: string;
       properties: Readonly<{
         [k: string]: Readonly<{
+          default?: any;
+          optional?: boolean;
           type: SchemaPropertyType;
         }>
       }>
@@ -96,6 +112,8 @@ export type ExpandedSchema<S extends Schema> = (
       [ResType in keyof S["resources"]]: {
         properties: Readonly<{
           [PropType in keyof S["resources"][ResType]["properties"]]: {
+            default?: any;
+            optional?: boolean;
             type: SchemaPropertyType;
           }
         }>;
@@ -400,6 +418,19 @@ export type ResourceOfType<S extends Schema, ResType extends keyof S["resources"
   }>
 );
 
+export type ResourceUpdateOfType<S extends Schema, ResType extends keyof S["resources"]> = (
+  Readonly<{
+    type: ResType & string;
+    id: string;
+    properties: Readonly<(keyof S["resources"][ResType]["properties"] & string)[]>,
+    relationships: Readonly<Partial<{
+      [RelType in keyof S["resources"][ResType]["relationships"]]:
+        ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["type"]>
+        | ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["type"]>[]
+    }>>
+  }>
+);
+
 export interface ResourceTreeRef<S extends Schema> extends ResourceRef<S> {
   properties: Record<string, never>;
   relationships: Record<string, never>;
@@ -453,6 +484,14 @@ export type ResourceUpdate<S extends Schema, ResType extends keyof S["resources"
   id: string;
   properties?: Partial<Res["properties"]>;
   relationships?: Partial<Res["relationships"]>;
+};
+
+// TODO: likely a replacement for ResourceUpdate -- or worthless
+export type FullResourceUpdate<S extends Schema, ResType extends keyof S["resources"]> = {
+  type: ResType;
+  id: string;
+  properties: Partial<S["resources"][ResType]["properties"]>;
+  relationships: Partial<S["resources"][ResType]["relationships"]>;
 };
 
 export type NormalizedResourceUpdates<S extends Schema> = {

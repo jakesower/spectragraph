@@ -9,7 +9,6 @@ This repository is the source of the glue that attempts to hold all of the adapt
 - Schema
 - Store
 - Query
-- Mutation
 - Tree
 - Graph
 
@@ -56,11 +55,16 @@ Additionally, `merge` incorporates a number of the other operations in its funct
 
 (Should the CUD operations only function on nodes?)
 
-### Tree
+### Graph
 
 Data within Polygraph is modeled on graphs. In particular, graphs that result from queries have one or more roots. From those roots, other nodes may be traversed to, depending on what was returned.
 
-Mutations also operate on graphs, but at a low level with no hopes for traversal.
+There are three types of nodes within a tree:
+
+|-Node Type-|-Compatible With-|-Description-|-Must Specify Id-|
+| **Root Node:** | Leaf Node | Nodes corresponding to the top level of the query. | Yes, unless `id` specified in query |
+| **Leaf Node:** | Root Node | Nodes that have no nested relationships, and thus represent terminal nodes. Root nodes may be leaf nodes. | Yes, unless a root node and `id` specified in query |
+| **Branch Node:** | | Nodes that are neither root nodes nor leaf nodes. | Yes |
 
 ## Philosophy
 

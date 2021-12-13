@@ -1,6 +1,8 @@
+"use strict";
 // // export type Transducer<A, B, C> = (transducerFn: (val: A) => B) => (val: A, next: (nextVal: B) => C) => C;
 // // export type Transducer<A, B, C> = (transducerFn: (val: A) => B) => (val: A, next: (nextVal: B) => C) => C;
 // export type Transducer<Input, NextArg, Return> = (val: Input, next: (nextVal: NextArg) => Return[]) => Return[];
+Object.defineProperty(exports, "__esModule", { value: true });
 // // export function transduce<A, B, C, D>(items: A[], transducers: Transducer<any, any, any, any>[]): any {
 // // export function transduce<A, B, C>(items: A[], []): A[]
 // // export function transduce<A, B, C>(items: A[], transducers: [Transducer<A, B, C>]): C[]
@@ -166,4 +168,14 @@
 //     output = output.concat(transFn(items[i]));
 //   }
 //   return output;
+// }
+// const filterT = (predicateFn) => (acc, item, next) =>
+//   predicateFn(item) ? next(acc.concat(item)) : acc;
+// const mapT = (fn) => (acc, item, next) =>
+//   next(acc, fn(item));
+// type TransducerFunction<Result, Item, NextItem> = (
+//   acc: Result, item: Item, next: (nextAcc: Result, nextItem: NextItem) => Result
+// ) => Result;
+// const transduce = (init, transducerFns, items) => {
+//   const fn = pipe(transducerFns);
 // }

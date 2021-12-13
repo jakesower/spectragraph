@@ -5,8 +5,8 @@ export const schema = {
       singular: "bear",
       plural: "bears",
       properties: {
-        name: { type: "string" },
-        gender: { type: "string" },
+        name: { default: "", type: "string" },
+        year_introduced: { type: "number" },
         belly_badge: { type: "string" },
         fur_color: { type: "string" },
 
@@ -61,6 +61,21 @@ export const schema = {
           type: "bears",
           cardinality: "many",
           inverse: "powers",
+        },
+      },
+    },
+
+    companions: {
+      singular: "companion",
+      plural: "companions",
+      properties: {
+        name: { type: "string", optional: true },
+        recurs: { type: "boolean", default: false },
+      },
+      relationships: {
+        follows: {
+          type: "bears",
+          cardinality: "many",
         },
       },
     },

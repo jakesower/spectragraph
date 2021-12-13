@@ -2,21 +2,12 @@ import test from "ava";
 // import { mapObj } from "@polygraph/utils";
 import { mapObj } from "@polygraph/utils";
 import { schema } from "../fixtures/care-bear-schema";
-import { compileSchema } from "../../src/data-structures/schema";
 import { compileQuery } from "../../src/utils";
-import {
-  Expand, ExpandedSchema, CompiledQuery, CompiledSubQuery, Query, SubQuery,
-} from "../../src/types";
+import { ExpandedSchema, Query } from "../../src/types";
 
-// const schema = compileSchema(rawSchema);
-// type S = typeof rawSchema;
-// type SR = typeof rawSchema.resources.bears.relationships
 type S = typeof schema;
 type XS = ExpandedSchema<S>;
 const expandedSchema = schema as XS;
-type SchemaRelationships<ResType extends keyof S["resources"]> = (
-  XS["resources"][ResType]["relationships"]
-);
 
 const getRefOnlyRels = <ResType extends keyof S["resources"]>(
   resType: ResType,
@@ -64,8 +55,6 @@ test("compiles a query for a single resource with specified properties", async (
     referencesOnly: false,
     relationships: getRefOnlyRels("bears"),
   } as typeof result;
-
-  type RE = Expand<typeof result>;
 
   t.deepEqual(result, expected);
 });

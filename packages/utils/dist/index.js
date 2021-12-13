@@ -14,6 +14,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const deep_equal_1 = __importDefault(require("deep-equal"));
 exports.equals = deep_equal_1.default;
+const pipe_1 = require("./pipe");
+exports.pipe = pipe_1.pipe;
+var intersection_1 = require("./intersection");
+exports.intersection = intersection_1.intersection;
+var lazy_1 = require("./lazy");
+exports.lazy = lazy_1.lazy;
 var pick_1 = require("./pick");
 exports.pick = pick_1.pick;
 function append(xs, ys) {
@@ -104,14 +110,17 @@ function fillObject(keys, value) {
     return out;
 }
 exports.fillObject = fillObject;
-function filterObj(obj, predicateFn) {
-    let out = {};
-    for (const key of Object.keys(obj)) {
-        if (predicateFn(obj[key])) {
-            out[key] = obj[key];
+function filterObj(obj, fn) {
+    const keys = Object.keys(obj);
+    const output = {};
+    const l = keys.length;
+    for (let i = 0; i < l; i += 1) {
+        const val = obj[keys[i]];
+        if (fn(val, keys[i])) {
+            output[keys[i]] = val;
         }
     }
-    return out;
+    return output;
 }
 exports.filterObj = filterObj;
 function findObj(obj, predicateFn) {
@@ -129,7 +138,11 @@ function flatMap(xs, fn) {
 exports.flatMap = flatMap;
 function forEachObj(obj, fn) {
     const keys = Object.keys(obj);
-    keys.forEach((k) => fn(obj[k], k));
+    const l = keys.length;
+    for (let i = 0; i < l; i += 1) {
+        const val = obj[keys[i]];
+        fn(val, keys[i]);
+    }
 }
 exports.forEachObj = forEachObj;
 function flatten(xs) {
@@ -322,10 +335,6 @@ function pathOr(obj, path, otherwise) {
     return first in obj ? pathOr(obj[first], rest, otherwise) : otherwise;
 }
 exports.pathOr = pathOr;
-function pipe(fns) {
-    return fns.reduce((acc, fn) => (val) => fn(acc(val)), (x) => x);
-}
-exports.pipe = pipe;
 function pipeMw(init, mws) {
     return __awaiter(this, void 0, void 0, function* () {
         if (mws.length === 0) {
@@ -339,7 +348,7 @@ function pipeMw(init, mws) {
 }
 exports.pipeMw = pipeMw;
 function pipeThru(val, fns) {
-    return pipe(fns)(val);
+    return pipe_1.pipe(fns)(val);
 }
 exports.pipeThru = pipeThru;
 function pluckKeys(obj, keep) {
