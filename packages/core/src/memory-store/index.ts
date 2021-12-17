@@ -35,7 +35,7 @@ import {
   Writeable,
 } from "../types";
 import {
-  asArray, cardinalize, compileQuery, convertDataTreeToResourceTree, formatValidationError, toRef,
+  asArray, cardinalize, compileQuery, convertDataTreeToResourceTree, formatValidationError, queryTree, toRef,
 } from "../utils";
 import { validateResource } from "../utils/validate";
 
@@ -49,8 +49,8 @@ interface MemoryStoreOptions<S extends Schema> {
  */
 function makeEmptyStore<S extends Schema>(schema: S): NormalizedResources<S> {
   const resources = {} as Record<keyof S["resources"], Record<string, ResourceOfType<S, keyof S["resources"]>>>;
-  const ResTypes = Object.keys(schema.resources) as (keyof S["resources"])[];
-  ResTypes.forEach(
+  const resTypes = Object.keys(schema.resources) as (keyof S["resources"])[];
+  resTypes.forEach(
     <ResType extends keyof S["resources"]>(resourceName: ResType) => {
       resources[resourceName] = {} as Record<string, Writeable<ResourceOfType<S, ResType>>>;
     },
@@ -80,7 +80,7 @@ function makeNewResource<S extends Schema, ResType extends keyof S["resources"]>
     id,
     properties,
     relationships,
-  };
+  } as ResourceOfType<S, ResType>;
 }
 
 function toRefStr<S extends Schema>(ref: ResourceRef<S>): string {
@@ -106,7 +106,7 @@ export async function makeMemoryStore<S extends Schema>(
   options: MemoryStoreOptions<S> = {},
 ): Promise<MemoryStore<S>> {
   const expandedSchema = schema as ExpandedSchema<S>;
-  const store = makeEmptyStore(schema);
+  const store: NormalizedResources<S> = makeEmptyStore(schema);
 
   const applyQuiver = async (
     quiver: ResourceQuiverResult<S>,
@@ -114,7 +114,6 @@ export async function makeMemoryStore<S extends Schema>(
     let allValid = true;
     const allValidationErrors = [];
     const resUpdates = makeEmptyStore(schema);
-    console.log(quiver.getResources())
 
     // eslint-disable-next-line no-restricted-syntax
     for (const [ref, value] of quiver.getResources()) {
@@ -213,7 +212,7 @@ export async function makeMemoryStore<S extends Schema>(
   // TODO: do not allow this to be valid if a resource is missing from both the updates or the store
   // (imagine a case where no props are required--it might be fine in a tree, but not a res update)
   const replaceResources = async (updated: NormalizedResourceUpdates<S>): Promise<ReplacementResponse<S>> => {
-    const quiver = makeResourceQuiver(schema, ({ assertResource, retractResource }) => {
+    const quiver = makeResourceQuiver(schema, {}, ({ assertResource, retractResource }) => {
       Object.entries(updated).forEach(([type, typedResources]) => {
         Object.entries(typedResources).forEach(([id, updatedRes]) => {
           if (updatedRes === null) {
@@ -419,32 +418,22 @@ export async function makeMemoryStore<S extends Schema>(
     trees: DataTree[],
     params: QueryParams<S> = {},
   ): Promise<ReplacementResponse<S>> => {
-    const compiledQuery = compileQuery(schema, query);
-    const resourceTrees = trees.map(
-      (tree) => convertDataTreeToResourceTree(schema, compiledQuery, tree),
-    );
+    const seenRootResourceIds: Set<string> = new Set();
+    const existingResources = store[query.type];
+    const quiver = makeResourceQuiver(schema, existingResources, ({ assertResource, retractResource }) => {
+      trees.forEach((tree) => {
+        const { descendantResources, rootResource } = queryTree(schema, query, tree);
 
-    const topLevelResourcesQuery = {
-      type: query.type,
-      id: null,
-      properties: [],
-      relationships: {},
-      referencesOnly: true,
-    } as const;
-    const refAsStr = (ref: ResourceRef<S>): string => `${ref.type}-${ref.id}`;
-    const topLevelResources = await getWithCompiled(topLevelResourcesQuery, params);
-
-    const quiver = makeResourceQuiver(schema, (quiverMethods) => {
-      const possiblyToDelete = keyBy(asArray(topLevelResources), refAsStr);
-
-      resourceTrees.forEach((tree) => {
-        replaceStep(tree, quiverMethods);
-        delete possiblyToDelete[refAsStr(tree)];
+        seenRootResourceIds.add(rootResource.id);
+        assertResource(rootResource, store[rootResource.type][rootResource.id]);
+        descendantResources.forEach((res) => assertResource(res, store[res.type][res.id]));
       });
 
-      Object.values(possiblyToDelete).forEach(
-        (res) => { quiverMethods.retractResource(store[res.type][res.id]); },
-      );
+      Object.keys(existingResources).forEach((resId) => {
+        if (!seenRootResourceIds.has(resId)) {
+          retractResource({ type: query.type, id: resId });
+        }
+      });
     });
 
     return applyQuiver(quiver);
@@ -454,15 +443,13 @@ export async function makeMemoryStore<S extends Schema>(
     query: Q,
     tree: DataTree,
   ): Promise<ReplacementResponse<S>> => {
-    const compiledQuery = compileQuery(schema, query);
-    const resourceTree = convertDataTreeToResourceTree(schema, compiledQuery, tree);
-    console.log(tree)
+    const { allResources, rootResource } = queryTree(schema, query, tree);
 
-    const quiver = makeResourceQuiver(schema, (quiverMethods) => {
+    const quiver = makeResourceQuiver(schema, {}, ({ assertResource, retractResource }) => {
       if (tree === null) {
-        quiverMethods.retractResource(resourceTree);
+        retractResource(rootResource);
       } else {
-        replaceStep(resourceTree, quiverMethods);
+        allResources.forEach((res) => assertResource(res, store[res.type][res.id]));
       }
     });
 
