@@ -9,7 +9,7 @@ import {
   ResourceOfType,
 } from "../../src/types";
 import { cardinalize } from "../../src/utils";
-import { careBearData } from "../fixtures/care-bears-data";
+import { careBearData } from "../fixtures/care-bear-data";
 
 type S = typeof schema;
 const expandedSchema = schema as ExpandedSchema<S>;
@@ -35,6 +35,7 @@ const grumpyBearDT = {
   id: "4",
   name: "Grumpy Bear",
   gender: "male",
+  year_introduced: 1982,
   belly_badge: "raincloud",
   fur_color: "blue",
   home: { type: "homes", id: "1" },
@@ -145,7 +146,7 @@ const test = anyTest as TestInterface<{ store: MemoryStore<S> }>;
 test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign
   t.context = { store: await makeMemoryStore(schema, { initialData: careBearData }) };
-  // console.log("\n\n\nmade store\n\n\n");
+  console.log("\n\n\nmade store\n\n\n");
 });
 
 // ----General-------------------------------------------------------------------------------------
@@ -153,7 +154,7 @@ test.beforeEach(async (t) => {
 test("id mismatches between query and data fails", async (t) => {
   const replaceResult = await t.context.store.replaceOne(
     { type: "bears", id: "5" },
-    { type: "bears", id: "mismatched", gender: "male" },
+    { type: "bears", id: "mismatched", fur_color: "brink pink" },
   );
 
   t.deepEqual(replaceResult.isValid, false);
@@ -223,10 +224,10 @@ test("does not fail when creating a resource without an optional property", asyn
 test("replaces a property", async (t) => {
   const replaceResult = await t.context.store.replaceOne(
     { type: "bears", id: "5" },
-    { type: "bears", id: "5", gender: "male" },
+    { type: "bears", id: "5", fur_color: "brink pink" },
   );
   const replaceExpected = pickResources([
-    ["bears", "5", { properties: { gender: "male" } }],
+    ["bears", "5", { properties: { fur_color: "brink pink" } }],
   ]);
 
   t.deepEqual(replaceResult.isValid && replaceResult.data, replaceExpected);
@@ -349,7 +350,7 @@ test("replaces or keeps existing data given a new resources", async (t) => {
     ["powers", "careBearStare", { relationships: { bears: ["1", "4"] } }],
   ]);
 
-  t.deepEqual(replaceResult.isValid && replaceResult.data, replaceExpected);
+  t.deepEqual(resultData(replaceResult), replaceExpected);
 
   const getResult = await t.context.store.get({
     type: "bears",
@@ -359,7 +360,7 @@ test("replaces or keeps existing data given a new resources", async (t) => {
 
 // ----Relationships-------------------------------------------------------------------------------
 
-test("replaces a one-to-one relationship", async (t) => {
+test.only("replaces a one-to-one relationship", async (t) => {
   const replaceResult = await t.context.store.replaceOne(
     {
       type: "bears",

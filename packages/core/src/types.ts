@@ -402,6 +402,15 @@ export type ResourceRefOfType<S extends Schema, ResType extends keyof S["resourc
   Readonly<{ type: ResType & string, id: string }>
 )
 
+type ResourceOfTypeRel<
+  S extends Schema,
+  ResType extends keyof S["resources"],
+  RelType extends keyof S["resources"][ResType]["relationships"]
+> = (
+  S["resources"][ResType]["relationships"][RelType]["cardinality"] extends "one"
+    ? ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["type"]>
+    : ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["type"]>[]
+);
 export type ResourceOfType<S extends Schema, ResType extends keyof S["resources"]> = (
   Readonly<{
     type: ResType & string;
@@ -411,9 +420,7 @@ export type ResourceOfType<S extends Schema, ResType extends keyof S["resources"
         ResourcePropertyTypeOf<S["resources"][ResType]["properties"][PropType]["type"]>
     }>,
     relationships: Readonly<{
-      [RelType in keyof S["resources"][ResType]["relationships"]]:
-        ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["type"]>
-        | ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["type"]>[]
+      [RelType in keyof S["resources"][ResType]["relationships"]]: ResourceOfTypeRel<S, ResType, RelType>
     }>
   }>
 );
@@ -422,11 +429,12 @@ export type ResourceUpdateOfType<S extends Schema, ResType extends keyof S["reso
   Readonly<{
     type: ResType & string;
     id: string;
-    properties: Readonly<(keyof S["resources"][ResType]["properties"] & string)[]>,
+    properties: Readonly<Partial<{
+      [PropType in keyof S["resources"][ResType]["properties"]]:
+        ResourcePropertyTypeOf<S["resources"][ResType]["properties"][PropType]["type"]>
+    }>>,
     relationships: Readonly<Partial<{
-      [RelType in keyof S["resources"][ResType]["relationships"]]:
-        ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["type"]>
-        | ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["type"]>[]
+      [RelType in keyof S["resources"][ResType]["relationships"]]: ResourceOfTypeRel<S, ResType, RelType>
     }>>
   }>
 );

@@ -7,6 +7,8 @@ export { intersection } from './intersection';
 export { lazy } from './lazy';
 export { pick } from "./pick";
 export { pipe };
+export { reverse } from "./reverse";
+export { trisect } from "./trisect";
 
 type Ord = number | string | boolean | Date
 

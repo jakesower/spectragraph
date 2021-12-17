@@ -1,5 +1,6 @@
+import { arraySetDifferenceBy } from "@polygraph/utils";
 import {
-  ResourceOfType, ResourceRef, ResourceRefOfType, Schema,
+  ResourceUpdateOfType, ResourceRef, ResourceRefOfType, Schema,
 } from "../types";
 import { asArray, formatRef } from "../utils";
 import { makeQuiver } from "./quiver";
@@ -11,12 +12,11 @@ import { makeQuiver } from "./quiver";
 
 export interface ResourceQuiverBuilder<S extends Schema> {
   // useful when constructing
-  assertResource: (resource: ResourceOfType<S, keyof S["resources"]>) => void;
+  assertResource: (
+    udpatedResource: ResourceUpdateOfType<S, keyof S["resources"]>,
+    existingResource: ResourceUpdateOfType<S, keyof S["resources"]> | null
+  ) => void;
   retractResource: (resourceRef: ResourceRefOfType<S, keyof S["resources"]>) => void;
-  markRelationship: (
-    relationshipType: string,
-    resource: ResourceRefOfType<S, keyof S["resources"]>,
-    relatedResource: ResourceRefOfType<S, keyof S["resources"]>) => void;
 }
 
 type RelationshipChanges = { present: Set<string> } | { changes: Record<string, boolean> };
@@ -25,7 +25,7 @@ export interface ResourceQuiverResult<S extends Schema> {
   getRelationshipChanges: (ref: ResourceRef<S>) => Record<string, RelationshipChanges>;
   getResources: () => Map<
     ResourceRef<S>,
-    (null | ResourceRefOfType<S, keyof S["resources"]> | ResourceOfType<S, keyof S["resources"]>)
+    (null | ResourceRefOfType<S, keyof S["resources"]> | ResourceUpdateOfType<S, keyof S["resources"]>)
   >;
 }
 
@@ -36,9 +36,11 @@ export type ResourceQuiverFn<S extends Schema> = (
 
 export function makeResourceQuiver<S extends Schema>(
   schema: S,
+  markedResources: Record<string, ResourceUpdateOfType<S, keyof S["resources"]>>,
   builderFn: (builder: ResourceQuiverBuilder<S>) => void,
 ): ResourceQuiverResult<S> {
   const quiver = makeQuiver();
+  const unassertedMarkedResources = { ...markedResources };
 
   const inverseOf = (resourceRef: ResourceRef<S>, relName: string): string => {
     const relDef = schema.resources[resourceRef.type].relationships[relName];
@@ -47,19 +49,28 @@ export function makeResourceQuiver<S extends Schema>(
     return inverse;
   };
 
-  const assertResource = (resource: ResourceOfType<S, keyof S["resources"]>) => {
-    quiver.assertNode(resource);
-    Object.entries(resource.relationships || {}).forEach(([label, baseTargets]) => {
-      const targets = asArray(baseTargets);
-      quiver.assertArrowGroup(resource, targets, label);
-      targets.forEach((target) => {
-        const inverse = inverseOf(resource, label);
-        quiver.assertArrow({ source: target, target: resource, label: inverse });
+  const assertResource = (
+    updatedResource: ResourceUpdateOfType<S, keyof S["resources"]>,
+    existingResource: ResourceUpdateOfType<S, keyof S["resources"]> | null,
+  ) => {
+    quiver.assertNode(updatedResource);
+    delete unassertedMarkedResources[updatedResource.id];
+
+    Object.keys(updatedResource.relationships || {}).forEach((relKey) => {
+      const existingRels = asArray(existingResource[relKey]);
+      const updatedRels = asArray(updatedResource[relKey]);
+
+      const removedTargets = arraySetDifferenceBy(existingRels, updatedRels, (rel) => rel.id);
+      quiver.assertArrowGroup(updatedResource, updatedRels, relKey);
+
+      updatedRels.forEach((target) => {
+        const inverse = inverseOf(updatedResource, relKey);
+        quiver.assertArrow({ source: target, target: updatedResource, label: inverse });
       });
     });
   };
 
-  const retractResource = (resource: ResourceOfType<S, keyof S["resources"]>) => {
+  const retractResource = (resource: ResourceUpdateOfType<S, keyof S["resources"]>) => {
     if (!resource) {
       throw new Error(`Resources that do not exist cannot be deleted: ${formatRef(resource)}`);
     }
@@ -75,19 +86,13 @@ export function makeResourceQuiver<S extends Schema>(
     });
   };
 
-  // marks relationships from existing related nodes to a resource about to be traversed
-  const markRelationship = (
-    relationshipType: string,
-    resource: ResourceRef<S>,
-    relatedResource: ResourceRef<S>,
-  ) => {
-    const inverse = inverseOf(resource, relationshipType);
-    if (inverse) {
-      quiver.markArrow({ source: relatedResource, target: resource, label: inverse });
-    }
-  };
+  builderFn({
+    assertResource, retractResource,
+  });
 
-  builderFn({ assertResource, retractResource, markRelationship });
+  Object.values(unassertedMarkedResources).forEach((doomedResource) => {
+    retractResource(doomedResource);
+  });
 
   return {
     ...quiver,
