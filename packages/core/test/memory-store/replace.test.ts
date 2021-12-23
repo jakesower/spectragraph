@@ -146,7 +146,7 @@ const test = anyTest as TestInterface<{ store: MemoryStore<S> }>;
 test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign
   t.context = { store: await makeMemoryStore(schema, { initialData: careBearData }) };
-  console.log("\n\n\nmade store\n\n\n");
+  // console.log("\n\n\nmade store\n\n\n");
 });
 
 // ----General-------------------------------------------------------------------------------------
@@ -342,6 +342,7 @@ test("replaces or keeps existing data given a new resources", async (t) => {
     [grumpyBearDT, careBearData.bears["1"]],
   );
   const replaceExpected: NormalizedResourceUpdates<S> = pickResources([
+    ["bears", "1"],
     ["bears", "2", null],
     ["bears", "3", null],
     grumpyBear,
@@ -360,7 +361,7 @@ test("replaces or keeps existing data given a new resources", async (t) => {
 
 // ----Relationships-------------------------------------------------------------------------------
 
-test.only("replaces a one-to-one relationship", async (t) => {
+test("replaces a one-to-one relationship", async (t) => {
   const replaceResult = await t.context.store.replaceOne(
     {
       type: "bears",
@@ -369,7 +370,6 @@ test.only("replaces a one-to-one relationship", async (t) => {
     },
     { type: "bears", id: "2", home: { type: "homes", id: "2" } },
   );
-  const replaceData = replaceResult.isValid && replaceResult.data;
 
   const replaceExpected = {
     bears: {
@@ -387,7 +387,7 @@ test.only("replaces a one-to-one relationship", async (t) => {
     },
     powers: {},
   };
-  t.deepEqual(replaceData, replaceExpected as typeof replaceData);
+  t.deepEqual(resultData(replaceResult), replaceExpected);
 
   const bearResult = await t.context.store.get({
     type: "bears",
@@ -425,13 +425,13 @@ test("replaces a one-to-many-relationship", async (t) => {
 
   t.is(bearResult.home, null);
 
-  const funshineResult = await t.context.store.get({
+  const smartHeartResult = await t.context.store.get({
     type: "bears",
     id: "5",
     relationships: { home: {} },
   });
 
-  t.is(funshineResult.home.name, "Care-a-Lot");
+  t.is(smartHeartResult.home.name, "Care-a-Lot");
 
   const careALotResult = await t.context.store.get({
     type: "homes",

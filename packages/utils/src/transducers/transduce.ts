@@ -2,7 +2,7 @@
 // // export type Transducer<A, B, C> = (transducerFn: (val: A) => B) => (val: A, next: (nextVal: B) => C) => C;
 // export type Transducer<Input, NextArg, Return> = (val: Input, next: (nextVal: NextArg) => Return[]) => Return[];
 
-import { pipe } from "../pipe";
+// import { pipe } from "../general/pipe";
 
 
 // // export function transduce<A, B, C, D>(items: A[], transducers: Transducer<any, any, any, any>[]): any {

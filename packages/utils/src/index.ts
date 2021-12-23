@@ -1,14 +1,12 @@
 import equals from 'deep-equal'
-import { pipe } from './pipe';
+import { pipe } from './general/pipe';
 // export * from './transducers'
 
 export { equals };
-export { intersection } from './intersection';
-export { lazy } from './lazy';
-export { pick } from "./pick";
+export { lazy } from './general/lazy';
+export { pick } from "./general/pick";
 export { pipe };
-export { reverse } from "./reverse";
-export { trisect } from "./trisect";
+export { reverse } from "./general/reverse";
 
 type Ord = number | string | boolean | Date
 
@@ -92,10 +90,6 @@ export function deepClone<T>(obj: T): T {
   }
 
   return out as T
-}
-
-export function difference<T>(left: Set<T>, right: Set<T>): Set<T> {
-  return new Set(Array.from(left).filter((leftElt) => !right.has(leftElt)));
 }
 
 export function fgo(generator) {

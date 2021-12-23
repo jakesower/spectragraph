@@ -1,10 +1,10 @@
 import equals from 'deep-equal';
-import { pipe } from './pipe';
+import { pipe } from './general/pipe';
 export { equals };
-export { intersection } from './intersection';
-export { lazy } from './lazy';
-export { pick } from "./pick";
+export { lazy } from './general/lazy';
+export { pick } from "./general/pick";
 export { pipe };
+export { reverse } from "./general/reverse";
 declare type Ord = number | string | boolean | Date;
 export declare function append<T, U>(xs: T[], ys: U[]): (T | U)[];
 export declare function appendKeys<T, K extends keyof T>(base: {
@@ -31,7 +31,6 @@ export declare function assignChildren(objs: {
 export declare function chainPipeThru(val: any, fns: ((x: any) => any)[]): any;
 export declare function cmp(a: Ord, b: Ord): number;
 export declare function deepClone<T>(obj: T): T;
-export declare function difference<T>(left: Set<T>, right: Set<T>): Set<T>;
 export declare function fgo(generator: any): any;
 export declare function fillObject<T>(keys: string[], value: T): {
     [k: string]: T;

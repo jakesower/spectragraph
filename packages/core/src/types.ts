@@ -404,13 +404,14 @@ export type ResourceRefOfType<S extends Schema, ResType extends keyof S["resourc
 
 type ResourceOfTypeRel<
   S extends Schema,
-  ResType extends keyof S["resources"],
-  RelType extends keyof S["resources"][ResType]["relationships"]
+  ResType extends keyof S["resources"] & string,
+  RelType extends keyof S["resources"][ResType]["relationships"] & string
 > = (
   S["resources"][ResType]["relationships"][RelType]["cardinality"] extends "one"
     ? ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["type"]>
     : ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["type"]>[]
 );
+
 export type ResourceOfType<S extends Schema, ResType extends keyof S["resources"]> = (
   Readonly<{
     type: ResType & string;
@@ -422,6 +423,20 @@ export type ResourceOfType<S extends Schema, ResType extends keyof S["resources"
     relationships: Readonly<{
       [RelType in keyof S["resources"][ResType]["relationships"]]: ResourceOfTypeRel<S, ResType, RelType>
     }>
+  }>
+);
+
+export type MutableResourceOfType<S extends Schema, ResType extends keyof S["resources"]> = (
+  Readonly<{
+    type: ResType & string;
+    id: string;
+    properties: {
+      [PropType in keyof S["resources"][ResType]["properties"]]:
+        ResourcePropertyTypeOf<S["resources"][ResType]["properties"][PropType]["type"]>
+    },
+    relationships: {
+      [RelType in keyof S["resources"][ResType]["relationships"]]: ResourceOfTypeRel<S, ResType, RelType>
+    }
   }>
 );
 
@@ -484,6 +499,10 @@ export type ResourceTreeOfType<S extends Schema, ResType extends keyof S["resour
 
 export type NormalizedResources<S extends Schema> = Readonly<{
   [ResType in keyof S["resources"]]: Record<string, ResourceOfType<S, ResType & string>>;
+}>;
+
+export type MutableNormalizedResources<S extends Schema> = Readonly<{
+  [ResType in keyof S["resources"]]: Record<string, MutableResourceOfType<S, ResType & string>>;
 }>
 
 // TODO: args can/should be Res extends ResourceOfType<any, any> ?

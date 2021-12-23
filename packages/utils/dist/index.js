@@ -12,16 +12,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.union = exports.uniqBy = exports.uniq = exports.sortWithAll = exports.sortWith = exports.sortByAll = exports.sortBy = exports.reduceObj = exports.pluckKeys = exports.pipeThru = exports.pipeMw = exports.pathOr = exports.partition = exports.parseQueryParams = exports.omit = exports.overPath = exports.mergeWith = exports.mergeChildren = exports.mergeAll = exports.mapResult = exports.maxStable = exports.mapObjToArray = exports.mapObj = exports.keyByProp = exports.keyBy = exports.inlineKey = exports.indexOn = exports.groupBy = exports.flatten = exports.forEachObj = exports.flatMap = exports.findObj = exports.filterObj = exports.fillObject = exports.fgo = exports.deepClone = exports.cmp = exports.chainPipeThru = exports.assignChildren = exports.arrayUnion = exports.arraySetDifferenceBy = exports.arraySetDifference = exports.applyOrMap = exports.appendKeys = exports.append = exports.reverse = exports.pipe = exports.pick = exports.lazy = exports.equals = void 0;
+exports.zipObj = exports.xprod = exports.unnest = void 0;
 const deep_equal_1 = __importDefault(require("deep-equal"));
 exports.equals = deep_equal_1.default;
-const pipe_1 = require("./pipe");
-exports.pipe = pipe_1.pipe;
-var intersection_1 = require("./intersection");
-exports.intersection = intersection_1.intersection;
-var lazy_1 = require("./lazy");
-exports.lazy = lazy_1.lazy;
-var pick_1 = require("./pick");
-exports.pick = pick_1.pick;
+const pipe_1 = require("./general/pipe");
+Object.defineProperty(exports, "pipe", { enumerable: true, get: function () { return pipe_1.pipe; } });
+var lazy_1 = require("./general/lazy");
+Object.defineProperty(exports, "lazy", { enumerable: true, get: function () { return lazy_1.lazy; } });
+var pick_1 = require("./general/pick");
+Object.defineProperty(exports, "pick", { enumerable: true, get: function () { return pick_1.pick; } });
+var reverse_1 = require("./general/reverse");
+Object.defineProperty(exports, "reverse", { enumerable: true, get: function () { return reverse_1.reverse; } });
 function append(xs, ys) {
     return [...xs, ...ys];
 }
@@ -86,10 +88,6 @@ function deepClone(obj) {
     return out;
 }
 exports.deepClone = deepClone;
-function difference(left, right) {
-    return new Set(Array.from(left).filter((leftElt) => !right.has(leftElt)));
-}
-exports.difference = difference;
 function fgo(generator) {
     const recur = ({ value, done }, gen) => {
         if (done) {
@@ -348,7 +346,7 @@ function pipeMw(init, mws) {
 }
 exports.pipeMw = pipeMw;
 function pipeThru(val, fns) {
-    return pipe_1.pipe(fns)(val);
+    return (0, pipe_1.pipe)(fns)(val);
 }
 exports.pipeThru = pipeThru;
 function pluckKeys(obj, keep) {

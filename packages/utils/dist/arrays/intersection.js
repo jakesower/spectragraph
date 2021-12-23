@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.intersection = void 0;
 function intersection(leftArray, rightArray) {
     const output = [];
     const [smallerArray, largerArrayAsSet] = leftArray.length < rightArray.length

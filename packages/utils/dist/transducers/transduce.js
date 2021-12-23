@@ -1,8 +1,7 @@
-"use strict";
 // // export type Transducer<A, B, C> = (transducerFn: (val: A) => B) => (val: A, next: (nextVal: B) => C) => C;
 // // export type Transducer<A, B, C> = (transducerFn: (val: A) => B) => (val: A, next: (nextVal: B) => C) => C;
 // export type Transducer<Input, NextArg, Return> = (val: Input, next: (nextVal: NextArg) => Return[]) => Return[];
-Object.defineProperty(exports, "__esModule", { value: true });
+// import { pipe } from "../general/pipe";
 // // export function transduce<A, B, C, D>(items: A[], transducers: Transducer<any, any, any, any>[]): any {
 // // export function transduce<A, B, C>(items: A[], []): A[]
 // // export function transduce<A, B, C>(items: A[], transducers: [Transducer<A, B, C>]): C[]
