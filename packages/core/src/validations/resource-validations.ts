@@ -3,7 +3,7 @@ import {
   ExpandedSchema, ResourceOfType, ResourceValidation, ResourceValidationError, Schema,
 } from "../types";
 
-const withResourceId = (validationDef, validationName) => ({
+const withResourceInfo = (validationDef, validationName) => ({
   ...validationDef,
   validate: (res, oldRes, options) => validationDef
     .validate(res, oldRes, options)
@@ -12,6 +12,7 @@ const withResourceId = (validationDef, validationName) => ({
       type: res.type ?? oldRes.type,
       id: res.id ?? oldRes.id,
       validationName,
+      validationType: "resource",
     })),
 });
 
@@ -47,5 +48,5 @@ export const resourceValidationDefs: Record<string, ResourceValidationDef> = {
 
 export const resourceValidations: Record<string, ResourceValidation> = mapObj(
   resourceValidationDefs,
-  withResourceId,
+  withResourceInfo,
 );

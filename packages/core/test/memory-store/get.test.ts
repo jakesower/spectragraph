@@ -7,7 +7,7 @@ import {
   QueryResultResource,
   ResourceOfType,
 } from "../../src/types";
-import { careBearData } from "../fixtures/care-bears-data";
+import { careBearData } from "../fixtures/care-bear-data";
 
 const normalizedData = careBearData;
 

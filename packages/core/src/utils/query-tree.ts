@@ -1,6 +1,5 @@
-import {
-  intersection, mapObj, pick,
-} from "@polygraph/utils";
+import { mapObj, pick } from "@polygraph/utils";
+import { intersection } from "@polygraph/utils/dist/arrays";
 import { asArray } from "./asArray";
 import { cardinalize } from "./cardinalize";
 import {

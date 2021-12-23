@@ -1,8 +1,7 @@
-import { arraySetDifferenceBy } from "@polygraph/utils";
 import {
   ResourceUpdateOfType, ResourceRef, ResourceRefOfType, Schema,
 } from "../types";
-import { asArray, formatRef } from "../utils";
+import { asArray, formatRef, setRelationships } from "../utils";
 import { makeQuiver } from "./quiver";
 
 /**
@@ -19,10 +18,19 @@ export interface ResourceQuiverBuilder<S extends Schema> {
   retractResource: (resourceRef: ResourceRefOfType<S, keyof S["resources"]>) => void;
 }
 
-type RelationshipChanges = { present: Set<string> } | { changes: Record<string, boolean> };
+type ReplacementRelationshipChanges<S extends Schema> = {
+  present: ResourceRefOfType<S, keyof S["resources"]>[]
+};
+type DeltaRelationshipChanges<S extends Schema> = {
+  asserted?: ResourceRefOfType<S, keyof S["resources"]>[],
+  retracted?: ResourceRefOfType<S, keyof S["resources"]>[]
+};
+type RelationshipChanges<S extends Schema> = (
+  ReplacementRelationshipChanges<S> | DeltaRelationshipChanges<S>
+);
 
 export interface ResourceQuiverResult<S extends Schema> {
-  getRelationshipChanges: (ref: ResourceRef<S>) => Record<string, RelationshipChanges>;
+  getRelationshipChanges: (ref: ResourceRef<S>) => Record<string, RelationshipChanges<S>>;
   getResources: () => Map<
     ResourceRef<S>,
     (null | ResourceRefOfType<S, keyof S["resources"]> | ResourceUpdateOfType<S, keyof S["resources"]>)
@@ -34,13 +42,11 @@ export type ResourceQuiverFn<S extends Schema> = (
   builderFn: (builderFns: ResourceQuiverBuilder<S>) => void
 ) => ResourceQuiverResult<S>;
 
-export function makeResourceQuiver<S extends Schema>(
+export function makeResourceQuiver<S extends Schema, ResType extends keyof S["resources"]>(
   schema: S,
-  markedResources: Record<string, ResourceUpdateOfType<S, keyof S["resources"]>>,
   builderFn: (builder: ResourceQuiverBuilder<S>) => void,
 ): ResourceQuiverResult<S> {
   const quiver = makeQuiver();
-  const unassertedMarkedResources = { ...markedResources };
 
   const inverseOf = (resourceRef: ResourceRef<S>, relName: string): string => {
     const relDef = schema.resources[resourceRef.type].relationships[relName];
@@ -50,22 +56,26 @@ export function makeResourceQuiver<S extends Schema>(
   };
 
   const assertResource = (
-    updatedResource: ResourceUpdateOfType<S, keyof S["resources"]>,
-    existingResource: ResourceUpdateOfType<S, keyof S["resources"]> | null,
+    updatedResource: ResourceUpdateOfType<S, ResType>,
+    existingResource: ResourceUpdateOfType<S, ResType> | null,
   ) => {
     quiver.assertNode(updatedResource);
-    delete unassertedMarkedResources[updatedResource.id];
 
-    Object.keys(updatedResource.relationships || {}).forEach((relKey) => {
-      const existingRels = asArray(existingResource[relKey]);
-      const updatedRels = asArray(updatedResource[relKey]);
+    Object.keys(updatedResource.relationships || {}).forEach((relKey: keyof S["resources"][ResType]["relationships"] & string) => {
+      const updatedRels = asArray(updatedResource.relationships[relKey]);
+      const existingRels = existingResource ? asArray(existingResource.relationships[relKey]) : [];
+      const deltas = setRelationships(updatedRels, existingRels, (x) => x.id);
 
-      const removedTargets = arraySetDifferenceBy(existingRels, updatedRels, (rel) => rel.id);
       quiver.assertArrowGroup(updatedResource, updatedRels, relKey);
 
       updatedRels.forEach((target) => {
         const inverse = inverseOf(updatedResource, relKey);
         quiver.assertArrow({ source: target, target: updatedResource, label: inverse });
+      });
+
+      deltas.rightOnly.forEach((target) => {
+        const inverse = inverseOf(updatedResource, relKey);
+        quiver.retractArrow({ source: target, target: updatedResource, label: inverse });
       });
     });
   };
@@ -88,10 +98,6 @@ export function makeResourceQuiver<S extends Schema>(
 
   builderFn({
     assertResource, retractResource,
-  });
-
-  Object.values(unassertedMarkedResources).forEach((doomedResource) => {
-    retractResource(doomedResource);
   });
 
   return {

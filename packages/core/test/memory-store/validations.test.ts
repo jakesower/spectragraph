@@ -1,6 +1,6 @@
 import test from "ava";
 import { schema } from "../fixtures/care-bear-schema";
-import { careBearData } from "../fixtures/care-bears-data";
+import { careBearData } from "../fixtures/care-bear-data";
 import { makeMemoryStore } from "../../src/memory-store";
 import { formatRef } from "../../src/utils";
 
@@ -20,6 +20,12 @@ const errorMessage = (validationName, message) => (
 const resErrorMessage = (validationName, propName, actualValue) => (
   errorMessage(validationName, `"${actualValue}" is not a valid value for "${propName}"`)
 );
+
+function resultData(result) {
+  return result.isValid
+    ? result.data
+    : result;
+}
 
 const tenderheart = careBearData.bears["1"];
 const careALot = careBearData.homes["1"];
@@ -62,41 +68,39 @@ test("doesn't allow bad initial data", async (t) => {
 
   t.deepEqual(
     error.message,
-    'Invalid initial data.\n\nvalidation "propertyTypes" failed: "500" is not a valid value for "name"',
+    'Invalid initial data.\n\nvalidation "propertyTypes" failed: "500" is not a valid value for "name" (bears, 1)',
   );
 });
 
 // ----Consistency-Level---------------------------------------------------------------------------
 
-test.only("does allow resource creation from branch nodes on query", async (t) => {
+test("does allow relationship reassignment from branch nodes on query", async (t) => {
   const store = await makeStore();
+  const updateTree = {
+    id: "1",
+    home: {
+      id: "1",
+      bears: [careBearData.bears["1"], careBearData.bears["2"]],
+    },
+  };
+
   const replaceResult = await store.replaceOne(
     { type: "bears", id: "1", relationships: { home: { relationships: { bears: {} } } } },
-    {
-      ...tenderheart,
-      home: {
-        ...careALot,
-        relationships: {
-          ...careALot.relationships,
-          bears: [careBearData.bears["1"], careBearData.bears["2"]],
-        },
-      },
-    },
+    updateTree,
   );
-  console.log(replaceResult.isValid && replaceResult.data.bears[1].relationships);
 
-  t.like(replaceResult.isValid && replaceResult.data, {
+  t.like(resultData(replaceResult), {
     bears: {
       1: {
         relationships: { home: { type: "homes", id: "1" } },
       },
       3: {
-        home: null,
+        relationships: { home: null },
       },
     },
     homes: {
       1: {
-        bears: [{ type: "bears", id: 1 }, { type: "bears", id: 2 }],
+        relationships: { bears: [{ type: "bears", id: "1" }, { type: "bears", id: "2" }] },
       },
     },
   });

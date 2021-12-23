@@ -3,7 +3,7 @@
 import {
   filterObj,
   forEachObj,
-  keyBy, mapObj, pick,
+  keyBy, mapObj, partition, pick,
 } from "@polygraph/utils";
 import { makeResourceQuiver, ResourceQuiverResult } from "../data-structures/resource-quiver";
 import {
@@ -33,6 +33,7 @@ import {
   Expand,
   ResourceUpdate,
   Writeable,
+  ResourceUpdateOfType,
 } from "../types";
 import {
   asArray, cardinalize, compileQuery, convertDataTreeToResourceTree, formatValidationError, queryTree, toRef,
@@ -59,7 +60,12 @@ function makeEmptyStore<S extends Schema>(schema: S): NormalizedResources<S> {
 }
 
 function makeEmptyUpdatesObj<S extends Schema>(schema: S): NormalizedResourceUpdates<S> {
-  return mapObj(schema.resources, () => ({})) as NormalizedResourceUpdates<S>;
+  const output = {} as NormalizedResourceUpdates<S>;
+  Object.keys(schema.resources).forEach((resType: keyof S["resources"]) => {
+    output[resType] = {};
+  });
+
+  return output;
 }
 
 function makeNewResource<S extends Schema, ResType extends keyof S["resources"]>(
@@ -107,13 +113,26 @@ export async function makeMemoryStore<S extends Schema>(
 ): Promise<MemoryStore<S>> {
   const expandedSchema = schema as ExpandedSchema<S>;
   const store: NormalizedResources<S> = makeEmptyStore(schema);
+  const baseResources = mapObj(schema.resources, <ResType extends keyof S["resources"]>(resDef, resType: ResType) => {
+    const properties = mapObj(
+      resDef.properties,
+      (prop) => prop.default ?? undefined,
+    );
+    const relationships = mapObj(resDef.relationships, (relDef) => cardinalize([], relDef));
+
+    return {
+      type: resType,
+      properties,
+      relationships,
+    } as ResourceOfType<S, ResType>;
+  });
 
   const applyQuiver = async (
     quiver: ResourceQuiverResult<S>,
   ): Promise<ReplacementResponse<S>> => {
     let allValid = true;
     const allValidationErrors = [];
-    const resUpdates = makeEmptyStore(schema);
+    const updatedResources: any = makeEmptyUpdatesObj(schema);
 
     // eslint-disable-next-line no-restricted-syntax
     for (const [ref, value] of quiver.getResources()) {
@@ -121,66 +140,56 @@ export async function makeMemoryStore<S extends Schema>(
       type ResType = typeof type;
 
       if (value == null) {
-        const typeAffected = resUpdates[type] as Record<string, null>;
-        typeAffected[id] = null;
+        updatedResources[type][id] = null;
         continue; // eslint-disable-line no-continue
       }
 
+      const resDef = expandedSchema.resources[type];
       const existingOrNewRes = store[type][id] ?? makeNewResource(schema, type, id);
+      const existingOrNewProps = existingOrNewRes.properties;
+      const existingOrNewRels = existingOrNewRes.relationships;
 
-      const changedProps = ("properties" in value)
-        ? filterObj(value.properties, (newVal, key: string) => existingOrNewRes[key] !== newVal)
-        : {};
+      const properties = ("properties" in value)
+        ? mapObj(existingOrNewProps, (existingProp, propKey) => value.properties[propKey] ?? existingProp)
+        : baseResources[type].properties;
 
-      const changedQuiverRelationships = quiver.getRelationshipChanges(ref);
+      const relationships = {};
+      const updatedRels = quiver.getRelationshipChanges(ref);
+      Object.entries(existingOrNewRels).forEach(([relType, existingRels]) => {
+        if (relType in updatedRels) {
+          const relDef = resDef.relationships[relType];
+          const updatedRel = updatedRels[relType];
 
-      // TODO: Apply new rel change format
-      const changedRels = mapObj(changedQuiverRelationships, (relsToChange, relType) => {
-        const relDef = schema.resources[type].relationships[relType];
-        if ("present" in relsToChange) {
-          return cardinalize(
-            [...relsToChange.present].map((relStr) => JSON.parse(relStr)),
-            relDef,
-          );
+          if ("present" in updatedRel) {
+            relationships[relType] = cardinalize(updatedRel.present, relDef);
+          } else {
+            const existingRelsOfType = asArray(existingRels);
+            const updatedRelIds = new Set(existingRelsOfType.map((r) => r.id));
+            (updatedRel.retracted ?? []).forEach((r) => updatedRelIds.delete(r.id));
+            (updatedRel.asserted ?? []).forEach((r) => updatedRelIds.add(r.id));
+
+            relationships[relType] = cardinalize(
+              [...updatedRelIds].map((relId) => ({ type: relDef.type, id: relId })),
+              relDef,
+            );
+          }
+        } else {
+          relationships[relType] = existingOrNewRes.relationships[relType];
         }
-
-        const newRelSet = asRefSet(existingOrNewRes.relationships[relType], (relSet) => {
-          Object.entries(relsToChange.changes).forEach(([relRef, keep]) => {
-            if (keep) {
-              relSet.add(relRef);
-            } else {
-              relSet.delete(relRef);
-            }
-          });
-
-          return relSet;
-        });
-
-        return cardinalize([...newRelSet].map(toRef), relDef);
       });
 
-      const hasPropChanges = Object.keys(changedProps).length > 0;
-      const hasRelChanges = Object.keys(changedQuiverRelationships).length > 0;
-      const isNewResource = !store[type][id];
+      const nextRes = {
+        type, id, properties, relationships,
+      } as ResourceOfType<S, ResType>;
 
-      if (hasPropChanges || hasRelChanges || isNewResource) {
-        const nextRes = {
-          type,
-          id,
-          properties: { ...existingOrNewRes.properties, ...changedProps },
-          relationships: { ...existingOrNewRes.relationships, ...changedRels },
-        };
+      // eslint-disable-next-line no-await-in-loop
+      const { isValid, errors } = await validateResource(expandedSchema, nextRes);
 
-        // eslint-disable-next-line no-await-in-loop
-        const { isValid, errors } = await validateResource(expandedSchema, nextRes);
-
-        if (isValid) {
-          const typeAffected = resUpdates[type] as Record<string, ResourceUpdate<S, ResType, ResourceOfType<S, ResType>>>;
-          typeAffected[id] = nextRes;
-        } else {
-          allValid = false;
-          allValidationErrors.push(...errors);
-        }
+      if (isValid) {
+        updatedResources[type][id] = nextRes;
+      } else {
+        allValid = false;
+        allValidationErrors.push(...errors);
       }
     }
 
@@ -188,16 +197,16 @@ export async function makeMemoryStore<S extends Schema>(
       return { isValid: false, errors: allValidationErrors };
     }
 
-    forEachObj(resUpdates, (ressById, resType) => {
-      const typeStore = store[resType] as Record<string, ResourceOfType<S, typeof resType>>;
+    forEachObj(updatedResources, (ressById, resType) => {
+      const untypedStore = store as any;
 
       forEachObj(ressById, (resValue, resId) => {
         if (resValue === null) {
-          delete typeStore[resId];
+          delete untypedStore[resType][resId];
         } else {
           // const existingRes = typeStore[resId] || makeEmptyResource(schema, resType, resId);
           // const nextRes = applyResourceUpdate(existingRes, resValue) as ResourceOfType<S, typeof resType>;
-          typeStore[resId] = resValue;
+          untypedStore[resType][resId] = resValue;
         }
       });
     });
@@ -205,20 +214,20 @@ export async function makeMemoryStore<S extends Schema>(
     // eslint-disable-next-line consistent-return
     return {
       isValid: true,
-      data: resUpdates,
+      data: updatedResources,
     };
   };
 
   // TODO: do not allow this to be valid if a resource is missing from both the updates or the store
   // (imagine a case where no props are required--it might be fine in a tree, but not a res update)
   const replaceResources = async (updated: NormalizedResourceUpdates<S>): Promise<ReplacementResponse<S>> => {
-    const quiver = makeResourceQuiver(schema, {}, ({ assertResource, retractResource }) => {
+    const quiver = makeResourceQuiver(schema, ({ assertResource, retractResource }) => {
       Object.entries(updated).forEach(([type, typedResources]) => {
         Object.entries(typedResources).forEach(([id, updatedRes]) => {
           if (updatedRes === null) {
             retractResource(store[type][id]);
           } else {
-            assertResource(updatedRes as ResourceOfType<S, typeof type>);
+            assertResource(updatedRes as ResourceOfType<S, typeof type>, store[type][id]);
           }
         });
       });
@@ -227,48 +236,49 @@ export async function makeMemoryStore<S extends Schema>(
     return applyQuiver(quiver);
   };
 
-  const getWithCompiled = async <TopResType extends keyof S["resources"]>(
-    compiledQuery: CompiledQuery<S, TopResType & string>,
-    params: QueryParams<S> = {},
-  ): Promise<ResourceTreeOfType<S, TopResType> | ResourceTreeOfType<S, TopResType>[]> => {
-    const walk = <ResType extends keyof S["resources"]>(
-      subQuery: CompiledSubQuery<S, ResType>,
-      ref: ResourceRefOfType<S, ResType>,
-    ): ResourceTreeOfType<S, ResType> => {
-      const { type, id } = ref;
-      const resource = store[type][id];
+  const buildTree = <
+    ResType extends keyof S["resources"] & string,
+    Q extends Query<S, ResType>
+  >(query: Q, resource: ResourceOfType<S, ResType>): any => {
+    type PartitionedRelKeys = [
+      (keyof S["resources"][ResType & string]["relationships"] & string)[],
+      (keyof S["resources"][ResType & string]["relationships"] & string)[]
+    ];
+    const schemaResDef = expandedSchema.resources[query.type];
+    const schemaPropKeys = Object.keys(schemaResDef.properties);
+    const schemaRelKeys = Object.keys(schemaResDef.relationships);
+    const propKeys = query.properties ?? schemaPropKeys;
+    const [refRelKeys, nestedRelKeys]: PartitionedRelKeys = query.relationships
+      ? partition(
+        Object.keys(query.relationships),
+        (relKey) => query.relationships[relKey].referencesOnly,
+      )
+      : [schemaRelKeys, []];
 
-      if (!resource) return null;
-      if (subQuery.referencesOnly === true) {
-        return {
-          type, id, relationships: {}, properties: {},
-        };
-      }
+    const relsToRefs = pick(resource.relationships, refRelKeys);
+    const relsToExpand = pick(resource.relationships, nestedRelKeys);
 
-      const expanededRels = mapObj(
-        subQuery.relationships,
-        (relQuery, relName) => {
-          const rels = asArray(resource.relationships[relName]);
-          return rels.map((rel) => walk(relQuery, rel));
-        },
-      );
+    const expandedRels = mapObj(
+      relsToExpand,
+      <RelType extends (keyof S["resources"][ResType]["relationships"] & string)>(relRef: any, relKey) => {
+        const relDef = schemaResDef.relationships[relKey];
+        const subResourceRefs = asArray(resource.relationships[relKey]);
+        const subRel = query.relationships[relKey];
+        const subQuery: Query<S, RelType> = { ...subRel, type: relDef.type as RelType };
+        const subTrees = subResourceRefs.map((subResRef) => {
+          const subRes = store[subResRef.type][subResRef.id];
+          return buildTree(subQuery, subRes);
+        });
+        return cardinalize(subTrees, relDef);
+      });
 
-      return {
-        id,
-        type,
-        properties: resource.properties,
-        relationships: expanededRels,
-      };
+    return {
+      type: resource.type,
+      id: resource.id,
+      ...pick(resource.properties, propKeys),
+      ...relsToRefs,
+      ...expandedRels,
     };
-
-    if (compiledQuery.id) {
-      return { id: compiledQuery.id, ...walk(compiledQuery, compiledQuery) };
-    }
-
-    // TODO: transduce
-    return Object.values(store[compiledQuery.type])
-      .filter(() => true)
-      .map((res) => walk(compiledQuery, res));
   };
 
   const getOne = <
@@ -277,46 +287,10 @@ export async function makeMemoryStore<S extends Schema>(
     QProps extends QueryProps<S, TopResType, Q>,
     QRels extends QueryRels<S, TopResType, Q>,
   >(query: Q & { type: TopResType }, params: QueryParams<S> = {}): Promise<QueryResultResource<S, TopResType, QProps, QRels>> => {
-    const compiledQuery = compileQuery(schema, query);
+    const out = store[query.type][query.id]
+      ? buildTree(query, store[query.type][query.id])
+      : null;
 
-    const walk = <
-      ResType extends keyof S["resources"],
-      CSQ extends CompiledSubQuery<S, ResType>,
-      CSQProps extends CompiledSubQueryProps<S, ResType, CSQ>,
-      CSQRels extends CompiledSubQueryRels<S, ResType, CSQ>,
-    >(
-        compiledSubQuery: CSQ,
-        ref: ResourceRefOfType<S, ResType>,
-      ): QueryResultResource<S, ResType, CSQProps, CSQRels> => {
-      const { type, id } = ref;
-      const resource = store[type][id];
-
-      if (!resource) return null;
-      if (compiledSubQuery.referencesOnly === true) {
-        return { type, id } as QueryResultResource<S, ResType, CSQProps, CSQRels>;
-      }
-
-      const properties = pick(resource.properties, compiledSubQuery.properties);
-
-      const expandedRels = mapObj(compiledSubQuery.relationships, (relQuery, relName) => {
-        const relDef = schema.resources[type].relationships[relName];
-        const rels = asArray(resource.relationships[relName]);
-        const expanded = rels.map((rel) => walk(relQuery, rel));
-
-        return relDef.cardinality === "one"
-          ? (expanded.length === 0 ? null : expanded[0])
-          : expanded;
-      });
-
-      return {
-        id,
-        type,
-        ...properties,
-        ...expandedRels,
-      } as QueryResultResource<S, ResType, CSQProps, CSQRels>;
-    };
-
-    const out = walk(compiledQuery, compiledQuery);
     return Promise.resolve(out);
   };
 
@@ -327,49 +301,10 @@ export async function makeMemoryStore<S extends Schema>(
       query: Q,
       params: QueryParams<S>,
     ): Promise<QueryResultResource<S, TopResType>[]> => {
-    const compiledQuery = compileQuery(schema, query);
-
-    const walk = <ResType extends keyof S["resources"], SQ extends CompiledSubQuery<S, ResType>>(
-      subQuery: SQ,
-      ref: ResourceRefOfType<S, ResType>,
-    ): QueryResultResource<S, ResType> => {
-      const { type, id } = ref;
-      const resource = store[type][id];
-
-      if (!resource) return null;
-      if (subQuery.referencesOnly === true) {
-        return { type, id } as QueryResultResource<S, ResType>;
-      }
-
-      const expandedRels = mapObj(
-        subQuery.relationships,
-        <RelType extends keyof S["resources"][ResType]["relationships"]>(relQuery, relName: RelType) => {
-          const relDef = schema.resources[type].relationships[relName as string];
-          const rels = asArray(resource.relationships[relName]);
-          const expanded = rels.map((rel) => walk(relQuery, rel));
-
-          return relDef.cardinality === "one"
-            ? (expanded.length === 0 ? null : expanded[0])
-            : expanded;
-        },
-      );
-
-      return {
-        id,
-        type,
-        ...resource.properties,
-        ...expandedRels,
-      } as QueryResultResource<S, ResType>;
-    };
-
     const allResources = Object.values(store[query.type]);
-    const results = allResources.map((res) => walk(compiledQuery, res));
+    const out = allResources.map((res) => buildTree(query, res));
 
-    const out = Promise.resolve(
-      results as QueryResultResource<S, TopResType>[],
-    );
-
-    return out;
+    return Promise.resolve(out);
   };
 
   const get = <
@@ -420,7 +355,7 @@ export async function makeMemoryStore<S extends Schema>(
   ): Promise<ReplacementResponse<S>> => {
     const seenRootResourceIds: Set<string> = new Set();
     const existingResources = store[query.type];
-    const quiver = makeResourceQuiver(schema, existingResources, ({ assertResource, retractResource }) => {
+    const quiver = makeResourceQuiver(schema, ({ assertResource, retractResource }) => {
       trees.forEach((tree) => {
         const { descendantResources, rootResource } = queryTree(schema, query, tree);
 
@@ -429,9 +364,9 @@ export async function makeMemoryStore<S extends Schema>(
         descendantResources.forEach((res) => assertResource(res, store[res.type][res.id]));
       });
 
-      Object.keys(existingResources).forEach((resId) => {
+      Object.entries(existingResources).forEach(([resId, existingRes]) => {
         if (!seenRootResourceIds.has(resId)) {
-          retractResource({ type: query.type, id: resId });
+          retractResource(existingRes);
         }
       });
     });
@@ -445,7 +380,7 @@ export async function makeMemoryStore<S extends Schema>(
   ): Promise<ReplacementResponse<S>> => {
     const { allResources, rootResource } = queryTree(schema, query, tree);
 
-    const quiver = makeResourceQuiver(schema, {}, ({ assertResource, retractResource }) => {
+    const quiver = makeResourceQuiver(schema, ({ assertResource, retractResource }) => {
       if (tree === null) {
         retractResource(rootResource);
       } else {

@@ -1,9 +1,9 @@
+import { difference } from "@polygraph/utils/dist/sets";
 import { formatRef } from "../utils";
-import { difference } from "../../../utils/dist";
 
 /**
  * The point of this quiver is to detect internal inconsistencies from nodes
- * and arrows created by assertions. It is meant to be mutated, preferably
+ * and arrows created by assertions. It is meant to be mutated, preferablyretracted
  * within a single function. It functions relatively transparently, with each
  * method having a corresponding value in the state, e.g.,
  * assertNode<->assertedNodes. The utility is in the validation.
@@ -34,7 +34,9 @@ interface ArrowLike {
   label: string;
 }
 
-type ArrowChanges = { present: Set<string> } | { changes: Record<string, boolean> };
+type ReplacementArrowChanges = { present: NodeRef[] };
+type DeltaArrowChanges = { asserted?: NodeRef[], retracted?: NodeRef[] };
+type ArrowChanges = ReplacementArrowChanges | DeltaArrowChanges;
 
 export interface Quiver {
   // useful when constructing
@@ -42,7 +44,6 @@ export interface Quiver {
   retractNode: (nodeRef: NodeRef) => void;
   assertArrow: (arrow: Arrow) => void;
   retractArrow: (arrow: Arrow) => void;
-  markArrow: (arrow: Arrow) => void;
   assertArrowGroup: (source: NodeRef, targets: NodeRef[], label: string) => void;
 
   // useful as the result
@@ -80,12 +81,10 @@ const addToArrowSet = (setObj, arrow) => {
 };
 
 export function makeQuiver(): Quiver {
-  const nodes: Record<string, NodeRefWithState> = {};
-  const assertedArrows: Record<string, Record<string, Set<NodeRefString>>> = {};
-  const retractedArrows: Record<string, Record<string, Set<NodeRefString>>> = {};
-  const seenArrows: Record<string, Record<string, Set<NodeRefString>>> = {};
-  const assertedArrowGroups: Set<string> = new Set();
-  const markedArrows: Record<string, Set<string>> = {};
+  const nodes: Record<NodeRefString, NodeRefWithState> = {};
+  const assertedArrows: Record<NodeRefString, Record<string, Set<NodeRefString>>> = {};
+  const retractedArrows: Record<NodeRefString, Record<string, Set<NodeRefString>>> = {};
+  const assertedArrowGroups: Set<NodeRefString> = new Set();
 
   const relStr = (arrow: ArrowLike) => {
     const { source, target, label } = arrow;
@@ -214,18 +213,17 @@ export function makeQuiver(): Quiver {
     };
   };
 
-  const relateNode = (nodeRef: NodeRef): void => {
+  const seeNode = (nodeRef: NodeRef): void => {
     const nodeKey = makeRefKey(nodeRef);
-    nodes[nodeKey] = nodes[nodeKey] ?? { ...nodeRef, state: "related" };
-  };
+    const existing = nodes[nodeKey];
 
-  const markArrow = (arrow: Arrow): void => {
-    const groupKey = makeArrowGroupKey(arrow);
-    const targetKey = makeRefKey(arrow.target);
-
-    relateNode(arrow.source);
-    addToArrowSet(seenArrows, arrow);
-    markedArrows[groupKey] = markedArrows[groupKey]?.add(targetKey) ?? new Set([targetKey]);
+    if (!existing) {
+      nodes[nodeKey] = {
+        ...nodeRef,
+        properties: {},
+        state: "related",
+      };
+    }
   };
 
   const assertArrow = (arrow: Arrow): void => {
@@ -242,13 +240,14 @@ export function makeQuiver(): Quiver {
       assertNode({ ...target, properties: {} });
 
       addToArrowSet(assertedArrows, arrow);
-      addToArrowSet(seenArrows, arrow);
     }
   };
 
   const retractArrow = (arrow: Arrow): void => {
     checkArrowNotAsserted(arrow);
     addToArrowSet(retractedArrows, arrow);
+    seeNode(arrow.source);
+    seeNode(arrow.target);
   };
 
   const assertArrowGroup = (source: NodeRef, targets: NodeRef[], label: string): void => {
@@ -263,55 +262,35 @@ export function makeQuiver(): Quiver {
     }
   };
 
-  // Return outgoing arrows on a per-label basis, but only for those that have changed
-  // Output is a per label, with booleans keyed by NodeRefString to say assert or retract
   const getArrowChanges = (source: NodeRef): Record<string, ArrowChanges> => {
     const sourceKey = makeRefKey(source);
 
-    if (!seenArrows[sourceKey]) {
-      return {};
-    }
-
     const output = {} as Record<string, ArrowChanges>;
-    Object.entries(seenArrows[sourceKey]).forEach(([label, seen]) => {
+    Object.entries(assertedArrows[sourceKey] ?? {}).forEach(([label, asserted]) => {
       const groupKey = makeArrowGroupKey({ source, label });
-
-      // A = M iff A = (A ∪ M) = M which implies
-      // A = M iff |A| = |A ∪ M| = |M|
-      // N = M ∪ A which implies
-      // Changes have been made if |A| ≠ |N| or |M| ≠ |N|
-      // Changes have also been made if |R| > 0
-      const retracted = retractedArrows?.[sourceKey]?.[label] ?? new Set();
-      const marked = markedArrows?.[groupKey] ?? new Set();
-      const asserted = assertedArrows[sourceKey]?.[label] ?? new Set();
-      const hasNonRetractionChanges = (asserted.size !== seen.size) || (marked.size !== seen.size);
-
-      if (retracted.size === 0 && !hasNonRetractionChanges) {
+      if (assertedArrowGroups.has(groupKey)) {
+        output[label] = { present: [...asserted].map(readNodeKey) };
         return;
       }
 
-      if (assertedArrowGroups.has(groupKey)) {
-        output[label] = { present: asserted };
-      } else {
-        // this logic may be optimizable at a higher layer
-        const changes = {};
-        [...seen].forEach((seenStr) => {
-          changes[seenStr] = asserted.has(seenStr);
-        });
+      output[label] = { asserted: [...asserted].map(readNodeKey) };
+    });
 
-        [...retracted].forEach((retractedStr) => {
-          changes[retractedStr] = false;
-        });
-
-        output[label] = { changes };
+    Object.entries(retractedArrows[sourceKey] ?? {}).forEach(([label, retracted]) => {
+      const groupKey = makeArrowGroupKey({ source, label });
+      if (!assertedArrowGroups.has(groupKey)) {
+        if (output[label]) {
+          (output[label] as DeltaArrowChanges).retracted = [...retracted].map(readNodeKey);
+        } else {
+          output[label] = { retracted: [...retracted].map(readNodeKey) };
+        }
       }
     });
 
     return output;
   };
 
-  // These are any nodes referenced anywhere in the quiver
-  // TODO: omit related nodes that have no rel changes
+  // These are all nodes referenced anywhere in the quiver
   const getNodes = (): Map<NodeRef, (null | Node | NodeRef)> => {
     const output = new Map();
 
@@ -332,7 +311,6 @@ export function makeQuiver(): Quiver {
     assertArrow,
     retractArrow,
     assertArrowGroup,
-    markArrow,
     getArrowChanges,
     getNodes,
   };

@@ -5,7 +5,7 @@ export function formatValidationError<S extends Schema>(error: ValidationError<S
   const { message, validationName, validationType } = error;
 
   if (validationType === "resource") {
-    return `validation "${validationName}" failed: ${message} (${formatRef(error)})`;
+    return `validation "${validationName}" failed: ${message} ${formatRef(error)}`;
   }
 
   return `validation "${validationName}" failed: ${message}`;
