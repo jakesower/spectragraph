@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "title": "Care Bear Resources",
+  "description": "Validations for data trees under the care bear schema (singular).",
+  "type": "object",
+  "required": ["type", "tree", "isSingular"],
+  "properties": {
+    "type": { "type": "string", "enum": ["bears", "homes", "powers", "companions"] },
+    "isSingular": { "type": "boolean" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "type": { "type": "string", "const": "bears" } }
+      },
+      "then": {
+        "properties": {
+          "tree": {
+            "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/bears" }]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "type": "string", "const": "homes" } }
+      },
+      "then": {
+        "properties": {
+          "tree": {
+            "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/homes" }]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "type": "string", "const": "powers" } }
+      },
+      "then": {
+        "properties": {
+          "tree": {
+            "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/powers" }]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "type": "string", "const": "companions" } }
+      },
+      "then": {
+        "properties": {
+          "tree": {
+            "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/companions" }]
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "bears": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "year_introduced": { "type": "number" },
+        "belly_badge": { "type": "string" },
+        "fur_color": { "type": "string" },
+        "home": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/homes" }
+          ]
+        },
+        "powers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/powers" }
+        },
+        "best_friend": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/bears" }
+          ]
+        }
+      }
+    },
+    "homes": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "caring_meter": { "type": "number" },
+        "is_in_clouds": { "type": "boolean" },
+        "bears": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/bears" }
+        }
+      }
+    },
+    "powers": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string" },
+        "bears": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/bears" }
+        }
+      }
+    },
+    "companions": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "recurs": { "type": "boolean" },
+        "follows": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/bears" }
+          ]
+        }
+      }
+    }
+  }
+}

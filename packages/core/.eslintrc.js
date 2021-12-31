@@ -37,6 +37,7 @@ module.exports = {
     indent: ["error", 2, {
       flatTernaryExpressions: true,
     }],
+    "max-classes-per-file": "off",
     "max-len": ["error", {
       code: 100, comments: 125, ignoreStrings: true, ignoreTemplateLiterals: true,
     }],

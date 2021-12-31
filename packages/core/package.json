@@ -14,6 +14,7 @@
     "@polygraph/data-graph": "^0.0.7",
     "@polygraph/schema-utils": "^0.0.7",
     "@polygraph/utils": "^0.0.6",
+    "ajv": "^8.8.2",
     "object-hash": "^2.1.1"
   },
   "devDependencies": {

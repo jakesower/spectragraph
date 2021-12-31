@@ -1,10 +1,9 @@
 import test from "ava";
-import { mapObj, pick } from "@polygraph/utils";
+import { pick } from "@polygraph/utils";
 import { schema } from "../fixtures/care-bear-schema";
 import { queryTree } from "../../src/utils";
-import { ExpandedSchema, Query, ResourceOfType } from "../../src/types";
+import { ResourceOfType } from "../../src/types";
 import { careBearData } from "../fixtures/care-bear-data";
-import { QueryTree } from "../../src/utils/query-tree";
 
 type S = typeof schema;
 
@@ -129,5 +128,5 @@ test("finds descendants properly", async (t) => {
     ...[careBearData.powers.careBearStare],
   ];
 
-  t.deepEqual(qt.selfAndDescendantResources, expected);
+  t.deepEqual(qt.allResources, expected);
 });

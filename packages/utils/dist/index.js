@@ -12,14 +12,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.union = exports.uniqBy = exports.uniq = exports.sortWithAll = exports.sortWith = exports.sortByAll = exports.sortBy = exports.reduceObj = exports.pluckKeys = exports.pipeThru = exports.pipeMw = exports.pathOr = exports.partition = exports.parseQueryParams = exports.omit = exports.overPath = exports.mergeWith = exports.mergeChildren = exports.mergeAll = exports.mapResult = exports.maxStable = exports.mapObjToArray = exports.mapObj = exports.keyByProp = exports.keyBy = exports.inlineKey = exports.indexOn = exports.groupBy = exports.flatten = exports.forEachObj = exports.flatMap = exports.findObj = exports.filterObj = exports.fillObject = exports.fgo = exports.deepClone = exports.cmp = exports.chainPipeThru = exports.assignChildren = exports.arrayUnion = exports.arraySetDifferenceBy = exports.arraySetDifference = exports.applyOrMap = exports.appendKeys = exports.append = exports.reverse = exports.pipe = exports.pick = exports.lazy = exports.equals = void 0;
-exports.zipObj = exports.xprod = exports.unnest = void 0;
+exports.unnest = exports.union = exports.uniqBy = exports.uniq = exports.sortWithAll = exports.sortWith = exports.sortByAll = exports.sortBy = exports.reduceObj = exports.pluckKeys = exports.pipeThru = exports.pipeMw = exports.pathOr = exports.partition = exports.parseQueryParams = exports.omit = exports.overPath = exports.mergeWith = exports.mergeChildren = exports.mergeAll = exports.mapResult = exports.maxStable = exports.mapObjToArray = exports.mapObj = exports.keyByProp = exports.keyBy = exports.inlineKey = exports.indexOn = exports.groupBy = exports.flatten = exports.forEachObj = exports.flatMap = exports.findObj = exports.filterObj = exports.fillObject = exports.fgo = exports.deepClone = exports.cmp = exports.chainPipeThru = exports.assignChildren = exports.arrayUnion = exports.arraySetDifferenceBy = exports.arraySetDifference = exports.applyOrMap = exports.appendKeys = exports.append = exports.reverse = exports.pipe = exports.pick = exports.equals = void 0;
+exports.zipObj = exports.xprod = void 0;
 const deep_equal_1 = __importDefault(require("deep-equal"));
 exports.equals = deep_equal_1.default;
 const pipe_1 = require("./general/pipe");
 Object.defineProperty(exports, "pipe", { enumerable: true, get: function () { return pipe_1.pipe; } });
-var lazy_1 = require("./general/lazy");
-Object.defineProperty(exports, "lazy", { enumerable: true, get: function () { return lazy_1.lazy; } });
 var pick_1 = require("./general/pick");
 Object.defineProperty(exports, "pick", { enumerable: true, get: function () { return pick_1.pick; } });
 var reverse_1 = require("./general/reverse");

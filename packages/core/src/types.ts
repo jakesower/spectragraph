@@ -67,6 +67,7 @@ type SchemaPropertyType = "string" | "number" | "boolean";
 
 export type Schema = Readonly<{
   title?: string;
+  urlName: string;
   resources: Readonly<{
     [k: string]: Readonly<{
       singular?: string;

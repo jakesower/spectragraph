@@ -149,17 +149,6 @@ test.beforeEach(async (t) => {
   // console.log("\n\n\nmade store\n\n\n");
 });
 
-// ----General-------------------------------------------------------------------------------------
-
-test("id mismatches between query and data fails", async (t) => {
-  const replaceResult = await t.context.store.replaceOne(
-    { type: "bears", id: "5" },
-    { type: "bears", id: "mismatched", fur_color: "brink pink" },
-  );
-
-  t.deepEqual(replaceResult.isValid, false);
-});
-
 // ----Properties----------------------------------------------------------------------------------
 
 test("uses defaults when creating a resource missing the property", async (t) => {
@@ -230,7 +219,7 @@ test("replaces a property", async (t) => {
     ["bears", "5", { properties: { fur_color: "brink pink" } }],
   ]);
 
-  t.deepEqual(replaceResult.isValid && replaceResult.data, replaceExpected);
+  t.deepEqual(resultData(replaceResult), replaceExpected);
 });
 
 test("keeps values with default when replacing other properties", async (t) => {

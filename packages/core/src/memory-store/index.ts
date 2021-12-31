@@ -1,9 +1,7 @@
 /* eslint-disable max-len, no-use-before-define */
 
 import {
-  filterObj,
-  forEachObj,
-  keyBy, mapObj, partition, pick,
+  forEachObj, mapObj, partition, pick,
 } from "@polygraph/utils";
 import { makeResourceQuiver, ResourceQuiverResult } from "../data-structures/resource-quiver";
 import {
@@ -12,33 +10,25 @@ import {
   NormalizedResourceUpdates,
   Query,
   QueryParams,
-  CompiledQuery,
-  ResourceRef,
   DataTree,
   Schema,
   MemoryStore,
   ExpandedResourceTree,
   QueryResultResource,
   QueryWithId,
-  ResourceRefOfType,
-  CompiledSubQuery,
   ResourceOfType,
-  ResourceTreeOfType,
   ExpandedSchema,
   QueryProps,
-  CompiledSubQueryProps,
   QueryRels,
-  CompiledSubQueryRels,
   ReplacementResponse,
-  Expand,
-  ResourceUpdate,
   Writeable,
-  ResourceUpdateOfType,
 } from "../types";
 import {
-  asArray, cardinalize, compileQuery, convertDataTreeToResourceTree, formatValidationError, queryTree, toRef,
+  asArray, cardinalize, formatValidationError, queryTree,
 } from "../utils";
-import { validateResource } from "../utils/validate";
+import { PolygraphGetQuerySyntaxError, PolygraphReplaceSyntaxError } from "../validations/errors";
+import { syntaxValidations as syntaxValidationsForSchema } from "../validations/syntax-validations";
+import { extractQuiver } from "./extract-quiver";
 
 interface MemoryStoreOptions<S extends Schema> {
   initialData?: NormalizedResourceUpdates<S>;
@@ -59,163 +49,35 @@ function makeEmptyStore<S extends Schema>(schema: S): NormalizedResources<S> {
   return resources as Writeable<NormalizedResources<S>>;
 }
 
-function makeEmptyUpdatesObj<S extends Schema>(schema: S): NormalizedResourceUpdates<S> {
-  const output = {} as NormalizedResourceUpdates<S>;
-  Object.keys(schema.resources).forEach((resType: keyof S["resources"]) => {
-    output[resType] = {};
-  });
-
-  return output;
-}
-
-function makeNewResource<S extends Schema, ResType extends keyof S["resources"]>(
-  schema: S,
-  type: ResType & string,
-  id: string,
-): ResourceOfType<S, ResType> {
-  const expandedSchema = schema as ExpandedSchema<S>;
-  const resDef = expandedSchema.resources[type];
-  const properties = mapObj(
-    resDef.properties,
-    (prop) => prop.default ?? undefined,
-  );
-  const relationships = mapObj(resDef.relationships, (relDef) => cardinalize([], relDef));
-
-  return {
-    type,
-    id,
-    properties,
-    relationships,
-  } as ResourceOfType<S, ResType>;
-}
-
-function toRefStr<S extends Schema>(ref: ResourceRef<S>): string {
-  return JSON.stringify({ type: ref.type, id: ref.id });
-}
-
-function strToRef<S extends Schema>(refStr: string): ResourceRef<S> {
-  return JSON.parse(refStr);
-}
-
-type RelatedResource<S extends Schema> = null | ResourceRef<S> | ResourceRef<S>[];
-function asRefSet<S extends Schema>(
-  resources: RelatedResource<S>,
-  fn: (val: Set<string>) => Set<string>,
-): ResourceRef<S>[] {
-  const set = new Set(asArray(resources).map(toRefStr));
-  const nextSet = fn(set);
-  return [...nextSet].map(strToRef);
-}
-
 export async function makeMemoryStore<S extends Schema>(
   schema: S,
   options: MemoryStoreOptions<S> = {},
 ): Promise<MemoryStore<S>> {
   const expandedSchema = schema as ExpandedSchema<S>;
   const store: NormalizedResources<S> = makeEmptyStore(schema);
-  const baseResources = mapObj(schema.resources, <ResType extends keyof S["resources"]>(resDef, resType: ResType) => {
-    const properties = mapObj(
-      resDef.properties,
-      (prop) => prop.default ?? undefined,
-    );
-    const relationships = mapObj(resDef.relationships, (relDef) => cardinalize([], relDef));
-
-    return {
-      type: resType,
-      properties,
-      relationships,
-    } as ResourceOfType<S, ResType>;
-  });
+  const syntaxValidations = syntaxValidationsForSchema(schema);
 
   const applyQuiver = async (
     quiver: ResourceQuiverResult<S>,
   ): Promise<ReplacementResponse<S>> => {
-    let allValid = true;
-    const allValidationErrors = [];
-    const updatedResources: any = makeEmptyUpdatesObj(schema);
+    const errorsOrData = await extractQuiver(schema, store, quiver);
 
-    // eslint-disable-next-line no-restricted-syntax
-    for (const [ref, value] of quiver.getResources()) {
-      const { type, id } = ref;
-      type ResType = typeof type;
-
-      if (value == null) {
-        updatedResources[type][id] = null;
-        continue; // eslint-disable-line no-continue
-      }
-
-      const resDef = expandedSchema.resources[type];
-      const existingOrNewRes = store[type][id] ?? makeNewResource(schema, type, id);
-      const existingOrNewProps = existingOrNewRes.properties;
-      const existingOrNewRels = existingOrNewRes.relationships;
-
-      const properties = ("properties" in value)
-        ? mapObj(existingOrNewProps, (existingProp, propKey) => value.properties[propKey] ?? existingProp)
-        : baseResources[type].properties;
-
-      const relationships = {};
-      const updatedRels = quiver.getRelationshipChanges(ref);
-      Object.entries(existingOrNewRels).forEach(([relType, existingRels]) => {
-        if (relType in updatedRels) {
-          const relDef = resDef.relationships[relType];
-          const updatedRel = updatedRels[relType];
-
-          if ("present" in updatedRel) {
-            relationships[relType] = cardinalize(updatedRel.present, relDef);
-          } else {
-            const existingRelsOfType = asArray(existingRels);
-            const updatedRelIds = new Set(existingRelsOfType.map((r) => r.id));
-            (updatedRel.retracted ?? []).forEach((r) => updatedRelIds.delete(r.id));
-            (updatedRel.asserted ?? []).forEach((r) => updatedRelIds.add(r.id));
-
-            relationships[relType] = cardinalize(
-              [...updatedRelIds].map((relId) => ({ type: relDef.type, id: relId })),
-              relDef,
-            );
-          }
-        } else {
-          relationships[relType] = existingOrNewRes.relationships[relType];
-        }
-      });
-
-      const nextRes = {
-        type, id, properties, relationships,
-      } as ResourceOfType<S, ResType>;
-
-      // eslint-disable-next-line no-await-in-loop
-      const { isValid, errors } = await validateResource(expandedSchema, nextRes);
-
-      if (isValid) {
-        updatedResources[type][id] = nextRes;
-      } else {
-        allValid = false;
-        allValidationErrors.push(...errors);
-      }
+    if (!errorsOrData.isValid) {
+      return errorsOrData;
     }
 
-    if (!allValid) {
-      return { isValid: false, errors: allValidationErrors };
-    }
-
-    forEachObj(updatedResources, (ressById, resType) => {
+    forEachObj(errorsOrData.data, (ressById, resType) => {
       const untypedStore = store as any;
-
       forEachObj(ressById, (resValue, resId) => {
         if (resValue === null) {
           delete untypedStore[resType][resId];
         } else {
-          // const existingRes = typeStore[resId] || makeEmptyResource(schema, resType, resId);
-          // const nextRes = applyResourceUpdate(existingRes, resValue) as ResourceOfType<S, typeof resType>;
           untypedStore[resType][resId] = resValue;
         }
       });
     });
 
-    // eslint-disable-next-line consistent-return
-    return {
-      isValid: true,
-      data: updatedResources,
-    };
+    return errorsOrData;
   };
 
   // TODO: do not allow this to be valid if a resource is missing from both the updates or the store
@@ -281,12 +143,16 @@ export async function makeMemoryStore<S extends Schema>(
     };
   };
 
-  const getOne = <
+  const getOne = async <
     TopResType extends keyof S["resources"],
     Q extends QueryWithId<S, TopResType>,
     QProps extends QueryProps<S, TopResType, Q>,
     QRels extends QueryRels<S, TopResType, Q>,
-  >(query: Q & { type: TopResType }, params: QueryParams<S> = {}): Promise<QueryResultResource<S, TopResType, QProps, QRels>> => {
+  >(query: Q & { type: TopResType }, params: QueryParams<S> = {}): Promise<any> => {
+    if (!syntaxValidations.querySyntax(query)) {
+      throw new PolygraphGetQuerySyntaxError(query, syntaxValidations.querySyntax.errors);
+    }
+
     const out = store[query.type][query.id]
       ? buildTree(query, store[query.type][query.id])
       : null;
@@ -326,28 +192,6 @@ export async function makeMemoryStore<S extends Schema>(
     );
   };
 
-  const replaceStep = (tree: ResourceTree<S>, { assertResource, markRelationship }) => {
-    assertResource(tree);
-
-    if (tree && ("relationships" in tree)) {
-      Object.entries(tree.relationships)
-        .forEach(([relType, rels]) => {
-          asArray(rels).forEach((subTree) => {
-            if ("relationships" in subTree) {
-              replaceStep(subTree as ExpandedResourceTree<S>, { assertResource, markRelationship });
-            }
-          });
-
-          const existing = store[tree.type][tree.id];
-
-          if (existing?.relationships[relType]) {
-            asArray(existing.relationships[relType])
-              .forEach((related) => markRelationship(relType, existing, related));
-          }
-        });
-    }
-  };
-
   const replaceMany = async <TopResType extends keyof S["resources"], Q extends Query<S, TopResType & string>>(
     query: Q,
     trees: DataTree[],
@@ -378,12 +222,16 @@ export async function makeMemoryStore<S extends Schema>(
     query: Q,
     tree: DataTree,
   ): Promise<ReplacementResponse<S>> => {
-    const { allResources, rootResource } = queryTree(schema, query, tree);
+    const { queryTreeSyntax } = syntaxValidations;
+    if (!queryTreeSyntax({ query, tree })) {
+      throw new PolygraphReplaceSyntaxError(query, tree, queryTreeSyntax.errors);
+    }
 
     const quiver = makeResourceQuiver(schema, ({ assertResource, retractResource }) => {
       if (tree === null) {
-        retractResource(rootResource);
+        retractResource({ type: query.type, id: query.id });
       } else {
+        const { allResources } = queryTree(schema, query, tree);
         allResources.forEach((res) => assertResource(res, store[res.type][res.id]));
       }
     });

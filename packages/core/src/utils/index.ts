@@ -1,17 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { mapObj, pick } from "@polygraph/utils";
-import {
-  CompiledQuery,
-  CompiledSchema,
-  DataTree, ExpandedResourceTree, Query, SubQuery, ResourceRef, ResourceTree, Schema,
-} from "../types";
+import { pick } from "@polygraph/utils";
+import { ResourceRef, Schema } from "../types";
 
 export { asArray } from "./asArray";
 export { cardinalize } from "./cardinalize";
-export { compileQuery } from "./compileQuery";
-export { convertDataTreeToResourceTree } from "./convertDataTreeToResourceTree";
-export { convertResourceTreeToDataTree } from "./convertResourceTreeToDataTree";
 export { formatRef } from "./format-ref";
 export { formatValidationError } from "./format-validation-error";
 export { queryTree } from "./query-tree";

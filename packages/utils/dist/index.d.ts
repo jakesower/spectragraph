@@ -1,7 +1,6 @@
 import equals from 'deep-equal';
 import { pipe } from './general/pipe';
 export { equals };
-export { lazy } from './general/lazy';
 export { pick } from "./general/pick";
 export { pipe };
 export { reverse } from "./general/reverse";
