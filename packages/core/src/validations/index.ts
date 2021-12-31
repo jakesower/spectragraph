@@ -1,2 +1,2 @@
 export { resourceValidations } from "./resource-validations";
-export { schemaValidations } from "./schema-validations";
+export { syntaxValidations } from "./syntax-validations";

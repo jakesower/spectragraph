@@ -1,5 +1,6 @@
 import { mapObj } from "@polygraph/utils";
 import {
+  DataTree,
   ExpandedSchema, ResourceOfType, ResourceValidation, ResourceValidationError, Schema,
 } from "../types";
 
@@ -22,10 +23,20 @@ const propertyTypeChecks = {
   string: (val) => (typeof val === "string"),
 };
 
-type ResourceValidationDef = Omit<ResourceValidation, "validate"> & {
+export type ResourceValidationDef = Omit<ResourceValidation, "validate"> & {
   validate: <S extends Schema, ResType extends keyof S["resources"]>(
     newResource: ResourceOfType<S, ResType>,
     oldResource: ResourceOfType<S, ResType>,
+    options: {
+      schema: ExpandedSchema<S>,
+    },
+  ) => Omit<ResourceValidationError<S>, "id" | "type">[];
+}
+
+export type CustomResourceValidationDef = Omit<ResourceValidation, "validate"> & {
+  validate: <S extends Schema>(
+    updatedTree: DataTree,
+    existingTree: DataTree,
     options: {
       schema: ExpandedSchema<S>,
     },

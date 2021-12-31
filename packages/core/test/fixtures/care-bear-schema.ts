@@ -1,5 +1,6 @@
 export const schema = {
   title: "Care Bear Schema",
+  urlName: "care-bears",
   resources: {
     bears: {
       singular: "bear",
