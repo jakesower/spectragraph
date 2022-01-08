@@ -1,52 +1,65 @@
 /* eslint-disable max-len, no-use-before-define */
 
 import {
-  forEachObj, mapObj, partition, pick,
+  forEachObj, groupBy, mapObj, partition, pick,
 } from "@polygraph/utils";
 import { makeResourceQuiver, ResourceQuiverResult } from "../data-structures/resource-quiver";
 import {
-  ResourceTree,
-  NormalizedResources,
-  NormalizedResourceUpdates,
   Query,
   QueryParams,
   DataTree,
   Schema,
   MemoryStore,
-  ExpandedResourceTree,
-  QueryResultResource,
   QueryWithId,
-  ResourceOfType,
   ExpandedSchema,
   QueryProps,
   QueryRels,
-  ReplacementResponse,
   Writeable,
+  Validation,
+  ResourceRefOfType,
+  NormalizedResources,
 } from "../types";
 import {
-  asArray, cardinalize, formatValidationError, queryTree,
+  asArray, cardinalize, queryTree,
 } from "../utils";
 import { PolygraphGetQuerySyntaxError, PolygraphReplaceSyntaxError } from "../validations/errors";
 import { syntaxValidations as syntaxValidationsForSchema } from "../validations/syntax-validations";
-import { extractQuiver } from "./extract-quiver";
+import { validateAndExtractQuiver } from "./validate-and-extract-quiver";
 
 interface MemoryStoreOptions<S extends Schema> {
-  initialData?: NormalizedResourceUpdates<S>;
+  initialData?: NormalizedResources<S>;
+  validations?: Validation[];
+}
+
+type FlatResourceOfType<S extends Schema, ResType extends keyof S["resources"]> = (
+  { id: string }
+  & { [PropType in keyof S["resources"][ResType]["properties"]]:
+      S["resources"][ResType]["properties"][PropType]
+    }
+  & { [RelType in keyof S["resources"][ResType]["relationships"]]:
+      ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["relatedType"]>
+      | ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["relatedType"]>[]
+    }
+)
+
+type StoreFormat<S extends Schema> = {
+  [ResType in keyof S["resources"]]:
+    Record<string, FlatResourceOfType<S, ResType & string>>;
 }
 
 /**
  * TODO:
  * - Some queries guarantee no internal inconsistencies, a good place for optimization.
  */
-function makeEmptyStore<S extends Schema>(schema: S): NormalizedResources<S> {
-  const resources = {} as Record<keyof S["resources"], Record<string, ResourceOfType<S, keyof S["resources"]>>>;
+function makeEmptyStore<S extends Schema>(schema: S): StoreFormat<S> {
+  const resources = {} as StoreFormat<S>;
   const resTypes = Object.keys(schema.resources) as (keyof S["resources"])[];
   resTypes.forEach(
     <ResType extends keyof S["resources"]>(resourceName: ResType) => {
-      resources[resourceName] = {} as Record<string, Writeable<ResourceOfType<S, ResType>>>;
+      resources[resourceName] = {} as Record<string, FlatResourceOfType<S, ResType>>;
     },
   );
-  return resources as Writeable<NormalizedResources<S>>;
+  return resources as StoreFormat<S>;
 }
 
 export async function makeMemoryStore<S extends Schema>(
@@ -54,19 +67,17 @@ export async function makeMemoryStore<S extends Schema>(
   options: MemoryStoreOptions<S> = {},
 ): Promise<MemoryStore<S>> {
   const expandedSchema = schema as ExpandedSchema<S>;
-  const store: NormalizedResources<S> = makeEmptyStore(schema);
+  const store: StoreFormat<S> = makeEmptyStore(schema);
   const syntaxValidations = syntaxValidationsForSchema(schema);
+  const customValidations = options.validations ?? [];
+  const resourceValidations = groupBy(customValidations, (v) => v.resourceType);
 
   const applyQuiver = async (
     quiver: ResourceQuiverResult<S>,
-  ): Promise<ReplacementResponse<S>> => {
-    const errorsOrData = await extractQuiver(schema, store, quiver);
+  ): Promise<NormalizedResourceUpdates<S>> => {
+    const data = await validateAndExtractQuiver(schema, store, quiver, resourceValidations);
 
-    if (!errorsOrData.isValid) {
-      return errorsOrData;
-    }
-
-    forEachObj(errorsOrData.data, (ressById, resType) => {
+    forEachObj(data, (ressById, resType) => {
       const untypedStore = store as any;
       forEachObj(ressById, (resValue, resId) => {
         if (resValue === null) {
@@ -77,12 +88,12 @@ export async function makeMemoryStore<S extends Schema>(
       });
     });
 
-    return errorsOrData;
+    return data;
   };
 
   // TODO: do not allow this to be valid if a resource is missing from both the updates or the store
   // (imagine a case where no props are required--it might be fine in a tree, but not a res update)
-  const replaceResources = async (updated: NormalizedResourceUpdates<S>): Promise<ReplacementResponse<S>> => {
+  const replaceResources = async (updated: NormalizedResourceUpdates<S>): Promise<NormalizedResourceUpdates<S>> => {
     const quiver = makeResourceQuiver(schema, ({ assertResource, retractResource }) => {
       Object.entries(updated).forEach(([type, typedResources]) => {
         Object.entries(typedResources).forEach(([id, updatedRes]) => {
@@ -196,7 +207,7 @@ export async function makeMemoryStore<S extends Schema>(
     query: Q,
     trees: DataTree[],
     params: QueryParams<S> = {},
-  ): Promise<ReplacementResponse<S>> => {
+  ): Promise<NormalizedResourceUpdates<S>> => {
     const seenRootResourceIds: Set<string> = new Set();
     const existingResources = store[query.type];
     const quiver = makeResourceQuiver(schema, ({ assertResource, retractResource }) => {
@@ -221,7 +232,7 @@ export async function makeMemoryStore<S extends Schema>(
   const replaceOne = async <TopResType extends keyof S["resources"], Q extends QueryWithId<S, TopResType & string>>(
     query: Q,
     tree: DataTree,
-  ): Promise<ReplacementResponse<S>> => {
+  ): Promise<NormalizedResourceUpdates<S>> => {
     const { queryTreeSyntax } = syntaxValidations;
     if (!queryTreeSyntax({ query, tree })) {
       throw new PolygraphReplaceSyntaxError(query, tree, queryTreeSyntax.errors);
@@ -240,10 +251,7 @@ export async function makeMemoryStore<S extends Schema>(
   };
 
   if (options.initialData) {
-    const initDataResponse = await replaceResources(options.initialData);
-    if (initDataResponse.isValid === false) {
-      throw new Error(`Invalid initial data.\n\n${initDataResponse.errors.map(formatValidationError).join("\n")}`);
-    }
+    await replaceResources(options.initialData);
   }
 
   return {

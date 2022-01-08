@@ -3,14 +3,13 @@ import {
   ExpandedSchema,
   NormalizedResources,
   NormalizedResourceUpdates,
-  ReplacementResponse,
   ResourceOfType,
   Schema,
 } from "../types";
 import { ResourceQuiverResult } from "../data-structures/resource-quiver";
 import { asArray, cardinalize } from "../utils";
 import { defaultResources as getDefaultResources } from "./default-resources";
-import { validateResource } from "../utils/validate";
+import { PolygraphToOneValidationError } from "../validations/errors";
 
 function makeEmptyUpdatesObj<S extends Schema>(schema: S): NormalizedResourceUpdates<S> {
   const output = {} as NormalizedResourceUpdates<S>;
@@ -42,20 +41,18 @@ function makeNewResource<S extends Schema, ResType extends keyof S["resources"]>
   } as ResourceOfType<S, ResType>;
 }
 
-export async function extractQuiver<S extends Schema>(
+export async function validateAndExtractQuiver<S extends Schema>(
   schema: S,
   store: NormalizedResources<S>,
   quiver: ResourceQuiverResult<S>,
-): Promise<ReplacementResponse<S>> {
-  let allValid = true;
-  const allValidationErrors = [];
+  resourceValidations,
+): Promise<NormalizedResourceUpdates<S>> {
   const updatedResources: any = makeEmptyUpdatesObj(schema);
   const defaultResources = getDefaultResources(schema);
 
   // eslint-disable-next-line no-restricted-syntax
   for (const [ref, value] of quiver.getResources()) {
     const { type, id } = ref;
-    type ResType = typeof type;
 
     if (value == null) {
       updatedResources[type][id] = null;
@@ -89,6 +86,10 @@ export async function extractQuiver<S extends Schema>(
           (updatedRel.retracted ?? []).forEach((r) => updatedRelIds.delete(r.id));
           (updatedRel.asserted ?? []).forEach((r) => updatedRelIds.add(r.id));
 
+          if (relDef.cardinality === "one" && updatedRelIds.size > 1) {
+            throw new PolygraphToOneValidationError(updatedRel, relType, updatedRelIds);
+          }
+
           relationships[relType] = cardinalize(
             [...updatedRelIds].map((relId) => ({ type: relDef.type, id: relId })),
             relDef,
@@ -101,20 +102,16 @@ export async function extractQuiver<S extends Schema>(
 
     const nextRes = {
       type, id, properties, relationships,
-    } as ResourceOfType<S, ResType>;
+    };
 
+    const validations = resourceValidations[type] ?? [];
     // eslint-disable-next-line no-await-in-loop
-    const { isValid, errors } = await validateResource(schema as ExpandedSchema<S>, nextRes);
+    await Promise.all(validations.map(
+      ({ validateResource }) => validateResource(nextRes, store[type][id], { schema }),
+    ));
 
-    if (isValid) {
-      updatedResources[type][id] = nextRes;
-    } else {
-      allValid = false;
-      allValidationErrors.push(...errors);
-    }
+    updatedResources[type][id] = nextRes;
   }
 
-  return allValid
-    ? { isValid: true, data: updatedResources }
-    : { isValid: false, errors: allValidationErrors };
+  return updatedResources;
 }

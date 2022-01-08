@@ -1,8 +1,20 @@
 import { DefinedError } from "ajv";
+import {
+  DataTree, FlatResourceOfType, NormalResourceOfType, ResourceRef, ResourceValidationError, Schema,
+} from "../types";
 
 const errorCodeFormat = /^PG-\d{4}$/;
 
 export class PolygraphError extends Error {
+  details: any;
+
+  constructor(message, details) {
+    super(message);
+    this.details = details;
+  }
+}
+
+export class BasePolygraphError extends Error {
   code: string;
 
   constructor(message, code) {
@@ -16,7 +28,7 @@ export class PolygraphError extends Error {
   }
 }
 
-export class PolygraphGetQuerySyntaxError extends PolygraphError {
+export class PolygraphGetQuerySyntaxError extends BasePolygraphError {
   jsonSchemaErrors: DefinedError[];
 
   query: any;
@@ -25,11 +37,10 @@ export class PolygraphGetQuerySyntaxError extends PolygraphError {
     super("invalid query syntax in get query", "PG-0001");
     this.query = query;
     this.jsonSchemaErrors = jsonSchemaErrors;
-    console.log(jsonSchemaErrors[0])
   }
 }
 
-export class PolygraphReplaceSyntaxError extends PolygraphError {
+export class PolygraphReplaceSyntaxError extends BasePolygraphError {
   jsonSchemaErrors: DefinedError[];
 
   query: any;
@@ -41,5 +52,62 @@ export class PolygraphReplaceSyntaxError extends PolygraphError {
     this.jsonSchemaErrors = jsonSchemaErrors;
     this.query = query;
     this.tree = tree;
+  }
+}
+
+export class PolygraphGraphConsistencyError extends BasePolygraphError {
+  constructor() {
+    super("one or more inconsistencies found in graph", "PG-0003");
+  }
+}
+
+export class PolygraphCustomResourceValidationError<S extends Schema> extends BasePolygraphError {
+  errors: ResourceValidationError<S>[];
+
+  constructor(errors) {
+    super("a custom validation failed", "PG-0004");
+    this.errors = errors;
+  }
+}
+
+export class PolygraphToOneValidationError<S extends Schema, ResType extends keyof S["resources"]> extends BasePolygraphError {
+  erroredResource: NormalResourceOfType<S, ResType>;
+
+  relationship: keyof S["resources"][ResType]["relationships"];
+
+  relatatedResources: ResourceRef<S>[];
+
+  constructor(erroredResource, relationship, relatedResources) {
+    super("a resource has a to-one relationship with multiple resources in it", "PG-0005");
+    this.erroredResource = erroredResource;
+    this.relationship = relationship;
+    this.relatatedResources = relatedResources;
+  }
+}
+
+export class PolygraphResourceTypeError extends BasePolygraphError {
+  tree: DataTree;
+
+  path: (string | number)[];
+
+  expectedType: any;
+
+  constructor(tree, path, propDef) {
+    super("invalid property value", "PG-0006");
+    this.tree = tree;
+    this.path = path;
+    this.expectedType = propDef.type;
+  }
+}
+
+export class PolygraphToOneCardinalityMismatchError extends BasePolygraphError {
+  tree: DataTree;
+
+  path: (string | number)[];
+
+  constructor(tree, path) {
+    super("a to-one relationship has multiple values", "PG-0007");
+    this.tree = tree;
+    this.path = path;
   }
 }

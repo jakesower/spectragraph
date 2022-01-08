@@ -1,27 +1,42 @@
 import anyTest, { TestInterface } from "ava";
 import { makeMemoryStore } from "../../src/memory-store";
-import { ExpandedSchema, MemoryStore } from "../../src/types";
-import { CustomResourceValidationDef } from "../../src/validations/resource-validations";
+import { ExpandedSchema, MemoryStore, Validation } from "../../src/types";
+import { PolygraphError } from "../../src/validations/errors";
 import { careBearData } from "../fixtures/care-bear-data";
 import { schema } from "../fixtures/care-bear-schema";
 
 type S = typeof schema;
 const expandedSchema = schema as ExpandedSchema<S>;
 
-const customValidations: CustomResourceValidationDef[] = [{
-  validate: (updatedTree) => {
-    if (!updatedTree.powers.some((power) => power.name === "Care Bear Stare")) {
-      return [{
-        validationName: "original bears have Care Bear Stare",
-        message: "original bears must have Care Bear Stare",
-        type: "bears",
-        id: "string",
-        validationType: "resource",
-      }];
-    }
-    return [];
+const validations: Validation[] = [
+  {
+    name: "no self as best friend",
+    resourceType: "bears",
+    validateResource: (updatedResource) => {
+      console.log("boom??")
+      console.log(updatedResource)
+      if (updatedResource.best_friend?.id === updatedResource.id) {
+        console.log("boom!!")
+        throw new Error("a bear can't be best friends with themselves!");
+      }
+      console.log("no")
+    },
   },
-}];
+//   {
+//   validate: (updatedTree) => {
+//     if (!updatedTree.powers.some((power) => power.name === "Care Bear Stare")) {
+//       return [{
+//         validationName: "original bears have Care Bear Stare",
+//         message: "original bears must have Care Bear Stare",
+//         type: "bears",
+//         id: "string",
+//         validationType: "resource",
+//       }];
+//     }
+//     return [];
+//   },
+// }
+];
 
 const getErrors = (validator, obj) => (validator(obj) ? [] : validator.errors);
 
@@ -43,27 +58,53 @@ const careALot = {
   isSingular: true,
 };
 
+const getPgCode = (error) => error?.code;
+
 const test = anyTest as TestInterface<{ store: MemoryStore<S> }>;
+
 test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign
-  t.context = { store: await makeMemoryStore(schema, { initialData: careBearData }) };
-  // console.log("\n\n\nmade store\n\n\n");
+  t.context = {
+    store: await makeMemoryStore(schema, {
+      initialData: careBearData,
+      validations,
+    }),
+  };
+  console.log("\n\n\nmade store\n\n\n");
 });
 
-test("enforces a custom validaton (original bears must have care bear stare)", async (t) => {
+test("enforces a custom validaton (single resource)", async (t) => {
   const err = await t.throwsAsync(async () => {
     await t.context.store.replaceOne(
       {
         type: "bears",
         id: "2",
-        relationships: { powers: {} },
+        relationships: { best_friend: {} },
       },
-      { type: "bears", id: "2", powers: [{ type: "powers", id: "2" }] },
+      { type: "bears", id: "2", best_friend: { id: "2" } },
     );
   });
 
-  t.deepEqual(err.message, "PG-0003");
+  console.log("err!", err);
+  t.deepEqual(err.message, "a bear can't be best friends with themselves!");
 });
+
+test.todo("leaf references must exist");
+
+// test("enforces a custom validaton (original bears must have care bear stare)", async (t) => {
+//   const err = await t.throwsAsync(async () => {
+//     await t.context.store.replaceOne(
+//       {
+//         type: "bears",
+//         id: "2",
+//         relationships: { powers: {} },
+//       },
+//       { type: "bears", id: "2", powers: [{ type: "powers", id: "2" }] },
+//     );
+//   });
+
+//   t.deepEqual(err.message, "PG-0003");
+// });
 
 // test("does not validate empty objects", (t) => {
 //   t.deepEqual(singleCompiled({}), false);
