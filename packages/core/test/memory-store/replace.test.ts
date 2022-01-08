@@ -244,7 +244,7 @@ test("keeps values with default when replacing other properties", async (t) => {
     },
   };
 
-  t.like(replaceResult.isValid && replaceResult.data, replaceExpected);
+  t.like(replaceResult, replaceExpected);
 });
 
 test("replaces a property deep in the graph", async (t) => {
@@ -258,7 +258,7 @@ test("replaces a property deep in the graph", async (t) => {
     ["homes", "1", { properties: { caring_meter: 0.4 } }],
   ]);
 
-  t.deepEqual(replaceResult.isValid && replaceResult.data, replaceExpected);
+  t.deepEqual(replaceResult, replaceExpected);
 });
 
 test("creates a relationship and replaces a property deep in the graph", async (t) => {
@@ -275,7 +275,7 @@ test("creates a relationship and replaces a property deep in the graph", async (
     }],
   ]);
 
-  t.deepEqual(replaceResult.isValid && replaceResult.data, replaceExpected);
+  t.deepEqual(replaceResult, replaceExpected);
 });
 
 test("resources can have properties named type that can be updated", async (t) => {
@@ -288,7 +288,7 @@ test("resources can have properties named type that can be updated", async (t) =
     ["powers", "careBearStare", { properties: { type: "bear power" } }],
   ]);
 
-  t.deepEqual(replaceResult.isValid && replaceResult.data, replaceExpected);
+  t.deepEqual(replaceResult, replaceExpected);
 
   const getResult = await t.context.store.get({
     type: "powers",
@@ -315,7 +315,7 @@ test("replaces existing data completely given a new resource", async (t) => {
     ["powers", "careBearStare", { relationships: { bears: ["4"] } }],
   ]);
 
-  t.deepEqual(replaceResult.isValid && replaceResult.data, replaceExpected);
+  t.deepEqual(replaceResult, replaceExpected);
 
   const getResult = await t.context.store.get({
     type: "bears",

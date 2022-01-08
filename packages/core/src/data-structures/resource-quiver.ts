@@ -1,3 +1,4 @@
+import { pick } from "@polygraph/utils";
 import {
   ResourceUpdateOfType, ResourceRef, ResourceRefOfType, Schema,
 } from "../types";
@@ -48,12 +49,9 @@ export function makeResourceQuiver<S extends Schema, ResType extends keyof S["re
 ): ResourceQuiverResult<S> {
   const quiver = makeQuiver();
 
-  const inverseOf = (resourceRef: ResourceRef<S>, relName: string): string => {
-    const relDef = schema.resources[resourceRef.type].relationships[relName];
-    const inverse = relDef.inverse || `%inverse-${relName}`;
-
-    return inverse;
-  };
+  const inverseOf = (resourceRef: ResourceRef<S>, relName: string): string => (
+    schema.resources[resourceRef.type].relationships[relName].inverse
+  );
 
   const assertResource = (
     updatedResource: ResourceUpdateOfType<S, ResType>,
@@ -70,12 +68,16 @@ export function makeResourceQuiver<S extends Schema, ResType extends keyof S["re
 
       updatedRels.forEach((target) => {
         const inverse = inverseOf(updatedResource, relKey);
-        quiver.assertArrow({ source: target, target: updatedResource, label: inverse });
+        if (inverse) {
+          quiver.assertArrow({ source: target, target: updatedResource, label: inverse });
+        }
       });
 
       deltas.rightOnly.forEach((target) => {
         const inverse = inverseOf(updatedResource, relKey);
-        quiver.retractArrow({ source: target, target: updatedResource, label: inverse });
+        if (inverse) {
+          quiver.retractArrow({ source: target, target: updatedResource, label: inverse });
+        }
       });
     });
   };
@@ -91,7 +93,9 @@ export function makeResourceQuiver<S extends Schema, ResType extends keyof S["re
       quiver.assertArrowGroup(resource, [], label);
       existingTargets.forEach((existingTarget) => {
         const inverse = inverseOf(resource, label);
-        quiver.retractArrow({ source: existingTarget, target: resource, label: inverse });
+        if (inverse) {
+          quiver.retractArrow({ source: existingTarget, target: resource, label: inverse });
+        }
       });
     });
   };

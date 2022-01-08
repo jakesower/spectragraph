@@ -10,21 +10,20 @@ export const schema = {
         year_introduced: { type: "number" },
         belly_badge: { type: "string" },
         fur_color: { type: "string" },
-
       },
       relationships: {
         home: {
-          type: "homes",
+          relatedType: "homes",
           cardinality: "one",
           inverse: "bears",
         },
         powers: {
-          type: "powers",
+          relatedType: "powers",
           cardinality: "many",
           inverse: "bears",
         },
         best_friend: {
-          type: "bears",
+          relatedType: "bears",
           cardinality: "one",
           inverse: "best_friend",
         },
@@ -42,7 +41,7 @@ export const schema = {
       },
       relationships: {
         bears: {
-          type: "bears",
+          relatedType: "bears",
           cardinality: "many",
           inverse: "home",
         },
@@ -59,7 +58,7 @@ export const schema = {
       },
       relationships: {
         bears: {
-          type: "bears",
+          relatedType: "bears",
           cardinality: "many",
           inverse: "powers",
         },
@@ -75,7 +74,7 @@ export const schema = {
       },
       relationships: {
         follows: {
-          type: "bears",
+          relatedType: "bears",
           cardinality: "many",
         },
       },
