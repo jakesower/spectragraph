@@ -2,8 +2,8 @@ import { mapObj } from "@polygraph/utils";
 import { Schema } from "../../types";
 
 export function makeQuerySchema<S extends Schema>(schema: S) {
-  const resourceQuery = <ResType extends keyof S["resources"]>(
-    resDef: S["resources"][ResType],
+  const resourceQuery = <RT extends keyof S["resources"]>(
+    resDef: S["resources"][RT],
   ) => ({
       type: "object",
       properties: {
@@ -15,7 +15,7 @@ export function makeQuerySchema<S extends Schema>(schema: S) {
           type: "object",
           additionalProperties: false,
           properties: mapObj(resDef.relationships, (relDef) => ({
-            $ref: `#/$defs/${relDef.type}`,
+            $ref: `#/$defs/${relDef.relatedType}`,
           })),
         },
       },

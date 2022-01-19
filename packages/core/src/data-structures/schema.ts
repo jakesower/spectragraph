@@ -12,7 +12,7 @@ const validCardinalities = ["one", "many"];
 export function compileSchema<S extends Schema>(schemaDefinition: S): CompiledSchema<S> {
   const resources = mapObj(
     schemaDefinition.resources,
-    <ResType extends keyof S["resources"]>(resourceDef: S["resources"][ResType], resourceName: ResType) => {
+    <RT extends keyof S["resources"]>(resourceDef: S["resources"][ResType], resourceName: ResType) => {
       const properties = mapObj(
         resourceDef.properties,
         <PropType extends keyof S["resources"][ResType]["properties"]>(prop, name: PropType) => {

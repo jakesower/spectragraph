@@ -1,24 +1,19 @@
 import {
-  DataTree, Query, NormalResourceUpdateOfType, Schema,
+  DataTree, Query, NormalResourceUpdate, Schema,
 } from "../types";
 import { typeValidations } from "../validations/type-validations";
 import { PolygraphError } from "../validations/errors";
 
-export type QueryTree<S extends Schema, ResType extends keyof S["resources"]> = {
-  forEachResource: (fn: (res: NormalResourceUpdateOfType<S, ResType>) => void) => void,
-  rootResource: NormalResourceUpdateOfType<S, ResType>;
-}
+export type QueryTree<S extends Schema, RT extends keyof S["resources"]> = Readonly<{
+  forEachResource: (fn: (res: NormalResourceUpdate<S, RT>) => void) => void,
+  rootResource: NormalResourceUpdate<S, RT>;
+}>;
 
-export function queryTree<
-  S extends Schema,
-  TopResType extends keyof S["resources"],
-  TQ extends Query<S, TopResType>
->(schema: S, topQuery: TQ, fullDataTree: DataTree): QueryTree<S, TopResType> {
-  function internalQueryTree<
-    ResType extends keyof S["resources"],
-    Q extends Query<S, ResType>
-  >(query: Q, dataTree: DataTree, path: (number | string)[]): QueryTree<S, ResType> {
-    const schemaDef = schema.resources[query.$type];
+function withRootData<S extends Schema>(schema: S, fullDataTree: DataTree) {
+  const internalQueryTree = <
+    RT extends keyof S["resources"], Q extends Query<S, RT>
+  >(query: Q, dataTree: DataTree, path: (string | number)[]): QueryTree<S, RT> => {
+    const schemaDef = schema.resources[query.type];
 
     const getId = () => {
       const idField = schemaDef.idField ?? "id";
@@ -33,8 +28,8 @@ export function queryTree<
     };
 
     const getProps = () => {
-      const propKeys = query.$properties ?? Object.keys(schemaDef.properties);
-      const $properties: Pick<DataTree, string> = {};
+      const propKeys = query.properties ?? Object.keys(schemaDef.properties);
+      const properties: Pick<DataTree, string> = {};
       propKeys.forEach((propKey) => {
         const propDef = schemaDef.properties[propKey];
         if (propKey in dataTree) {
@@ -47,16 +42,16 @@ export function queryTree<
               },
             );
           }
-          $properties[propKey] = value;
+          properties[propKey] = value;
         }
       });
 
-      return $properties;
+      return properties;
     };
 
     const getRels = () => {
-      const relKeys = Object.keys(query.$relationships ?? schemaDef.relationships);
-      const $relationships = {};
+      const relKeys = Object.keys(query.relationships ?? schemaDef.relationships);
+      const relationships = {};
 
       relKeys.forEach((relKey) => {
         const relDef = schemaDef.relationships[relKey];
@@ -77,7 +72,7 @@ export function queryTree<
             );
           }
 
-          return { $type: relDef.relatedType, $id: foundId };
+          return { type: relDef.relatedType, id: foundId };
         };
 
         if (relKey in dataTree) {
@@ -92,7 +87,7 @@ export function queryTree<
               );
             }
 
-            $relationships[relKey] = relResOrRess ? getRelRef(relResOrRess, nextPath) : null;
+            relationships[relKey] = relResOrRess ? getRelRef(relResOrRess, nextPath) : null;
           }
 
           if (relDef.cardinality === "many") {
@@ -110,34 +105,34 @@ export function queryTree<
               );
             }
 
-            $relationships[relKey] = relResOrRess.map(
+            relationships[relKey] = relResOrRess.map(
               (relRes, idx) => getRelRef(relRes, [...nextPath, idx]),
             );
           }
         }
       });
 
-      return $relationships;
+      return relationships;
     };
 
     // MAIN FUNCTION BODY
 
     const rootResource = {
-      $type: query.$type,
-      $id: getId(),
-      $properties: getProps(),
-      $relationships: getRels(),
-    } as NormalResourceUpdateOfType<S, ResType>;
+      type: query.type,
+      id: getId(),
+      properties: getProps(),
+      relationships: getRels(),
+    } as NormalResourceUpdate<S, RT>;
 
     const forEachResource = (fn) => {
       fn(rootResource);
 
-      Object.keys(query.$relationships ?? {}).forEach((relKey) => {
+      Object.keys(query.relationships ?? {}).forEach((relKey) => {
         const relDef = schemaDef.relationships[relKey];
         const nextPath = [...path, relKey];
         const subQuery = {
-          ...query.$relationships[relKey],
-          $type: schemaDef.relationships[relKey].relatedType,
+          ...query.relationships[relKey],
+          type: schemaDef.relationships[relKey].relatedType,
         };
 
         if (relDef.cardinality === "one" && dataTree[relKey] !== null) {
@@ -155,8 +150,14 @@ export function queryTree<
       forEachResource,
       rootResource,
     };
-  }
+  };
 
-  const out = internalQueryTree<TopResType, TQ>(topQuery, fullDataTree, []);
-  return out;
+  return internalQueryTree;
+}
+
+export function queryTree<
+  S extends Schema,
+  RT extends keyof S["resources"],
+>(schema: S, query: Query<S, RT>, dataTree: DataTree): QueryTree<S, RT> {
+  return withRootData(schema, dataTree)(query, dataTree, []);
 }

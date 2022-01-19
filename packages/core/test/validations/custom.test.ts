@@ -1,6 +1,6 @@
 import anyTest, { TestInterface } from "ava";
-import { makeMemoryStore } from "../../src/memory-store";
-import { ExpandedSchema, MemoryStore, Validation } from "../../src/types";
+import { makeMemoryStore, MemoryStore } from "../../src/memory-store";
+import { DataTreeOfType, ExpandedSchema, Schema } from "../../src/types";
 import { PolygraphError } from "../../src/validations/errors";
 import { careBearData } from "../fixtures/care-bear-data";
 import { schema } from "../fixtures/care-bear-schema";
@@ -8,18 +8,18 @@ import { schema } from "../fixtures/care-bear-schema";
 type S = typeof schema;
 const expandedSchema = schema as ExpandedSchema<S>;
 
-const validations: Validation[] = [
+const validations = [
   {
     name: "no self as best friend",
     resourceType: "bears",
     validateResource: (updatedResource) => {
-      console.log("boom??")
-      console.log(updatedResource)
+      console.log("boom??");
+      console.log(updatedResource);
       if (updatedResource.best_friend?.id === updatedResource.id) {
-        console.log("boom!!")
+        console.log("boom!!");
         throw new Error("a bear can't be best friends with themselves!");
       }
-      console.log("no")
+      console.log("no");
     },
   },
 //   {
@@ -42,19 +42,13 @@ const getErrors = (validator, obj) => (validator(obj) ? [] : validator.errors);
 
 const tenderheart = {
   type: "bears",
-  tree: {
-    id: "1",
-    ...careBearData.bears["1"].properties,
-  },
+  tree: careBearData.bears["1"],
   isSingular: true,
 };
 
 const careALot = {
   type: "homes",
-  tree: {
-    id: "1",
-    ...careBearData.homes["1"].properties,
-  },
+  tree: careBearData.homes["1"],
   isSingular: true,
 };
 

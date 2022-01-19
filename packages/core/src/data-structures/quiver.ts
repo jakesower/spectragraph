@@ -166,7 +166,7 @@ export function makeQuiver(): Quiver {
     const existingSet = assertedArrows[sourceKey][label];
     const incomingSet = new Set(targets.map(makeRefKey));
 
-    if (!setsEqual(existingSet, incomingSet)) {
+    if (!setsEqual(existingSet ?? new Set(), incomingSet)) {
       // suss out an error message
       const mismatches = [
         ...difference(existingSet, incomingSet),

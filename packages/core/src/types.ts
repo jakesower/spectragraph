@@ -65,7 +65,11 @@ export type Immutable<T> = (
 );
 
 // ----Schema--------------------------------------------------------------------------------------
-type SchemaPropertyType = "string" | "number" | "boolean";
+type SchemaPropertyTypes = {
+  boolean: boolean;
+  number: number;
+  string: string;
+}
 
 export type Schema = Readonly<{
   title?: string;
@@ -79,7 +83,7 @@ export type Schema = Readonly<{
         [k: string]: Readonly<{
           default?: any;
           optional?: boolean;
-          type: SchemaPropertyType;
+          type: keyof SchemaPropertyTypes;
         }>
       }>
       relationships: Readonly<{
@@ -93,76 +97,39 @@ export type Schema = Readonly<{
   }>
 }>;
 
-export type ValidSchema<S extends Schema> = (
-  S &
-  Readonly<{
-    resources: Readonly<{
-      [ResType in keyof S["resources"]]: {
-        relationships: Readonly<{
-          [RelType in keyof S["resources"][ResType]["relationships"]]: {
-            type: keyof S["resources"];
-          }
-        }>
-      }
-    }>
-  }>
-)
+// export type ValidSchema<S extends Schema> = (
+//   S &
+//   Readonly<{
+//     resources: Readonly<{
+//       [RT in keyof S["resources"]]: {
+//         relationships: Readonly<{
+//           [RelType in keyof S["resources"][RT]["relationships"]]: {
+//             type: keyof S["resources"];
+//           }
+//         }>
+//       }
+//     }>
+//   }>
+// )
 
 export type ExpandedSchema<S extends Schema> = (
   Readonly<{
     title?: string;
     urlName: string;
     resources: Readonly<{
-      [ResType in keyof S["resources"]]: {
+      [RT in keyof S["resources"]]: {
         properties: Readonly<{
-          [PropType in keyof S["resources"][ResType]["properties"]]: {
+          [PropType in keyof S["resources"][RT]["properties"]]: {
             default?: any;
             optional?: boolean;
-            type: SchemaPropertyType;
+            type: keyof SchemaPropertyTypes;
           }
         }>;
         relationships: Readonly<{
-          [RelType in keyof S["resources"][ResType]["relationships"]]: {
+          [RelType in keyof S["resources"][RT]["relationships"]]: {
             cardinality: "one" | "many";
             inverse?: string;
-            relatedType: S["resources"][ResType]["relationships"][RelType]["relatedType"] & string;
-          }
-        }>
-      }
-    }>
-  }>
-)
-
-export type CompiledSchema<S extends Schema> = (
-  Readonly<{
-    title?: string;
-    resources: Readonly<{
-      [ResType in keyof S["resources"]]: {
-        name: ResType & string,
-        idField: string;
-        propertiesArray: { type: SchemaPropertyType }[];
-        properties: Readonly<{
-          [PropType in keyof S["resources"][ResType]["properties"]]: {
-            name: PropType & string;
-            type: SchemaPropertyType;
-          }
-        }>;
-        propertyNames: string[];
-        propertyNamesSet: Set<string>;
-        relationshipsArray: ({
-          name: string;
-          cardinality: "one" | "many";
-          inverse?: string;
-          type: keyof S["resources"] & string;
-        })[];
-        relationshipNames: string[];
-        relationshipNamesSet: Set<string>;
-        relationships: Readonly<{
-          [RelType in keyof S["resources"][ResType]["relationships"]]: {
-            name: RelType & string;
-            cardinality: "one" | "many";
-            inverse?: string;
-            relatedType: keyof S["resources"] & string;
+            relatedType: S["resources"][RT]["relationships"][RelType]["relatedType"] & string;
           }
         }>
       }
@@ -171,279 +138,120 @@ export type CompiledSchema<S extends Schema> = (
 )
 
 // ----Queries-------------------------------------------------------------------------------------
-export type QueryParams<S extends Schema> = {
-  $first?: boolean;
-  $id?: string;
-  $not?: QueryParams<S>;
-  [k: string]: QueryParams<S> | string | number | boolean;
-}
-
-// TODO: expand with ResType
-export type SubQuery<S extends Schema, ResType extends keyof S["resources"]> = Readonly<{
-  properties?: readonly (keyof S["resources"][ResType]["properties"] & string)[];
+export type SubQuery<S extends Schema, RT extends keyof S["resources"]> = Readonly<{
+  properties?: readonly (keyof S["resources"][RT]["properties"] & string)[];
   relationships?: Partial<{
-    [RelType in keyof S["resources"][ResType]["relationships"]]:
-      SubQuery<S, S["resources"][ResType]["relationships"][RelType]["relatedType"]>
+    [RelType in keyof S["resources"][RT]["relationships"]]:
+      SubQuery<S, S["resources"][RT]["relationships"][RelType]["relatedType"]>
   }>
   referencesOnly?: boolean;
-  params?: Record<string, QueryParams<S>>;
 }>
 
-// THIS IS WRONG!!!! ^^^^^
-
-
-export type SubQueryProps<
-  S extends Schema,
-  ResType extends keyof S["resources"],
-  SQ extends SubQuery<S, ResType>,
-> = Readonly<
-  "properties" extends keyof SQ
-    ? ArrayToUnion<SQ["properties"]>
-    : keyof S["resources"][ResType]["properties"]
->;
-
-export type SubQueryRels<
-  S extends Schema,
-  ResType extends keyof S["resources"],
-  SQ extends SubQuery<S, ResType>,
-> = (
-  "relationships" extends keyof SQ
-    ? keyof SQ["relationships"]
-    : keyof S["resources"][ResType]["relationships"]
-);
-
-export type Query<S extends Schema, ResType extends keyof S["resources"]> = Readonly<{
-  $properties?: readonly (keyof S["resources"][ResType]["properties"] & string)[];
-  $relationships?: Partial<{
-    [RelType in keyof S["resources"][ResType]["relationships"]]:
-      SubQuery<S, S["resources"][ResType]["relationships"][RelType]["relatedType"]>
+export type Query<S extends Schema, RT extends keyof S["resources"]> = (
+  SubQuery<S, RT> &
+  Readonly<{
+    type: RT & string;
+    id?: string;
   }>
-  $referencesOnly?: boolean;
-  $type: ResType & string;
-  $id?: string;
-}>
-
-export type QueryProps<
-  S extends Schema,
-  ResType extends keyof S["resources"],
-  Q extends Query<S, ResType>,
-> = (
-  "properties" extends keyof Q
-    ? ArrayToUnion<Q["$properties"]>
-    : keyof S["resources"][ResType]["properties"]
-);
-
-export type QueryRels<
-  S extends Schema,
-  ResType extends keyof S["resources"],
-  Q extends Query<S, ResType>,
-> = (
-  "relationships" extends keyof Q
-    ? keyof Q["relationships"]
-    : keyof S["resources"][ResType]["relationships"]
-);
-
-export type QueryWithId<S extends Schema, ResType extends keyof S["resources"]> = (
-  Readonly<Query<S, ResType> & { $id: string }>
 );
 
 // ----Query Results-------------------------------------------------------------------------------
 export type DataTree = Record<string, any>;
 
-type ResourcePropertyTypeOf<K extends SchemaPropertyType> = (
-  K extends "string" ? string
-    : K extends "number" ? number
-    : K extends "boolean" ? boolean
-    : never
-);
-
-// ----Validations---------------------------------------------------------------------------------
-export type BaseValidationError = {
-  message: string;
-  [k: string]: any;
-}
-
-export type InternalValidationError = (
-  BaseValidationError & {
-    message: string;
-    validationName: string;
-    [k: string]: any;
-  }
-);
-
-export type ResourceValidationError<S extends Schema> = (
-  BaseValidationError
+export type DataTreeOfType<S extends Schema, RT extends keyof S["resources"]> = (
+  { id: string; }
   & {
-    type: keyof S["resources"] & string,
-    id: string,
-    validationType: "resource",
+    [PropType in keyof S["resources"][RT]["properties"]]:
+      SchemaPropertyTypes[S["resources"][RT]["properties"][PropType]["type"]];
+  }
+  & {
+    [RelType in keyof S["resources"][RT]["relationships"]]:
+      S["resources"][RT]["relationships"][RelType]["cardinality"] extends "one"
+        ? DataTreeOfType<S, S["resources"][RT]["relationships"][RelType]["relatedType"]>
+        : DataTreeOfType<S, S["resources"][RT]["relationships"][RelType]["relatedType"]>[];
   }
 );
-
-export type GraphValidationError = BaseValidationError
-  & {
-    validationType: "graph",
-  }
-
-export type GraphValidation = {
-  validate: <S extends Schema>(
-    newGraph: DataTree,
-    oldGraph: DataTree,
-    options: {
-      schema: S,
-    },
-  ) => PolygraphError[];
-  validationType: "graph";
-}
-
-export type ResourceValidation<S extends Schema, ResType extends keyof S["resources"]> = {
-  resourceType: ResType;
-  validate: (
-    newResource: DataTree,
-    oldResource: DataTree,
-    options: {
-      schema: ExpandedSchema<S>,
-    },
-  ) => ResourceValidationError<S>[];
-  validationType: "resource";
-}
-
-export type CustomResourceValidation<S extends Schema, ResType extends keyof S["resources"]> = (
-  BaseValidationError & {
-    resourceType: ResType;
-    validate: (
-      newResource: DataTree,
-      oldResource: DataTree,
-      options: {
-        schema: ExpandedSchema<S>,
-      },
-    ) => ResourceValidationError<S>[];
-    validationType: "resource";
-  }
-)
-
-export type ValidationError<S extends Schema> = ResourceValidationError<S> | GraphValidationError;
-export type Validation = {
-  name: string;
-  validateResource: <S extends Schema>(
-    newGraph: DataTree,
-    oldGraph: DataTree,
-    options: {
-      schema: S,
-    },
-  ) => any;
-  [k: string]: any;
-};
 
 // ----Resources-----------------------------------------------------------------------------------
-export type ResourceRef<S extends Schema> = Readonly<{
-  $type: keyof S["resources"] & string;
-  $id: string;
-}>
-
-export type ResourceRefOfType<S extends Schema, ResType extends keyof S["resources"]> = (
-  Readonly<{ $type: ResType & string, $id: string }>
-)
-
-type ResourceOfTypeRel<
-  S extends Schema,
-  ResType extends keyof S["resources"] & string,
-  RelType extends keyof S["resources"][ResType]["relationships"] & string
-> = (
-  S["resources"][ResType]["relationships"][RelType]["cardinality"] extends "one"
-    ? ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["relatedType"]>
-    : ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["relatedType"]>[]
+export type ResourceRef<S extends Schema, RT extends keyof S["resources"]> = (
+  Readonly<{ type: RT & string, id: string }>
 );
 
-type NormalResourceOfTypeRel<
+type ResourceRel<
   S extends Schema,
-  ResType extends keyof S["resources"] & string,
-  RelType extends keyof S["resources"][ResType]["relationships"] & string
+  RT extends keyof S["resources"] & string,
+  RelType extends keyof S["resources"][RT]["relationships"] & string
 > = (
-  S["resources"][ResType]["relationships"][RelType]["cardinality"] extends "one"
-    ? ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["relatedType"]>
-    : ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["relatedType"]>[]
+  S["resources"][RT]["relationships"][RelType]["cardinality"] extends "one"
+    ? (ResourceRef<S, S["resources"][RT]["relationships"][RelType]["relatedType"]> | null)
+    : ResourceRef<S, S["resources"][RT]["relationships"][RelType]["relatedType"]>[]
 );
 
-export type NormalResourceOfType<S extends Schema, ResType extends keyof S["resources"]> = (
+export type Resource<S extends Schema, RT extends keyof S["resources"] & string> = (
+  { id: string; }
+  & {
+    [PropType in keyof S["resources"][RT]["properties"]]:
+      SchemaPropertyTypes[S["resources"][RT]["properties"][PropType]["type"]];
+  }
+  & {
+    [RelType in keyof S["resources"][RT]["relationships"]]: ResourceRel<S, RT, RelType & string>
+  }
+);
+
+export type NormalResource<S extends Schema, RT extends keyof S["resources"]> = (
   Readonly<{
-    $type: ResType & string;
-    $id: string;
-    $properties: Readonly<{
-      [PropType in keyof S["resources"][ResType]["properties"]]:
-        ResourcePropertyTypeOf<S["resources"][ResType]["properties"][PropType]["type"]>
+    type: RT & string;
+    id: string;
+    properties: Readonly<{
+      [PropType in keyof S["resources"][RT]["properties"]]:
+        SchemaPropertyTypes[S["resources"][RT]["properties"][PropType]["type"]]
     }>,
-    $relationships: Readonly<{
-      [RelType in keyof S["resources"][ResType]["relationships"]]:
-        NormalResourceOfTypeRel<S, ResType & string, RelType & string>
+    relationships: Readonly<{
+      [RelType in keyof S["resources"][RT]["relationships"]]:
+        ResourceRel<S, RT & string, RelType & string>
     }>
   }>
 );
 
-export type NormalResourceUpdateOfType<S extends Schema, ResType extends keyof S["resources"]> = (
+export type NormalResourceUpdate<S extends Schema, RT extends keyof S["resources"]> = (
   Readonly<{
-    $type: ResType & string;
-    $id: string;
-    $properties: Readonly<Partial<{
-      [PropType in keyof S["resources"][ResType]["properties"]]:
-        ResourcePropertyTypeOf<S["resources"][ResType]["properties"][PropType]["type"]>
+    type: RT & string;
+    id: string;
+    properties: Readonly<Partial<{
+      [PropType in keyof S["resources"][RT]["properties"]]:
+        SchemaPropertyTypes[S["resources"][RT]["properties"][PropType]["type"]]
     }>>,
-    $relationships: Readonly<Partial<{
-      [RelType in keyof S["resources"][ResType]["relationships"]]:
-        ResourceOfTypeRel<S, ResType & string, RelType & string>
+    relationships: Readonly<Partial<{
+      [RelType in keyof S["resources"][RT]["relationships"]]:
+        ResourceRel<S, RT & string, RelType & string>
     }>>
   }>
 );
 
-// TODO: likely a replacement for ResourceUpdate -- or worthless
-export type FullResourceUpdate<S extends Schema, ResType extends keyof S["resources"]> = {
-  $type: ResType;
-  $id: string;
-  $properties: Partial<S["resources"][ResType]["properties"]>;
-  $relationships: Partial<S["resources"][ResType]["relationships"]>;
-};
-
-export type FlatResourceOfType<S extends Schema, ResType extends keyof S["resources"]> = (
-  { id: string }
-  & { [PropType in keyof S["resources"][ResType]["properties"]]:
-      S["resources"][ResType]["properties"][PropType]
-    }
-  & { [RelType in keyof S["resources"][ResType]["relationships"]]:
-      ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["relatedType"]>
-      | ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["relatedType"]>[]
-    }
-);
-
 // ----Store---------------------------------------------------------------------------------------
-export type NormalizedResources<S extends Schema> = Readonly<{
-  [ResType in keyof S["resources"]]: Record<string, NormalResourceOfType<S, ResType & string>>;
-}>;
+export type NormalStore<S extends Schema> = {
+  [RT in keyof S["resources"]]: Record<string, NormalResource<S, RT & string>>;
+}
+
+export type Store<S extends Schema> = {
+  [RT in keyof S["resources"]]: Record<string, Resource<S, RT & string>>;
+}
 
 export interface PolygraphStore<S extends Schema> {
   get: <
-    ResType extends keyof S["resources"],
-    Q extends Query<S, ResType>,
-    QProps extends QueryProps<S, ResType, Q>,
-    QRels extends QueryRels<S, ResType, Q>,
+    RT extends keyof S["resources"],
+    Q extends Query<S, RT>,
   >(
-    query: Q & { type: ResType },
-    params?: QueryParams<S>
-  ) => "id" extends keyof Q ? Promise<QueryResultResource<S, ResType, QProps, QRels>> : Promise<QueryResultResource<S, ResType, QProps, QRels>[]>;
+    query: Q & Query<S, RT>,
+  ) => "id" extends keyof Q ? Promise<any> : Promise<any[]>;
 
-  replaceOne: <ResType extends keyof S["resources"]>(
-    query: Query<ExpandedSchema<S>, ResType>,
+  replaceOne: <RT extends keyof S["resources"]>(
+    query: Query<ExpandedSchema<S>, RT>,
     tree: DataTree,
-    params?: QueryParams<S>
-  ) => Promise<NormalizedResourceUpdates<S>>;
+  ) => Promise<Store<S>>;
 
-  replaceMany: <ResType extends keyof S["resources"]>(
-    query: Query<ExpandedSchema<S>, ResType>,
+  replaceMany: <RT extends keyof S["resources"]>(
+    query: Query<ExpandedSchema<S>, RT>,
     trees: DataTree[],
-    params?: QueryParams<S>
-  ) => Promise<NormalizedResourceUpdates<S>>;
-}
-
-// Memory Store: TODO: separate package
-export interface MemoryStore<S extends Schema> extends PolygraphStore<S> {
-  replaceResources: (resources: NormalizedResources<S>) => Promise<NormalizedResourceUpdates<S>>;
+  ) => Promise<Store<S>>;
 }
