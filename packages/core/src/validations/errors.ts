@@ -1,6 +1,6 @@
 import { DefinedError } from "ajv";
 import {
-  DataTree, FlatResourceOfType, NormalResourceOfType, ResourceRef, ResourceValidationError, Schema,
+  DataTree, NormalResource, ResourceRef, Schema,
 } from "../types";
 
 const errorCodeFormat = /^PG-\d{4}$/;
@@ -62,7 +62,7 @@ export class PolygraphGraphConsistencyError extends BasePolygraphError {
 }
 
 export class PolygraphCustomResourceValidationError<S extends Schema> extends BasePolygraphError {
-  errors: ResourceValidationError<S>[];
+  errors: any[];
 
   constructor(errors) {
     super("a custom validation failed", "PG-0004");
@@ -70,12 +70,12 @@ export class PolygraphCustomResourceValidationError<S extends Schema> extends Ba
   }
 }
 
-export class PolygraphToOneValidationError<S extends Schema, ResType extends keyof S["resources"]> extends BasePolygraphError {
-  erroredResource: NormalResourceOfType<S, ResType>;
+export class PolygraphToOneValidationError<S extends Schema, RT extends keyof S["resources"]> extends BasePolygraphError {
+  erroredResource: NormalResource<S, RT>;
 
-  relationship: keyof S["resources"][ResType]["relationships"];
+  relationship: keyof S["resources"][RT]["relationships"];
 
-  relatatedResources: ResourceRef<S>[];
+  relatatedResources: ResourceRef<S, RT>[];
 
   constructor(erroredResource, relationship, relatedResources) {
     super("a resource has a to-one relationship with multiple resources in it", "PG-0005");

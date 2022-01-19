@@ -1,18 +1,16 @@
 import anyTest, { TestInterface } from "ava";
 import { mapObj, pick } from "@polygraph/utils";
 import { schema } from "../fixtures/care-bear-schema";
-import { makeMemoryStore } from "../../src/memory-store";
+import { makeMemoryStore, MemoryStore } from "../../src/memory-store";
 import {
-  ExpandedSchema,
-  MemoryStore,
-  NormalizedResourceUpdates,
-  ResourceOfType,
+  NormalResource,
+  Store,
+  Resource,
 } from "../../src/types";
-import { cardinalize } from "../../src/utils";
 import { careBearData } from "../fixtures/care-bear-data";
+import { denormalizeResource } from "../../src/utils";
 
 type S = typeof schema;
-const expandedSchema = schema as ExpandedSchema<S>;
 
 const grumpyBear = {
   type: "bears",
@@ -28,46 +26,9 @@ const grumpyBear = {
     home: { type: "homes", id: "1" },
     powers: [{ type: "powers", id: "careBearStare" }],
   },
-} as ResourceOfType<S, "bears">;
+} as NormalResource<S, "bears">;
 
-const grumpyBearDT = {
-  type: "bears",
-  id: "4",
-  name: "Grumpy Bear",
-  gender: "male",
-  year_introduced: 1982,
-  belly_badge: "raincloud",
-  fur_color: "blue",
-  home: { type: "homes", id: "1" },
-  powers: [{ type: "powers", id: "careBearStare" }],
-};
-
-const fullResource = <ResType extends keyof S["resources"]>(
-  resource: ResourceOfType<S, ResType>,
-  relOverrides = {},
-): ResourceOfType<S, ResType> => {
-  const {
-    id, type, properties, relationships: existingRelationships,
-  } = resource;
-  const resDef = expandedSchema.resources[type];
-  const emptyRelationships = mapObj(resDef.relationships, (relDef) => cardinalize([], relDef));
-  const relationships = {
-    ...emptyRelationships,
-    ...existingRelationships,
-    ...relOverrides,
-  };
-
-  return {
-    id,
-    type,
-    properties,
-    relationships,
-  };
-};
-
-const fullResourceFromRef = (type, id, relOverrides) => (
-  fullResource(careBearData[type][id], relOverrides)
-);
+const grumpyBearDT: Resource<S, "bears"> = denormalizeResource(grumpyBear);
 
 const dataTree = (res, rels = null) => {
   const { id, type, properties } = res;
@@ -75,7 +36,6 @@ const dataTree = (res, rels = null) => {
 
   const allRels = rels || Object.keys(resSchemaDef.relationships);
   return {
-    type,
     id,
     ...properties,
     ...pick(res.relationships, allRels),
@@ -93,9 +53,9 @@ type PickRefWithOverrides = [
   },
 ];
 
-type PickInput = PickRef | PickRefWithOverrides | ResourceOfType<S, any>;
+type PickInput = PickRef | PickRefWithOverrides | Resource<S, any>;
 
-const pickResources = (resInputs: PickInput[]): NormalizedResourceUpdates<S> => {
+const pickResources = (resInputs: PickInput[]): Store<S> => {
   const subGraph = {
     bears: {}, companions: {}, homes: {}, powers: {},
   };
@@ -105,17 +65,18 @@ const pickResources = (resInputs: PickInput[]): NormalizedResourceUpdates<S> => 
       subGraph[input.type][input.id] = input;
     } else {
       const [type, id, overrides = {}] = input;
+      const relKeys = Object.keys(schema.resources[type].relationships);
 
       if (overrides === null) {
         subGraph[type][id] = null;
       } else {
-        const base = careBearData[type][id];
+        const base = careBearData[type][id] ?? {};
         const overrideRels = mapObj(
-          overrides.relationships || {},
+          pick(overrides || {}, relKeys),
           (relIds, relType) => {
             const resDef = schema.resources[type].relationships[relType];
             const toRef = (idOrRef) => ((typeof idOrRef === "string")
-              ? { type: resDef.type, id: idOrRef }
+              ? { type: resDef.relatedType, id: idOrRef }
               : idOrRef);
             return Array.isArray(relIds)
               ? relIds.map(toRef)
@@ -125,8 +86,8 @@ const pickResources = (resInputs: PickInput[]): NormalizedResourceUpdates<S> => 
 
         subGraph[type][id] = {
           ...base,
-          properties: { ...base.properties, ...(overrides.properties || {}) },
-          relationships: { ...base.relationships, ...overrideRels },
+          ...overrides,
+          ...overrideRels,
         };
       }
     }
@@ -134,12 +95,6 @@ const pickResources = (resInputs: PickInput[]): NormalizedResourceUpdates<S> => 
 
   return subGraph;
 };
-
-function resultData(result) {
-  return result.isValid
-    ? result.data
-    : result;
-}
 
 const test = anyTest as TestInterface<{ store: MemoryStore<S> }>;
 
@@ -159,15 +114,13 @@ test("uses defaults when creating a resource missing the property", async (t) =>
   const createExpected = {
     companions: {
       nobody: {
-        properties: {
-          name: "Friend",
-          recurs: false,
-        },
+        name: "Friend",
+        recurs: false,
       },
     },
   };
 
-  t.like(resultData(createResult), createExpected);
+  t.like(createResult, createExpected);
 });
 
 test("does not use defaults when creating a resource has the property", async (t) => {
@@ -180,46 +133,42 @@ test("does not use defaults when creating a resource has the property", async (t
   const createExpected = {
     companions: {
       nobody: {
-        properties: {
-          name: "Friend",
-          recurs: true,
-        },
+        name: "Friend",
+        recurs: true,
       },
     },
   };
 
-  t.like(resultData(createResult), createExpected);
+  t.like(createResult, createExpected);
 });
 
 test("does not fail when creating a resource without an optional property", async (t) => {
   const createResult = await t.context.store.replaceOne(
     { type: "companions", id: "nobody" },
-    { type: "companions", id: "nobody" },
+    { id: "nobody" },
   );
   const createExpected = {
     companions: {
       nobody: {
-        properties: {
-          name: undefined,
-          recurs: false,
-        },
+        name: undefined,
+        recurs: false,
       },
     },
   };
 
-  t.like(resultData(createResult), createExpected);
+  t.like(createResult, createExpected);
 });
 
 test("replaces a property", async (t) => {
   const replaceResult = await t.context.store.replaceOne(
     { type: "bears", id: "5" },
-    { type: "bears", id: "5", fur_color: "brink pink" },
+    { id: "5", fur_color: "brink pink" },
   );
   const replaceExpected = pickResources([
-    ["bears", "5", { properties: { fur_color: "brink pink" } }],
+    ["bears", "5", { fur_color: "brink pink" }],
   ]);
 
-  t.deepEqual(resultData(replaceResult), replaceExpected);
+  t.deepEqual(replaceResult, replaceExpected);
 });
 
 test("keeps values with default when replacing other properties", async (t) => {
@@ -236,10 +185,8 @@ test("keeps values with default when replacing other properties", async (t) => {
   const replaceExpected = {
     companions: {
       nobody: {
-        properties: {
-          name: "Bob",
-          recurs: true,
-        },
+        name: "Bob",
+        recurs: true,
       },
     },
   };
@@ -255,7 +202,7 @@ test("replaces a property deep in the graph", async (t) => {
 
   const replaceExpected = pickResources([
     ["bears", "1"],
-    ["homes", "1", { properties: { caring_meter: 0.4 } }],
+    ["homes", "1", { caring_meter: 0.4 }],
   ]);
 
   t.deepEqual(replaceResult, replaceExpected);
@@ -268,11 +215,8 @@ test("creates a relationship and replaces a property deep in the graph", async (
   );
 
   const replaceExpected = pickResources([
-    ["bears", "5", { relationships: { home: "1" } }],
-    ["homes", "1", {
-      properties: { caring_meter: 0.3 },
-      relationships: { bears: ["1", "2", "3", "5"] },
-    }],
+    ["bears", "5", { home: "1" }],
+    ["homes", "1", { caring_meter: 0.3, bears: ["1", "2", "3", "5"] }],
   ]);
 
   t.deepEqual(replaceResult, replaceExpected);
@@ -285,7 +229,7 @@ test("resources can have properties named type that can be updated", async (t) =
   );
 
   const replaceExpected = pickResources([
-    ["powers", "careBearStare", { properties: { type: "bear power" } }],
+    ["powers", "careBearStare", { type: "bear power" }],
   ]);
 
   t.deepEqual(replaceResult, replaceExpected);
@@ -295,7 +239,7 @@ test("resources can have properties named type that can be updated", async (t) =
     id: "careBearStare",
   });
 
-  const expectedRes = { ...dataTree(careBearData.powers.careBearStare), type: "bear power" };
+  const expectedRes = { ...careBearData.powers.careBearStare, type: "bear power" };
   t.deepEqual(getResult, expectedRes);
 });
 
@@ -309,10 +253,10 @@ test("replaces existing data completely given a new resource", async (t) => {
     ["bears", "1", null],
     ["bears", "2", null],
     ["bears", "3", null],
-    grumpyBear,
+    ["bears", "4", grumpyBearDT],
     ["bears", "5", null],
-    ["homes", "1", { relationships: { bears: ["4"] } }],
-    ["powers", "careBearStare", { relationships: { bears: ["4"] } }],
+    ["homes", "1", { bears: ["4"] }],
+    ["powers", "careBearStare", { bears: ["4"] }],
   ]);
 
   t.deepEqual(replaceResult, replaceExpected);
@@ -320,6 +264,7 @@ test("replaces existing data completely given a new resource", async (t) => {
   const getResult = await t.context.store.get({
     type: "bears",
   });
+
   t.deepEqual(getResult, [dataTree(grumpyBear)]);
 });
 
@@ -330,22 +275,22 @@ test("replaces or keeps existing data given a new resources", async (t) => {
     query,
     [grumpyBearDT, careBearData.bears["1"]],
   );
-  const replaceExpected: NormalizedResourceUpdates<S> = pickResources([
+  const replaceExpected = pickResources([
     ["bears", "1"],
     ["bears", "2", null],
     ["bears", "3", null],
-    grumpyBear,
+    ["bears", "4", grumpyBearDT],
     ["bears", "5", null],
-    ["homes", "1", { relationships: { bears: ["1", "4"] } }],
-    ["powers", "careBearStare", { relationships: { bears: ["1", "4"] } }],
+    ["homes", "1", { bears: ["1", "4"] }],
+    ["powers", "careBearStare", { bears: ["1", "4"] }],
   ]);
 
-  t.deepEqual(resultData(replaceResult), replaceExpected);
+  t.deepEqual(replaceResult, replaceExpected);
 
   const getResult = await t.context.store.get({
     type: "bears",
   });
-  t.deepEqual(getResult, [dataTree(careBearData.bears["1"]), dataTree(grumpyBear)]);
+  t.deepEqual(getResult, [careBearData.bears["1"], dataTree(grumpyBear)]);
 });
 
 // ----Relationships-------------------------------------------------------------------------------
@@ -357,26 +302,15 @@ test("replaces a one-to-one relationship", async (t) => {
       id: "2",
       relationships: { home: {} },
     },
-    { type: "bears", id: "2", home: { type: "homes", id: "2" } },
+    { id: "2", home: { type: "homes", id: "2" } },
   );
 
-  const replaceExpected = {
-    bears: {
-      2: fullResourceFromRef("bears", "2",
-        { home: { type: "homes", id: "2" } }),
-    },
-    companions: {},
-    homes: {
-      1: fullResourceFromRef("homes", "1", {
-        bears: [{ type: "bears", id: "1" }, { type: "bears", id: "3" }],
-      }),
-      2: fullResourceFromRef("homes", "2", {
-        bears: [{ type: "bears", id: "2" }],
-      }),
-    },
-    powers: {},
-  };
-  t.deepEqual(resultData(replaceResult), replaceExpected);
+  const replaceExpected = pickResources([
+    ["bears", "2", { home: "2" }],
+    ["homes", "1", { bears: ["1", "3"] }],
+    ["homes", "2", { bears: ["2"] }],
+  ]);
+  t.deepEqual(replaceResult, replaceExpected);
 
   const bearResult = await t.context.store.get({
     type: "bears",

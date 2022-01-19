@@ -6,45 +6,39 @@ import {
 import { makeResourceQuiver, ResourceQuiverResult } from "../data-structures/resource-quiver";
 import {
   Query,
-  QueryParams,
   DataTree,
   Schema,
-  MemoryStore,
-  QueryWithId,
   ExpandedSchema,
-  QueryProps,
-  QueryRels,
   Writeable,
-  Validation,
-  ResourceRefOfType,
-  NormalizedResources,
+  NormalResourceUpdate,
+  NormalResource,
+  NormalStore,
+  PolygraphStore,
+  Store,
 } from "../types";
 import {
-  asArray, cardinalize, queryTree,
+  asArray, cardinalize, denormalizeResource, normalizeResource, queryTree,
 } from "../utils";
 import { PolygraphGetQuerySyntaxError, PolygraphReplaceSyntaxError } from "../validations/errors";
 import { syntaxValidations as syntaxValidationsForSchema } from "../validations/syntax-validations";
 import { validateAndExtractQuiver } from "./validate-and-extract-quiver";
 
+export interface MemoryStore<S extends Schema> extends PolygraphStore<S> {
+  replaceResources: (resources: Store<S>) => Promise<void>;
+}
+
+type Validation = any;
+
 interface MemoryStoreOptions<S extends Schema> {
-  initialData?: NormalizedResources<S>;
+  initialData?: Store<S>;
   validations?: Validation[];
 }
 
-type FlatResourceOfType<S extends Schema, ResType extends keyof S["resources"]> = (
-  { id: string }
-  & { [PropType in keyof S["resources"][ResType]["properties"]]:
-      S["resources"][ResType]["properties"][PropType]
-    }
-  & { [RelType in keyof S["resources"][ResType]["relationships"]]:
-      ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["relatedType"]>
-      | ResourceRefOfType<S, S["resources"][ResType]["relationships"][RelType]["relatedType"]>[]
-    }
-)
+type StoreResource<S extends Schema, RT extends keyof S["resources"]> = Writeable<NormalResource<S, RT>>;
 
 type StoreFormat<S extends Schema> = {
   [ResType in keyof S["resources"]]:
-    Record<string, FlatResourceOfType<S, ResType & string>>;
+    Record<string, StoreResource<S, ResType & string>>;
 }
 
 /**
@@ -56,7 +50,7 @@ function makeEmptyStore<S extends Schema>(schema: S): StoreFormat<S> {
   const resTypes = Object.keys(schema.resources) as (keyof S["resources"])[];
   resTypes.forEach(
     <ResType extends keyof S["resources"]>(resourceName: ResType) => {
-      resources[resourceName] = {} as Record<string, FlatResourceOfType<S, ResType>>;
+      resources[resourceName] = {} as Record<string, StoreResource<S, ResType>>;
     },
   );
   return resources as StoreFormat<S>;
@@ -74,33 +68,39 @@ export async function makeMemoryStore<S extends Schema>(
 
   const applyQuiver = async (
     quiver: ResourceQuiverResult<S>,
-  ): Promise<NormalizedResourceUpdates<S>> => {
+  ): Promise<any> => {
     const data = await validateAndExtractQuiver(schema, store, quiver, resourceValidations);
+    const output = {} as any;
 
     forEachObj(data, (ressById, resType) => {
       const untypedStore = store as any;
+      output[resType] = {};
       forEachObj(ressById, (resValue, resId) => {
         if (resValue === null) {
           delete untypedStore[resType][resId];
         } else {
           untypedStore[resType][resId] = resValue;
         }
+        output[resType][resId] = denormalizeResource(resValue);
       });
     });
 
-    return data;
+    return output;
   };
 
   // TODO: do not allow this to be valid if a resource is missing from both the updates or the store
   // (imagine a case where no props are required--it might be fine in a tree, but not a res update)
-  const replaceResources = async (updated: NormalizedResourceUpdates<S>): Promise<NormalizedResourceUpdates<S>> => {
+  const replaceResources = async (updated: Store<S>): Promise<void> => {
     const quiver = makeResourceQuiver(schema, ({ assertResource, retractResource }) => {
       Object.entries(updated).forEach(([type, typedResources]) => {
         Object.entries(typedResources).forEach(([id, updatedRes]) => {
           if (updatedRes === null) {
             retractResource(store[type][id]);
           } else {
-            assertResource(updatedRes as ResourceOfType<S, typeof type>, store[type][id]);
+            assertResource(
+              normalizeResource(schema, type, updatedRes),
+              store[type][id] as NormalResourceUpdate<S, typeof type>,
+            );
           }
         });
       });
@@ -112,7 +112,7 @@ export async function makeMemoryStore<S extends Schema>(
   const buildTree = <
     ResType extends keyof S["resources"] & string,
     Q extends Query<S, ResType>
-  >(query: Q, resource: ResourceOfType<S, ResType>): any => {
+  >(query: Q, resource: NormalResource<S, ResType>): any => {
     type PartitionedRelKeys = [
       (keyof S["resources"][ResType & string]["relationships"] & string)[],
       (keyof S["resources"][ResType & string]["relationships"] & string)[]
@@ -137,7 +137,7 @@ export async function makeMemoryStore<S extends Schema>(
         const relDef = schemaResDef.relationships[relKey];
         const subResourceRefs = asArray(resource.relationships[relKey]);
         const subRel = query.relationships[relKey];
-        const subQuery: Query<S, RelType> = { ...subRel, type: relDef.type as RelType };
+        const subQuery: Query<S, RelType> = { ...subRel, type: relDef.relatedType as RelType };
         const subTrees = subResourceRefs.map((subResRef) => {
           const subRes = store[subResRef.type][subResRef.id];
           return buildTree(subQuery, subRes);
@@ -146,7 +146,6 @@ export async function makeMemoryStore<S extends Schema>(
       });
 
     return {
-      type: resource.type,
       id: resource.id,
       ...pick(resource.properties, propKeys),
       ...relsToRefs,
@@ -154,12 +153,7 @@ export async function makeMemoryStore<S extends Schema>(
     };
   };
 
-  const getOne = async <
-    TopResType extends keyof S["resources"],
-    Q extends QueryWithId<S, TopResType>,
-    QProps extends QueryProps<S, TopResType, Q>,
-    QRels extends QueryRels<S, TopResType, Q>,
-  >(query: Q & { type: TopResType }, params: QueryParams<S> = {}): Promise<any> => {
+  const getOne = async <RT extends keyof S["resources"]>(query: Query<S, RT>): Promise<any> => {
     if (!syntaxValidations.querySyntax(query)) {
       throw new PolygraphGetQuerySyntaxError(query, syntaxValidations.querySyntax.errors);
     }
@@ -171,52 +165,34 @@ export async function makeMemoryStore<S extends Schema>(
     return Promise.resolve(out);
   };
 
-  const getMany = <
-    TopResType extends keyof S["resources"],
-    Q extends Query<S, TopResType>
-  >(
-      query: Q,
-      params: QueryParams<S>,
-    ): Promise<QueryResultResource<S, TopResType>[]> => {
+  const getMany = <RT extends keyof S["resources"]>(query: Query<S, RT>): Promise<any[]> => {
     const allResources = Object.values(store[query.type]);
     const out = allResources.map((res) => buildTree(query, res));
 
     return Promise.resolve(out);
   };
 
-  const get = <
-    ResType extends keyof S["resources"],
-    Q extends Query<S, ResType>,
-    QProps extends QueryProps<S, ResType, Q>,
-    QRels extends QueryRels<S, ResType, Q>
-  >(
-      query: Q & { type: ResType },
-      params: QueryParams<S>,
-    ): "id" extends keyof Q ? Promise<QueryResultResource<S, ResType, QProps, QRels>> : Promise<QueryResultResource<S, ResType, QProps, QRels>[]> => {
-    const out = ("id" in query)
-      ? getOne(query as Q & { id: string }, params)
-      : getMany(query, params);
+  const get = <RT extends keyof S["resources"]>(query: Query<S, RT>): Promise<any> => (
+    ("id" in query)
+      ? getOne(query)
+      : getMany(query)
+  );
 
-    return out as ("id" extends keyof Q
-      ? Promise<QueryResultResource<S, ResType, QProps, QRels>>
-      : Promise<QueryResultResource<S, ResType, QProps, QRels>[]>
-    );
-  };
-
-  const replaceMany = async <TopResType extends keyof S["resources"], Q extends Query<S, TopResType & string>>(
-    query: Q,
+  const replaceMany = async <RT extends keyof S["resources"]>(
+    query: Query<S, RT>,
     trees: DataTree[],
-    params: QueryParams<S> = {},
-  ): Promise<NormalizedResourceUpdates<S>> => {
+  ): Promise<Store<S>> => {
     const seenRootResourceIds: Set<string> = new Set();
     const existingResources = store[query.type];
     const quiver = makeResourceQuiver(schema, ({ assertResource, retractResource }) => {
       trees.forEach((tree) => {
-        const { descendantResources, rootResource } = queryTree(schema, query, tree);
+        const { forEachResource, rootResource } = queryTree(schema, query, tree);
 
         seenRootResourceIds.add(rootResource.id);
         assertResource(rootResource, store[rootResource.type][rootResource.id]);
-        descendantResources.forEach((res) => assertResource(res, store[res.type][res.id]));
+        forEachResource((res) => {
+          assertResource(res, store[res.type][res.id]);
+        });
       });
 
       Object.entries(existingResources).forEach(([resId, existingRes]) => {
@@ -229,10 +205,10 @@ export async function makeMemoryStore<S extends Schema>(
     return applyQuiver(quiver);
   };
 
-  const replaceOne = async <TopResType extends keyof S["resources"], Q extends QueryWithId<S, TopResType & string>>(
-    query: Q,
+  const replaceOne = async <RT extends keyof S["resources"]>(
+    query: Query<S, RT> & { id: string },
     tree: DataTree,
-  ): Promise<NormalizedResourceUpdates<S>> => {
+  ): Promise<Store<S>> => {
     const { queryTreeSyntax } = syntaxValidations;
     if (!queryTreeSyntax({ query, tree })) {
       throw new PolygraphReplaceSyntaxError(query, tree, queryTreeSyntax.errors);
@@ -242,8 +218,7 @@ export async function makeMemoryStore<S extends Schema>(
       if (tree === null) {
         retractResource({ type: query.type, id: query.id });
       } else {
-        const { allResources } = queryTree(schema, query, tree);
-        allResources.forEach((res) => assertResource(res, store[res.type][res.id]));
+        queryTree(schema, query, tree).forEachResource((res) => assertResource(res, store[res.type][res.id]));
       }
     });
 

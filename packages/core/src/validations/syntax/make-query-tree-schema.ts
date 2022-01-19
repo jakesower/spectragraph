@@ -18,8 +18,13 @@ export function makeQueryTreeSchema<S extends Schema>(schema: S) {
           type: propDef.type,
         })),
         ...mapObj(resDef.relationships, (relDef) => (relDef.cardinality === "one"
-          ? { $ref: `#/$defs/${relDef.type}` }
-          : { type: "array", items: { $ref: `#/$defs/${relDef.type}` } }),
+          ? {
+            oneOf: [
+              { $ref: `#/$defs/${relDef.relatedType}` },
+              { type: "null" },
+            ],
+          }
+          : { type: "array", items: { $ref: `#/$defs/${relDef.relatedType}` } }),
         ),
       },
     });

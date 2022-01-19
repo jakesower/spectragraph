@@ -17,10 +17,6 @@ const errorMessage = (validationName, message) => (
   `validation "${validationName}" failed: ${message}`
 );
 
-const resErrorMessage = (validationName, propName, actualValue) => (
-  errorMessage(validationName, `"${actualValue}" is not a valid value for "${propName}"`)
-);
-
 function resultData(result) {
   return result.isValid
     ? result.data
@@ -58,8 +54,7 @@ test("doesn't allow bad initial data", async (t) => {
         bears: {
           1: {
             ...tenderheart,
-            properties: { ...tenderheart.properties, name: 500 },
-            relationships: {},
+            name: 500,
           },
         },
       },
@@ -68,7 +63,7 @@ test("doesn't allow bad initial data", async (t) => {
 
   t.deepEqual(
     error.message,
-    'Invalid initial data.\n\nvalidation "propertyTypes" failed: "500" is not a valid value for "name" (bears, 1)',
+    "a property did not meet the validation criteria",
   );
 });
 
@@ -92,67 +87,25 @@ test("does allow relationship reassignment from branch nodes on query", async (t
   t.like(resultData(replaceResult), {
     bears: {
       1: {
-        relationships: { home: { type: "homes", id: "1" } },
+        home: { type: "homes", id: "1" },
       },
       3: {
-        relationships: { home: null },
+        home: null,
       },
     },
     homes: {
       1: {
-        relationships: { bears: [{ type: "bears", id: "1" }, { type: "bears", id: "2" }] },
+        bears: [{ type: "bears", id: "1" }, { type: "bears", id: "2" }],
       },
     },
   });
 });
 
-test.todo("does not allow resource creation from leaf nodes on query");
+// test.todo("does not allow resource creation from leaf nodes on query", async (t) => {
+
+// });
+
 test.todo("strings and numbers are clearly differentiated in error messages");
-
-// ----Resource-Level------------------------------------------------------------------------------
-
-test("enforces types on values", async (t) => {
-  const store = await makeStore();
-  const replaceResult = await store.replaceOne(
-    { type: "bears", id: "1", relationships: { home: {} } },
-    {
-      ...tenderheart,
-      name: false,
-      home: {
-        ...careALot,
-        caring_meter: "really big!",
-        is_in_clouds: "yep",
-      },
-    },
-  );
-
-  t.deepEqual(replaceResult, {
-    errors: [
-      {
-        validationName: "propertyTypes",
-        validationType: "resource",
-        message: '"false" is not a valid value for "name"',
-        type: "bears",
-        id: "1",
-      },
-      {
-        validationName: "propertyTypes",
-        validationType: "resource",
-        message: '"really big!" is not a valid value for "caring_meter"',
-        type: "homes",
-        id: "1",
-      },
-      {
-        validationName: "propertyTypes",
-        validationType: "resource",
-        message: '"yep" is not a valid value for "is_in_clouds"',
-        type: "homes",
-        id: "1",
-      },
-    ],
-    isValid: false,
-  });
-});
 
 // ----Graph-Level---------------------------------------------------------------------------------
 

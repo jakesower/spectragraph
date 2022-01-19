@@ -1,9 +1,9 @@
 import { mapObj } from "@polygraph/utils";
 import {
   ExpandedSchema,
-  NormalizedResources,
-  NormalizedResourceUpdates,
-  ResourceOfType,
+  NormalStore,
+  NormalResourceUpdate,
+  NormalResource,
   Schema,
 } from "../types";
 import { ResourceQuiverResult } from "../data-structures/resource-quiver";
@@ -11,8 +11,8 @@ import { asArray, cardinalize } from "../utils";
 import { defaultResources as getDefaultResources } from "./default-resources";
 import { PolygraphToOneValidationError } from "../validations/errors";
 
-function makeEmptyUpdatesObj<S extends Schema>(schema: S): NormalizedResourceUpdates<S> {
-  const output = {} as NormalizedResourceUpdates<S>;
+function makeEmptyUpdatesObj<S extends Schema>(schema: S): NormalStore<S> {
+  const output = {} as NormalStore<S>;
   Object.keys(schema.resources).forEach((resType: keyof S["resources"]) => {
     output[resType] = {};
   });
@@ -20,11 +20,11 @@ function makeEmptyUpdatesObj<S extends Schema>(schema: S): NormalizedResourceUpd
   return output;
 }
 
-function makeNewResource<S extends Schema, ResType extends keyof S["resources"]>(
+function makeNewResource<S extends Schema, RT extends keyof S["resources"]>(
   schema: S,
-  type: ResType & string,
+  type: RT & string,
   id: string,
-): ResourceOfType<S, ResType> {
+): NormalResource<S, RT> {
   const expandedSchema = schema as ExpandedSchema<S>;
   const resDef = expandedSchema.resources[type];
   const properties = mapObj(
@@ -38,15 +38,15 @@ function makeNewResource<S extends Schema, ResType extends keyof S["resources"]>
     id,
     properties,
     relationships,
-  } as ResourceOfType<S, ResType>;
+  } as NormalResource<S, RT>;
 }
 
 export async function validateAndExtractQuiver<S extends Schema>(
   schema: S,
-  store: NormalizedResources<S>,
+  store: NormalStore<S>,
   quiver: ResourceQuiverResult<S>,
   resourceValidations,
-): Promise<NormalizedResourceUpdates<S>> {
+): Promise<NormalStore<S>> {
   const updatedResources: any = makeEmptyUpdatesObj(schema);
   const defaultResources = getDefaultResources(schema);
 
@@ -91,7 +91,7 @@ export async function validateAndExtractQuiver<S extends Schema>(
           }
 
           relationships[relType] = cardinalize(
-            [...updatedRelIds].map((relId) => ({ type: relDef.type, id: relId })),
+            [...updatedRelIds].map((relId) => ({ type: relDef.relatedType, id: relId })),
             relDef,
           );
         }

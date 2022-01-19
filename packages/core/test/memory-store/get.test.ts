@@ -1,20 +1,17 @@
 import anyTest, { TestInterface } from "ava";
+import { pick } from "@polygraph/utils";
 import { schema } from "../fixtures/care-bear-schema";
 import { makeMemoryStore } from "../../src/memory-store";
 import {
-  MemoryStore,
-  NormalizedResources,
-  QueryResultResource,
-  ResourceOfType,
+  NormalStore,
+  NormalResource,
 } from "../../src/types";
 import { careBearData } from "../fixtures/care-bear-data";
-
-const normalizedData = careBearData;
 
 type S = typeof schema;
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const empty: NormalizedResources<S> = {
+const empty: NormalStore<S> = {
   bears: {},
   companions: {},
   homes: {},
@@ -22,7 +19,7 @@ const empty: NormalizedResources<S> = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const emptyBear: ResourceOfType<S, "bears"> = {
+const emptyBear: NormalResource<S, "bears"> = {
   type: "bears",
   id: "3",
   properties: {
@@ -39,7 +36,7 @@ const emptyBear: ResourceOfType<S, "bears"> = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const almostEmpty: NormalizedResources<S> = {
+const almostEmpty: NormalStore<S> = {
   ...empty,
   bears: {
     3: emptyBear,
@@ -47,7 +44,7 @@ const almostEmpty: NormalizedResources<S> = {
 } as const;
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const bearWithHome: ResourceOfType<S, "bears"> = {
+const bearWithHome: NormalResource<S, "bears"> = {
   ...emptyBear,
   relationships: {
     ...emptyBear.relationships,
@@ -56,7 +53,7 @@ const bearWithHome: ResourceOfType<S, "bears"> = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const bearWithBadHome: ResourceOfType<S, "bears"> = {
+const bearWithBadHome: NormalResource<S, "bears"> = {
   ...emptyBear,
   relationships: {
     ...emptyBear.relationships,
@@ -66,36 +63,37 @@ const bearWithBadHome: ResourceOfType<S, "bears"> = {
 
 // Helper functions
 
-const test = anyTest as TestInterface<{ store: MemoryStore<S> }>;
+const test = anyTest as TestInterface<{ store: any }>;
 
-const resource = <ResType extends keyof S["resources"]>(
-  type: ResType & string,
+const resource = (
+  type: string,
   id: string,
   getRels = true,
   overrides = {},
-): QueryResultResource<S, ResType> => {
-  const stored = normalizedData[type][id];
-  const { properties, relationships } = stored;
+) => {
+  const stored = careBearData[type][id];
+  const resDef = schema.resources[type];
+  const props = pick(stored, Object.keys(resDef.properties));
+  const rels = pick(stored, Object.keys(resDef.relationships));
 
   return {
     id,
-    type,
-    ...properties,
-    ...(getRels ? relationships : {}),
+    ...props,
+    ...(getRels ? rels : {}),
     ...overrides,
-  } as unknown as QueryResultResource<S, ResType>; // TODO: revisit this
+  };
 };
 
 // Test Setup
 
 test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign
-  t.context = { store: await makeMemoryStore(schema, { initialData: normalizedData }) };
+  t.context = { store: await makeMemoryStore(schema, { initialData: careBearData }) };
 });
 
 // Actual Tests
 
-test.only("fetches a single resource", async (t) => {
+test("fetches a single resource", async (t) => {
   const result = await t.context.store.get({ type: "bears", id: "1" });
 
   t.deepEqual(result, resource("bears", "1"));
@@ -143,7 +141,7 @@ test("fetches a single resource with a subset of properties", async (t) => {
   t.deepEqual(
     result,
     {
-      type: "bears", id: "1", name: "Tenderheart Bear", fur_color: "tan",
+      id: "1", name: "Tenderheart Bear", fur_color: "tan",
     } as typeof result,
   );
 });
@@ -162,7 +160,6 @@ test("fetches a single resource with a subset of properties on a relationship", 
     result,
     resource("bears", "1", false, {
       home: {
-        type: "homes",
         id: "1",
         caring_meter: 1,
       },

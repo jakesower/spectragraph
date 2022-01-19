@@ -72,7 +72,7 @@ There are three types of nodes within a tree:
 
 Polygraph is suitable for data graphs with very little logic around them. It is designed to be particularly good at reading well-defined data connected to other well-defined data via well-defined relationships.
 
-The schema has knack for finding its way to the heart of any data layer that uses it. The fact that it is written in JSON makes it highly portable and suitable for operation on by any number of programs.
+The schema has knack for finding its way to the heart of any data layer that uses it. The fact that it is written in JSON makes it highly portable and suitable for use by any number of programs.
 
 ### What Polygraph Does Not Do
 
@@ -81,3 +81,7 @@ Polygraph is not suited for some things too:
 - RPC style systems. Polygraph reads and writes graphs to stores.
 - Loosely related data. The schema is the centerpiece for the data layer and does not allow for this.
 - An ORM. Polygraph works in pure data, with no functionality attached to the data itself.
+
+## Outstanding Questions
+
+- What should be the default for relationships on resources? When unspecified? When others are specified? Explicitly identified in props? Explicitly identified in rels with `referencesOnly`?
