@@ -1,6 +1,6 @@
 import test from "ava";
 import { schema } from "../fixtures/care-bear-schema";
-import { careBearData } from "../fixtures/care-bear-data";
+import { careBearData, grumpyBear } from "../fixtures/care-bear-data";
 import { makeMemoryStore } from "../../src/memory-store";
 import { formatRef } from "../../src/utils";
 
@@ -9,7 +9,7 @@ const makeStore = async (overrides = {}, dataOverrides = {}) => {
     initialData: { ...careBearData, ...dataOverrides },
     ...overrides,
   });
-  console.log("\n\n\nmade store\n\n\n");
+  // console.log("\n\n\nmade store\n\n\n");
   return store;
 };
 
@@ -40,7 +40,7 @@ test("allows partial initial data", async (t) => {
     await makeStore({
       initialData: {
         bears: {
-          1: { ...tenderheart, relationships: {} },
+          1: { ...tenderheart, home: null, powers: [] },
         },
       },
     });
@@ -101,36 +101,71 @@ test("does allow relationship reassignment from branch nodes on query", async (t
   });
 });
 
-// test.todo("does not allow resource creation from leaf nodes on query", async (t) => {
+test("does not allow resource reassignment from leaf nodes on query", async (t) => {
+  const store = await makeStore();
+  const updateTree = {
+    id: "1",
+    home: {
+      id: "1",
+      bears: [careBearData.bears["1"], careBearData.bears["2"]],
+    },
+  };
 
-// });
+  const replaceResult = await store.replaceOne(
+    { type: "bears", id: "1", relationships: { home: {} } },
+    updateTree,
+  );
 
-test.todo("strings and numbers are clearly differentiated in error messages");
+  t.like(resultData(replaceResult), {
+    homes: {
+      1: {
+        bears: careBearData.homes["1"].bears,
+      },
+    },
+  });
+});
+
+// TODO: throw an error in strict mode
+test("does not allow resource creation from leaf nodes on query", async (t) => {
+  const store = await makeStore();
+  const updateTree = {
+    id: "1",
+    home: {
+      id: "1",
+      bears: [careBearData.bears["1"], grumpyBear],
+    },
+  };
+
+  const replaceResult = await store.replaceOne(
+    { type: "bears", id: "1", relationships: { home: {} } },
+    updateTree,
+  );
+
+  t.like(resultData(replaceResult), {
+    homes: {
+      1: {
+        bears: careBearData.homes["1"].bears,
+      },
+    },
+  });
+});
 
 // ----Graph-Level---------------------------------------------------------------------------------
 
-test.skip("does not allow relationships to nonexistant resources", async (t) => {
-  const error = await t.throwsAsync(async () => {
+test("does not allow relationships to nonexistant resources", async (t) => {
+  const error: any = await t.throwsAsync(async () => {
     await makeStore({
       initialData: {
         bears: {
-          1: { ...tenderheart, relationships: { home: { type: "homes", id: "oopsie!" } } },
+          1: { ...tenderheart, home: { type: "homes", id: "oopsie!" } },
         },
       },
     });
   });
 
-  // const expectedErrors = [
-  //   resErrorMessage("propertyTypes", "name", undefined),
-  //   resErrorMessage("propertyTypes", "location", undefined),
-  //   resErrorMessage("propertyTypes", "caring_meter", undefined),
-  //   resErrorMessage("propertyTypes", "is_in_clouds", undefined),
-  // ];
-  const expectedErrors = [
-    errorMessage("validateRelationshipsExist", `${formatRef({ type: "homes", id: "oopsie!" })} doesn't exist`),
-  ];
-
-  t.deepEqual(error.message, `Invalid initial data.\n\n${expectedErrors.join("\n")}`);
-
-  console.log(error);
+  t.deepEqual(error.message, "resource references must already be present in the store to be used");
+  t.deepEqual(error.details, {
+    ref: { type: "homes", id: "oopsie!" },
+    referencingResources: [{ ...tenderheart, home: { type: "homes", id: "oopsie!" } }],
+  });
 });

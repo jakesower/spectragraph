@@ -36,7 +36,7 @@ interface MemoryStoreOptions<S extends Schema> {
 
 type StoreResource<S extends Schema, RT extends keyof S["resources"]> = Writeable<NormalResource<S, RT>>;
 
-type StoreFormat<S extends Schema> = {
+export type StoreFormat<S extends Schema> = {
   [ResType in keyof S["resources"]]:
     Record<string, StoreResource<S, ResType & string>>;
 }
@@ -181,7 +181,7 @@ export async function makeMemoryStore<S extends Schema>(
   const replaceMany = async <RT extends keyof S["resources"]>(
     query: Query<S, RT>,
     trees: DataTree[],
-  ): Promise<Store<S>> => {
+  ): Promise<Store<S>> => { 
     const seenRootResourceIds: Set<string> = new Set();
     const existingResources = store[query.type];
     const quiver = makeResourceQuiver(schema, ({ assertResource, retractResource }) => {

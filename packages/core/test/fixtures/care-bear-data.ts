@@ -85,3 +85,14 @@ export const careBearData = {
   },
   companions: {},
 } as Store<typeof schema>;
+
+export const grumpyBear = {
+  id: "4",
+  name: "Grumpy Bear",
+  year_introduced: 1982,
+  belly_badge: "raincloud",
+  fur_color: "blue",
+  best_friend: null,
+  home: { type: "homes", id: "1" },
+  powers: [{ type: "powers", id: "careBearStare" }],
+};
