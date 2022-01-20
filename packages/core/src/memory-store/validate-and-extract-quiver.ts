@@ -1,15 +1,45 @@
+/* eslint-disable no-restricted-syntax, no-loop-func */
+
 import { mapObj } from "@polygraph/utils";
 import {
   ExpandedSchema,
   NormalStore,
-  NormalResourceUpdate,
   NormalResource,
   Schema,
+  ResourceRef,
 } from "../types";
 import { ResourceQuiverResult } from "../data-structures/resource-quiver";
-import { asArray, cardinalize } from "../utils";
+import { asArray, cardinalize, denormalizeResource } from "../utils";
 import { defaultResources as getDefaultResources } from "./default-resources";
-import { PolygraphToOneValidationError } from "../validations/errors";
+import { PolygraphError, PolygraphToOneValidationError } from "../validations/errors";
+import { makeRefKey } from "../utils/make-ref-key";
+
+function getReferencingResources<S extends Schema>(
+  quiver: ResourceQuiverResult<S>,
+  resRef: ResourceRef<S, any>,
+) {
+  const targetKey = makeRefKey(resRef);
+  const output = [];
+
+  for (const [referencingRef, referencingRes] of quiver.getResources()) {
+    const updatedRels = quiver.getRelationshipChanges(referencingRef);
+
+    Object.values(updatedRels).forEach((arrowChanges) => {
+      const referencedRefs = ("present" in arrowChanges)
+        ? arrowChanges.present
+        : [...(arrowChanges.asserted ?? []), ...(arrowChanges.retracted ?? [])];
+
+      referencedRefs.forEach((referencedRef) => {
+        const refKey = makeRefKey(referencedRef);
+        if (refKey === targetKey) {
+          output.push(denormalizeResource(referencingRes as any));
+        }
+      });
+    });
+  }
+
+  return output;
+}
 
 function makeEmptyUpdatesObj<S extends Schema>(schema: S): NormalStore<S> {
   const output = {} as NormalStore<S>;
@@ -50,9 +80,18 @@ export async function validateAndExtractQuiver<S extends Schema>(
   const updatedResources: any = makeEmptyUpdatesObj(schema);
   const defaultResources = getDefaultResources(schema);
 
-  // eslint-disable-next-line no-restricted-syntax
   for (const [ref, value] of quiver.getResources()) {
     const { type, id } = ref;
+    const isReferenceOnly = !quiver.explicitResources.has(makeRefKey(ref));
+
+    if (isReferenceOnly && !(id in store[type])) {
+      throw new PolygraphError(
+        "resource references must already be present in the store to be used", {
+          ref,
+          referencingResources: getReferencingResources(quiver, ref),
+        },
+      );
+    }
 
     if (value == null) {
       updatedResources[type][id] = null;
@@ -70,6 +109,10 @@ export async function validateAndExtractQuiver<S extends Schema>(
         (existingProp, propKey) => value.properties[propKey] ?? existingProp,
       )
       : defaultResources[type].properties;
+
+    // console.log({ ref, properties, value, existingOrNewProps })
+
+    // need a way to detect resources that were merely referenced rather than asserted
 
     const relationships = {};
     const updatedRels = quiver.getRelationshipChanges(ref);

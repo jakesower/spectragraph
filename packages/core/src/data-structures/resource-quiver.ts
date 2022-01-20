@@ -2,6 +2,7 @@ import {
   NormalResourceUpdate, ResourceRef, Schema,
 } from "../types";
 import { asArray, formatRef, setRelationships } from "../utils";
+import { makeRefKey } from "../utils/make-ref-key";
 import { makeQuiver } from "./quiver";
 
 /**
@@ -30,6 +31,7 @@ type RelationshipChanges<S extends Schema> = (
 );
 
 export interface ResourceQuiverResult<S extends Schema> {
+  explicitResources: Set<string>;
   getRelationshipChanges: (ref: ResourceRef<S, keyof S["resources"]>) => Record<string, RelationshipChanges<S>>;
   getResources: () => Map<
     ResourceRef<S, keyof S["resources"]>,
@@ -47,6 +49,7 @@ export function makeResourceQuiver<S extends Schema>(
   builderFn: (builder: ResourceQuiverBuilder<S>) => void,
 ): ResourceQuiverResult<S> {
   const quiver = makeQuiver();
+  const explicitResources = new Set<string>();
 
   const inverseOf = <RT extends keyof S["resources"]>(resourceRef: ResourceRef<S, RT>, relName: string) => (
     schema.resources[resourceRef.type].relationships[relName].inverse
@@ -57,6 +60,7 @@ export function makeResourceQuiver<S extends Schema>(
     existingResource: NormalResourceUpdate<S, RT> | null,
   ) => {
     quiver.assertNode(updatedResource);
+    explicitResources.add(makeRefKey(updatedResource));
 
     Object.keys(updatedResource.relationships || {})
       .forEach((relKey: keyof S["resources"][RT]["relationships"] & string) => {
@@ -107,6 +111,7 @@ export function makeResourceQuiver<S extends Schema>(
   });
 
   return {
+    explicitResources,
     ...quiver,
     getRelationshipChanges: quiver.getArrowChanges,
     getResources: quiver.getNodes,

@@ -3,6 +3,7 @@ import { pipe } from './general/pipe';
 // export * from './transducers'
 
 export { equals };
+export { objPromise } from "./general/objPromise";
 export { pick } from "./general/pick";
 export { pipe };
 export { reverse } from "./general/reverse";

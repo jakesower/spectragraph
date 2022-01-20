@@ -3,7 +3,7 @@ import { formatRef } from "../utils";
 
 /**
  * The point of this quiver is to detect internal inconsistencies from nodes
- * and arrows created by assertions. It is meant to be mutated, preferablyretracted
+ * and arrows created by assertions. It is meant to be mutated, preferably
  * within a single function. It functions relatively transparently, with each
  * method having a corresponding value in the state, e.g.,
  * assertNode<->assertedNodes. The utility is in the validation.
@@ -266,6 +266,7 @@ export function makeQuiver(): Quiver {
     const sourceKey = makeRefKey(source);
 
     const output = {} as Record<string, ArrowChanges>;
+
     Object.entries(assertedArrows[sourceKey] ?? {}).forEach(([label, asserted]) => {
       const groupKey = makeArrowGroupKey({ source, label });
       if (assertedArrowGroups.has(groupKey)) {
@@ -291,7 +292,7 @@ export function makeQuiver(): Quiver {
   };
 
   // These are all nodes referenced anywhere in the quiver
-  const getNodes = (): Map<NodeRef, (null | Node | NodeRef)> => {
+  const getNodes = (): Map<NodeRef, (null | Node)> => {
     const output = new Map();
 
     Object.entries(nodes).forEach(([key, nodeWithState]) => {

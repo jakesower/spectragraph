@@ -14,6 +14,7 @@ function withRootData<S extends Schema>(schema: S, fullDataTree: DataTree) {
     RT extends keyof S["resources"], Q extends Query<S, RT>
   >(query: Q, dataTree: DataTree, path: (string | number)[]): QueryTree<S, RT> => {
     const schemaDef = schema.resources[query.type];
+    const queryRels = Object.keys(query.relationships ?? {});
 
     const getId = () => {
       const idField = schemaDef.idField ?? "id";
@@ -50,10 +51,9 @@ function withRootData<S extends Schema>(schema: S, fullDataTree: DataTree) {
     };
 
     const getRels = () => {
-      const relKeys = Object.keys(query.relationships ?? schemaDef.relationships);
       const relationships = {};
 
-      relKeys.forEach((relKey) => {
+      queryRels.forEach((relKey) => {
         const relDef = schemaDef.relationships[relKey];
         const relResDef = schema.resources[relDef.relatedType];
 
@@ -120,8 +120,8 @@ function withRootData<S extends Schema>(schema: S, fullDataTree: DataTree) {
     const rootResource = {
       type: query.type,
       id: getId(),
-      properties: getProps(),
-      relationships: getRels(),
+      properties: query.referencesOnly ? {} : getProps(),
+      relationships: query.referencesOnly ? {} : getRels(),
     } as NormalResourceUpdate<S, RT>;
 
     const forEachResource = (fn) => {

@@ -7,28 +7,10 @@ import {
   Store,
   Resource,
 } from "../../src/types";
-import { careBearData } from "../fixtures/care-bear-data";
+import { careBearData, grumpyBear } from "../fixtures/care-bear-data";
 import { denormalizeResource } from "../../src/utils";
 
 type S = typeof schema;
-
-const grumpyBear = {
-  type: "bears",
-  id: "4",
-  properties: {
-    name: "Grumpy Bear",
-    year_introduced: 1982,
-    belly_badge: "raincloud",
-    fur_color: "blue",
-  },
-  relationships: {
-    best_friend: null,
-    home: { type: "homes", id: "1" },
-    powers: [{ type: "powers", id: "careBearStare" }],
-  },
-} as NormalResource<S, "bears">;
-
-const grumpyBearDT: Resource<S, "bears"> = denormalizeResource(grumpyBear);
 
 const dataTree = (res, rels = null) => {
   const { id, type, properties } = res;
@@ -246,14 +228,20 @@ test("resources can have properties named type that can be updated", async (t) =
 // ----Replacement---------------------------------------------------------------------------------
 
 test("replaces existing data completely given a new resource", async (t) => {
-  const query = { type: "bears" } as const;
+  const query = {
+    type: "bears",
+    relationships: {
+      home: { referencesOnly: true },
+      powers: { referencesOnly: true },
+    },
+  } as const;
 
-  const replaceResult = await t.context.store.replaceMany(query, [grumpyBearDT]);
+  const replaceResult = await t.context.store.replaceMany(query, [grumpyBear]);
   const replaceExpected = pickResources([
     ["bears", "1", null],
     ["bears", "2", null],
     ["bears", "3", null],
-    ["bears", "4", grumpyBearDT],
+    ["bears", "4", grumpyBear],
     ["bears", "5", null],
     ["homes", "1", { bears: ["4"] }],
     ["powers", "careBearStare", { bears: ["4"] }],
@@ -265,21 +253,27 @@ test("replaces existing data completely given a new resource", async (t) => {
     type: "bears",
   });
 
-  t.deepEqual(getResult, [dataTree(grumpyBear)]);
+  t.deepEqual(getResult, [grumpyBear]);
 });
 
 test("replaces or keeps existing data given a new resources", async (t) => {
-  const query = { type: "bears" } as const;
+  const query = {
+    type: "bears",
+    relationships: {
+      home: { referencesOnly: true },
+      powers: { referencesOnly: true },
+    },
+  } as const;
 
   const replaceResult = await t.context.store.replaceMany(
     query,
-    [grumpyBearDT, careBearData.bears["1"]],
+    [grumpyBear, careBearData.bears["1"]],
   );
   const replaceExpected = pickResources([
     ["bears", "1"],
     ["bears", "2", null],
     ["bears", "3", null],
-    ["bears", "4", grumpyBearDT],
+    ["bears", "4", grumpyBear],
     ["bears", "5", null],
     ["homes", "1", { bears: ["1", "4"] }],
     ["powers", "careBearStare", { bears: ["1", "4"] }],
@@ -290,7 +284,7 @@ test("replaces or keeps existing data given a new resources", async (t) => {
   const getResult = await t.context.store.get({
     type: "bears",
   });
-  t.deepEqual(getResult, [careBearData.bears["1"], dataTree(grumpyBear)]);
+  t.deepEqual(getResult, [careBearData.bears["1"], grumpyBear]);
 });
 
 // ----Relationships-------------------------------------------------------------------------------
@@ -332,7 +326,7 @@ test("replaces a one-to-one relationship", async (t) => {
 
 test("replaces a one-to-many-relationship", async (t) => {
   await t.context.store.replaceOne(
-    { type: "homes", id: "1" },
+    { type: "homes", id: "1", relationships: { bears: { referencesOnly: true } } },
     {
       type: "homes",
       id: "1",

@@ -224,7 +224,7 @@ export type NormalResourceUpdate<S extends Schema, RT extends keyof S["resources
     relationships: Readonly<Partial<{
       [RelType in keyof S["resources"][RT]["relationships"]]:
         ResourceRel<S, RT & string, RelType & string>
-    }>>
+    }>>,
   }>
 );
 
