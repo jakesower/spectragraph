@@ -39,7 +39,7 @@ export function normalizeResource<
     return value;
   });
 
-  const relationships = mapObj(schemaDef.relationships, (relDef, relKey) => {
+  const relationships: any = mapObj(schemaDef.relationships, (relDef, relKey) => {
     const ensureValidRef = (ref) => {
       if (ref.type !== relDef.relatedType) {
         throw new PolygraphError(
