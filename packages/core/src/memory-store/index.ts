@@ -12,7 +12,6 @@ import {
   Writeable,
   NormalResourceUpdate,
   NormalResource,
-  NormalStore,
   PolygraphStore,
   Store,
 } from "../types";
@@ -181,7 +180,7 @@ export async function makeMemoryStore<S extends Schema>(
   const replaceMany = async <RT extends keyof S["resources"]>(
     query: Query<S, RT>,
     trees: DataTree[],
-  ): Promise<Store<S>> => { 
+  ): Promise<Store<S>> => {
     const seenRootResourceIds: Set<string> = new Set();
     const existingResources = store[query.type];
     const quiver = makeResourceQuiver(schema, ({ assertResource, retractResource }) => {

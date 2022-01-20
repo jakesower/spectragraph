@@ -224,7 +224,7 @@ export type NormalResourceUpdate<S extends Schema, RT extends keyof S["resources
     relationships: Readonly<Partial<{
       [RelType in keyof S["resources"][RT]["relationships"]]:
         ResourceRel<S, RT & string, RelType & string>
-    }>>,
+    }>>
   }>
 );
 
@@ -236,6 +236,20 @@ export type NormalStore<S extends Schema> = {
 export type Store<S extends Schema> = {
   [RT in keyof S["resources"]]: Record<string, Resource<S, RT & string>>;
 }
+
+// export type Store<S extends Schema> = Readonly<{
+//   normalized: { [RT in keyof S["resources"]]: Record<string, NormalResource<S, RT & string>> };
+//   denormalized: { [RT in keyof S["resources"]]: Record<string, Resource<S, RT & string>> };
+// }>;
+
+// export type MutableStore<S extends Schema> = {
+//   normalized: {
+//     [RT in keyof S["resources"]]: Record<string, Writeable<NormalResource<S, RT & string>>>
+//   };
+//   denormalized: {
+//     [RT in keyof S["resources"]]: Record<string, Writeable<Resource<S, RT & string>>>
+//   };
+// }
 
 export interface PolygraphStore<S extends Schema> {
   get: <

@@ -13,13 +13,9 @@ const validations = [
     name: "no self as best friend",
     resourceType: "bears",
     validateResource: (updatedResource) => {
-      console.log("boom??");
-      console.log(updatedResource);
       if (updatedResource.best_friend?.id === updatedResource.id) {
-        console.log("boom!!");
         throw new Error("a bear can't be best friends with themselves!");
       }
-      console.log("no");
     },
   },
 //   {
@@ -38,22 +34,6 @@ const validations = [
 // }
 ];
 
-const getErrors = (validator, obj) => (validator(obj) ? [] : validator.errors);
-
-const tenderheart = {
-  type: "bears",
-  tree: careBearData.bears["1"],
-  isSingular: true,
-};
-
-const careALot = {
-  type: "homes",
-  tree: careBearData.homes["1"],
-  isSingular: true,
-};
-
-const getPgCode = (error) => error?.code;
-
 const test = anyTest as TestInterface<{ store: MemoryStore<S> }>;
 
 test.beforeEach(async (t) => {
@@ -67,7 +47,7 @@ test.beforeEach(async (t) => {
   console.log("\n\n\nmade store\n\n\n");
 });
 
-test("enforces a custom validaton (single resource)", async (t) => {
+test("enforces no custom validaton (single resource - no self as best_friend)", async (t) => {
   const err = await t.throwsAsync(async () => {
     await t.context.store.replaceOne(
       {
@@ -79,7 +59,6 @@ test("enforces a custom validaton (single resource)", async (t) => {
     );
   });
 
-  console.log("err!", err);
   t.deepEqual(err.message, "a bear can't be best friends with themselves!");
 });
 
