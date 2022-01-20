@@ -2,67 +2,11 @@ import anyTest, { TestInterface } from "ava";
 import { pick } from "@polygraph/utils";
 import { schema } from "../fixtures/care-bear-schema";
 import { makeMemoryStore } from "../../src/memory-store";
-import {
-  NormalStore,
-  NormalResource,
-} from "../../src/types";
 import { careBearData } from "../fixtures/care-bear-data";
 
 type S = typeof schema;
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const empty: NormalStore<S> = {
-  bears: {},
-  companions: {},
-  homes: {},
-  powers: {},
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const emptyBear: NormalResource<S, "bears"> = {
-  type: "bears",
-  id: "3",
-  properties: {
-    name: "Tenderheart",
-    belly_badge: "heart",
-    year_introduced: 1982,
-    fur_color: "tan",
-  },
-  relationships: {
-    best_friend: null,
-    home: null,
-    powers: [],
-  },
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const almostEmpty: NormalStore<S> = {
-  ...empty,
-  bears: {
-    3: emptyBear,
-  },
-} as const;
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const bearWithHome: NormalResource<S, "bears"> = {
-  ...emptyBear,
-  relationships: {
-    ...emptyBear.relationships,
-    home: { type: "homes", id: "33223" },
-  },
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const bearWithBadHome: NormalResource<S, "bears"> = {
-  ...emptyBear,
-  relationships: {
-    ...emptyBear.relationships,
-    home: { type: "homes", id: "33223" }, // SHOULD NOT BE VALID!
-  },
-};
-
 // Helper functions
-
 const test = anyTest as TestInterface<{ store: any }>;
 
 const resource = (

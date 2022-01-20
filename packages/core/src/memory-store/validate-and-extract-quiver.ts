@@ -145,12 +145,16 @@ export async function validateAndExtractQuiver<S extends Schema>(
 
     const nextRes = {
       type, id, properties, relationships,
-    };
+    } as any;
 
     const validations = resourceValidations[type] ?? [];
     // eslint-disable-next-line no-await-in-loop
     await Promise.all(validations.map(
-      ({ validateResource }) => validateResource(nextRes, store[type][id], { schema }),
+      ({ validateResource }) => validateResource(
+        denormalizeResource(nextRes),
+        denormalizeResource(store[type][id]),
+        { schema },
+      ),
     ));
 
     updatedResources[type][id] = nextRes;
