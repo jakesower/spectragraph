@@ -1,8 +1,8 @@
 import test from "ava";
 import { omit, pick } from "@polygraph/utils";
-import { schema } from "../fixtures/care-bear-schema";
-import { queryTree } from "../../src/utils";
-import { careBearData } from "../fixtures/care-bear-data";
+import { schema } from "../fixtures/care-bear-schema.mjs";
+import { queryTree } from "../../src/utils/query-tree.mjs";
+import { careBearData } from "../fixtures/care-bear-data.mjs";
 
 const bearsWithHomeQuery = {
   type: "bears",

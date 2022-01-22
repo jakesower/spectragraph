@@ -1,23 +1,14 @@
 import equals from 'deep-equal'
-import { pipe } from './general/pipe';
+import { pipe } from './general/pipe.mjs';
 // export * from './transducers'
 
 export { equals };
-export { objPromise } from "./general/objPromise";
-export { pick } from "./general/pick";
+export { objPromise } from "./general/objPromise.mjs";
+export { pick } from "./general/pick.mjs";
 export { pipe };
-export { reverse } from "./general/reverse";
+export { reverse } from "./general/reverse.mjs";
 
-type Ord = number | string | boolean | Date
-
-export function append<T, U>(xs: T[], ys: U[]): (T | U)[] {
-  return [...xs, ...ys]
-}
-
-export function appendKeys<T, K extends keyof T>(
-  base: { [k: string]: T[K][] },
-  other: { [k: string]: T[K][] },
-): { [k: string]: T[K][] } {
+export function appendKeys(base,other,) {
   const keys = uniq([...Object.keys(base), ...Object.keys(other)])
 
   let result = {}
@@ -29,8 +20,6 @@ export function appendKeys<T, K extends keyof T>(
   return result
 }
 
-export function applyOrMap<T, U>(valueOrArray: T[], fn: (item: T) => U): U[]
-export function applyOrMap<T, U>(valueOrArray: T, fn: (item: T) => U): U
 export function applyOrMap(valueOrArray, fn) {
   if (Array.isArray(valueOrArray)) {
     return valueOrArray.map(fn)
@@ -38,28 +27,22 @@ export function applyOrMap(valueOrArray, fn) {
   return fn(valueOrArray)
 }
 
-export function arraySetDifference<T>(xs: T[], ys: T[]): T[] {
+export function arraySetDifference(xs, ys) {
   const ySet = new Set(ys)
   return xs.filter((x) => !ySet.has(x))
 }
 
-export function arraySetDifferenceBy<T, U>(
-  xs: T[],
-  ys: T[],
-  fn: (val: T) => U,
-): T[] {
+export function arraySetDifferenceBy(xs, ys, fn,) {
   const ySet = new Set(ys.map(fn))
   return xs.filter((x) => !ySet.has(fn(x)))
 }
 
-export function arrayUnion<T, U>(xs: T[], ys: U[]): (T | U)[] {
+export function arrayUnion(xs, ys) {
   return [...new Set([].concat(xs, ys))]
 }
 
 
-export function assignChildren(
-  objs: { [k: string]: { [k: string]: any } }[],
-): { [k: string]: { [k: string]: any } } {
+export function assignChildren(objs,) {
   let out = {}
 
   objs.forEach((obj) => {
@@ -70,26 +53,26 @@ export function assignChildren(
   return out
 }
 
-export function chainPipeThru(val: any, fns: ((x: any) => any)[]) {
+export function chainPipeThru(val, fns) {
   return fns.reduce((acc, fn) => acc.chain(fn), val)
 }
 
-export function cmp(a: Ord, b: Ord): number {
+export function cmp(a, b) {
   return a < b ? -1 : a > b ? 1 : 0
 }
 
-export function deepClone<T>(obj: T): T {
+export function deepClone(obj) {
   if (!obj) {
     return obj
   }
 
-  let out = (Array.isArray(obj) ? [] : {}) as T
+  let out = (Array.isArray(obj) ? [] : {})
   for (const key in obj) {
     const val = obj[key]
     out[key] = typeof val === 'object' ? deepClone(val) : val
   }
 
-  return out as T
+  return out
 }
 
 export function fgo(generator) {
@@ -104,7 +87,7 @@ export function fgo(generator) {
   return recur(g.next(), g)
 }
 
-export function fillObject<T>(keys: string[], value: T): { [k: string]: T } {
+export function fillObject(keys, value) {
   const l = keys.length
   let out = {}
 
@@ -115,28 +98,22 @@ export function fillObject<T>(keys: string[], value: T): { [k: string]: T } {
   return out
 }
 
-export function filterObj<T extends Record<string, any>>(
-  obj: T,
-  fn: (val: T[keyof T], key: keyof T & string) => boolean
-): Partial<T> {
+export function filterObj(obj,fn) {
   const keys = Object.keys(obj);
-  const output = {} as Record<any, any>;
+  const output = {};
   const l = keys.length;
 
   for (let i = 0; i < l; i += 1) {
     const val = obj[keys[i]];
-    if (fn(val, keys[i] as keyof T & string)) {
+    if (fn(val, keys[i])) {
       output[keys[i]] = val;
     }
   }
 
-  return output as Partial<T>;
+  return output;
 }
 
-export function findObj<T>(
-  obj: { [k: string]: T },
-  predicateFn: (x: T) => boolean,
-): T | null {
+export function findObj(obj,predicateFn) {
   for (const key of Object.keys(obj)) {
     if (predicateFn(obj[key])) {
       return obj[key]
@@ -146,31 +123,25 @@ export function findObj<T>(
   return null
 }
 
-export function flatMap<T>(xs: T[], fn: (x: T) => T[]): T[] {
+export function flatMap(xs, fn) {
   return makeFlat(xs.map(fn), false)
 }
 
-export function forEachObj<T extends Record<string, any>>(
-  obj: T,
-  fn: (val: T[keyof T], key: keyof T & string) => any
-): void {
+export function forEachObj(obj, fn) {
   const keys = Object.keys(obj);
   const l = keys.length;
 
   for (let i = 0; i < l; i += 1) {
     const val = obj[keys[i]];
-    fn(val, keys[i] as keyof T & string);
+    fn(val, keys[i]);
   }
 }
 
-export function flatten<T>(xs: T[][]): T[] {
+export function flatten(xs) {
   return makeFlat(xs, true)
 }
 
-export function groupBy<T>(
-  items: T[],
-  fn: (item: T) => string,
-): { [k: string]: T[] } {
+export function groupBy(items, fn) {
   const out = {}
   const l = items.length
 
@@ -205,19 +176,16 @@ export function indexOn(xs, keys) {
 }
 
 // e.g. {a: {inner: 'thing'}, b: {other: 'item'}} => {a: {key: 'a', inner: 'thing'}, b: {key: 'b', other: 'item'}}
-export function inlineKey<T extends Record<string, Record<string, any>>, K extends string>(
-  obj: T,
-  keyProp: K
-): { [P in keyof T]: T[P] & { [k in K]: string } } {
+export function inlineKey(obj, keyProp) {
   let result = {}
   const keys = Object.keys(obj)
   for (let key of keys) {
     result[key] = Object.assign({}, obj[key], { [keyProp]: key })
   }
-  return result as { [P in keyof T]: T[P] & { [k in K]: string } };
+  return result;
 }
 
-export function keyBy<T>(items: T[], fn: (item: T) => string): Record<string, T> {
+export function keyBy(items, fn) {
   const output = {};
   const l = items.length;
   for (let i = 0; i < l; i += 1) {
@@ -226,41 +194,26 @@ export function keyBy<T>(items: T[], fn: (item: T) => string): Record<string, T>
   return output;
 }
 
-export function keyByProp<T, K extends keyof T>(items: T[], key: K): Record<K, T> {
-  const output = {} as Record<K, T>;
-  const l = items.length;
-  for (let i = 0; i < l; i += 1) {
-    output[key] = items[i];
-  }
-  return output;
-}
-
-export function mapObj<T extends Record<string, any>, U>(
-  obj: T,
-  fn: (val: T[keyof T], key: keyof T & string) => U
-): { [K in keyof T]: U } {
+export function mapObj(obj, fn) {
   const keys = Object.keys(obj);
-  const output = {} as Record<any, any>;
+  const output = {};
   const l = keys.length;
 
   for (let i = 0; i < l; i += 1) {
     const val = obj[keys[i]];
-    output[keys[i]] = fn(val, keys[i] as keyof T & string);
+    output[keys[i]] = fn(val, keys[i]);
   }
 
-  return output as { [K in keyof T]: U };
+  return output;
 }
 
-export function mapObjToArray<T, U>(
-  obj: { [k in string]: T },
-  fn: (x: T, idx: string) => U,
-): U[] {
+export function mapObjToArray(obj, fn) {
   const [keys, vals] = [Object.keys(obj), Object.values(obj)]
   const mappedVals = vals.map((v, idx) => fn(v, keys[idx]))
   return mappedVals
 }
 
-export function maxStable<T>(fn: (a: T) => Ord, xs: T[]): T {
+export function maxStable(fn, xs) {
   const l = xs.length
   let out = xs[0]
   let outVal = fn(out)
@@ -295,17 +248,12 @@ export function mapResult(resultOrResults, fn) {
   return { ...next, relationships }
 }
 
-export function mergeAll<T>(
-  items: { [k in string]: T }[],
-): { [k in string]: T } {
-  const init: { [k in string]: T } = {}
+export function mergeAll(items) {
+  const init = {}
   return items.reduce((merged, arg) => ({ ...merged, ...arg }), init)
 }
 
-export function mergeChildren(
-  obj: { [k: string]: { [k: string]: any } },
-  ext: { [k: string]: { [k: string]: any } },
-): { [k: string]: { [k: string]: any } } {
+export function mergeChildren(obj, ext) {
   const ks = uniq([...Object.keys(obj), ...Object.keys(ext)])
   const l = ks.length
 
@@ -316,11 +264,7 @@ export function mergeChildren(
   return out
 }
 
-export function mergeWith<T, U, V>(
-  base: { [k: string]: T },
-  other: { [k: string]: U },
-  combiner: (x: T, y: U) => V,
-): { [k: string]: T | U | V } {
+export function mergeWith(base, other, combiner) {
   const keys = uniq([...Object.keys(base), ...Object.keys(other)])
 
   let result = {}
@@ -356,7 +300,7 @@ export function overPath(obj, path, fn) {
   }
 }
 
-export function omit<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
+export function omit(obj, keys) {
   let out = { ...obj }
   for (let key of keys) {
     delete out[key]
@@ -383,10 +327,7 @@ export function parseQueryParams(rawParams) {
   return out
 }
 
-export function partition<T>(
-  items: T[],
-  predicateFn: (val: T) => boolean,
-): [T[], T[]] {
+export function partition(items, predicateFn) {
   const l = items.length
   let outTrue = []
   let outFalse = []
@@ -422,14 +363,11 @@ export async function pipeMw(init, mws) {
   return fn(init)
 }
 
-export function pipeThru(val: any, fns: ((x: any) => any)[]): any {
+export function pipeThru(val, fns) {
   return pipe(fns)(val)
 }
 
-export function pluckKeys<T>(
-  obj: { [k: string]: T },
-  keep: string[],
-): { [k: string]: T } {
+export function pluckKeys(obj, keep) {
   let out = {}
   for (let key of keep) {
     if (key in obj) {
@@ -439,26 +377,22 @@ export function pluckKeys<T>(
   return out
 }
 
-export function reduceObj<T, U>(
-  obj: { [k: string]: T },
-  init: U,
-  reducer: (acc: U, v: T, k: string) => U,
-): U {
+export function reduceObj(obj, init, reducer) {
   return Object.keys(obj).reduce(
     (acc, key) => reducer(acc, obj[key], key),
     init,
   )
 }
 
-export function sortBy<T>(fn: (a: T, b: T) => number, xs: T[]): T[] {
+export function sortBy(xs, fn) {
   if (xs.length === 0) {
     return []
   }
   const first = xs[0]
   const rest = xs.slice(1)
-  let lts: T[] = []
-  let gts: T[] = []
-  let eqs: T[] = [first]
+  let lts = []
+  let gts = []
+  let eqs = [first]
   for (let i = 0; i < rest.length; i += 1) {
     const comp = fn(rest[i], first)
 
@@ -474,7 +408,7 @@ export function sortBy<T>(fn: (a: T, b: T) => number, xs: T[]): T[] {
   return sortBy(fn, lts).concat(eqs).concat(sortBy(fn, gts))
 }
 
-export function sortByAll<T>(fns: ((a: T, b: T) => number)[], xs: T[]): T[] {
+export function sortByAll(xs, fns) {
   if (fns.length === 0 || xs.length <= 1) {
     return xs
   }
@@ -482,9 +416,9 @@ export function sortByAll<T>(fns: ((a: T, b: T) => number)[], xs: T[]): T[] {
   const [fn, ...restFns] = fns
   const [first, ...rest] = xs
 
-  let lts: T[] = []
-  let gts: T[] = []
-  let eqs: T[] = [first]
+  let lts = []
+  let gts = []
+  let eqs = [first]
   for (let i = 0; i < rest.length; i += 1) {
     const comp = fn(rest[i], first)
 
@@ -504,16 +438,16 @@ export function sortByAll<T>(fns: ((a: T, b: T) => number)[], xs: T[]): T[] {
   ]
 }
 
-export function sortWith<T>(fn: (a: T) => Ord, xs: T[]): T[] {
+export function sortWith(fn, xs) {
   if (xs.length === 0) {
     return []
   }
   const first = xs[0]
   const fx = fn(first)
   const rest = xs.slice(1)
-  let lts: T[] = []
-  let gts: T[] = []
-  let eqs: T[] = [first]
+  let lts = []
+  let gts = []
+  let eqs = [first]
   for (let i = 0; i < rest.length; i += 1) {
     const fy = fn(rest[i])
 
@@ -529,7 +463,7 @@ export function sortWith<T>(fn: (a: T) => Ord, xs: T[]): T[] {
   return sortWith(fn, lts).concat(eqs).concat(sortWith(fn, gts))
 }
 
-export function sortWithAll<T>(fns: ((a: T) => Ord)[], xs: T[]): T[] {
+export function sortWithAll(xs, fns) {
   if (fns.length === 0 || xs.length <= 1) {
     return xs
   }
@@ -539,9 +473,9 @@ export function sortWithAll<T>(fns: ((a: T) => Ord)[], xs: T[]): T[] {
   const first = xs[0]
   const fx = fn(first)
   const rest = xs.slice(1)
-  let lts: T[] = []
-  let gts: T[] = []
-  let eqs: T[] = [first]
+  let lts = []
+  let gts = []
+  let eqs = [first]
   for (let i = 0; i < rest.length; i += 1) {
     // TODO: reduce this over fns (start with 0, exit on non-zero)
     const fy = fn(rest[i])
@@ -562,11 +496,11 @@ export function sortWithAll<T>(fns: ((a: T) => Ord)[], xs: T[]): T[] {
   ]
 }
 
-export function uniq<T>(xs: T[]): T[] {
+export function uniq(xs) {
   return [...new Set(xs)]
 }
 
-export function uniqBy<T>(xs: T[], fn: (x: T) => Ord): T[] {
+export function uniqBy(xs, fn) {
   let hits = new Set()
   let out = []
 
@@ -581,18 +515,18 @@ export function uniqBy<T>(xs: T[], fn: (x: T) => Ord): T[] {
   return out
 }
 
-export function union<T>(left: Set<T>, right: Set<T>): Set<T> {
+export function union(left, right) {
   return new Set([...left, ...right])
 }
 
-export function unnest<T>(xs: T[][]): T[] {
+export function unnest(xs) {
   return makeFlat(xs, false)
 }
 
-export function xprod<T, U>(xs: T[], ys: U[]): [T, U][] {
+export function xprod(xs, ys) {
   const xl = xs.length
   const yl = ys.length
-  let out: [T, U][] = []
+  let out = []
 
   for (let i = 0; i < xl; i += 1) {
     for (let j = 0; j < yl; j += 1) {
@@ -603,15 +537,15 @@ export function xprod<T, U>(xs: T[], ys: U[]): [T, U][] {
   return out
 }
 
-export function zipObj<T>(keys: string[], vals: T[]): { [k: string]: T } {
+export function zipObj(keys, vals) {
   return keys.reduce((out, key, idx) => {
     const o = { [key]: vals[idx] }
     return { ...out, ...o }
   }, {})
 }
 
-function makeFlat<T>(list, recursive): T[] {
-  let result: T[] = []
+function makeFlat(list, recursive) {
+  let result = []
   let idx = 0
   let ilen = list.length
 

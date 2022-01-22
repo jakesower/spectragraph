@@ -2,16 +2,15 @@
   "name": "@polygraph/utils",
   "version": "0.0.6",
   "description": "",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
     "test": "echo 'oh hey'"
   },
   "keywords": [],
   "author": "Jake Sower",
   "license": "ISC",
   "devDependencies": {
-    "typescript": "^4.4"
   },
   "publishConfig": {
     "access": "public"

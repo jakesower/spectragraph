@@ -1,4 +1,4 @@
-export function reverse<T>(items: Readonly<T[]>): Readonly<T[]> {
+export function reverse(items) {
   const output = [];
 
   for (let i = (items.length - 1); i >= 0; i -= 1) {

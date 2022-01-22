@@ -1,4 +1,4 @@
-export function intersection<T>(leftArray: Readonly<T[]>, rightArray: Readonly<T[]>): Readonly<T[]> {
+export function intersection(leftArray, rightArray) {
   const output = [];
   const [smallerArray, largerArrayAsSet] =
     leftArray.length < rightArray.length

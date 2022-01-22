@@ -1,5 +1,3 @@
-import { DefinedError } from "ajv";
-
 const errorCodeFormat = /^PG-\d{4}$/;
 
 export class PolygraphError extends Error {
