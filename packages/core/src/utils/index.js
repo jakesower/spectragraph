@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { pick } from "@polygraph/utils";
-import { ResourceRef, Schema } from "../types";
 
 export { asArray } from "./asArray";
 export { cardinalize } from "./cardinalize";
@@ -12,10 +11,8 @@ export { queryTree } from "./query-tree";
 export { setRelationships } from "./set-relationships";
 
 // please let tuples/records come soon
-export const refsEqual = (left: ResourceRef<any, any>, right: ResourceRef<any, any>): boolean => (
+export const refsEqual = (left, right) => (
   left.type === right.type && left.id === right.id
 );
 
-export const toRef = <S extends Schema>(ref: ResourceRef<S, any>): ResourceRef<S, any> => (
-  pick(ref as Record<string, unknown>, ["id", "type"]) as ResourceRef<S, any>
-);
+export const toRef = (ref) => pick(ref, ["id", "type"]);

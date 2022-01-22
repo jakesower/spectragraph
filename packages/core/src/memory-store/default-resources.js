@@ -1,20 +1,15 @@
 import { mapObj } from "@polygraph/utils";
-import { NormalResource, Schema } from "../types";
 import { cardinalize } from "../utils";
 
 let cachedKey;
 let cachedVal;
 
-type DefaultResources<S extends Schema> = {
-  [P in keyof S["resources"]]: NormalResource<S, P>
-}
-
-export function defaultResources<S extends Schema>(schema: S): DefaultResources<S> {
+export function defaultResources(schema) {
   if (cachedKey !== schema) {
     cachedKey = schema;
     cachedVal = mapObj(
       schema.resources,
-      <RT extends keyof S["resources"]>(resDef, resType: RT): NormalResource<S, RT> => {
+      (resDef, resType) => {
         const properties = mapObj(
           resDef.properties,
           (prop) => prop.default ?? undefined,
@@ -25,7 +20,7 @@ export function defaultResources<S extends Schema>(schema: S): DefaultResources<
           type: resType,
           properties,
           relationships,
-        } as NormalResource<S, RT>;
+        };
       },
     );
   }

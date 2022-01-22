@@ -1,21 +1,17 @@
 import { keyByProp, mapObj } from "@polygraph/utils";
-import {
-  CompiledSchema,
-  Schema,
-} from "../types";
 
 // function compileResource()
 const validPropTypes = ["string", "number", "boolean"];
 const validCardinalities = ["one", "many"];
 
 // TODO: Validate schema structure with json-schema
-export function compileSchema<S extends Schema>(schemaDefinition: S): CompiledSchema<S> {
+export function compileSchema(schemaDefinition) {
   const resources = mapObj(
     schemaDefinition.resources,
-    <RT extends keyof S["resources"]>(resourceDef: S["resources"][ResType], resourceName: ResType) => {
+    (resourceDef, resourceName) => {
       const properties = mapObj(
         resourceDef.properties,
-        <PropType extends keyof S["resources"][ResType]["properties"]>(prop, name: PropType) => {
+        (prop, name) => {
           if (!validPropTypes.includes(prop.type)) {
             throw new Error(`type on property ${resourceName}.${name} must be a valid type; it must be one of (${validPropTypes.join(", ")})`);
           }
@@ -26,7 +22,7 @@ export function compileSchema<S extends Schema>(schemaDefinition: S): CompiledSc
 
       const relationships = mapObj(
         resourceDef.relationships,
-        <RelType extends keyof S["resources"][ResType]["relationships"]>(rel, name: RelType) => {
+        (rel, name) => {
           if (!(Object.keys(schemaDefinition.resources).includes(rel.type))) {
             throw new Error(`relationship type ${resourceName}.${name}.${rel.type} does not reference a valid resource`);
           }
@@ -70,5 +66,5 @@ export function compileSchema<S extends Schema>(schemaDefinition: S): CompiledSc
   return {
     ...schemaDefinition,
     resources,
-  } as unknown as CompiledSchema<S>;
+  };
 }

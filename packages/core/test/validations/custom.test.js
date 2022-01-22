@@ -1,9 +1,7 @@
 import anyTest, { TestInterface } from "ava";
-import { makeMemoryStore, MemoryStore } from "../../src/memory-store";
+import { makeMemoryStore } from "../../src/memory-store";
 import { careBearData } from "../fixtures/care-bear-data";
 import { schema } from "../fixtures/care-bear-schema";
-
-type S = typeof schema;
 
 const validations = [
   {
@@ -31,7 +29,7 @@ const validations = [
 // }
 ];
 
-const test = anyTest as TestInterface<{ store: MemoryStore<S> }>;
+const test = anyTest;
 
 test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign

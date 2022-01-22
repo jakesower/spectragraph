@@ -1,9 +1,8 @@
 import Ajv from "ajv";
-import { Schema } from "../types";
 import { makeQuerySchema } from "./syntax/make-query-schema";
 import { makeQueryTreeSchema } from "./syntax/make-query-tree-schema";
 
-export function syntaxValidations<S extends Schema>(schema: S) {
+export function syntaxValidations(schema) {
   const querySchema = makeQuerySchema(schema);
   const queryTreeSchema = makeQueryTreeSchema(schema);
 

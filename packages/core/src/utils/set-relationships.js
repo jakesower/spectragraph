@@ -1,17 +1,6 @@
-interface SetRelationships<T> {
-  left: T[];
-  right: T[];
-  leftOnly: T[];
-  rightOnly: T[];
-  intersection: T[];
-  union: T[];
-}
-
 // note that compareFn must be injective
-export function setRelationships<T, C>(
-  left: T[], right: T[], compareFn: (item: T) => C,
-): SetRelationships<T> {
-  const leftOnlyMap: Map<C, T> = new Map();
+export function setRelationships(left, right, compareFn) {
+  const leftOnlyMap = new Map();
   const [numLeft, numRight] = [left.length, right.length];
   const rightOnly = [];
   const intersection = [];

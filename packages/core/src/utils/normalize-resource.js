@@ -1,20 +1,9 @@
 import { mapObj } from "@polygraph/utils";
-import {
-  NormalResourceUpdate, Schema, Resource, NormalResource, ExpandedSchema,
-} from "../types";
 import { typeValidations } from "../validations/type-validations";
 import { PolygraphError } from "../validations/errors";
 
-export type QueryTree<S extends Schema, RT extends keyof S["resources"]> = Readonly<{
-  forEachResource: (fn: (res: NormalResourceUpdate<S, RT>) => void) => void,
-  rootResource: NormalResourceUpdate<S, RT>;
-}>;
-
-export function normalizeResource<
-  S extends Schema, RT extends keyof S["resources"] & string
->(schema: S, resourceType: RT, resource: Resource<S, RT>): NormalResource<S, RT> {
-  const xs = schema as ExpandedSchema<S>;
-  const schemaDef = xs.resources[resourceType];
+export function normalizeResource(schema, resourceType, resource) {
+  const schemaDef = schema.resources[resourceType];
 
   const properties = mapObj(schemaDef.properties, (propDef, propKey) => {
     if (!(propKey in resource)) {
@@ -39,7 +28,7 @@ export function normalizeResource<
     return value;
   });
 
-  const relationships: any = mapObj(schemaDef.relationships, (relDef, relKey) => {
+  const relationships = mapObj(schemaDef.relationships, (relDef, relKey) => {
     const ensureValidRef = (ref) => {
       if (ref.type !== relDef.relatedType) {
         throw new PolygraphError(

@@ -2,7 +2,6 @@ import test from "ava";
 import { schema } from "../fixtures/care-bear-schema";
 import { careBearData, grumpyBear } from "../fixtures/care-bear-data";
 import { makeMemoryStore } from "../../src/memory-store";
-import { formatRef } from "../../src/utils";
 
 const makeStore = async (overrides = {}, dataOverrides = {}) => {
   const store = await makeMemoryStore(schema, {
@@ -24,7 +23,6 @@ function resultData(result) {
 }
 
 const tenderheart = careBearData.bears["1"];
-const careALot = careBearData.homes["1"];
 
 // ----General-------------------------------------------------------------------------------------
 
@@ -153,7 +151,7 @@ test("does not allow resource creation from leaf nodes on query", async (t) => {
 // ----Graph-Level---------------------------------------------------------------------------------
 
 test("does not allow relationships to nonexistant resources", async (t) => {
-  const error: any = await t.throwsAsync(async () => {
+  const error = await t.throwsAsync(async () => {
     await makeStore({
       initialData: {
         bears: {

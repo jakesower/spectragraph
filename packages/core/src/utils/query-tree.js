@@ -1,18 +1,8 @@
-import {
-  DataTree, Query, NormalResourceUpdate, Schema,
-} from "../types";
 import { typeValidations } from "../validations/type-validations";
 import { PolygraphError } from "../validations/errors";
 
-export type QueryTree<S extends Schema, RT extends keyof S["resources"]> = Readonly<{
-  forEachResource: (fn: (res: NormalResourceUpdate<S, RT>) => void) => void,
-  rootResource: NormalResourceUpdate<S, RT>;
-}>;
-
-function withRootData<S extends Schema>(schema: S, fullDataTree: DataTree) {
-  const internalQueryTree = <
-    RT extends keyof S["resources"], Q extends Query<S, RT>
-  >(query: Q, dataTree: DataTree, path: (string | number)[]): QueryTree<S, RT> => {
+function withRootData(schema, fullDataTree) {
+  const internalQueryTree = (query, dataTree, path) => {
     const schemaDef = schema.resources[query.type];
     const queryRels = Object.keys(query.relationships ?? {});
 
@@ -30,7 +20,7 @@ function withRootData<S extends Schema>(schema: S, fullDataTree: DataTree) {
 
     const getProps = () => {
       const propKeys = query.properties ?? Object.keys(schemaDef.properties);
-      const properties: Pick<DataTree, string> = {};
+      const properties = {};
       propKeys.forEach((propKey) => {
         const propDef = schemaDef.properties[propKey];
         if (propKey in dataTree) {
@@ -122,7 +112,7 @@ function withRootData<S extends Schema>(schema: S, fullDataTree: DataTree) {
       id: getId(),
       properties: query.referencesOnly ? {} : getProps(),
       relationships: query.referencesOnly ? {} : getRels(),
-    } as NormalResourceUpdate<S, RT>;
+    };
 
     const forEachResource = (fn) => {
       fn(rootResource);
@@ -155,9 +145,6 @@ function withRootData<S extends Schema>(schema: S, fullDataTree: DataTree) {
   return internalQueryTree;
 }
 
-export function queryTree<
-  S extends Schema,
-  RT extends keyof S["resources"],
->(schema: S, query: Query<S, RT>, dataTree: DataTree): QueryTree<S, RT> {
+export function queryTree(schema, query, dataTree) {
   return withRootData(schema, dataTree)(query, dataTree, []);
 }
