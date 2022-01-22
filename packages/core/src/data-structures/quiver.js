@@ -9,48 +9,6 @@ import { formatRef } from "../utils";
  * assertNode<->assertedNodes. The utility is in the validation.
  */
 
-type NodeRef = { type: any, id: string };
-type NodeProps = Record<string, unknown>;
-type NodeRefString = string;
-
-export interface Node extends NodeRef {
-  properties: NodeProps;
-}
-
-interface NodeRefWithState extends NodeRef {
-  properties?: NodeProps;
-  state: "asserted" | "related" | "retracted";
-}
-
-interface Arrow {
-  source: NodeRef;
-  target: NodeRef;
-  label: string;
-}
-
-interface ArrowLike {
-  source: NodeRef | undefined;
-  target: NodeRef | undefined;
-  label: string;
-}
-
-type ReplacementArrowChanges = { present: NodeRef[] };
-type DeltaArrowChanges = { asserted?: NodeRef[], retracted?: NodeRef[] };
-type ArrowChanges = ReplacementArrowChanges | DeltaArrowChanges;
-
-export interface Quiver {
-  // useful when constructing
-  assertNode: (node: Node) => void;
-  retractNode: (nodeRef: NodeRef) => void;
-  assertArrow: (arrow: Arrow) => void;
-  retractArrow: (arrow: Arrow) => void;
-  assertArrowGroup: (source: NodeRef, targets: NodeRef[], label: string) => void;
-
-  // useful as the result
-  getArrowChanges: (source: NodeRef) => Record<string, ArrowChanges>;
-  getNodes: () => Map<NodeRef, (null | Node | NodeRef)>;
-}
-
 // ideally these can be replaced by Records/Tuples in upcoming ECMA scripts
 const makeRefKey = ({ type, id }) => JSON.stringify({ type, id });
 const makeArrowGroupKey = (arrow) => JSON.stringify([
@@ -59,9 +17,9 @@ const makeArrowGroupKey = (arrow) => JSON.stringify([
   arrow.label,
 ]);
 
-const readNodeKey = (key: string): NodeRef => JSON.parse(key);
+const readNodeKey = (key) => JSON.parse(key);
 
-const setsEqual = <T>(left: Set<T>, right: Set<T>): boolean => (
+const setsEqual = (left, right) => (
   left.size === right.size && [...left].every((l) => right.has(l))
 );
 
@@ -80,13 +38,13 @@ const addToArrowSet = (setObj, arrow) => {
   }
 };
 
-export function makeQuiver(): Quiver {
-  const nodes: Record<NodeRefString, NodeRefWithState> = {};
-  const assertedArrows: Record<NodeRefString, Record<string, Set<NodeRefString>>> = {};
-  const retractedArrows: Record<NodeRefString, Record<string, Set<NodeRefString>>> = {};
-  const assertedArrowGroups: Set<NodeRefString> = new Set();
+export function makeQuiver() {
+  const nodes = {};
+  const assertedArrows = {};
+  const retractedArrows = {};
+  const assertedArrowGroups = new Set();
 
-  const relStr = (arrow: ArrowLike) => {
+  const relStr = (arrow) => {
     const { source, target, label } = arrow;
     const sourceStr = source ? formatRef(source) : "X";
     const targetStr = target ? formatRef(target) : "X";
@@ -155,7 +113,7 @@ export function makeQuiver(): Quiver {
     }
   };
 
-  const checkPreviouslyAssertedArrowGroup = (source, targets: NodeRef[], label) => {
+  const checkPreviouslyAssertedArrowGroup = (source, targets, label) => {
     const sourceKey = makeRefKey(source);
     const groupKey = makeArrowGroupKey({ source, label });
 
@@ -189,7 +147,7 @@ export function makeQuiver(): Quiver {
     }
   };
 
-  const assertNode = (node: Node): void => {
+  const assertNode = (node) => {
     const nodeKey = makeRefKey(node);
     const existing = nodes[nodeKey];
 
@@ -204,7 +162,7 @@ export function makeQuiver(): Quiver {
     };
   };
 
-  const retractNode = (nodeRef: NodeRef): void => {
+  const retractNode = (nodeRef) => {
     const nodeKey = makeRefKey(nodeRef);
     checkNodeNotAsserted(nodeRef);
     nodes[nodeKey] = {
@@ -213,7 +171,7 @@ export function makeQuiver(): Quiver {
     };
   };
 
-  const seeNode = (nodeRef: NodeRef): void => {
+  const seeNode = (nodeRef) => {
     const nodeKey = makeRefKey(nodeRef);
     const existing = nodes[nodeKey];
 
@@ -226,7 +184,7 @@ export function makeQuiver(): Quiver {
     }
   };
 
-  const assertArrow = (arrow: Arrow): void => {
+  const assertArrow = (arrow) => {
     const groupKey = makeArrowGroupKey(arrow);
 
     if (assertedArrowGroups.has(groupKey)) {
@@ -243,14 +201,14 @@ export function makeQuiver(): Quiver {
     }
   };
 
-  const retractArrow = (arrow: Arrow): void => {
+  const retractArrow = (arrow) => {
     checkArrowNotAsserted(arrow);
     addToArrowSet(retractedArrows, arrow);
     seeNode(arrow.source);
     seeNode(arrow.target);
   };
 
-  const assertArrowGroup = (source: NodeRef, targets: NodeRef[], label: string): void => {
+  const assertArrowGroup = (source, targets, label) => {
     const groupKey = makeArrowGroupKey({ source, label });
 
     if (assertedArrowGroups.has(groupKey)) {
@@ -262,10 +220,10 @@ export function makeQuiver(): Quiver {
     }
   };
 
-  const getArrowChanges = (source: NodeRef): Record<string, ArrowChanges> => {
+  const getArrowChanges = (source) => {
     const sourceKey = makeRefKey(source);
 
-    const output = {} as Record<string, ArrowChanges>;
+    const output = {};
 
     Object.entries(assertedArrows[sourceKey] ?? {}).forEach(([label, asserted]) => {
       const groupKey = makeArrowGroupKey({ source, label });
@@ -281,7 +239,7 @@ export function makeQuiver(): Quiver {
       const groupKey = makeArrowGroupKey({ source, label });
       if (!assertedArrowGroups.has(groupKey)) {
         if (output[label]) {
-          (output[label] as DeltaArrowChanges).retracted = [...retracted].map(readNodeKey);
+          (output[label]).retracted = [...retracted].map(readNodeKey);
         } else {
           output[label] = { retracted: [...retracted].map(readNodeKey) };
         }
@@ -292,7 +250,7 @@ export function makeQuiver(): Quiver {
   };
 
   // These are all nodes referenced anywhere in the quiver
-  const getNodes = (): Map<NodeRef, (null | Node)> => {
+  const getNodes = () => {
     const output = new Map();
 
     Object.entries(nodes).forEach(([key, nodeWithState]) => {

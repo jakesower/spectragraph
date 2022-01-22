@@ -1,4 +1,3 @@
-import { Store } from "../../src/types";
 import { schema } from "./care-bear-schema";
 
 export const careBearData = {
@@ -84,7 +83,7 @@ export const careBearData = {
     },
   },
   companions: {},
-} as Store<typeof schema>;
+};
 
 export const grumpyBear = {
   id: "4",

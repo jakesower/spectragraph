@@ -1,33 +1,30 @@
 import { mapObj } from "@polygraph/utils";
-import { Schema } from "../../types";
 
 // 3 kinds of potential trees: (going with #3 for now)
 // - strict adherence to query props/rels
 // - adherence to properties inside the resource type
 // - free-for-all with properties, so long as relevant ones obey rules
 
-export function makeQueryTreeSchema<S extends Schema>(schema: S) {
-  const resourceNodes = <ResType extends keyof S["resources"]>(
-    resDef: S["resources"][ResType],
-  ) => ({
-      type: "object",
-      required: ["id"], // this may need to change if PG becomes responsible for generating IDs (likely)
-      properties: {
-        id: { type: "string", minLength: 1 },
-        ...mapObj(resDef.properties, (propDef) => ({
-          type: propDef.type,
-        })),
-        ...mapObj(resDef.relationships, (relDef) => (relDef.cardinality === "one"
-          ? {
-            oneOf: [
-              { $ref: `#/$defs/${relDef.relatedType}` },
-              { type: "null" },
-            ],
-          }
-          : { type: "array", items: { $ref: `#/$defs/${relDef.relatedType}` } }),
-        ),
-      },
-    });
+export function makeQueryTreeSchema(schema) {
+  const resourceNodes = (resDef) => ({
+    type: "object",
+    required: ["id"], // this may need to change if PG becomes responsible for generating IDs (likely)
+    properties: {
+      id: { type: "string", minLength: 1 },
+      ...mapObj(resDef.properties, (propDef) => ({
+        type: propDef.type,
+      })),
+      ...mapObj(resDef.relationships, (relDef) => (relDef.cardinality === "one"
+        ? {
+          oneOf: [
+            { $ref: `#/$defs/${relDef.relatedType}` },
+            { type: "null" },
+          ],
+        }
+        : { type: "array", items: { $ref: `#/$defs/${relDef.relatedType}` } }),
+      ),
+    },
+  });
 
   // these link the root query type to a root property type in the tree
   const resourceIfs = Object.keys(schema.resources).map((resType) => ({

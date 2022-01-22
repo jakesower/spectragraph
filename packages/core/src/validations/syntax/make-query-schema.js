@@ -1,25 +1,22 @@
 import { mapObj } from "@polygraph/utils";
-import { Schema } from "../../types";
 
-export function makeQuerySchema<S extends Schema>(schema: S) {
-  const resourceQuery = <RT extends keyof S["resources"]>(
-    resDef: S["resources"][RT],
-  ) => ({
-      type: "object",
+export function makeQuerySchema(schema) {
+  const resourceQuery = (resDef) => ({
+    type: "object",
+    properties: {
       properties: {
-        properties: {
-          type: "array",
-          items: { enum: Object.keys(resDef.properties) },
-        },
-        relationships: {
-          type: "object",
-          additionalProperties: false,
-          properties: mapObj(resDef.relationships, (relDef) => ({
-            $ref: `#/$defs/${relDef.relatedType}`,
-          })),
-        },
+        type: "array",
+        items: { enum: Object.keys(resDef.properties) },
       },
-    });
+      relationships: {
+        type: "object",
+        additionalProperties: false,
+        properties: mapObj(resDef.relationships, (relDef) => ({
+          $ref: `#/$defs/${relDef.relatedType}`,
+        })),
+      },
+    },
+  });
 
   const topIfs = Object.keys(schema.resources).map((resType) => ({
     if: {

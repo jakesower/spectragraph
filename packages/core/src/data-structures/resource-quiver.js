@@ -1,6 +1,3 @@
-import {
-  NormalResourceUpdate, ResourceRef, Schema,
-} from "../types";
 import { asArray, formatRef, setRelationships } from "../utils";
 import { makeRefKey } from "../utils/make-ref-key";
 import { makeQuiver } from "./quiver";
@@ -10,60 +7,20 @@ import { makeQuiver } from "./quiver";
  * inverses.
  */
 
-export interface ResourceQuiverBuilder<S extends Schema> {
-  // useful when constructing
-  assertResource: (
-    udpatedResource: NormalResourceUpdate<S, keyof S["resources"]>,
-    existingResource: NormalResourceUpdate<S, keyof S["resources"]> | null
-  ) => void;
-  retractResource: (resourceRef: ResourceRef<S, keyof S["resources"]>) => void;
-}
-
-type ReplacementRelationshipChanges<S extends Schema> = {
-  present: ResourceRef<S, keyof S["resources"]>[]
-};
-type DeltaRelationshipChanges<S extends Schema> = {
-  asserted?: ResourceRef<S, keyof S["resources"]>[],
-  retracted?: ResourceRef<S, keyof S["resources"]>[]
-};
-type RelationshipChanges<S extends Schema> = (
-  ReplacementRelationshipChanges<S> | DeltaRelationshipChanges<S>
-);
-
-export interface ResourceQuiverResult<S extends Schema> {
-  explicitResources: Set<string>;
-  getRelationshipChanges: (ref: ResourceRef<S, keyof S["resources"]>) => Record<string, RelationshipChanges<S>>;
-  getResources: () => Map<
-    ResourceRef<S, keyof S["resources"]>,
-    (null | ResourceRef<S, keyof S["resources"]> | NormalResourceUpdate<S, keyof S["resources"]>)
-  >;
-}
-
-export type ResourceQuiverFn<S extends Schema> = (
-  schema: S,
-  builderFn: (builderFns: ResourceQuiverBuilder<S>) => void
-) => ResourceQuiverResult<S>;
-
-export function makeResourceQuiver<S extends Schema>(
-  schema: S,
-  builderFn: (builder: ResourceQuiverBuilder<S>) => void,
-): ResourceQuiverResult<S> {
+export function makeResourceQuiver(schema, builderFn) {
   const quiver = makeQuiver();
-  const explicitResources = new Set<string>();
+  const explicitResources = new Set();
 
-  const inverseOf = <RT extends keyof S["resources"]>(resourceRef: ResourceRef<S, RT>, relName: string) => (
+  const inverseOf = (resourceRef, relName) => (
     schema.resources[resourceRef.type].relationships[relName].inverse
   );
 
-  const assertResource = <RT extends keyof S["resources"]>(
-    updatedResource: NormalResourceUpdate<S, RT>,
-    existingResource: NormalResourceUpdate<S, RT> | null,
-  ) => {
+  const assertResource = (updatedResource, existingResource) => {
     quiver.assertNode(updatedResource);
     explicitResources.add(makeRefKey(updatedResource));
 
     Object.keys(updatedResource.relationships || {})
-      .forEach((relKey: keyof S["resources"][RT]["relationships"] & string) => {
+      .forEach((relKey) => {
         const updatedRels = asArray(updatedResource.relationships[relKey]);
         const existingRels = existingResource
           ? asArray(existingResource.relationships[relKey])
@@ -88,7 +45,7 @@ export function makeResourceQuiver<S extends Schema>(
       });
   };
 
-  const retractResource = <RT extends keyof S["resources"]>(resource: NormalResourceUpdate<S, RT>) => {
+  const retractResource = (resource) => {
     if (!resource) {
       throw new Error(`Resources that do not exist cannot be deleted: ${formatRef(resource)}`);
     }

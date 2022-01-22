@@ -4,16 +4,14 @@ import { schema } from "../fixtures/care-bear-schema";
 import { makeMemoryStore } from "../../src/memory-store";
 import { careBearData } from "../fixtures/care-bear-data";
 
-type S = typeof schema;
-
 // Helper functions
-const test = anyTest as TestInterface<{ store: any }>;
+const test = anyTest;
 
 const resource = (
-  type: string,
-  id: string,
-  getRels = true,
-  overrides = {},
+  type,
+  id,
+  getRels,
+  overrides,
 ) => {
   const stored = careBearData[type][id];
   const resDef = schema.resources[type];
@@ -67,7 +65,7 @@ test("fetches a single resource with a single relationship", async (t) => {
     type: "bears",
     id: "1",
     relationships: { home: {} },
-  } as const;
+  };
 
   const result = await t.context.store.get(q);
 
@@ -86,7 +84,7 @@ test("fetches a single resource with a subset of properties", async (t) => {
     result,
     {
       id: "1", name: "Tenderheart Bear", fur_color: "tan",
-    } as typeof result,
+    },
   );
 });
 
@@ -96,7 +94,7 @@ test("fetches a single resource with a subset of properties on a relationship", 
     type: "bears",
     id: "1",
     relationships: { home: { properties: ["caring_meter"] } },
-  } as const;
+  };
 
   const result = await t.context.store.get(q);
 

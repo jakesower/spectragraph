@@ -1,23 +1,12 @@
 /* eslint-disable no-restricted-syntax, no-loop-func */
 
 import { mapObj } from "@polygraph/utils";
-import {
-  ExpandedSchema,
-  NormalStore,
-  NormalResource,
-  Schema,
-  ResourceRef,
-} from "../types";
-import { ResourceQuiverResult } from "../data-structures/resource-quiver";
 import { asArray, cardinalize, denormalizeResource } from "../utils";
 import { defaultResources as getDefaultResources } from "./default-resources";
 import { PolygraphError, PolygraphToOneValidationError } from "../validations/errors";
 import { makeRefKey } from "../utils/make-ref-key";
 
-function getReferencingResources<S extends Schema>(
-  quiver: ResourceQuiverResult<S>,
-  resRef: ResourceRef<S, any>,
-) {
+function getReferencingResources(quiver, resRef) {
   const targetKey = makeRefKey(resRef);
   const output = [];
 
@@ -32,7 +21,7 @@ function getReferencingResources<S extends Schema>(
       referencedRefs.forEach((referencedRef) => {
         const refKey = makeRefKey(referencedRef);
         if (refKey === targetKey) {
-          output.push(denormalizeResource(referencingRes as any));
+          output.push(denormalizeResource(referencingRes));
         }
       });
     });
@@ -41,21 +30,17 @@ function getReferencingResources<S extends Schema>(
   return output;
 }
 
-function makeEmptyUpdatesObj<S extends Schema>(schema: S): NormalStore<S> {
-  const output = {} as NormalStore<S>;
-  Object.keys(schema.resources).forEach((resType: keyof S["resources"]) => {
+function makeEmptyUpdatesObj(schema) {
+  const output = {};
+  Object.keys(schema.resources).forEach((resType) => {
     output[resType] = {};
   });
 
   return output;
 }
 
-function makeNewResource<S extends Schema, RT extends keyof S["resources"]>(
-  schema: S,
-  type: RT & string,
-  id: string,
-): NormalResource<S, RT> {
-  const expandedSchema = schema as ExpandedSchema<S>;
+function makeNewResource(schema, type, id) {
+  const expandedSchema = schema;
   const resDef = expandedSchema.resources[type];
   const properties = mapObj(
     resDef.properties,
@@ -68,16 +53,11 @@ function makeNewResource<S extends Schema, RT extends keyof S["resources"]>(
     id,
     properties,
     relationships,
-  } as NormalResource<S, RT>;
+  };
 }
 
-export async function validateAndExtractQuiver<S extends Schema>(
-  schema: S,
-  store: NormalStore<S>,
-  quiver: ResourceQuiverResult<S>,
-  resourceValidations,
-): Promise<NormalStore<S>> {
-  const updatedResources: any = makeEmptyUpdatesObj(schema);
+export async function validateAndExtractQuiver(schema, store, quiver, resourceValidations) {
+  const updatedResources = makeEmptyUpdatesObj(schema);
   const defaultResources = getDefaultResources(schema);
 
   for (const [ref, value] of quiver.getResources()) {
@@ -145,7 +125,7 @@ export async function validateAndExtractQuiver<S extends Schema>(
 
     const nextRes = {
       type, id, properties, relationships,
-    } as any;
+    };
 
     const validations = resourceValidations[type] ?? [];
     // eslint-disable-next-line no-await-in-loop

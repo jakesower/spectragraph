@@ -2,10 +2,7 @@ import test from "ava";
 import { omit, pick } from "@polygraph/utils";
 import { schema } from "../fixtures/care-bear-schema";
 import { queryTree } from "../../src/utils";
-import { NormalResource } from "../../src/types";
 import { careBearData } from "../fixtures/care-bear-data";
-
-type S = typeof schema;
 
 const bearsWithHomeQuery = {
   type: "bears",
@@ -13,7 +10,7 @@ const bearsWithHomeQuery = {
   relationships: {
     home: {},
   },
-} as const;
+};
 
 const deref = ({ type, id }) => careBearData[type][id];
 const normalize = (type, res, rels = null) => {

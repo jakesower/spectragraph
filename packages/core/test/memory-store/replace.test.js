@@ -1,16 +1,8 @@
-import anyTest, { TestInterface } from "ava";
+import anyTest from "ava";
 import { mapObj, pick } from "@polygraph/utils";
 import { schema } from "../fixtures/care-bear-schema";
-import { makeMemoryStore, MemoryStore } from "../../src/memory-store";
-import {
-  NormalResource,
-  Store,
-  Resource,
-} from "../../src/types";
+import { makeMemoryStore } from "../../src/memory-store";
 import { careBearData, grumpyBear } from "../fixtures/care-bear-data";
-import { denormalizeResource } from "../../src/utils";
-
-type S = typeof schema;
 
 const dataTree = (res, rels = null) => {
   const { id, type, properties } = res;
@@ -24,20 +16,7 @@ const dataTree = (res, rels = null) => {
   };
 };
 
-type PickRef = [keyof S["resources"], string];
-type PickRefWithOverrides = [
-  keyof S["resources"],
-  string,
-  null | {
-    properties?: Record<any, any>,
-    relationships?: Record<string, string | string[]>,
-    [k: string]: any,
-  },
-];
-
-type PickInput = PickRef | PickRefWithOverrides | Resource<S, any>;
-
-const pickResources = (resInputs: PickInput[]): Store<S> => {
+const pickResources = (resInputs) => {
   const subGraph = {
     bears: {}, companions: {}, homes: {}, powers: {},
   };
@@ -78,7 +57,7 @@ const pickResources = (resInputs: PickInput[]): Store<S> => {
   return subGraph;
 };
 
-const test = anyTest as TestInterface<{ store: MemoryStore<S> }>;
+const test = anyTest;
 
 test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign
@@ -234,7 +213,7 @@ test("replaces existing data completely given a new resource", async (t) => {
       home: { referencesOnly: true },
       powers: { referencesOnly: true },
     },
-  } as const;
+  };
 
   const replaceResult = await t.context.store.replaceMany(query, [grumpyBear]);
   const replaceExpected = pickResources([
@@ -263,7 +242,7 @@ test("replaces or keeps existing data given a new resources", async (t) => {
       home: { referencesOnly: true },
       powers: { referencesOnly: true },
     },
-  } as const;
+  };
 
   const replaceResult = await t.context.store.replaceMany(
     query,

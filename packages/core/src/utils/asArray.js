@@ -1,4 +1,4 @@
-export function asArray<T>(maybeArray: null | T | T[]): T[] {
+export function asArray(maybeArray) {
   return !maybeArray
     ? []
     : Array.isArray(maybeArray)
