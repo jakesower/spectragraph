@@ -1,5 +1,5 @@
-import { typeValidations } from "../validations/type-validations";
-import { PolygraphError } from "../validations/errors";
+import { typeValidations } from "../validations/type-validations.mjs";
+import { PolygraphError } from "../validations/errors.mjs";
 
 function withRootData(schema, fullDataTree) {
   const internalQueryTree = (query, dataTree, path) => {

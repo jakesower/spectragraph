@@ -1,4 +1,4 @@
-import { schema } from "./care-bear-schema";
+import { schema } from "./care-bear-schema.mjs";
 
 export const careBearData = {
   bears: {
