@@ -1,11 +1,8 @@
-import anyTest, { TestInterface } from "ava";
+import test from "ava";
 import { pick } from "@polygraph/utils";
-import { schema } from "../fixtures/care-bear-schema";
-import { makeMemoryStore } from "../../src/memory-store";
-import { careBearData } from "../fixtures/care-bear-data";
-
-// Helper functions
-const test = anyTest;
+import { schema } from "../fixtures/care-bear-schema.mjs";
+import { makeMemoryStore } from "../../src/memory-store/index.mjs";
+import { careBearData } from "../fixtures/care-bear-data.mjs";
 
 const resource = (
   type,
@@ -35,7 +32,7 @@ test.beforeEach(async (t) => {
 
 // Actual Tests
 
-test("fetches a single resource", async (t) => {
+test.only("fetches a single resource", async (t) => {
   const result = await t.context.store.get({ type: "bears", id: "1" });
 
   t.deepEqual(result, resource("bears", "1"));

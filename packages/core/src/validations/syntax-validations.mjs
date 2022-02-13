@@ -1,6 +1,6 @@
 import Ajv from "ajv";
-import { makeQuerySchema } from "./syntax/make-query-schema";
-import { makeQueryTreeSchema } from "./syntax/make-query-tree-schema";
+import { makeQuerySchema } from "./syntax/make-query-schema.mjs";
+import { makeQueryTreeSchema } from "./syntax/make-query-tree-schema.mjs";
 
 export function syntaxValidations(schema) {
   const querySchema = makeQuerySchema(schema);
