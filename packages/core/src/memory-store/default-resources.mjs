@@ -1,5 +1,5 @@
 import { mapObj } from "@polygraph/utils";
-import { cardinalize } from "../utils";
+import { cardinalize } from "../utils/index.mjs";
 
 let cachedKey;
 let cachedVal;

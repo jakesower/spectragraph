@@ -1,7 +1,7 @@
 import test from "ava";
-import { schema } from "../fixtures/care-bear-schema";
-import { careBearData, grumpyBear } from "../fixtures/care-bear-data";
-import { makeMemoryStore } from "../../src/memory-store";
+import { schema } from "../fixtures/care-bear-schema.mjs";
+import { careBearData, grumpyBear } from "../fixtures/care-bear-data.mjs";
+import { makeMemoryStore } from "../../src/memory-store.mjs";
 
 const makeStore = async (overrides = {}, dataOverrides = {}) => {
   const store = await makeMemoryStore(schema, {

@@ -3,13 +3,13 @@
 import {
   forEachObj, groupBy, mapObj, partition, pick,
 } from "@polygraph/utils";
-import { makeResourceQuiver } from "../data-structures/resource-quiver";
+import { makeResourceQuiver } from "../data-structures/resource-quiver.mjs";
 import {
   asArray, cardinalize, denormalizeResource, normalizeResource, queryTree,
-} from "../utils";
-import { PolygraphGetQuerySyntaxError, PolygraphReplaceSyntaxError } from "../validations/errors";
-import { syntaxValidations as syntaxValidationsForSchema } from "../validations/syntax-validations";
-import { validateAndExtractQuiver } from "./validate-and-extract-quiver";
+} from "../utils/index.mjs";
+import { PolygraphGetQuerySyntaxError, PolygraphReplaceSyntaxError } from "../validations/errors.mjs";
+import { syntaxValidations as syntaxValidationsForSchema } from "../validations/syntax-validations.mjs";
+import { validateAndExtractQuiver } from "./validate-and-extract-quiver.mjs";
 
 /**
  * TODO:

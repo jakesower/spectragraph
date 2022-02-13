@@ -1,6 +1,6 @@
-import { asArray, formatRef, setRelationships } from "../utils";
-import { makeRefKey } from "../utils/make-ref-key";
-import { makeQuiver } from "./quiver";
+import { asArray, formatRef, setRelationships } from "../utils/index.mjs";
+import { makeRefKey } from "../utils/make-ref-key.mjs";
+import { makeQuiver } from "./quiver.mjs";
 
 /**
  * This wraps a generic quiver. It is aware of the schema and resources in order to calculate

@@ -1,6 +1,6 @@
 import { mapObj } from "@polygraph/utils";
-import { typeValidations } from "../validations/type-validations";
-import { PolygraphError } from "../validations/errors";
+import { typeValidations } from "../validations/type-validations.mjs";
+import { PolygraphError } from "../validations/errors.mjs";
 
 export function normalizeResource(schema, resourceType, resource) {
   const schemaDef = schema.resources[resourceType];

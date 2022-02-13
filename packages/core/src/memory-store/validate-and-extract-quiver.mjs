@@ -1,10 +1,10 @@
 /* eslint-disable no-restricted-syntax, no-loop-func */
 
 import { mapObj } from "@polygraph/utils";
-import { asArray, cardinalize, denormalizeResource } from "../utils";
-import { defaultResources as getDefaultResources } from "./default-resources";
-import { PolygraphError, PolygraphToOneValidationError } from "../validations/errors";
-import { makeRefKey } from "../utils/make-ref-key";
+import { asArray, cardinalize, denormalizeResource } from "../utils/index.mjs";
+import { defaultResources as getDefaultResources } from "./default-resources.mjs";
+import { PolygraphError, PolygraphToOneValidationError } from "../validations/errors.mjs";
+import { makeRefKey } from "../utils/make-ref-key.mjs";
 
 function getReferencingResources(quiver, resRef) {
   const targetKey = makeRefKey(resRef);

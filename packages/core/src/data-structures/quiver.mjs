@@ -1,5 +1,5 @@
-import { difference } from "@polygraph/utils/dist/sets";
-import { formatRef } from "../utils";
+import { difference } from "@polygraph/utils/sets";
+import { formatRef } from "../utils/index.mjs";
 
 /**
  * The point of this quiver is to detect internal inconsistencies from nodes
