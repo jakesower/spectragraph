@@ -7,7 +7,7 @@ import { careBearData } from "../fixtures/care-bear-data.mjs";
 const bearsWithHomeQuery = {
   type: "bears",
   id: "1",
-  relationships: {
+  subQueries: {
     home: {},
   },
 };
@@ -29,20 +29,19 @@ const bearWithHomeAndPowersTree = {
   id: "1",
   name: tenderheart.name,
   belly_badge: tenderheart.belly_badge,
+  fur_color: "tan",
+  year_introduced: 1982,
   home: deref(tenderheart.home),
   powers: tenderheart.powers.map(deref),
   best_friend: null,
 };
 
-test("considers all present fields when the query doesn't specify", async (t) => {
+test("considers no fields when the query doesn't specify", async (t) => {
   const qt = queryTree(schema, { type: "bears", id: "1" }, bearWithHomeAndPowersTree);
   const expected = {
     ...normalize("bears", tenderheart),
-    properties: {
-      name: tenderheart.name,
-      belly_badge: tenderheart.belly_badge,
-    },
-    relationships: {},
+    properties: {},
+    subQueries: {},
   };
 
   t.deepEqual(qt.rootResource, expected);
@@ -62,7 +61,16 @@ test("only considers properties included in the query, when specified", async (t
   const expected = {
     ...normalize("bears", tenderheart),
     properties: pick(tenderheart, ["name"]),
-    relationships: {},
+    subQueries: {},
+  };
+
+  t.deepEqual(qt.rootResource, expected);
+});
+
+test("considers all fields when the query requests them", async (t) => {
+  const qt = queryTree(schema, { type: "bears", id: "1", allProperties: true }, bearWithHomeAndPowersTree);
+  const expected = {
+    ...normalize("bears", tenderheart, {}),
   };
 
   t.deepEqual(qt.rootResource, expected);
@@ -88,7 +96,7 @@ test("gathers no properties when key is empty array", async (t) => {
   t.deepEqual(qt.rootResource, expected);
 });
 
-test("only considers properties included in the both the query and the tree", async (t) => {
+test.only("only considers properties included in the both the query and the tree", async (t) => {
   const qt = queryTree(
     schema,
     {
@@ -102,29 +110,29 @@ test("only considers properties included in the both the query and the tree", as
   const expected = {
     ...normalize("bears", tenderheart),
     properties: { belly_badge: tenderheart.belly_badge },
-    relationships: {},
+    subQueries: {},
   };
 
   t.deepEqual(qt.rootResource, expected);
 });
 
-test("omits relationships when empty object is provided", async (t) => {
+test("omits subQueries when empty object is provided", async (t) => {
   const qt = queryTree(schema, bearsWithHomeQuery, bearWithHomeAndPowersTree);
   const expected = {
     ...normalize("bears", tenderheart),
     properties: pick(tenderheart, ["name", "belly_badge"]),
-    relationships: pick(tenderheart, ["home"]),
+    subQueries: pick(tenderheart, ["home"]),
   };
 
   t.deepEqual(qt.rootResource, expected);
 });
 
-test("only considers relationships included in the query, when specified", async (t) => {
-  const qt = queryTree(schema, { type: "bears", id: "1", relationships: {} }, bearWithHomeAndPowersTree);
+test("only considers subQueries included in the query, when specified", async (t) => {
+  const qt = queryTree(schema, { type: "bears", id: "1", subQueries: {} }, bearWithHomeAndPowersTree);
   const expected = {
     ...normalize("bears", tenderheart),
     properties: pick(tenderheart, ["name", "belly_badge"]),
-    relationships: {},
+    subQueries: {},
   };
 
   t.deepEqual(qt.rootResource, expected);
@@ -140,7 +148,7 @@ test("finds descendants properly", async (t) => {
     best_friend: null,
     powers: tenderheart.powers.map((power) => ({
       ...deref({ type: "powers", id: power.id }),
-      relationships: {
+      subQueries: {
         ...deref({ type: "powers", id: power.id }),
         bears: careBearData.powers[power.id].bears.map(deref),
       },
@@ -152,7 +160,7 @@ test("finds descendants properly", async (t) => {
     {
       type: "bears",
       id: "1",
-      relationships: { home: {}, powers: {}, best_friend: {} },
+      subQueries: { home: {}, powers: {}, best_friend: {} },
     },
     tree,
   );

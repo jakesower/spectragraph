@@ -1,10 +1,11 @@
 /* eslint-disable no-restricted-syntax, no-loop-func */
 
 import { mapObj } from "@polygraph/utils";
-import { asArray, cardinalize, denormalizeResource } from "../utils/index.mjs";
-import { defaultResources as getDefaultResources } from "./default-resources.mjs";
+import { asArray, cardinalize, denormalizeResource } from "../utils/utils.mjs";
 import { PolygraphError, PolygraphToOneValidationError } from "../validations/errors.mjs";
 import { makeRefKey } from "../utils/make-ref-key.mjs";
+import { typeValidations } from "../validations/type-validations.mjs";
+import { ERRORS } from "../strings.mjs";
 
 function getReferencingResources(quiver, resRef) {
   const targetKey = makeRefKey(resRef);
@@ -40,8 +41,7 @@ function makeEmptyUpdatesObj(schema) {
 }
 
 function makeNewResource(schema, type, id) {
-  const expandedSchema = schema;
-  const resDef = expandedSchema.resources[type];
+  const resDef = schema.resources[type];
   const properties = mapObj(
     resDef.properties,
     (prop) => prop.default ?? undefined,
@@ -58,7 +58,6 @@ function makeNewResource(schema, type, id) {
 
 export async function validateAndExtractQuiver(schema, store, quiver, resourceValidations) {
   const updatedResources = makeEmptyUpdatesObj(schema);
-  const defaultResources = getDefaultResources(schema);
 
   for (const [ref, value] of quiver.getResources()) {
     const { type, id } = ref;
@@ -82,17 +81,38 @@ export async function validateAndExtractQuiver(schema, store, quiver, resourceVa
     const existingOrNewRes = store[type][id] ?? makeNewResource(schema, type, id);
     const existingOrNewProps = existingOrNewRes.properties;
     const existingOrNewRels = existingOrNewRes.relationships;
+    const isNewResource = !store[type][id];
 
-    const properties = ("properties" in value)
-      ? mapObj(
-        existingOrNewProps,
-        (existingProp, propKey) => value.properties[propKey] ?? existingProp,
-      )
-      : defaultResources[type].properties;
+    const updatedProperties = value.properties ?? {};
 
-    // console.log({ ref, properties, value, existingOrNewProps })
+    const properties = mapObj(
+      existingOrNewProps,
+      (existingProp, propKey) => {
+        const prop = updatedProperties[propKey] ?? existingProp;
+        const propDef = resDef.properties[propKey];
+        const optionalAndMissing = propDef.optional && prop == null;
 
-    // need a way to detect resources that were merely referenced rather than asserted
+        if (!optionalAndMissing && !typeValidations[propDef.type](prop)) {
+          if (isNewResource && !(propKey in updatedProperties)) {
+            const missingRequiredProperties = Object.entries(resDef.properties)
+              .filter(([checkPropName, checkPropDef]) => !checkPropDef.optional
+                && !("default" in checkPropDef)
+                && !(checkPropName in updatedProperties));
+
+            throw new PolygraphError(
+              ERRORS.QUERY_MISSING_CREATE_FIELDS,
+              { updatedProperties, missingRequiredProperties },
+            );
+          }
+
+          throw new PolygraphError(
+            ERRORS.INVALID_PROPS,
+            { prop, expectedType: propDef.type },
+          );
+        }
+        return prop;
+      },
+    );
 
     const relationships = {};
     const updatedRels = quiver.getRelationshipChanges(ref);

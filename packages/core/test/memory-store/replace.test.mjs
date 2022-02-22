@@ -1,63 +1,10 @@
-import anyTest from "ava";
-import { mapObj, pick } from "@polygraph/utils";
-import { schema } from "../fixtures/care-bear-schema";
-import { makeMemoryStore } from "../../src/memory-store";
-import { careBearData, grumpyBear } from "../fixtures/care-bear-data";
-
-const dataTree = (res, rels = null) => {
-  const { id, type, properties } = res;
-  const resSchemaDef = schema.resources[type];
-
-  const allRels = rels || Object.keys(resSchemaDef.relationships);
-  return {
-    id,
-    ...properties,
-    ...pick(res.relationships, allRels),
-  };
-};
-
-const pickResources = (resInputs) => {
-  const subGraph = {
-    bears: {}, companions: {}, homes: {}, powers: {},
-  };
-
-  resInputs.forEach((input) => {
-    if (!Array.isArray(input)) {
-      subGraph[input.type][input.id] = input;
-    } else {
-      const [type, id, overrides = {}] = input;
-      const relKeys = Object.keys(schema.resources[type].relationships);
-
-      if (overrides === null) {
-        subGraph[type][id] = null;
-      } else {
-        const base = careBearData[type][id] ?? {};
-        const overrideRels = mapObj(
-          pick(overrides || {}, relKeys),
-          (relIds, relType) => {
-            const resDef = schema.resources[type].relationships[relType];
-            const toRef = (idOrRef) => ((typeof idOrRef === "string")
-              ? { type: resDef.relatedType, id: idOrRef }
-              : idOrRef);
-            return Array.isArray(relIds)
-              ? relIds.map(toRef)
-              : toRef(relIds);
-          },
-        );
-
-        subGraph[type][id] = {
-          ...base,
-          ...overrides,
-          ...overrideRels,
-        };
-      }
-    }
-  });
-
-  return subGraph;
-};
-
-const test = anyTest;
+import test from "ava";
+import { forEachObj, mapObj } from "@polygraph/utils";
+import { schema } from "../fixtures/care-bear-schema.mjs";
+import { makeMemoryStore } from "../../src/memory-store/memory-store.mjs";
+import { careBearData, grumpyBear } from "../fixtures/care-bear-data.mjs";
+import { ERRORS } from "../../src/strings.mjs";
+import { PolygraphError } from "../../src/validations/errors.mjs";
 
 test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign
@@ -65,11 +12,21 @@ test.beforeEach(async (t) => {
   // console.log("\n\n\nmade store\n\n\n");
 });
 
+const emptyStore = mapObj(schema.resources, () => ({}));
+
+function makeSubGraph(subGraph) {
+  const out = mapObj(schema.resources, () => ({}));
+  forEachObj(subGraph, (subRess, resType) => { out[resType] = subRess; });
+  return out;
+}
+
+const toRef = (type) => (id) => ({ type, id });
+
 // ----Properties----------------------------------------------------------------------------------
 
 test("uses defaults when creating a resource missing the property", async (t) => {
   const createResult = await t.context.store.replaceOne(
-    { type: "companions", id: "nobody" },
+    { type: "companions", id: "nobody", allProperties: true },
     { type: "companions", id: "nobody", name: "Friend" },
   );
   const createExpected = {
@@ -86,7 +43,7 @@ test("uses defaults when creating a resource missing the property", async (t) =>
 
 test("does not use defaults when creating a resource has the property", async (t) => {
   const createResult = await t.context.store.replaceOne(
-    { type: "companions", id: "nobody" },
+    { type: "companions", id: "nobody", allProperties: true },
     {
       type: "companions", id: "nobody", name: "Friend", recurs: true,
     },
@@ -120,27 +77,74 @@ test("does not fail when creating a resource without an optional property", asyn
   t.like(createResult, createExpected);
 });
 
-test("replaces a property", async (t) => {
+// might replace the next one--the goal is to check that the query itself can't be used to create a resource
+test.todo("fails to create a resource that doesn't have a required field in the query");
+
+test("fails to create a resource that doesn't have a required field in the tree", async (t) => {
+  await t.throwsAsync(async () => {
+    const replaceResult = await t.context.store.replaceOne(
+      { type: "bears", id: "4" },
+      grumpyBear,
+    );
+    console.log(replaceResult);
+  }, { instanceOf: PolygraphError, message: ERRORS.QUERY_MISSING_CREATE_FIELDS });
+});
+
+test("replaces a property when part of the query", async (t) => {
+  const replaceResult = await t.context.store.replaceOne(
+    { type: "bears", id: "5", properties: ["fur_color"] },
+    { id: "5", fur_color: "brink pink" },
+  );
+  const replaceExpected = {
+    ...emptyStore,
+    bears: {
+      5: {
+        ...careBearData.bears[5],
+        fur_color: "brink pink",
+      },
+    },
+  };
+
+  t.deepEqual(replaceResult, replaceExpected);
+});
+
+test("replaces a property if allProperties is specified", async (t) => {
+  const replaceResult = await t.context.store.replaceOne(
+    { type: "bears", id: "5", allProperties: true },
+    { id: "5", fur_color: "brink pink" },
+  );
+  const replaceExpected = {
+    ...emptyStore,
+    bears: {
+      5: {
+        ...careBearData.bears[5],
+        fur_color: "brink pink",
+      },
+    },
+  };
+
+  t.deepEqual(replaceResult, replaceExpected);
+});
+
+test("does not replace a property if the property is not specified", async (t) => {
   const replaceResult = await t.context.store.replaceOne(
     { type: "bears", id: "5" },
     { id: "5", fur_color: "brink pink" },
   );
-  const replaceExpected = pickResources([
-    ["bears", "5", { fur_color: "brink pink" }],
-  ]);
+  const replaceExpected = { ...emptyStore, bears: { 5: careBearData.bears[5] } };
 
   t.deepEqual(replaceResult, replaceExpected);
 });
 
 test("keeps values with default when replacing other properties", async (t) => {
   await t.context.store.replaceOne(
-    { type: "companions", id: "nobody" },
+    { type: "companions", id: "nobody", allProperties: true },
     {
       type: "companions", id: "nobody", name: "Alice", recurs: true,
     },
   );
   const replaceResult = await t.context.store.replaceOne(
-    { type: "companions", id: "nobody" },
+    { type: "companions", id: "nobody", allProperties: true },
     { type: "companions", id: "nobody", name: "Bob" },
   );
   const replaceExpected = {
@@ -157,41 +161,29 @@ test("keeps values with default when replacing other properties", async (t) => {
 
 test("replaces a property deep in the graph", async (t) => {
   const replaceResult = await t.context.store.replaceOne(
-    { type: "bears", id: "1", relationships: { home: {} } },
+    { type: "bears", id: "1", subQueries: { home: { allProperties: true } } },
     { type: "bears", id: "1", home: { id: "1", caring_meter: 0.4 } },
   );
 
-  const replaceExpected = pickResources([
-    ["bears", "1"],
-    ["homes", "1", { caring_meter: 0.4 }],
-  ]);
-
-  t.deepEqual(replaceResult, replaceExpected);
-});
-
-test("creates a relationship and replaces a property deep in the graph", async (t) => {
-  const replaceResult = await t.context.store.replaceOne(
-    { type: "bears", id: "5", relationships: { home: {} } },
-    { type: "bears", id: "5", home: { id: "1", caring_meter: 0.3 } },
-  );
-
-  const replaceExpected = pickResources([
-    ["bears", "5", { home: "1" }],
-    ["homes", "1", { caring_meter: 0.3, bears: ["1", "2", "3", "5"] }],
-  ]);
+  const replaceExpected = {
+    ...emptyStore,
+    bears: { 1: careBearData.bears[1] },
+    homes: { 1: { ...careBearData.homes[1], caring_meter: 0.4 } },
+  };
 
   t.deepEqual(replaceResult, replaceExpected);
 });
 
 test("resources can have properties named type that can be updated", async (t) => {
   const replaceResult = await t.context.store.replaceOne(
-    { type: "powers", id: "careBearStare" },
+    { type: "powers", id: "careBearStare", properties: ["type"] },
     { id: "careBearStare", type: "bear power" },
   );
 
-  const replaceExpected = pickResources([
-    ["powers", "careBearStare", { type: "bear power" }],
-  ]);
+  const replaceExpected = {
+    ...emptyStore,
+    powers: { careBearStare: { ...careBearData.powers.careBearStare, type: "bear power" } },
+  };
 
   t.deepEqual(replaceResult, replaceExpected);
 
@@ -200,7 +192,7 @@ test("resources can have properties named type that can be updated", async (t) =
     id: "careBearStare",
   });
 
-  const expectedRes = { ...careBearData.powers.careBearStare, type: "bear power" };
+  const expectedRes = { id: "careBearStare" };
   t.deepEqual(getResult, expectedRes);
 });
 
@@ -209,22 +201,30 @@ test("resources can have properties named type that can be updated", async (t) =
 test("replaces existing data completely given a new resource", async (t) => {
   const query = {
     type: "bears",
-    relationships: {
-      home: { referencesOnly: true },
-      powers: { referencesOnly: true },
+    allProperties: true,
+    subQueries: {
+      home: {},
+      powers: {},
     },
   };
 
   const replaceResult = await t.context.store.replaceMany(query, [grumpyBear]);
-  const replaceExpected = pickResources([
-    ["bears", "1", null],
-    ["bears", "2", null],
-    ["bears", "3", null],
-    ["bears", "4", grumpyBear],
-    ["bears", "5", null],
-    ["homes", "1", { bears: ["4"] }],
-    ["powers", "careBearStare", { bears: ["4"] }],
-  ]);
+  const replaceExpected = {
+    ...emptyStore,
+    bears: {
+      1: null,
+      2: null,
+      3: null,
+      4: grumpyBear,
+      5: null,
+    },
+    homes: {
+      1: { ...careBearData.homes[1], bears: [{ type: "bears", id: "4" }] },
+    },
+    powers: {
+      careBearStare: { ...careBearData.powers.careBearStare, bears: [{ type: "bears", id: "4" }] },
+    },
+  };
 
   t.deepEqual(replaceResult, replaceExpected);
 
@@ -232,15 +232,16 @@ test("replaces existing data completely given a new resource", async (t) => {
     type: "bears",
   });
 
-  t.deepEqual(getResult, [grumpyBear]);
+  t.deepEqual(getResult, [{ id: "4" }]);
 });
 
 test("replaces or keeps existing data given a new resources", async (t) => {
   const query = {
     type: "bears",
-    relationships: {
-      home: { referencesOnly: true },
-      powers: { referencesOnly: true },
+    allProperties: true,
+    subQueries: {
+      home: {},
+      powers: {},
     },
   };
 
@@ -248,22 +249,29 @@ test("replaces or keeps existing data given a new resources", async (t) => {
     query,
     [grumpyBear, careBearData.bears["1"]],
   );
-  const replaceExpected = pickResources([
-    ["bears", "1"],
-    ["bears", "2", null],
-    ["bears", "3", null],
-    ["bears", "4", grumpyBear],
-    ["bears", "5", null],
-    ["homes", "1", { bears: ["1", "4"] }],
-    ["powers", "careBearStare", { bears: ["1", "4"] }],
-  ]);
+  const replaceExpected = {
+    ...emptyStore,
+    bears: {
+      1: careBearData.bears["1"],
+      2: null,
+      3: null,
+      4: grumpyBear,
+      5: null,
+    },
+    homes: {
+      1: { ...careBearData.homes[1], bears: ["1", "4"].map(toRef("bears")) },
+    },
+    powers: {
+      careBearStare: { ...careBearData.powers.careBearStare, bears: ["1", "4"].map(toRef("bears")) },
+    },
+  };
 
   t.deepEqual(replaceResult, replaceExpected);
 
   const getResult = await t.context.store.get({
     type: "bears",
   });
-  t.deepEqual(getResult, [careBearData.bears["1"], grumpyBear]);
+  t.deepEqual(getResult, [{ id: "1" }, { id: "4" }]);
 });
 
 // ----Relationships-------------------------------------------------------------------------------
@@ -273,23 +281,28 @@ test("replaces a one-to-one relationship", async (t) => {
     {
       type: "bears",
       id: "2",
-      relationships: { home: {} },
+      subQueries: { home: {} },
     },
     { id: "2", home: { type: "homes", id: "2" } },
   );
 
-  const replaceExpected = pickResources([
-    ["bears", "2", { home: "2" }],
-    ["homes", "1", { bears: ["1", "3"] }],
-    ["homes", "2", { bears: ["2"] }],
-  ]);
+  const replaceExpected = {
+    ...emptyStore,
+    bears: {
+      2: { ...careBearData.bears[2], home: { type: "homes", id: "2" } },
+    },
+    homes: {
+      1: { ...careBearData.homes[1], bears: ["1", "3"].map(toRef("bears")) },
+      2: { ...careBearData.homes[2], bears: ["2"].map(toRef("bears")) },
+    },
+  };
   t.deepEqual(replaceResult, replaceExpected);
 
   const bearResult = await t.context.store.get({
     type: "bears",
     id: "2",
     properties: ["belly_badge"],
-    relationships: { home: {} },
+    subQueries: { home: { properties: ["name"] } },
   });
 
   t.is(bearResult.home.name, "Forest of Feelings");
@@ -297,7 +310,7 @@ test("replaces a one-to-one relationship", async (t) => {
   const careALotResult = await t.context.store.get({
     type: "homes",
     id: "1",
-    relationships: { bears: {} },
+    subQueries: { bears: {} },
   });
 
   t.is(careALotResult.bears.length, 2);
@@ -305,7 +318,7 @@ test("replaces a one-to-one relationship", async (t) => {
 
 test("replaces a one-to-many-relationship", async (t) => {
   await t.context.store.replaceOne(
-    { type: "homes", id: "1", relationships: { bears: { referencesOnly: true } } },
+    { type: "homes", id: "1", subQueries: { bears: {} } },
     {
       type: "homes",
       id: "1",
@@ -316,7 +329,7 @@ test("replaces a one-to-many-relationship", async (t) => {
   const bearResult = await t.context.store.get({
     type: "bears",
     id: "2",
-    relationships: { home: {} },
+    subQueries: { home: {} },
   });
 
   t.is(bearResult.home, null);
@@ -324,7 +337,7 @@ test("replaces a one-to-many-relationship", async (t) => {
   const smartHeartResult = await t.context.store.get({
     type: "bears",
     id: "5",
-    relationships: { home: {} },
+    subQueries: { home: { properties: ["name"] } },
   });
 
   t.is(smartHeartResult.home.name, "Care-a-Lot");
@@ -332,8 +345,29 @@ test("replaces a one-to-many-relationship", async (t) => {
   const careALotResult = await t.context.store.get({
     type: "homes",
     id: "1",
-    relationships: { bears: {} },
+    subQueries: { bears: {} },
   });
 
   t.is(careALotResult.bears.length, 2);
+});
+
+test("creates a relationship and replaces a property deep in the graph", async (t) => {
+  const replaceResult = await t.context.store.replaceOne(
+    { type: "bears", id: "5", subQueries: { home: { properties: ["caring_meter"] } } },
+    { type: "bears", id: "5", home: { id: "1", caring_meter: 0.3 } },
+  );
+
+  const replaceExpected = {
+    ...emptyStore,
+    bears: { 5: { ...careBearData.bears[5], home: { type: "homes", id: "1" } } },
+    homes: {
+      1: {
+        ...careBearData.homes[1],
+        bears: ["1", "2", "3", "5"].map(toRef("bears")),
+        caring_meter: 0.3,
+      },
+    },
+  };
+
+  t.deepEqual(replaceResult, replaceExpected);
 });

@@ -1,13 +1,15 @@
 /* eslint-disable max-len, no-use-before-define */
 
 import {
-  forEachObj, groupBy, mapObj, partition, pick,
+  forEachObj, groupBy, mapObj, pick,
 } from "@polygraph/utils";
 import { makeResourceQuiver } from "../data-structures/resource-quiver.mjs";
+import { ERRORS } from "../strings.mjs";
 import {
-  asArray, cardinalize, denormalizeResource, normalizeResource, queryTree,
-} from "../utils/index.mjs";
-import { PolygraphGetQuerySyntaxError, PolygraphReplaceSyntaxError } from "../validations/errors.mjs";
+  denormalizeResource, multiApply, normalizeResource, queryTree,
+} from "../utils/utils.mjs";
+import { normalizeQuery } from "../utils/normalize-query.mjs";
+import { PolygraphError, PolygraphGetQuerySyntaxError, PolygraphReplaceSyntaxError } from "../validations/errors.mjs";
 import { syntaxValidations as syntaxValidationsForSchema } from "../validations/syntax-validations.mjs";
 import { validateAndExtractQuiver } from "./validate-and-extract-quiver.mjs";
 
@@ -29,6 +31,8 @@ export async function makeMemoryStore(schema, options = {}) {
   const syntaxValidations = syntaxValidationsForSchema(schema);
   const customValidations = options.validations ?? [];
   const resourceValidations = groupBy(customValidations, (v) => v.resourceType);
+
+  const deref = (ref) => store[ref.type][ref.id];
 
   const applyQuiver = async (quiver) => {
     const data = await validateAndExtractQuiver(schema, store, quiver, resourceValidations);
@@ -71,48 +75,24 @@ export async function makeMemoryStore(schema, options = {}) {
     return applyQuiver(quiver);
   };
 
-  const buildTree = (query, resource) => {
-    const schemaResDef = schema.resources[query.type];
-    const schemaPropKeys = Object.keys(schemaResDef.properties);
-    const schemaRelKeys = Object.keys(schemaResDef.relationships);
-    const propKeys = query.properties ?? schemaPropKeys;
-    const [refRelKeys, nestedRelKeys] = query.relationships
-      ? partition(
-        Object.keys(query.relationships),
-        (relKey) => query.relationships[relKey].referencesOnly,
-      )
-      : [schemaRelKeys, []];
-
-    const relsToRefs = pick(resource.relationships, refRelKeys);
-    const relsToExpand = pick(resource.relationships, nestedRelKeys);
-
-    const expandedRels = mapObj(
-      relsToExpand,
-      (relRef, relKey) => {
-        const relDef = schemaResDef.relationships[relKey];
-        const subResourceRefs = asArray(resource.relationships[relKey]);
-        const subRel = query.relationships[relKey];
-        const subQuery = { ...subRel, type: relDef.relatedType };
-        const subTrees = subResourceRefs.map((subResRef) => {
-          const subRes = store[subResRef.type][subResRef.id];
-          return buildTree(subQuery, subRes);
-        });
-        return cardinalize(subTrees, relDef);
-      });
+  const buildTree = (query, normalResource) => {
+    const resource = denormalizeResource(normalResource);
+    const properties = pick(resource, query.properties);
+    const relationships = mapObj(query.relationships,
+      (subQuery, relKey) => multiApply(
+        resource[relKey],
+        (rel) => buildTree(subQuery, deref(rel)),
+      ),
+    );
 
     return {
       id: resource.id,
-      ...pick(resource.properties, propKeys),
-      ...relsToRefs,
-      ...expandedRels,
+      ...properties,
+      ...relationships,
     };
   };
 
   const getOne = async (query) => {
-    if (!syntaxValidations.querySyntax(query)) {
-      throw new PolygraphGetQuerySyntaxError(query, syntaxValidations.querySyntax.errors);
-    }
-
     const out = store[query.type][query.id]
       ? buildTree(query, store[query.type][query.id])
       : null;
@@ -127,11 +107,17 @@ export async function makeMemoryStore(schema, options = {}) {
     return Promise.resolve(out);
   };
 
-  const get = (query) => (
-    ("id" in query)
-      ? getOne(query)
-      : getMany(query)
-  );
+  const get = (query) => {
+    if (!syntaxValidations.querySyntax(query)) {
+      throw new PolygraphError(ERRORS.INVALID_GET_QUERY_SYNTAX, {
+        query,
+        schemaErrors: syntaxValidations.querySyntax.errors,
+      });
+    }
+
+    const normalQuery = normalizeQuery(schema, query);
+    return ("id" in query) ? getOne(normalQuery) : getMany(normalQuery);
+  };
 
   const replaceMany = async (query, trees) => {
     const seenRootResourceIds = new Set();

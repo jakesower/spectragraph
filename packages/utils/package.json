@@ -8,6 +8,7 @@
   },
   "exports": {
     ".": "./src/index.mjs",
+    "./arrays": "./src/arrays/index.mjs",
     "./sets": "./src/sets/index.mjs"
   },
   "keywords": [],

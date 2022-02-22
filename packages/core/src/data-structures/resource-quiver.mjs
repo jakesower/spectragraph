@@ -1,10 +1,10 @@
-import { asArray, formatRef, setRelationships } from "../utils/index.mjs";
+import { asArray, formatRef, subsetsOfSets } from "../utils/utils.mjs";
 import { makeRefKey } from "../utils/make-ref-key.mjs";
 import { makeQuiver } from "./quiver.mjs";
 
 /**
  * This wraps a generic quiver. It is aware of the schema and resources in order to calculate
- * inverses.
+ * inverses
  */
 
 export function makeResourceQuiver(schema, builderFn) {
@@ -19,13 +19,15 @@ export function makeResourceQuiver(schema, builderFn) {
     quiver.assertNode(updatedResource);
     explicitResources.add(makeRefKey(updatedResource));
 
-    Object.keys(updatedResource.relationships || {})
+    Object.keys(updatedResource.relationships ?? {})
       .forEach((relKey) => {
-        const updatedRels = asArray(updatedResource.relationships[relKey]);
+        const schemaRelDef = schema.resources[updatedResource.type].relationships[relKey];
+        const updatedRels = asArray(updatedResource.relationships[relKey])
+          .map(({ id }) => ({ id, type: schemaRelDef.relatedType }));
         const existingRels = existingResource
           ? asArray(existingResource.relationships[relKey])
           : [];
-        const deltas = setRelationships(updatedRels, existingRels, (x) => x.id);
+        const deltas = subsetsOfSets(updatedRels, existingRels, (x) => x.id);
 
         quiver.assertArrowGroup(updatedResource, updatedRels, relKey);
 
