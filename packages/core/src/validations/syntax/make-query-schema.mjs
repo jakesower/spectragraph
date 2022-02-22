@@ -1,31 +1,47 @@
 import { mapObj } from "@polygraph/utils";
 
 export function makeQuerySchema(schema) {
-  const resourceQuery = (resDef) => ({
-    type: "object",
-    properties: {
-      properties: {
-        type: "array",
-        items: { enum: Object.keys(resDef.properties) },
+  const resourceQuery = (resDef) => {
+    const resourceProperties = {
+      type: "array",
+      items: {
+        enum: [...Object.keys(resDef.properties), ...Object.keys(resDef.relationships)],
       },
-      relationships: {
-        type: "object",
-        additionalProperties: false,
-        properties: mapObj(resDef.relationships, (relDef) => ({
-          $ref: `#/$defs/${relDef.relatedType}`,
-        })),
-      },
-    },
-  });
+    };
+    const resourceRelationships = {
+      type: "object",
+      additionalProperties: false,
+      properties: mapObj(resDef.relationships, (relDef) => ({
+        $ref: `#/$defs/${relDef.relatedType}`,
+      })),
+    };
 
-  const topIfs = Object.keys(schema.resources).map((resType) => ({
-    if: {
+    return {
+      type: "object",
+      additionalProperties: false,
       properties: {
-        type: { const: resType },
+        allNonRefProps: { type: "boolean" },
+        allNonReferenceProperties: { type: "boolean" },
+        allRefProps: { type: "boolean" },
+        allReferenceProperties: { type: "boolean" },
+        excludedProps: resourceProperties,
+        excludedProperties: resourceProperties,
+        properties: resourceProperties,
+        props: resourceProperties,
+        relationships: resourceRelationships,
+        rels: resourceRelationships,
       },
-    },
-    then: {
-      $ref: `#/$defs/${resType}`,
+    };
+  };
+
+  const resourceQueries = mapObj(schema.resources, resourceQuery);
+  const topResources = mapObj(resourceQueries, (resQuery, resKey) => ({
+    ...resQuery,
+    required: ["type"],
+    properties: {
+      ...resQuery.properties,
+      type: { const: resKey },
+      id: { type: "string" },
     },
   }));
 
@@ -35,15 +51,7 @@ export function makeQuerySchema(schema) {
     title: `${schema.title ?? "Polygraph"} Query`,
     description: "Validations for queries.",
     type: "object",
-    required: ["type"],
-    additionalProperties: false,
-    properties: {
-      type: { enum: Object.keys(schema.resources) },
-      id: { type: "string" },
-      relationships: { type: "object" },
-      properties: { type: "array" },
-    },
-    allOf: topIfs,
+    oneOf: Object.values(topResources),
     $defs: mapObj(schema.resources, resourceQuery),
   };
 }

@@ -1,10 +1,21 @@
-import { typeValidations } from "../validations/type-validations.mjs";
+import { pick } from "@polygraph/utils";
+import { difference } from "@polygraph/utils/arrays";
 import { PolygraphError } from "../validations/errors.mjs";
+import { typeValidations } from "../validations/type-validations.mjs";
+import { normalizeQuery } from "./normalize-query.mjs";
 
 function withRootData(schema, fullDataTree) {
   const internalQueryTree = (query, dataTree, path) => {
     const schemaDef = schema.resources[query.type];
-    const queryRels = Object.keys(query.relationships ?? {});
+
+    // TODO: these could be calculated once rather than per-resource
+    const relProps = Object.keys(schemaDef.relationships)
+      .filter((relKey) => query.properties.includes(relKey));
+    const sqKeys = Object.keys(query.subQueries);
+    const implicitSubQueries = relProps.reduce((acc, relProp) => ({
+      ...acc, [relProp]: { type: schemaDef.relationships[relProp].relatedType },
+    }), {});
+    const propKeys = difference(query.properties, relProps);
 
     const getId = () => {
       const idField = schemaDef.idField ?? "id";
@@ -19,7 +30,6 @@ function withRootData(schema, fullDataTree) {
     };
 
     const getProps = () => {
-      const propKeys = query.properties ?? Object.keys(schemaDef.properties);
       const properties = {};
       propKeys.forEach((propKey) => {
         const propDef = schemaDef.properties[propKey];
@@ -40,92 +50,30 @@ function withRootData(schema, fullDataTree) {
       return properties;
     };
 
-    const getRels = () => {
-      const relationships = {};
-
-      queryRels.forEach((relKey) => {
-        const relDef = schemaDef.relationships[relKey];
-        const relResDef = schema.resources[relDef.relatedType];
-
-        const getRelRef = (relRes, relPath) => {
-          const idField = relResDef.idField ?? "id";
-          const foundId = relRes[idField];
-          if (!foundId) {
-            throw new PolygraphError(
-              "resources require an id field to be present",
-              {
-                tree: fullDataTree,
-                path: relPath,
-                idField,
-                value: relRes,
-              },
-            );
-          }
-
-          return { type: relDef.relatedType, id: foundId };
-        };
-
-        if (relKey in dataTree) {
-          const relResOrRess = dataTree[relKey];
-          const nextPath = [...path, relKey];
-
-          if (relDef.cardinality === "one") {
-            if (Array.isArray(relResOrRess)) {
-              throw new PolygraphError(
-                "a to-one relationship has multiple values when it should have a single value or be null",
-                { tree: fullDataTree, path: nextPath, value: relResOrRess },
-              );
-            }
-
-            relationships[relKey] = relResOrRess ? getRelRef(relResOrRess, nextPath) : null;
-          }
-
-          if (relDef.cardinality === "many") {
-            if (!Array.isArray(relResOrRess)) {
-              if (relResOrRess == null) {
-                throw new PolygraphError(
-                  "a to-many relationship has a null value instead of an empty array",
-                  { tree: fullDataTree, path: nextPath, value: relResOrRess },
-                );
-              }
-
-              throw new PolygraphError(
-                "a to-many relationship has a single value instead of an array of values",
-                { tree: fullDataTree, path: nextPath, value: relResOrRess },
-              );
-            }
-
-            relationships[relKey] = relResOrRess.map(
-              (relRes, idx) => getRelRef(relRes, [...nextPath, idx]),
-            );
-          }
-        }
-      });
-
-      return relationships;
+    const relationships = pick(dataTree, [...sqKeys, ...relProps]);
+    const subQueries = {
+      ...query.subQueries,
+      ...implicitSubQueries,
     };
-
-    // MAIN FUNCTION BODY
+    const relKeys = Object.keys(relationships);
 
     const rootResource = {
       type: query.type,
       id: getId(),
-      properties: query.referencesOnly ? {} : getProps(),
-      relationships: query.referencesOnly ? {} : getRels(),
+      // properties: getProps(),
+      properties: pick(dataTree, propKeys),
+      relationships,
     };
 
     const forEachResource = (fn) => {
       fn(rootResource);
 
-      Object.keys(query.relationships ?? {}).forEach((relKey) => {
+      relKeys.forEach((relKey) => {
         const relDef = schemaDef.relationships[relKey];
         const nextPath = [...path, relKey];
-        const subQuery = {
-          ...query.relationships[relKey],
-          type: schemaDef.relationships[relKey].relatedType,
-        };
+        const subQuery = subQueries[relKey];
 
-        if (relDef.cardinality === "one" && dataTree[relKey] !== null) {
+        if (relDef.cardinality === "one" && dataTree[relKey] != null) {
           internalQueryTree(subQuery, dataTree[relKey], nextPath).forEachResource(fn);
         } else if (relDef.cardinality === "many") {
           dataTree[relKey].forEach((subTree, idx) => {
@@ -146,5 +94,6 @@ function withRootData(schema, fullDataTree) {
 }
 
 export function queryTree(schema, query, dataTree) {
-  return withRootData(schema, dataTree)(query, dataTree, []);
+  const normalizedQuery = normalizeQuery(schema, query);
+  return withRootData(schema, dataTree)(normalizedQuery, dataTree, []);
 }

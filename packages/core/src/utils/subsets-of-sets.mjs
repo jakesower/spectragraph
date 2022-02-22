@@ -1,5 +1,5 @@
 // note that compareFn must be injective
-export function setRelationships(left, right, compareFn) {
+export function subsetsOfSets(left, right, compareFn) {
   const leftOnlyMap = new Map();
   const [numLeft, numRight] = [left.length, right.length];
   const rightOnly = [];

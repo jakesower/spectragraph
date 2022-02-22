@@ -5,16 +5,11 @@ module.exports = {
   extends: [
     "eslint:recommended",
     "airbnb-base",
-    "plugin:@typescript-eslint/eslint-recommended",
-    "plugin:@typescript-eslint/recommended"],
-  parser: "@typescript-eslint/parser",
+  ],
   parserOptions: {
     ecmaVersion: 12,
     sourceType: "module",
   },
-  plugins: [
-    "@typescript-eslint",
-  ],
   rules: {
     "array-callback-return": ["error"],
     "comma-dangle": ["error", "always-multiline"],
@@ -28,8 +23,6 @@ module.exports = {
       {
         js: "never",
         jsx: "never",
-        ts: "never",
-        tsx: "never",
       },
     ],
     "import/no-default-export": "error",
@@ -55,8 +48,5 @@ module.exports = {
     "sort-vars": "error",
   },
   settings: {
-    "import/resolver": {
-      typescript: {}, // this loads <rootdir>/tsconfig.json to eslint
-    },
   },
 };
