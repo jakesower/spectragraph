@@ -1,7 +1,7 @@
 import test from "ava";
 import { schema } from "../fixtures/care-bear-schema.mjs";
 import { careBearData, grumpyBear } from "../fixtures/care-bear-data.mjs";
-import { makeMemoryStore } from "../../src/memory-store.mjs";
+import { makeMemoryStore } from "../../src/memory-store/memory-store.mjs";
 
 const makeStore = async (overrides = {}, dataOverrides = {}) => {
   const store = await makeMemoryStore(schema, {
@@ -27,7 +27,7 @@ const tenderheart = careBearData.bears["1"];
 // ----General-------------------------------------------------------------------------------------
 
 // TODO: move these next several tests elsewhere
-test("allows no initial data", async (t) => {
+test("doesn't require initial data", async (t) => {
   await t.notThrowsAsync(async () => {
     await makeMemoryStore(schema);
   });

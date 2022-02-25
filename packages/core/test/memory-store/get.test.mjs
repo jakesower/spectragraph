@@ -66,6 +66,19 @@ test("fetches a single resource with a subset of props", async (t) => {
   );
 });
 
+test("fetches a single resource with a relationship ref prop", async (t) => {
+  const result = await t.context.store.get({
+    type: "bears",
+    id: "1",
+    props: ["home"],
+  });
+
+  t.deepEqual(
+    result,
+    { id: "1", home: { type: "homes", id: "1" } },
+  );
+});
+
 test("fetches a single resource with a subset of props on a relationship", async (t) => {
   const q = {
     type: "bears",

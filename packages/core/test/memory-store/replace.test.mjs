@@ -14,19 +14,13 @@ test.beforeEach(async (t) => {
 
 const emptyStore = mapObj(schema.resources, () => ({}));
 
-function makeSubGraph(subGraph) {
-  const out = mapObj(schema.resources, () => ({}));
-  forEachObj(subGraph, (subRess, resType) => { out[resType] = subRess; });
-  return out;
-}
-
 const toRef = (type) => (id) => ({ type, id });
 
 // ----Properties----------------------------------------------------------------------------------
 
 test("uses defaults when creating a resource missing the property", async (t) => {
   const createResult = await t.context.store.replaceOne(
-    { type: "companions", id: "nobody", allProperties: true },
+    { type: "companions", id: "nobody", allNonRefProps: true },
     { type: "companions", id: "nobody", name: "Friend" },
   );
   const createExpected = {
@@ -43,7 +37,7 @@ test("uses defaults when creating a resource missing the property", async (t) =>
 
 test("does not use defaults when creating a resource has the property", async (t) => {
   const createResult = await t.context.store.replaceOne(
-    { type: "companions", id: "nobody", allProperties: true },
+    { type: "companions", id: "nobody", allNonRefProps: true },
     {
       type: "companions", id: "nobody", name: "Friend", recurs: true,
     },
@@ -77,8 +71,15 @@ test("does not fail when creating a resource without an optional property", asyn
   t.like(createResult, createExpected);
 });
 
-// might replace the next one--the goal is to check that the query itself can't be used to create a resource
-test.todo("fails to create a resource that doesn't have a required field in the query");
+test("does not allow refs to be updated", async (t) => {
+  await t.throwsAsync(async () => {
+    const replaceResult = await t.context.store.replaceOne(
+      { type: "bears", id: "4", props: ["home"] },
+      grumpyBear,
+    );
+    console.log(replaceResult);
+  }, { instanceOf: PolygraphError, message: ERRORS.INVALID_SET_QUERY_SYNTAX });
+});
 
 test("fails to create a resource that doesn't have a required field in the tree", async (t) => {
   await t.throwsAsync(async () => {
@@ -108,9 +109,9 @@ test("replaces a property when part of the query", async (t) => {
   t.deepEqual(replaceResult, replaceExpected);
 });
 
-test("replaces a property if allProperties is specified", async (t) => {
+test("replaces a property if allNonRefProps is specified", async (t) => {
   const replaceResult = await t.context.store.replaceOne(
-    { type: "bears", id: "5", allProperties: true },
+    { type: "bears", id: "5", allNonRefProps: true },
     { id: "5", fur_color: "brink pink" },
   );
   const replaceExpected = {
@@ -138,13 +139,13 @@ test("does not replace a property if the property is not specified", async (t) =
 
 test("keeps values with default when replacing other properties", async (t) => {
   await t.context.store.replaceOne(
-    { type: "companions", id: "nobody", allProperties: true },
+    { type: "companions", id: "nobody", allNonRefProps: true },
     {
       type: "companions", id: "nobody", name: "Alice", recurs: true,
     },
   );
   const replaceResult = await t.context.store.replaceOne(
-    { type: "companions", id: "nobody", allProperties: true },
+    { type: "companions", id: "nobody", allNonRefProps: true },
     { type: "companions", id: "nobody", name: "Bob" },
   );
   const replaceExpected = {
@@ -161,7 +162,7 @@ test("keeps values with default when replacing other properties", async (t) => {
 
 test("replaces a property deep in the graph", async (t) => {
   const replaceResult = await t.context.store.replaceOne(
-    { type: "bears", id: "1", subQueries: { home: { allProperties: true } } },
+    { type: "bears", id: "1", relationships: { home: { allNonRefProps: true } } },
     { type: "bears", id: "1", home: { id: "1", caring_meter: 0.4 } },
   );
 
@@ -201,8 +202,8 @@ test("resources can have properties named type that can be updated", async (t) =
 test("replaces existing data completely given a new resource", async (t) => {
   const query = {
     type: "bears",
-    allProperties: true,
-    subQueries: {
+    allNonRefProps: true,
+    relationships: {
       home: {},
       powers: {},
     },
@@ -238,8 +239,8 @@ test("replaces existing data completely given a new resource", async (t) => {
 test("replaces or keeps existing data given a new resources", async (t) => {
   const query = {
     type: "bears",
-    allProperties: true,
-    subQueries: {
+    allNonRefProps: true,
+    relationships: {
       home: {},
       powers: {},
     },
@@ -281,7 +282,7 @@ test("replaces a one-to-one relationship", async (t) => {
     {
       type: "bears",
       id: "2",
-      subQueries: { home: {} },
+      relationships: { home: {} },
     },
     { id: "2", home: { type: "homes", id: "2" } },
   );
@@ -302,7 +303,7 @@ test("replaces a one-to-one relationship", async (t) => {
     type: "bears",
     id: "2",
     properties: ["belly_badge"],
-    subQueries: { home: { properties: ["name"] } },
+    relationships: { home: { properties: ["name"] } },
   });
 
   t.is(bearResult.home.name, "Forest of Feelings");
@@ -310,7 +311,7 @@ test("replaces a one-to-one relationship", async (t) => {
   const careALotResult = await t.context.store.get({
     type: "homes",
     id: "1",
-    subQueries: { bears: {} },
+    relationships: { bears: {} },
   });
 
   t.is(careALotResult.bears.length, 2);
@@ -318,7 +319,7 @@ test("replaces a one-to-one relationship", async (t) => {
 
 test("replaces a one-to-many-relationship", async (t) => {
   await t.context.store.replaceOne(
-    { type: "homes", id: "1", subQueries: { bears: {} } },
+    { type: "homes", id: "1", relationships: { bears: {} } },
     {
       type: "homes",
       id: "1",
@@ -329,7 +330,7 @@ test("replaces a one-to-many-relationship", async (t) => {
   const bearResult = await t.context.store.get({
     type: "bears",
     id: "2",
-    subQueries: { home: {} },
+    relationships: { home: {} },
   });
 
   t.is(bearResult.home, null);
@@ -337,7 +338,7 @@ test("replaces a one-to-many-relationship", async (t) => {
   const smartHeartResult = await t.context.store.get({
     type: "bears",
     id: "5",
-    subQueries: { home: { properties: ["name"] } },
+    relationships: { home: { properties: ["name"] } },
   });
 
   t.is(smartHeartResult.home.name, "Care-a-Lot");
@@ -345,7 +346,7 @@ test("replaces a one-to-many-relationship", async (t) => {
   const careALotResult = await t.context.store.get({
     type: "homes",
     id: "1",
-    subQueries: { bears: {} },
+    relationships: { bears: {} },
   });
 
   t.is(careALotResult.bears.length, 2);
@@ -353,7 +354,7 @@ test("replaces a one-to-many-relationship", async (t) => {
 
 test("creates a relationship and replaces a property deep in the graph", async (t) => {
   const replaceResult = await t.context.store.replaceOne(
-    { type: "bears", id: "5", subQueries: { home: { properties: ["caring_meter"] } } },
+    { type: "bears", id: "5", relationships: { home: { properties: ["caring_meter"] } } },
     { type: "bears", id: "5", home: { id: "1", caring_meter: 0.3 } },
   );
 

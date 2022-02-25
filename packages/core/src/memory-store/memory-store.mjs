@@ -146,7 +146,10 @@ export async function makeMemoryStore(schema, options = {}) {
   const replaceOne = async (query, tree) => {
     const { queryTreeSyntax } = syntaxValidations;
     if (!queryTreeSyntax({ query, tree })) {
-      throw new PolygraphReplaceSyntaxError(query, tree, queryTreeSyntax.errors);
+      throw new PolygraphError(
+        ERRORS.INVALID_SET_QUERY_SYNTAX,
+        { query, tree, schemaErrors: queryTreeSyntax.errors },
+      );
     }
 
     const quiver = makeResourceQuiver(schema, ({ assertResource, retractResource }) => {
