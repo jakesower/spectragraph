@@ -2,6 +2,7 @@ import equals from 'deep-equal'
 import { pipe } from './general/pipe.mjs';
 // export * from './transducers'
 
+export { combineObjs } from "./general/combineObjs.mjs";
 export { equals };
 export { objPromise } from "./general/objPromise.mjs";
 export { pick } from "./general/pick.mjs";
