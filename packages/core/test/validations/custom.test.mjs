@@ -1,7 +1,9 @@
-import anyTest, { TestInterface } from "ava";
-import { makeMemoryStore } from "../../src/memory-store";
+import test from "ava";
+import { makeMemoryStore } from "../../src/memory-store/memory-store.mjs";
 import { careBearData } from "../fixtures/care-bear-data.mjs";
 import { schema } from "../fixtures/care-bear-schema.mjs";
+
+const noSelfAsBestFriendStr = "a bear can't be best friends with themselves!";
 
 const validations = [
   {
@@ -9,27 +11,25 @@ const validations = [
     resourceType: "bears",
     validateResource: (updatedResource) => {
       if (updatedResource.best_friend?.id === updatedResource.id) {
-        throw new Error("a bear can't be best friends with themselves!");
+        throw new Error(noSelfAsBestFriendStr);
       }
     },
   },
-//   {
-//   validate: (updatedTree) => {
-//     if (!updatedTree.powers.some((power) => power.name === "Care Bear Stare")) {
-//       return [{
-//         validationName: "original bears have Care Bear Stare",
-//         message: "original bears must have Care Bear Stare",
-//         type: "bears",
-//         id: "string",
-//         validationType: "resource",
-//       }];
-//     }
-//     return [];
-//   },
-// }
+  {
+    validate: (updatedTree) => {
+      if (!updatedTree.powers.some((power) => power.name === "Care Bear Stare")) {
+        return [{
+          validationName: "original bears have Care Bear Stare",
+          message: "original bears must have Care Bear Stare",
+          type: "bears",
+          id: "string",
+          validationType: "resource",
+        }];
+      }
+      return [];
+    },
+  },
 ];
-
-const test = anyTest;
 
 test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign
@@ -39,7 +39,6 @@ test.beforeEach(async (t) => {
       validations,
     }),
   };
-  console.log("\n\n\nmade store\n\n\n");
 });
 
 test("enforces no custom validaton (single resource - no self as best_friend)", async (t) => {
@@ -54,5 +53,5 @@ test("enforces no custom validaton (single resource - no self as best_friend)", 
     );
   });
 
-  t.deepEqual(err.message, "a bear can't be best friends with themselves!");
+  t.deepEqual(err.message, noSelfAsBestFriendStr);
 });

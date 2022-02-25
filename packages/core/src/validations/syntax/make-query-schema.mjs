@@ -1,11 +1,14 @@
 import { mapObj } from "@polygraph/utils";
 
-export function makeQuerySchema(schema) {
+export function makeQuerySchema(schema, allowRelProps) {
   const resourceQuery = (resDef) => {
     const resourceProperties = {
       type: "array",
       items: {
-        enum: [...Object.keys(resDef.properties), ...Object.keys(resDef.relationships)],
+        enum: [
+          ...Object.keys(resDef.properties),
+          ...(allowRelProps ? Object.keys(resDef.relationships) : []),
+        ],
       },
     };
     const resourceRelationships = {
@@ -46,7 +49,7 @@ export function makeQuerySchema(schema) {
   }));
 
   return {
-    $id: `schemas/${schema.urlName}/query-schema`,
+    $id: `schemas/${schema.urlName}/query-schema${allowRelProps ? "-with-rel-props" : ""}`,
     $schema: "http://json-schema.org/draft-07/schema",
     title: `${schema.title ?? "Polygraph"} Query`,
     description: "Validations for queries.",
