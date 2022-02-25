@@ -1,5 +1,5 @@
 import test from "ava";
-import { forEachObj, mapObj } from "@polygraph/utils";
+import { mapObj } from "@polygraph/utils";
 import { schema } from "../fixtures/care-bear-schema.mjs";
 import { makeMemoryStore } from "../../src/memory-store/memory-store.mjs";
 import { careBearData, grumpyBear } from "../fixtures/care-bear-data.mjs";
@@ -9,7 +9,6 @@ import { PolygraphError } from "../../src/validations/errors.mjs";
 test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign
   t.context = { store: await makeMemoryStore(schema, { initialData: careBearData }) };
-  // console.log("\n\n\nmade store\n\n\n");
 });
 
 const emptyStore = mapObj(schema.resources, () => ({}));

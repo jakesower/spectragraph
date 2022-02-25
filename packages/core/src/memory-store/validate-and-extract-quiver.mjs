@@ -2,7 +2,7 @@
 
 import { mapObj } from "@polygraph/utils";
 import { asArray, cardinalize, denormalizeResource } from "../utils/utils.mjs";
-import { PolygraphError, PolygraphToOneValidationError } from "../validations/errors.mjs";
+import { PolygraphError } from "../validations/errors.mjs";
 import { makeRefKey } from "../utils/make-ref-key.mjs";
 import { typeValidations } from "../validations/type-validations.mjs";
 import { ERRORS } from "../strings.mjs";
@@ -65,7 +65,7 @@ export async function validateAndExtractQuiver(schema, store, quiver, resourceVa
 
     if (isReferenceOnly && !(id in store[type])) {
       throw new PolygraphError(
-        "resource references must already be present in the store to be used", {
+        ERRORS.RESOURCE_REFERENCE_NOT_IN_STORE, {
           ref,
           referencingResources: getReferencingResources(quiver, ref),
         },
@@ -131,7 +131,9 @@ export async function validateAndExtractQuiver(schema, store, quiver, resourceVa
           (updatedRel.asserted ?? []).forEach((r) => updatedRelIds.add(r.id));
 
           if (relDef.cardinality === "one" && updatedRelIds.size > 1) {
-            throw new PolygraphToOneValidationError(updatedRel, relType, updatedRelIds);
+            throw new PolygraphError(ERRORS.MULTIPLE_TO_ONE_RELATIONSHIPS, {
+              updatedRel, relType, updatedRelIds,
+            });
           }
 
           relationships[relType] = cardinalize(

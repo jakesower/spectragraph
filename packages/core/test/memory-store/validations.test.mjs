@@ -12,10 +12,6 @@ const makeStore = async (overrides = {}, dataOverrides = {}) => {
   return store;
 };
 
-const errorMessage = (validationName, message) => (
-  `validation "${validationName}" failed: ${message}`
-);
-
 function resultData(result) {
   return result.isValid
     ? result.data
@@ -162,8 +158,6 @@ test("does not allow relationships to nonexistant resources", async (t) => {
   });
 
   t.deepEqual(error.message, "resource references must already be present in the store to be used");
-  t.deepEqual(error.details, {
-    ref: { type: "homes", id: "oopsie!" },
-    referencingResources: [{ ...tenderheart, home: { type: "homes", id: "oopsie!" } }],
-  });
+  t.deepEqual(error.ref, { type: "homes", id: "oopsie!" });
+  t.deepEqual(error.referencingResources, [{ ...tenderheart, home: { type: "homes", id: "oopsie!" } }]);
 });
