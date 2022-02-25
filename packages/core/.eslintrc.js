@@ -26,6 +26,7 @@ module.exports = {
       },
     ],
     "import/no-default-export": "error",
+    "import/no-unresolved": ["warn"],
     "import/prefer-default-export": "off",
     indent: ["error", 2, {
       flatTernaryExpressions: true,

@@ -1,5 +1,3 @@
-import { schema } from "./care-bear-schema.mjs";
-
 export const careBearData = {
   bears: {
     1: {

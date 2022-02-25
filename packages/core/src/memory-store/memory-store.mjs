@@ -9,7 +9,7 @@ import {
   denormalizeResource, multiApply, normalizeResource, queryTree,
 } from "../utils/utils.mjs";
 import { normalizeQuery } from "../utils/normalize-query.mjs";
-import { PolygraphError, PolygraphGetQuerySyntaxError, PolygraphReplaceSyntaxError } from "../validations/errors.mjs";
+import { PolygraphError } from "../validations/errors.mjs";
 import { syntaxValidations as syntaxValidationsForSchema } from "../validations/syntax-validations.mjs";
 import { validateAndExtractQuiver } from "./validate-and-extract-quiver.mjs";
 
