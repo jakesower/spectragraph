@@ -15,4 +15,4 @@ export const refsEqual = (left, right) => (
   left.type === right.type && left.id === right.id
 );
 
-export const toRef = (ref) => pick(ref, ["id", "type"]);
+export const toRef = (ref) => ({ id: ref.id, type: ref.type});

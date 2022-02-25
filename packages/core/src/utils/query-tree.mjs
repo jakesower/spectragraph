@@ -1,5 +1,6 @@
-import { pick } from "@polygraph/utils";
+import { mapObj, pick } from "@polygraph/utils";
 import { PolygraphError } from "../validations/errors.mjs";
+import { multiApply } from "./multi-apply.mjs";
 import { normalizeQuery } from "./normalize-query.mjs";
 
 function withRootData(schema, fullDataTree) {
@@ -22,7 +23,13 @@ function withRootData(schema, fullDataTree) {
       type: query.type,
       id: getId(),
       properties: pick(dataTree, query.properties),
-      relationships: pick(dataTree, Object.keys(query.relationships)),
+      relationships: mapObj(
+        pick(dataTree, Object.keys(query.relationships)),
+        (subTree, relName) => multiApply(
+          subTree,
+          ({ id }) => ({ id, type: schemaDef.relationships[relName].relatedType }),
+        ),
+      ),
     };
 
     const forEachResource = (fn) => {
