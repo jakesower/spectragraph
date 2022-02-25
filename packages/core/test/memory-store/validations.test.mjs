@@ -2,6 +2,7 @@ import test from "ava";
 import { schema } from "../fixtures/care-bear-schema.mjs";
 import { careBearData, grumpyBear } from "../fixtures/care-bear-data.mjs";
 import { makeMemoryStore } from "../../src/memory-store/memory-store.mjs";
+import { ERRORS } from "../../src/strings.mjs";
 
 const makeStore = async (overrides = {}, dataOverrides = {}) => {
   const store = await makeMemoryStore(schema, {
@@ -157,7 +158,7 @@ test("does not allow relationships to nonexistant resources", async (t) => {
     });
   });
 
-  t.deepEqual(error.message, "resource references must already be present in the store to be used");
+  t.deepEqual(error.message, ERRORS.RESOURCE_REFERENCE_NOT_IN_STORE);
   t.deepEqual(error.ref, { type: "homes", id: "oopsie!" });
   t.deepEqual(error.referencingResources, [{ ...tenderheart, home: { type: "homes", id: "oopsie!" } }]);
 });
