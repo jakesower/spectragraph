@@ -58,6 +58,14 @@ export const careBearData = {
       is_in_clouds: false,
       bears: [],
     },
+    3: {
+      id: "3",
+      name: "Earth",
+      location: "Earth",
+      caring_meter: 0.5,
+      is_in_clouds: false,
+      bears: [],
+    },
   },
   powers: {
     careBearStare: {

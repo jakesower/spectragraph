@@ -4,10 +4,13 @@ import { pipe } from './general/pipe.mjs';
 
 export { combineObjs } from "./general/combineObjs.mjs";
 export { equals };
+export { filterObj } from "./general/filterObj.mjs";
 export { objPromise } from "./general/objPromise.mjs";
 export { pick } from "./general/pick.mjs";
 export { pipe };
+export { pipeThruMiddleware, pipeThruMiddlewareDebug } from  "./general/pipeThruMiddleware.mjs";
 export { reverse } from "./general/reverse.mjs";
+export { tap } from "./general/tap.mjs";
 
 export function appendKeys(base,other,) {
   const keys = uniq([...Object.keys(base), ...Object.keys(other)])
@@ -97,21 +100,6 @@ export function fillObject(keys, value) {
   }
 
   return out
-}
-
-export function filterObj(obj,fn) {
-  const keys = Object.keys(obj);
-  const output = {};
-  const l = keys.length;
-
-  for (let i = 0; i < l; i += 1) {
-    const val = obj[keys[i]];
-    if (fn(val, keys[i])) {
-      output[keys[i]] = val;
-    }
-  }
-
-  return output;
 }
 
 export function findObj(obj,predicateFn) {
