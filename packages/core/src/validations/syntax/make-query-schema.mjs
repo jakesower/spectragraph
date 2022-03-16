@@ -1,5 +1,11 @@
 import { mapObj } from "@polygraph/utils";
 
+const constraintDefs = {
+  boolean: { type: "boolean" },
+  number: { type: "number" },
+  string: { type: "string" },
+};
+
 export function makeQuerySchema(schema, allowRelProps) {
   const resourceQuery = (resDef) => {
     const resourceProperties = {
@@ -18,6 +24,11 @@ export function makeQuerySchema(schema, allowRelProps) {
         $ref: `#/$defs/${relDef.relatedType}`,
       })),
     };
+    const resourceConstraints = {
+      type: "object",
+      additionalProperties: false,
+      properties: mapObj(resDef.properties, (prop) => ({ $ref: `#/$defs/constraints/${prop.type}` })),
+    };
 
     return {
       type: "object",
@@ -27,6 +38,7 @@ export function makeQuerySchema(schema, allowRelProps) {
         allNonReferenceProperties: { type: "boolean" },
         allRefProps: { type: "boolean" },
         allReferenceProperties: { type: "boolean" },
+        constraints: resourceConstraints,
         excludedProps: resourceProperties,
         excludedProperties: resourceProperties,
         properties: resourceProperties,
@@ -55,6 +67,9 @@ export function makeQuerySchema(schema, allowRelProps) {
     description: "Validations for queries.",
     type: "object",
     oneOf: Object.values(topResources),
-    $defs: mapObj(schema.resources, resourceQuery),
+    $defs: {
+      ...mapObj(schema.resources, resourceQuery),
+      constraints: constraintDefs,
+    },
   };
 }

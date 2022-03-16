@@ -25,7 +25,7 @@ export function makeResourceQuiver(schema, builderFn) {
         const updatedRels = asArray(updatedResource.relationships[relKey])
           .map(({ id }) => ({ id, type: schemaRelDef.relatedType }));
         const existingRels = existingResource
-          ? asArray(existingResource.relationships[relKey])
+          ? asArray(existingResource[relKey])
           : [];
         const deltas = subsetsOfSets(updatedRels, existingRels, (x) => x.id);
 
@@ -47,12 +47,12 @@ export function makeResourceQuiver(schema, builderFn) {
       });
   };
 
-  const retractResource = (resource) => {
+  const retractResource = (resource, resourceType) => {
     if (!resource) {
       throw new Error(`Resources that do not exist cannot be deleted: ${formatRef(resource)}`);
     }
 
-    quiver.retractNode(resource);
+    quiver.retractNode({ type: resourceType, ...resource });
     Object.entries(resource.relationships || {}).forEach(([label, baseExistingTargets]) => {
       const existingTargets = asArray(baseExistingTargets);
       quiver.assertArrowGroup(resource, [], label);

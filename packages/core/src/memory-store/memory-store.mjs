@@ -1,17 +1,14 @@
 /* eslint-disable max-len, no-use-before-define */
 
-import {
-  forEachObj, groupBy, mapObj, pick,
-} from "@polygraph/utils";
+import { forEachObj, groupBy } from "@polygraph/utils";
 import { makeResourceQuiver } from "../data-structures/resource-quiver.mjs";
 import { ERRORS } from "../strings.mjs";
-import {
-  denormalizeResource, multiApply, normalizeResource, queryTree,
-} from "../utils/utils.mjs";
+import { normalizeResource, queryTree } from "../utils/utils.mjs";
 import { normalizeQuery } from "../utils/normalize-query.mjs";
 import { PolygraphError } from "../validations/errors.mjs";
 import { syntaxValidations as syntaxValidationsForSchema } from "../validations/syntax-validations.mjs";
 import { validateAndExtractQuiver } from "./validate-and-extract-quiver.mjs";
+import { applyOperations } from "./operations/apply-operations.mjs";
 
 /**
  * TODO:
@@ -32,7 +29,7 @@ export async function makeMemoryStore(schema, options = {}) {
   const customValidations = options.validations ?? [];
   const resourceValidations = groupBy(customValidations, (v) => v.resourceType);
 
-  const deref = (ref) => store[ref.type][ref.id];
+  const dereference = (ref) => (ref ? store[ref.type][ref.id] : null);
 
   const applyQuiver = async (quiver) => {
     const data = await validateAndExtractQuiver(schema, store, quiver, resourceValidations);
@@ -47,7 +44,7 @@ export async function makeMemoryStore(schema, options = {}) {
         } else {
           untypedStore[resType][resId] = resValue;
         }
-        output[resType][resId] = denormalizeResource(resValue);
+        output[resType][resId] = resValue;
       });
     });
 
@@ -61,7 +58,7 @@ export async function makeMemoryStore(schema, options = {}) {
       Object.entries(updated).forEach(([type, typedResources]) => {
         Object.entries(typedResources).forEach(([id, updatedRes]) => {
           if (updatedRes === null) {
-            retractResource(store[type][id]);
+            retractResource(normalizeResource(schema, type, store[type][id]));
           } else {
             assertResource(
               normalizeResource(schema, type, updatedRes),
@@ -75,34 +72,14 @@ export async function makeMemoryStore(schema, options = {}) {
     return applyQuiver(quiver);
   };
 
-  const buildTree = (query, normalResource) => {
-    const resource = denormalizeResource(normalResource);
-    const properties = pick(resource, query.properties);
-    const relationships = mapObj(query.relationships,
-      (subQuery, relKey) => multiApply(
-        resource[relKey],
-        (rel) => buildTree(subQuery, deref(rel)),
-      ),
-    );
-
-    return {
-      id: resource.id,
-      ...properties,
-      ...relationships,
-    };
-  };
-
   const getOne = async (query) => {
-    const out = store[query.type][query.id]
-      ? buildTree(query, store[query.type][query.id])
-      : null;
-
+    const out = applyOperations(store[query.type][query.id], { schema, query, dereference });
     return Promise.resolve(out);
   };
 
   const getMany = (query) => {
     const allResources = Object.values(store[query.type]);
-    const out = allResources.map((res) => buildTree(query, res));
+    const out = applyOperations(allResources, { schema, query, dereference });
 
     return Promise.resolve(out);
   };
@@ -135,7 +112,7 @@ export async function makeMemoryStore(schema, options = {}) {
 
       Object.entries(existingResources).forEach(([resId, existingRes]) => {
         if (!seenRootResourceIds.has(resId)) {
-          retractResource(existingRes);
+          retractResource(normalizeResource(schema, query.type, existingRes));
         }
       });
     });

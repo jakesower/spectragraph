@@ -4,6 +4,7 @@ import { mapObj } from "@polygraph/utils";
 import { asArray, cardinalize, denormalizeResource } from "../utils/utils.mjs";
 import { PolygraphError } from "../validations/errors.mjs";
 import { makeRefKey } from "../utils/make-ref-key.mjs";
+import { normalizeResource } from "../utils/normalize-resource.mjs";
 import { typeValidations } from "../validations/type-validations.mjs";
 import { ERRORS } from "../strings.mjs";
 
@@ -40,7 +41,7 @@ function makeEmptyUpdatesObj(schema) {
   return output;
 }
 
-function makeNewResource(schema, type, id) {
+function makeNewNormalResource(schema, type, id) {
   const resDef = schema.resources[type];
   const properties = mapObj(
     resDef.properties,
@@ -78,7 +79,13 @@ export async function validateAndExtractQuiver(schema, store, quiver, resourceVa
     }
 
     const resDef = schema.resources[type];
-    const existingOrNewRes = store[type][id] ?? makeNewResource(schema, type, id);
+    const existingOrNewRes = store[type][id]
+      ? normalizeResource(
+        schema,
+        type,
+        store[type][id],
+      )
+      : makeNewNormalResource(schema, type, id);
     const existingOrNewProps = existingOrNewRes.properties;
     const existingOrNewRels = existingOrNewRes.relationships;
     const isNewResource = !store[type][id];
@@ -146,16 +153,19 @@ export async function validateAndExtractQuiver(schema, store, quiver, resourceVa
       }
     });
 
+    const idField = resDef.idField ?? "id";
     const nextRes = {
-      type, id, properties, relationships,
+      [idField]: id,
+      ...properties,
+      ...relationships,
     };
 
     const validations = resourceValidations[type] ?? [];
     // eslint-disable-next-line no-await-in-loop
     await Promise.all(validations.map(
       ({ validateResource }) => validateResource(
-        denormalizeResource(nextRes),
-        denormalizeResource(store[type][id]),
+        nextRes,
+        store[type][id],
         { schema },
       ),
     ));
