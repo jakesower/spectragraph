@@ -1,9 +1,4 @@
-import { $gt, $in } from "./constraints/comparative.mjs";
-
-export const expressionDefinitions = {
-  $gt,
-  $in,
-};
+import { constraintDefinitions } from "./constraints/constraint-definitions.mjs";
 
 export const isExpression = (value) => typeof value === "object" && !Array.isArray(value);
 
@@ -24,7 +19,7 @@ export function compileExpression(expressionKey, expressionValue) {
   const compiledArg = isExpression(expressionValue)
     ? compileExpression(expressionValue)
     : expressionValue;
-  const { apply } = expressionDefinitions[expressionKey];
+  const { apply } = constraintDefinitions[expressionKey];
 
   return (resource, field) => apply({
     resource,

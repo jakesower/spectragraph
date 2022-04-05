@@ -27,7 +27,7 @@ test("filters on multiple property equality constraints", async (t) => {
   t.deepEqual(result, [{ id: "2" }]);
 });
 
-test("filters using gt operator", async (t) => {
+test("filters using $gt operator", async (t) => {
   const result = await t.context.store.get(
     {
       type: "bears",
@@ -37,6 +37,66 @@ test("filters using gt operator", async (t) => {
     });
 
   t.deepEqual(result, [{ id: "5" }]);
+});
+
+test("filters using $lt operator", async (t) => {
+  const result = await t.context.store.get(
+    {
+      type: "bears",
+      constraints: {
+        year_introduced: { $lt: 2000 },
+      },
+    });
+
+  t.deepEqual(result, [{ id: "1" }, { id: "2" }, { id: "3" }]);
+});
+
+test("filters using $lte operator", async (t) => {
+  const result = await t.context.store.get(
+    {
+      type: "bears",
+      constraints: {
+        year_introduced: { $lte: 2000 },
+      },
+    });
+
+  t.deepEqual(result, [{ id: "1" }, { id: "2" }, { id: "3" }]);
+});
+
+test("filters using $gte operator", async (t) => {
+  const result = await t.context.store.get(
+    {
+      type: "bears",
+      constraints: {
+        year_introduced: { $gte: 2005 },
+      },
+    });
+
+  t.deepEqual(result, [{ id: "5" }]);
+});
+
+test("filters using $in 1", async (t) => {
+  const result = await t.context.store.get(
+    {
+      type: "bears",
+      constraints: {
+        year_introduced: { $in: [2005, 2022] },
+      },
+    });
+
+  t.deepEqual(result, [{ id: "5" }]);
+});
+
+test("filters using $in 2", async (t) => {
+  const result = await t.context.store.get(
+    {
+      type: "bears",
+      constraints: {
+        year_introduced: { $in: [2022] },
+      },
+    });
+
+  t.deepEqual(result, []);
 });
 
 test("filters related resources", async (t) => {
