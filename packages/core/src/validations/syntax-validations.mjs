@@ -1,6 +1,7 @@
 import Ajv from "ajv";
 import { makeQuerySchema } from "./syntax/make-query-schema.mjs";
 import { makeQueryTreeSchema } from "./syntax/make-query-tree-schema.mjs";
+import { constraintDefinitions } from "../memory-store/operations/constraints/constraint-definitions.mjs";
 
 export function syntaxValidations(schema) {
   const querySchema = makeQuerySchema(schema, true);
@@ -14,6 +15,7 @@ export function syntaxValidations(schema) {
       setQuerySchema,
       queryTreeSchema],
   });
+  ajv.addVocabulary(Object.keys(constraintDefinitions));
 
   return {
     querySyntax: ajv.getSchema(`schemas/${schema.urlName}/query-schema-with-rel-props`),

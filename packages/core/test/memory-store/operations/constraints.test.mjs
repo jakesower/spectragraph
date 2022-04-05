@@ -1,7 +1,7 @@
 import test from "ava";
-import { schema } from "../fixtures/care-bear-schema.mjs";
-import { makeMemoryStore } from "../../src/memory-store/memory-store.mjs";
-import { careBearData } from "../fixtures/care-bear-data.mjs";
+import { schema } from "../../fixtures/care-bear-schema.mjs";
+import { makeMemoryStore } from "../../../src/memory-store/memory-store.mjs";
+import { careBearData } from "../../fixtures/care-bear-data.mjs";
 
 test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign
@@ -26,3 +26,17 @@ test("filters on multiple property equality constraints", async (t) => {
 
   t.deepEqual(result, [{ id: "2" }]);
 });
+
+test("filters using gt operator", async (t) => {
+  const result = await t.context.store.get(
+    {
+      type: "bears",
+      constraints: {
+        year_introduced: { $gt: 2000 },
+      },
+    });
+
+  t.deepEqual(result, [{ id: "5" }]);
+});
+
+test.todo("filters related resources");

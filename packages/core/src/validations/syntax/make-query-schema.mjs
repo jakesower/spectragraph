@@ -1,10 +1,13 @@
 import { mapObj } from "@polygraph/utils";
+import { constraintDefinitions } from "../../memory-store/operations/constraints/constraint-definitions.mjs";
 
 const constraintDefs = {
   boolean: { type: "boolean" },
   number: { type: "number" },
   string: { type: "string" },
 };
+
+const sharedConstraints = mapObj(constraintDefinitions, () => ({ }));
 
 export function makeQuerySchema(schema, allowRelProps) {
   const resourceQuery = (resDef) => {
@@ -17,6 +20,7 @@ export function makeQuerySchema(schema, allowRelProps) {
         ],
       },
     };
+
     const resourceRelationships = {
       type: "object",
       additionalProperties: false,
@@ -24,10 +28,15 @@ export function makeQuerySchema(schema, allowRelProps) {
         $ref: `#/$defs/${relDef.relatedType}`,
       })),
     };
+
     const resourceConstraints = {
       type: "object",
       additionalProperties: false,
-      properties: mapObj(resDef.properties, (prop) => ({ $ref: `#/$defs/constraints/${prop.type}` })),
+      properties: {
+        // ...mapObj(resDef.properties, (prop) => ({ $ref: `#/$defs/constraints/${prop.type}` })),
+        ...mapObj(resDef.properties, () => ({})),
+        ...sharedConstraints,
+      },
     };
 
     return {
@@ -41,6 +50,7 @@ export function makeQuerySchema(schema, allowRelProps) {
         constraints: resourceConstraints,
         excludedProps: resourceProperties,
         excludedProperties: resourceProperties,
+        first: { type: "boolean" },
         properties: resourceProperties,
         props: resourceProperties,
         relationships: resourceRelationships,
