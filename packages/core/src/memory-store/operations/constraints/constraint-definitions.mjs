@@ -1,6 +1,11 @@
-import { $gt, $in } from "./comparative.mjs";
+import {
+  $gt, $gte, $in, $lt, $lte,
+} from "./comparative.mjs";
 
 export const constraintDefinitions = {
   $gt,
+  $gte,
   $in,
+  $lt,
+  $lte,
 };

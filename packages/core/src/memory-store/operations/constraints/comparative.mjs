@@ -3,11 +3,23 @@ export const $gt = {
   args: [{ type: "number" }],
 };
 
+export const $gte = {
+  apply: ({ arg, value }) => value >= arg,
+  args: [{ type: "number" }],
+};
+
 // optimize this
 export const $in = {
-  apply: ({ arg, field, resource }) => {
-    console.log("made it to in", { arg, field, resource });
-    return arg.includes(resource);
-  },
+  apply: ({ arg, field, resource }) => arg.includes(resource[field]),
   args: [{ type: "array" }],
+};
+
+export const $lt = {
+  apply: ({ arg, value }) => value < arg,
+  args: [{ type: "number" }],
+};
+
+export const $lte = {
+  apply: ({ arg, value }) => value <= arg,
+  args: [{ type: "number" }],
 };
