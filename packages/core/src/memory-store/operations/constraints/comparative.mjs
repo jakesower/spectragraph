@@ -1,3 +1,8 @@
+export const $eq = {
+  apply: ({ arg, value }) => value === arg,
+  args: [{ type: "number" }],
+};
+
 export const $gt = {
   apply: ({ arg, value }) => value > arg,
   args: [{ type: "number" }],
@@ -22,4 +27,15 @@ export const $lt = {
 export const $lte = {
   apply: ({ arg, value }) => value <= arg,
   args: [{ type: "number" }],
+};
+
+export const $ne = {
+  apply: ({ arg, value }) => value !== arg,
+  args: [{ type: "number" }],
+};
+
+// optimize this
+export const $nin = {
+  apply: ({ arg, field, resource }) => !arg.includes(resource[field]),
+  args: [{ type: "array" }],
 };

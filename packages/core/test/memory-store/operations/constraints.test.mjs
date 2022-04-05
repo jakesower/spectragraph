@@ -27,6 +27,18 @@ test("filters on multiple property equality constraints", async (t) => {
   t.deepEqual(result, [{ id: "2" }]);
 });
 
+test("filters using $eq operator", async (t) => {
+  const result = await t.context.store.get(
+    {
+      type: "bears",
+      constraints: {
+        year_introduced: { $eq: 2005 },
+      },
+    });
+
+  t.deepEqual(result, [{ id: "5" }]);
+});
+
 test("filters using $gt operator", async (t) => {
   const result = await t.context.store.get(
     {
@@ -97,6 +109,18 @@ test("filters using $in 2", async (t) => {
     });
 
   t.deepEqual(result, []);
+});
+
+test("filters using $ne operator", async (t) => {
+  const result = await t.context.store.get(
+    {
+      type: "bears",
+      constraints: {
+        year_introduced: { $ne: 2005 },
+      },
+    });
+
+  t.deepEqual(result, [{ id: "1" }, { id: "2" }, { id: "3" }]);
 });
 
 test("filters related resources", async (t) => {
