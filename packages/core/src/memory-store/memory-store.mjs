@@ -8,7 +8,7 @@ import { normalizeQuery } from "../utils/normalize-query.mjs";
 import { PolygraphError } from "../validations/errors.mjs";
 import { syntaxValidations as syntaxValidationsForSchema } from "../validations/syntax-validations.mjs";
 import { validateAndExtractQuiver } from "./validate-and-extract-quiver.mjs";
-import { applyOperations } from "./operations/apply-operations.mjs";
+import { runQuery } from "./operations/run-query.mjs";
 
 /**
  * TODO:
@@ -72,17 +72,19 @@ export async function makeMemoryStore(schema, options = {}) {
     return applyQuiver(quiver);
   };
 
-  const getOne = async (query) => {
-    const out = applyOperations(store[query.type][query.id], { schema, query, dereference });
-    return Promise.resolve(out);
-  };
+  // const getOne = async (query) => {
+  //   const getFromStore = ({ type, id }) => (id ? store[type][id] : store[type]);
+  //   const out = runQuery(query, getFromStore, { schema, query, dereference });
 
-  const getMany = (query) => {
-    const allResources = Object.values(store[query.type]);
-    const out = applyOperations(allResources, { schema, query, dereference });
+  //   return Promise.resolve(out);
+  // };
 
-    return Promise.resolve(out);
-  };
+  // const getMany = (query) => {
+  //   const getFromStore = ({ type, id }) => (id ? store[type][id] : store[type]);
+  //   const out = runQuery(query, getFromStore, { schema, query, dereference });
+
+  //   return Promise.resolve(out);
+  // };
 
   const get = (query) => {
     if (!syntaxValidations.querySyntax(query)) {
@@ -93,7 +95,10 @@ export async function makeMemoryStore(schema, options = {}) {
     }
 
     const normalQuery = normalizeQuery(schema, query);
-    return ("id" in query) ? getOne(normalQuery) : getMany(normalQuery);
+    const getFromStore = ({ type, id }) => (id ? store[type][id] ?? null : Object.values(store[type]));
+    const out = runQuery(normalQuery, getFromStore, { schema, query: normalQuery, dereference });
+
+    return Promise.resolve(out);
   };
 
   const replaceMany = async (query, trees) => {

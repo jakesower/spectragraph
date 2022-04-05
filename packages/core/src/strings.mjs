@@ -1,4 +1,5 @@
 export const ERRORS = {
+  FIRST_NOT_ALLOWED_ON_SINGULAR: "`first` may only be used on queries or relationships returning multiple resources",
   ID_FIELD_REQUIRED: "resources require an id field to be present",
   INVALID_EXCLUDED_PROPS: "one or more excluded properties in the query don't match the schema",
   INVALID_PROPS: "one or more properties in the query don't match the schema",

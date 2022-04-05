@@ -9,6 +9,7 @@ export { objPromise } from "./general/objPromise.mjs";
 export { pick } from "./general/pick.mjs";
 export { pipe };
 export { pipeThruMiddleware, pipeThruMiddlewareDebug } from  "./general/pipeThruMiddleware.mjs";
+export { pipeWithContext } from "./general/pipeWithContext.mjs";
 export { reverse } from "./general/reverse.mjs";
 export { tap } from "./general/tap.mjs";
 
