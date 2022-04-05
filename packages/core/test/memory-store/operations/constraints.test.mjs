@@ -39,4 +39,19 @@ test("filters using gt operator", async (t) => {
   t.deepEqual(result, [{ id: "5" }]);
 });
 
-test.todo("filters related resources");
+test("filters related resources", async (t) => {
+  const result = await t.context.store.get(
+    {
+      type: "powers",
+      id: "careBearStare",
+      relationships: {
+        bears: {
+          constraints: {
+            year_introduced: { $gt: 2000 },
+          },
+        },
+      },
+    });
+
+  t.deepEqual(result, { id: "careBearStare", bears: [{ id: "5" }] });
+});
