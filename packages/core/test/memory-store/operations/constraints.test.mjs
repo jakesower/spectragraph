@@ -39,7 +39,7 @@ test("filters using $eq operator", async (t) => {
   t.deepEqual(result, [{ id: "5" }]);
 });
 
-test("filters using $gt operator", async (t) => {
+test.only("filters using $gt operator", async (t) => {
   const result = await t.context.store.get(
     {
       type: "bears",
