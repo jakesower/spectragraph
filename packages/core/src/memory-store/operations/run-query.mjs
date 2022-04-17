@@ -15,8 +15,8 @@ export function processResults(resourceOrResources, getFromStore, context) {
   const { query } = context;
 
   const paramPipe = [
-    ...(Array.isArray(resourceOrResources) ? [compileConstraints(query)] : []),
-    ...(query.first ? [first] : []),
+    compileConstraints(query),
+    first,
     selectProperties,
     expandRelated(getFromStore),
   ];

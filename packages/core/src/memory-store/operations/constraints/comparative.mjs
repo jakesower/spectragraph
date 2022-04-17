@@ -1,41 +1,14 @@
-export const $eq = {
-  apply: ({ arg, value }) => value === arg,
-  args: [{ type: "number" }],
-};
+const compileComparitive = (predicate) => ({
+  compile: (expression) => (value) => predicate(value, expression),
+});
 
-export const $gt = {
-  apply: ({ arg, value }) => value > arg,
-  args: [{ type: "number" }],
-};
+// TODO: optimize at least $in and $nin
 
-export const $gte = {
-  apply: ({ arg, value }) => value >= arg,
-  args: [{ type: "number" }],
-};
-
-// optimize this
-export const $in = {
-  apply: ({ arg, field, resource }) => arg.includes(resource[field]),
-  args: [{ type: "array" }],
-};
-
-export const $lt = {
-  apply: ({ arg, value }) => value < arg,
-  args: [{ type: "number" }],
-};
-
-export const $lte = {
-  apply: ({ arg, value }) => value <= arg,
-  args: [{ type: "number" }],
-};
-
-export const $ne = {
-  apply: ({ arg, value }) => value !== arg,
-  args: [{ type: "number" }],
-};
-
-// optimize this
-export const $nin = {
-  apply: ({ arg, field, resource }) => !arg.includes(resource[field]),
-  args: [{ type: "array" }],
-};
+export const $eq = compileComparitive((x, y) => x === y);
+export const $gt = compileComparitive((x, y) => x > y);
+export const $gte = compileComparitive((x, y) => x >= y);
+export const $in = compileComparitive((input, expr) => expr.includes(input));
+export const $lt = compileComparitive((x, y) => x < y);
+export const $lte = compileComparitive((x, y) => x <= y);
+export const $ne = compileComparitive((x, y) => x !== y);
+export const $nin = compileComparitive((input, expr) => !expr.includes(input));
