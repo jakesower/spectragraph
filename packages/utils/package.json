@@ -9,12 +9,21 @@
   "exports": {
     ".": "./src/index.mjs",
     "./arrays": "./src/arrays/index.mjs",
+    "./lenses": "./src/lenses.mjs",
     "./sets": "./src/sets/index.mjs"
   },
   "keywords": [],
   "author": "Jake Sower",
   "license": "ISC",
   "devDependencies": {
+    "eslint": "^7.26.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-config-standard": "^16.0.2",
+    "eslint-plugin-import": "^2.23.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^4.3.1",
+    "prettier": "^2.6.2"
   },
   "publishConfig": {
     "access": "public"
