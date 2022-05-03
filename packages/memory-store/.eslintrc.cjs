@@ -5,6 +5,7 @@ module.exports = {
   extends: [
     "eslint:recommended",
     "airbnb-base",
+    "prettier",
   ],
   parserOptions: {
     ecmaVersion: 12,
@@ -22,7 +23,7 @@ module.exports = {
       "ignorePackages",
       {
         js: "never",
-        jsx: "never",
+        mjs: "always",
       },
     ],
     "import/no-default-export": "error",
@@ -33,12 +34,13 @@ module.exports = {
     }],
     "max-classes-per-file": "off",
     "max-len": ["error", {
-      code: 100, comments: 125, ignoreStrings: true, ignoreTemplateLiterals: true,
+      code: 90, comments: 125, ignoreStrings: true, ignoreTemplateLiterals: true,
     }],
     "no-nested-ternary": "off",
     "no-param-reassign": "error",
     "no-use-before-define": ["error", { functions: false }],
     "prefer-destructuring": ["warn", { array: false, object: true }],
+    "object-curly-spacing": ["error", "always"],
     quotes: ["error", "double", { avoidEscape: true }],
     semi: ["error", "always"],
     // "sort-imports": ["error", {

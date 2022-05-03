@@ -39,7 +39,7 @@ test("filters using $eq operator", async (t) => {
   t.deepEqual(result, [{ id: "5" }]);
 });
 
-test.only("filters using $gt operator", async (t) => {
+test("filters using $gt operator", async (t) => {
   const result = await t.context.store.get(
     {
       type: "bears",
@@ -123,7 +123,7 @@ test("filters using $ne operator", async (t) => {
   t.deepEqual(result, [{ id: "1" }, { id: "2" }, { id: "3" }]);
 });
 
-test("filters related resources", async (t) => {
+test.only("filters related resources", async (t) => {
   const result = await t.context.store.get(
     {
       type: "powers",
@@ -134,7 +134,7 @@ test("filters related resources", async (t) => {
             year_introduced: { $gt: 2000 },
           },
         },
-      },
+      }
     });
 
   t.deepEqual(result, { id: "careBearStare", bears: [{ id: "5" }] });

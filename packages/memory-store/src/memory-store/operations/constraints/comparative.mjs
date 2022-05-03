@@ -1,5 +1,5 @@
 const compileComparitive = (predicate) => ({
-  compile: (expression) => (value) => predicate(value, expression),
+  compile: (expression) => (value, field) => predicate(value[field], expression),
 });
 
 // TODO: optimize at least $in and $nin

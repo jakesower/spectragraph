@@ -4,22 +4,21 @@ import { makeQueryTreeSchema } from "./syntax/make-query-tree-schema.mjs";
 import { constraintDefinitions } from "../memory-store/operations/constraints/constraint-definitions.mjs";
 
 export function syntaxValidations(schema) {
-  const querySchema = makeQuerySchema(schema, true);
+  const getQuerySchema = makeQuerySchema(schema, true);
   const setQuerySchema = makeQuerySchema(schema, false);
   const queryTreeSchema = makeQueryTreeSchema(schema);
 
   const ajv = new Ajv({
     $data: true,
-    schemas: [
-      querySchema,
-      setQuerySchema,
-      queryTreeSchema],
+    schemas: [getQuerySchema, setQuerySchema, queryTreeSchema],
   });
   ajv.addVocabulary(Object.keys(constraintDefinitions));
 
   return {
-    querySyntax: ajv.getSchema(`schemas/${schema.urlName}/query-schema-with-rel-props`),
-    querySyntaxNoRels: ajv.getSchema(`schemas/${schema.urlName}/query-schema`),
+    getQuerySyntax: ajv.getSchema(
+      `schemas/${schema.urlName}/query-schema-with-rel-props`,
+    ),
+    setQuerySyntax: ajv.getSchema(`schemas/${schema.urlName}/query-schema`),
     queryTreeSyntax: ajv.getSchema(`schemas/${schema.urlName}/query-tree-schema`),
   };
 }

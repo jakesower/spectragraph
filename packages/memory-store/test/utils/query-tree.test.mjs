@@ -1,5 +1,6 @@
 import test from "ava";
 import { omit, pick } from "@polygraph/utils";
+import { partitionObj } from "@polygraph/utils/objects";
 import { schema } from "../fixtures/care-bear-schema.mjs";
 import { queryTree } from "../../src/utils/query-tree.mjs";
 import { careBearData } from "../fixtures/care-bear-data.mjs";
@@ -7,11 +8,15 @@ import { careBearData } from "../fixtures/care-bear-data.mjs";
 const deref = ({ type, id }) => careBearData[type][id];
 const normalize = (type, res, rels = null) => {
   const schemaDef = schema.resources[type];
-  const relationships = pick(res, rels ?? Object.keys(schemaDef.relationships));
+  const [relProps, nonRelProps] = partitionObj(
+    schemaDef.properties,
+    prop => prop.type === "relationship",
+  );
+  const relationships = pick(res, rels ?? Object.keys(relProps));
   return {
     type,
     id: res.id,
-    properties: pick(res, Object.keys(schemaDef.properties)),
+    properties: pick(res, Object.keys(nonRelProps)),
     relationships,
   };
 };
@@ -60,7 +65,11 @@ test("only considers properties included in the query, when specified", async (t
 });
 
 test("considers all fields when the query requests them", async (t) => {
-  const qt = queryTree(schema, { type: "bears", id: "1", allNonRefProps: true }, bearWithHomeAndPowersTree);
+  const qt = queryTree(
+    schema,
+    { type: "bears", id: "1", allNonRefProps: true },
+    bearWithHomeAndPowersTree,
+  );
   const expected = {
     ...normalize("bears", tenderheart, {}),
   };
@@ -131,7 +140,11 @@ test("omits relationships when empty object is provided", async (t) => {
 });
 
 test("only considers relationships included in the query, when specified", async (t) => {
-  const qt = queryTree(schema, { type: "bears", id: "1", relationships: {} }, bearWithHomeAndPowersTree);
+  const qt = queryTree(
+    schema,
+    { type: "bears", id: "1", relationships: {} },
+    bearWithHomeAndPowersTree,
+  );
   const expected = {
     ...normalize("bears", tenderheart),
     properties: {},
@@ -171,13 +184,16 @@ test("finds descendants properly", async (t) => {
   const expected = [
     { ...normalize("bears", tenderheart), properties: {} },
     normalize("homes", careBearData.homes[1], []),
-    ...[careBearData.powers.careBearStare].map(
-      (res) => ({ ...normalize("powers", res, []), properties: {} }),
-    ),
+    ...[careBearData.powers.careBearStare].map((res) => ({
+      ...normalize("powers", res, []),
+      properties: {},
+    })),
   ];
 
   const allResources = [];
-  qt.forEachResource((res) => { allResources.push(res); });
+  qt.forEachResource((res) => {
+    allResources.push(res);
+  });
 
   t.deepEqual(allResources, expected);
 });

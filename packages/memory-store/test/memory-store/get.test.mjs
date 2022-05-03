@@ -4,6 +4,7 @@ import { schema } from "../fixtures/care-bear-schema.mjs";
 import { makeMemoryStore } from "../../src/memory-store/memory-store.mjs";
 import { careBearData } from "../fixtures/care-bear-data.mjs";
 import { ERRORS } from "../../src/strings.mjs";
+import { PolygraphError } from "../../src/validations/errors.mjs";
 
 // Test Setup
 test.beforeEach(async (t) => {
@@ -60,10 +61,7 @@ test("fetches a single resource with a subset of props", async (t) => {
     props: ["name", "fur_color"],
   });
 
-  t.deepEqual(
-    result,
-    { id: "1", name: "Tenderheart Bear", fur_color: "tan" },
-  );
+  t.deepEqual(result, { id: "1", name: "Tenderheart Bear", fur_color: "tan" });
 });
 
 test("fetches a single resource with a relationship ref prop", async (t) => {
@@ -73,10 +71,7 @@ test("fetches a single resource with a relationship ref prop", async (t) => {
     props: ["home"],
   });
 
-  t.deepEqual(
-    result,
-    { id: "1", home: { type: "homes", id: "1" } },
-  );
+  t.deepEqual(result, { id: "1", home: { type: "homes", id: "1" } });
 });
 
 test("fetches a single resource with a subset of props on a relationship", async (t) => {
@@ -88,10 +83,7 @@ test("fetches a single resource with a subset of props on a relationship", async
 
   const result = await t.context.store.get(q);
 
-  t.like(
-    result,
-    { id: "1", home: { id: "1", caring_meter: 1 } },
-  );
+  t.like(result, { id: "1", home: { id: "1", caring_meter: 1 } });
 });
 
 test("fetches a single resource with many-to-many relationship", async (t) => {
@@ -101,10 +93,7 @@ test("fetches a single resource with many-to-many relationship", async (t) => {
     rels: { powers: {} },
   });
 
-  t.deepEqual(
-    result,
-    { id: "1", powers: [{ id: "careBearStare" }] },
-  );
+  t.deepEqual(result, { id: "1", powers: [{ id: "careBearStare" }] });
 });
 
 test("fetches multiple sub queries of various types", async (t) => {
@@ -172,7 +161,10 @@ test("fetches all props except", async (t) => {
     excludedProps: ["belly_badge"],
   });
 
-  t.deepEqual(result, omit(careBearData.bears[1], ["belly_badge", "home", "best_friend", "powers"]));
+  t.deepEqual(
+    result,
+    omit(careBearData.bears[1], ["belly_badge", "home", "best_friend", "powers"]),
+  );
 });
 
 test("fetches all props and refs", async (t) => {
@@ -207,11 +199,12 @@ test("fails validation for invalid types", async (t) => {
 });
 
 test("fails validation for invalid top level props", async (t) => {
-  const err = await t.throwsAsync(async () => {
-    await t.context.store.get({ type: "bears", id: "1", koopa: "troopa" });
-  });
-
-  t.deepEqual(err.message, ERRORS.INVALID_GET_QUERY_SYNTAX);
+  await t.throwsAsync(
+    async () => {
+      await t.context.store.get({ type: "bears", id: "1", koopa: "troopa" });
+    },
+    { instanceOf: PolygraphError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
+  );
 });
 
 test("validates without an id", async (t) => {

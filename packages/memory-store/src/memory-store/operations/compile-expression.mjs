@@ -27,10 +27,5 @@ export function compileArg(constraintOrConst) {
 // expression's operation. This includes evaluation of nested expressions.
 export function compileExpression(expressionKey, expressionArg) {
   const { compile } = constraintDefinitions[expressionKey];
-
-  const compiledArg = isExpression(expressionArg)
-    ? compileExpression(expressionArg)
-    : expressionArg;
-
   return compile(expressionArg);
 }
