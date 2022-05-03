@@ -1,0 +1,22 @@
+$schema: http://json-schema.org/draft-07/schema#
+description: Modifications that can be made to a schema to shape it for a particular purpose.
+type: object
+patternProperties:
+  "^([a-z])([A-Za-z0-9_]+)$":
+    type: object
+    patternProperties:
+      "^([a-z])([A-Za-z0-9_]+)$":
+        type: object
+        additionalProperties: false
+        properties:
+          $translate:
+            type: string
+
+          $derive:
+            type: object
+            required: ["functionName", "propertyDefinition"]
+            properties:
+              functionName:
+                type: string
+              propertyDefinition:
+                type: object

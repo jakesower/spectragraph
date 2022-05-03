@@ -1,7 +1,7 @@
 {
-  "name": "@polygraph/core",
+  "name": "@polygraph/schema",
   "version": "0.0.1",
-  "main": "src/core.mjs",
+  "main": "dist/index.js",
   "type": "module",
   "scripts": {
     "test": "NODE_ENV=test ava",
@@ -10,7 +10,12 @@
   "keywords": [],
   "author": "Jake Sower",
   "license": "CC BY-NC-SA",
-  "dependencies": {},
+  "dependencies": {
+    "@polygraph/core": "*",
+    "@polygraph/utils": "*",
+    "ajv": "^8.8.2",
+    "js-yaml": "^4.1.0"
+  },
   "devDependencies": {
     "ava": "^3.15.0",
     "eslint": "^7.26.0",
