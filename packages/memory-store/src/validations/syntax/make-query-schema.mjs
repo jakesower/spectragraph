@@ -1,4 +1,4 @@
-import { mapObj } from "@polygraph/utils";
+import { mapObj, partitionObj } from "@polygraph/utils/objects";
 import { constraintDefinitions } from "../../memory-store/operations/constraints/constraint-definitions.mjs";
 
 const constraintDefs = {
@@ -7,16 +7,21 @@ const constraintDefs = {
   string: { type: "string" },
 };
 
-const sharedConstraints = mapObj(constraintDefinitions, () => ({ }));
+const sharedConstraints = mapObj(constraintDefinitions, () => ({}));
 
 export function makeQuerySchema(schema, allowRelProps) {
   const resourceQuery = (resDef) => {
+    const [relProps, nonRelProps] = partitionObj(
+      resDef.properties,
+      ({ type }) => type === "relationship",
+    );
+
     const resourceProperties = {
       type: "array",
       items: {
         enum: [
-          ...Object.keys(resDef.properties),
-          ...(allowRelProps ? Object.keys(resDef.relationships) : []),
+          ...Object.keys(nonRelProps),
+          ...(allowRelProps ? Object.keys(relProps) : []),
         ],
       },
     };
@@ -24,7 +29,7 @@ export function makeQuerySchema(schema, allowRelProps) {
     const resourceRelationships = {
       type: "object",
       additionalProperties: false,
-      properties: mapObj(resDef.relationships, (relDef) => ({
+      properties: mapObj(relProps, (relDef) => ({
         $ref: `#/$defs/${relDef.relatedType}`,
       })),
     };
@@ -34,7 +39,7 @@ export function makeQuerySchema(schema, allowRelProps) {
       additionalProperties: false,
       properties: {
         // ...mapObj(resDef.properties, (prop) => ({ $ref: `#/$defs/constraints/${prop.type}` })),
-        ...mapObj(resDef.properties, () => ({})),
+        ...mapObj(nonRelProps, () => ({})),
         ...sharedConstraints,
       },
     };
@@ -71,7 +76,9 @@ export function makeQuerySchema(schema, allowRelProps) {
   }));
 
   return {
-    $id: `schemas/${schema.urlName}/query-schema${allowRelProps ? "-with-rel-props" : ""}`,
+    $id: `schemas/${schema.urlName}/query-schema${
+      allowRelProps ? "-with-rel-props" : ""
+    }`,
     $schema: "http://json-schema.org/draft-07/schema",
     title: `${schema.title ?? "Polygraph"} Query`,
     description: "Validations for queries.",

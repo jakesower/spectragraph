@@ -1,6 +1,6 @@
 /* eslint-disable no-restricted-syntax, no-loop-func */
 
-import { mapObj } from "@polygraph/utils";
+import { mapObj, partitionObj } from "@polygraph/utils/objects";
 import { asArray, cardinalize, denormalizeResource } from "../utils/utils.mjs";
 import { PolygraphError } from "../validations/errors.mjs";
 import { makeRefKey } from "../utils/make-ref-key.mjs";
@@ -16,9 +16,10 @@ function getReferencingResources(quiver, resRef) {
     const updatedRels = quiver.getRelationshipChanges(referencingRef);
 
     Object.values(updatedRels).forEach((arrowChanges) => {
-      const referencedRefs = ("present" in arrowChanges)
-        ? arrowChanges.present
-        : [...(arrowChanges.asserted ?? []), ...(arrowChanges.retracted ?? [])];
+      const referencedRefs =
+        "present" in arrowChanges
+          ? arrowChanges.present
+          : [...(arrowChanges.asserted ?? []), ...(arrowChanges.retracted ?? [])];
 
       referencedRefs.forEach((referencedRef) => {
         const refKey = makeRefKey(referencedRef);
@@ -43,11 +44,13 @@ function makeEmptyUpdatesObj(schema) {
 
 function makeNewNormalResource(schema, type, id) {
   const resDef = schema.resources[type];
-  const properties = mapObj(
+  const [relProps, nonRelProps] = partitionObj(
     resDef.properties,
-    (prop) => prop.default ?? undefined,
+    (prop) => prop.type === "relationship",
   );
-  const relationships = mapObj(resDef.relationships, (relDef) => cardinalize([], relDef));
+
+  const properties = mapObj(nonRelProps, (prop) => prop.default ?? undefined);
+  const relationships = mapObj(relProps, (relDef) => cardinalize([], relDef));
 
   return {
     type,
@@ -57,7 +60,12 @@ function makeNewNormalResource(schema, type, id) {
   };
 }
 
-export async function validateAndExtractQuiver(schema, store, quiver, resourceValidations) {
+export async function validateAndExtractQuiver(
+  schema,
+  store,
+  quiver,
+  resourceValidations,
+) {
   const updatedResources = makeEmptyUpdatesObj(schema);
 
   for (const [ref, value] of quiver.getResources()) {
@@ -65,12 +73,10 @@ export async function validateAndExtractQuiver(schema, store, quiver, resourceVa
     const isReferenceOnly = !quiver.explicitResources.has(makeRefKey(ref));
 
     if (isReferenceOnly && !(id in store[type])) {
-      throw new PolygraphError(
-        ERRORS.RESOURCE_REFERENCE_NOT_IN_STORE, {
-          ref,
-          referencingResources: getReferencingResources(quiver, ref),
-        },
-      );
+      throw new PolygraphError(ERRORS.RESOURCE_REFERENCE_NOT_IN_STORE, {
+        ref,
+        referencingResources: getReferencingResources(quiver, ref),
+      });
     }
 
     if (value == null) {
@@ -80,11 +86,7 @@ export async function validateAndExtractQuiver(schema, store, quiver, resourceVa
 
     const resDef = schema.resources[type];
     const existingOrNewRes = store[type][id]
-      ? normalizeResource(
-        schema,
-        type,
-        store[type][id],
-      )
+      ? normalizeResource(schema, type, store[type][id])
       : makeNewNormalResource(schema, type, id);
     const existingOrNewProps = existingOrNewRes.properties;
     const existingOrNewRels = existingOrNewRes.relationships;
@@ -92,41 +94,40 @@ export async function validateAndExtractQuiver(schema, store, quiver, resourceVa
 
     const updatedProperties = value.properties ?? {};
 
-    const properties = mapObj(
-      existingOrNewProps,
-      (existingProp, propKey) => {
-        const prop = updatedProperties[propKey] ?? existingProp;
-        const propDef = resDef.properties[propKey];
-        const optionalAndMissing = propDef.optional && prop == null;
+    const properties = mapObj(existingOrNewProps, (existingProp, propKey) => {
+      const prop = updatedProperties[propKey] ?? existingProp;
+      const propDef = resDef.properties[propKey];
+      const optionalAndMissing = propDef.optional && prop == null;
 
-        if (!optionalAndMissing && !typeValidations[propDef.type](prop)) {
-          if (isNewResource && !(propKey in updatedProperties)) {
-            const missingRequiredProperties = Object.entries(resDef.properties)
-              .filter(([checkPropName, checkPropDef]) => !checkPropDef.optional
-                && !("default" in checkPropDef)
-                && !(checkPropName in updatedProperties));
-
-            throw new PolygraphError(
-              ERRORS.QUERY_MISSING_CREATE_FIELDS,
-              { updatedProperties, missingRequiredProperties },
-            );
-          }
-
-          throw new PolygraphError(
-            ERRORS.INVALID_PROPS,
-            { prop, expectedType: propDef.type },
+      if (!optionalAndMissing && !typeValidations[propDef.type](prop)) {
+        if (isNewResource && !(propKey in updatedProperties)) {
+          const missingRequiredProperties = Object.entries(resDef.properties).filter(
+            ([checkPropName, checkPropDef]) =>
+              !checkPropDef.optional &&
+              !("default" in checkPropDef) &&
+              !(checkPropName in updatedProperties),
           );
+
+          throw new PolygraphError(ERRORS.QUERY_MISSING_CREATE_FIELDS, {
+            updatedProperties,
+            missingRequiredProperties,
+          });
         }
-        return prop;
-      },
-    );
+
+        throw new PolygraphError(ERRORS.INVALID_PROPS, {
+          prop,
+          expectedType: propDef.type,
+        });
+      }
+      return prop;
+    });
 
     const relationships = {};
     const updatedRels = quiver.getRelationshipChanges(ref);
     // console.log(ref, updatedRels)
     Object.entries(existingOrNewRels).forEach(([relType, existingRels]) => {
       if (relType in updatedRels) {
-        const relDef = resDef.relationships[relType];
+        const relDef = resDef.properties[relType];
         const updatedRel = updatedRels[relType];
 
         if ("present" in updatedRel) {
@@ -139,7 +140,9 @@ export async function validateAndExtractQuiver(schema, store, quiver, resourceVa
 
           if (relDef.cardinality === "one" && updatedRelIds.size > 1) {
             throw new PolygraphError(ERRORS.MULTIPLE_TO_ONE_RELATIONSHIPS, {
-              updatedRel, relType, updatedRelIds,
+              updatedRel,
+              relType,
+              updatedRelIds,
             });
           }
 
@@ -162,13 +165,11 @@ export async function validateAndExtractQuiver(schema, store, quiver, resourceVa
 
     const validations = resourceValidations[type] ?? [];
     // eslint-disable-next-line no-await-in-loop
-    await Promise.all(validations.map(
-      ({ validateResource }) => validateResource(
-        nextRes,
-        store[type][id],
-        { schema },
+    await Promise.all(
+      validations.map(({ validateResource }) =>
+        validateResource(nextRes, store[type][id], { schema }),
       ),
-    ));
+    );
 
     updatedResources[type][id] = nextRes;
   }

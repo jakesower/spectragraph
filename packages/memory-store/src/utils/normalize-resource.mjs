@@ -1,11 +1,15 @@
-import { mapObj } from "@polygraph/utils";
+import { mapObj, partitionObj } from "@polygraph/utils/objects";
 import { typeValidations } from "../validations/type-validations.mjs";
 import { PolygraphError } from "../validations/errors.mjs";
 
 export function normalizeResource(schema, resourceType, resource) {
   const schemaDef = schema.resources[resourceType];
+  const [relProps, nonRelProps] = partitionObj(
+    schemaDef.properties,
+    ({ type }) => type === "relationship",
+  );
 
-  const properties = mapObj(schemaDef.properties, (propDef, propKey) => {
+  const properties = mapObj(nonRelProps, (propDef, propKey) => {
     if (!(propKey in resource)) {
       throw new PolygraphError(
         "a property was missing from the resource",
@@ -28,7 +32,7 @@ export function normalizeResource(schema, resourceType, resource) {
     return value;
   });
 
-  const relationships = mapObj(schemaDef.relationships, (relDef, relKey) => {
+  const relationships = mapObj(relProps, (relDef, relKey) => {
     const ensureValidRef = (ref) => {
       if (ref.type !== relDef.relatedType) {
         throw new PolygraphError(

@@ -10,6 +10,7 @@
     ".": "./src/index.mjs",
     "./arrays": "./src/arrays/index.mjs",
     "./lenses": "./src/lenses.mjs",
+    "./objects": "./src/objects.mjs",
     "./sets": "./src/sets/index.mjs"
   },
   "keywords": [],

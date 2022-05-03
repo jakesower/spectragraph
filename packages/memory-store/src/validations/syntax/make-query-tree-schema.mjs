@@ -1,4 +1,4 @@
-import { mapObj } from "@polygraph/utils";
+import { mapObj, partitionObj } from "@polygraph/utils/objects";
 
 // 3 kinds of potential trees: (going with #3 for now)
 // - strict adherence to query props/rels
@@ -6,25 +6,30 @@ import { mapObj } from "@polygraph/utils";
 // - free-for-all with properties, so long as relevant ones obey rules
 
 export function makeQueryTreeSchema(schema) {
-  const resourceNodes = (resDef) => ({
-    type: "object",
-    required: ["id"], // this may need to change if PG becomes responsible for generating IDs (likely)
-    properties: {
-      id: { type: "string", minLength: 1 },
-      ...mapObj(resDef.properties, (propDef) => ({
-        type: propDef.type,
-      })),
-      ...mapObj(resDef.relationships, (relDef) => (relDef.cardinality === "one"
-        ? {
-          oneOf: [
-            { $ref: `#/$defs/${relDef.relatedType}` },
-            { type: "null" },
-          ],
-        }
-        : { type: "array", items: { $ref: `#/$defs/${relDef.relatedType}` } }),
-      ),
-    },
-  });
+  const resourceNodes = (resDef) => {
+    const [relProps, nonRelProps] = partitionObj(
+      resDef.properties,
+      ({ type }) => type === "relationship",
+    );
+
+    return {
+      type: "object",
+      required: ["id"], // this may need to change if PG becomes responsible for generating IDs (likely)
+      properties: {
+        id: { type: "string", minLength: 1 },
+        ...mapObj(nonRelProps, (propDef) => ({
+          type: propDef.type,
+        })),
+        ...mapObj(relProps, (relDef) =>
+          relDef.cardinality === "one"
+            ? {
+              oneOf: [{ $ref: `#/$defs/${relDef.relatedType}` }, { type: "null" }],
+            }
+            : { type: "array", items: { $ref: `#/$defs/${relDef.relatedType}` } },
+        ),
+      },
+    };
+  };
 
   // these link the root query type to a root property type in the tree
   const resourceIfs = Object.keys(schema.resources).map((resType) => ({
@@ -37,7 +42,8 @@ export function makeQueryTreeSchema(schema) {
       },
     },
     then: {
-      if: { // determine if it's a singular or plural query
+      if: {
+        // determine if it's a singular or plural query
         type: "object",
         properties: {
           query: {
@@ -84,6 +90,5 @@ export function makeQueryTreeSchema(schema) {
     $defs: mapObj(schema.resources, resourceNodes),
   };
 
-  // console.log(JSON.stringify(out, null, 2));
   return out;
 }

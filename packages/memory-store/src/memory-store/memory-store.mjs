@@ -32,7 +32,12 @@ export async function makeMemoryStore(schema, options = {}) {
   const dereference = (ref) => (ref ? store[ref.type][ref.id] : null);
 
   const applyQuiver = async (quiver) => {
-    const data = await validateAndExtractQuiver(schema, store, quiver, resourceValidations);
+    const data = await validateAndExtractQuiver(
+      schema,
+      store,
+      quiver,
+      resourceValidations,
+    );
     const output = {};
 
     forEachObj(data, (ressById, resType) => {
@@ -60,10 +65,7 @@ export async function makeMemoryStore(schema, options = {}) {
           if (updatedRes === null) {
             retractResource(normalizeResource(schema, type, store[type][id]));
           } else {
-            assertResource(
-              normalizeResource(schema, type, updatedRes),
-              store[type][id],
-            );
+            assertResource(normalizeResource(schema, type, updatedRes), store[type][id]);
           }
         });
       });
@@ -72,31 +74,23 @@ export async function makeMemoryStore(schema, options = {}) {
     return applyQuiver(quiver);
   };
 
-  // const getOne = async (query) => {
-  //   const getFromStore = ({ type, id }) => (id ? store[type][id] : store[type]);
-  //   const out = runQuery(query, getFromStore, { schema, query, dereference });
-
-  //   return Promise.resolve(out);
-  // };
-
-  // const getMany = (query) => {
-  //   const getFromStore = ({ type, id }) => (id ? store[type][id] : store[type]);
-  //   const out = runQuery(query, getFromStore, { schema, query, dereference });
-
-  //   return Promise.resolve(out);
-  // };
-
   const get = (query) => {
-    if (!syntaxValidations.querySyntax(query)) {
+    const { getQuerySyntax } = syntaxValidations;
+    if (!getQuerySyntax(query)) {
       throw new PolygraphError(ERRORS.INVALID_GET_QUERY_SYNTAX, {
         query,
-        schemaErrors: syntaxValidations.querySyntax.errors,
+        schemaErrors: JSON.stringify(getQuerySyntax.errors, null, 2),
       });
     }
 
     const normalQuery = normalizeQuery(schema, query);
-    const getFromStore = ({ type, id }) => (id ? store[type][id] ?? null : Object.values(store[type]));
-    const out = runQuery(normalQuery, getFromStore, { schema, query: normalQuery, dereference });
+    const getFromStore = ({ type, id }) =>
+      id ? store[type][id] ?? null : Object.values(store[type]);
+    const out = runQuery(normalQuery, getFromStore, {
+      schema,
+      query: normalQuery,
+      dereference,
+    });
 
     return Promise.resolve(out);
   };
@@ -128,17 +122,20 @@ export async function makeMemoryStore(schema, options = {}) {
   const replaceOne = async (query, tree) => {
     const { queryTreeSyntax } = syntaxValidations;
     if (!queryTreeSyntax({ query, tree })) {
-      throw new PolygraphError(
-        ERRORS.INVALID_SET_QUERY_SYNTAX,
-        { query, tree, schemaErrors: queryTreeSyntax.errors },
-      );
+      throw new PolygraphError(ERRORS.INVALID_SET_QUERY_SYNTAX, {
+        query,
+        tree,
+        schemaErrors: queryTreeSyntax.errors,
+      });
     }
 
     const quiver = makeResourceQuiver(schema, ({ assertResource, retractResource }) => {
       if (tree === null) {
         retractResource({ type: query.type, id: query.id });
       } else {
-        queryTree(schema, query, tree).forEachResource((res) => assertResource(res, store[res.type][res.id]));
+        queryTree(schema, query, tree).forEachResource((res) =>
+          assertResource(res, store[res.type][res.id]),
+        );
       }
     });
 

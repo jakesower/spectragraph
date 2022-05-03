@@ -10,19 +10,20 @@ export const schema = {
         year_introduced: { type: "number" },
         belly_badge: { type: "string" },
         fur_color: { type: "string" },
-      },
-      relationships: {
         home: {
+          type: "relationship",
           relatedType: "homes",
           cardinality: "one",
           inverse: "bears",
         },
         powers: {
+          type: "relationship",
           relatedType: "powers",
           cardinality: "many",
           inverse: "bears",
         },
         best_friend: {
+          type: "relationship",
           relatedType: "bears",
           cardinality: "one",
           inverse: "best_friend",
@@ -38,9 +39,8 @@ export const schema = {
         location: { type: "string" },
         caring_meter: { type: "number" },
         is_in_clouds: { type: "boolean" },
-      },
-      relationships: {
         bears: {
+          type: "relationship",
           relatedType: "bears",
           cardinality: "many",
           inverse: "home",
@@ -55,9 +55,8 @@ export const schema = {
         name: { type: "string" },
         description: { type: "string" },
         type: { type: "string" },
-      },
-      relationships: {
         bears: {
+          type: "relationship",
           relatedType: "bears",
           cardinality: "many",
           inverse: "powers",
@@ -71,9 +70,8 @@ export const schema = {
       properties: {
         name: { type: "string", optional: true },
         recurs: { type: "boolean", default: false },
-      },
-      relationships: {
         follows: {
+          type: "relationship",
           relatedType: "bears",
           cardinality: "many",
         },

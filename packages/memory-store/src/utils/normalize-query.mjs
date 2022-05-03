@@ -1,4 +1,5 @@
-import { mapObj, pipeThru, uniq } from "@polygraph/utils";
+import { pipeThru, uniq } from "@polygraph/utils";
+import { filterObj, mapObj, partitionObj } from "@polygraph/utils/objects";
 import { difference } from "@polygraph/utils/arrays";
 import { PolygraphError } from "../validations/errors.mjs";
 import { ERRORS } from "../strings.mjs";
@@ -10,12 +11,11 @@ function normalizeShorthandLonghandKeys(schema, query) {
     ["excludedProps", "excludedProperties"],
     ["props", "properties"],
     ["rels", "relationships"],
-
   ];
 
   const outQuery = { ...query };
   shortLongPairs.forEach(([shorthand, longhand]) => {
-    if ((shorthand in query) && (longhand in query)) {
+    if (shorthand in query && longhand in query) {
       throw new PolygraphError(ERRORS.SHORTHAND_LONGHAND_BOTH_USED, {
         query,
         shorthand,
@@ -23,7 +23,7 @@ function normalizeShorthandLonghandKeys(schema, query) {
       });
     }
 
-    if ((shorthand in query) || (longhand in query)) {
+    if (shorthand in query || longhand in query) {
       outQuery[longhand] = query[shorthand] ?? query[longhand];
       delete outQuery[shorthand];
     }
@@ -34,9 +34,13 @@ function normalizeShorthandLonghandKeys(schema, query) {
 
 function normalizeProps(schema, query) {
   const schemaResDef = schema.resources[query.type];
-  const schemaNonRelKeys = Object.keys(schemaResDef.properties);
-  const schemaRelKeys = Object.keys(schemaResDef.relationships);
-  const schemaPropKeys = [...schemaNonRelKeys, ...schemaRelKeys];
+  const [relProps, nonRelProps] = partitionObj(
+    schemaResDef.properties,
+    ({ type }) => type === "relationship",
+  );
+  const schemaNonRelKeys = Object.keys(nonRelProps);
+  const schemaRelKeys = Object.keys(relProps);
+  const schemaPropKeys = Object.keys(schemaResDef.properties);
   const excludedProperties = query.excludedProperties ?? [];
 
   const availableProps = uniq([
@@ -73,9 +77,14 @@ function normalizeAndExpandRels(schema, query) {
   }
 
   const schemaResDef = schema.resources[query.type];
-  const schemaRelationshipKeys = Object.keys(schemaResDef.relationships);
+  const relProps = filterObj(
+    schemaResDef.properties,
+    ({ type }) => type === "relationship",
+  );
+
+  const schemaRelationshipKeys = Object.keys(relProps);
   const queryRelationshipKeys = Object.keys(query.relationships);
-  const invalidRelationships = difference(queryRelationshipKeys, queryRelationshipKeys);
+  const invalidRelationships = difference(queryRelationshipKeys, schemaRelationshipKeys);
 
   if (invalidRelationships.length > 0) {
     throw new PolygraphError(ERRORS.INVALID_RELATIONSHIPS, {
@@ -86,7 +95,7 @@ function normalizeAndExpandRels(schema, query) {
   }
 
   const relationships = mapObj(query.relationships, (rel, relKey) => {
-    const schemaRelDef = schemaResDef.relationships[relKey];
+    const schemaRelDef = schemaResDef.properties[relKey];
     return normalizeQuery(schema, { ...rel, type: schemaRelDef.relatedType });
   });
 

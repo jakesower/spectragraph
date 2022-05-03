@@ -27,7 +27,7 @@ function withRootData(schema, fullDataTree) {
         pick(dataTree, Object.keys(query.relationships)),
         (subTree, relName) => multiApply(
           subTree,
-          ({ id }) => ({ id, type: schemaDef.relationships[relName].relatedType }),
+          ({ id }) => ({ id, type: schemaDef.properties[relName].relatedType }),
         ),
       ),
     };
@@ -36,7 +36,7 @@ function withRootData(schema, fullDataTree) {
       fn(rootResource);
 
       Object.keys(query.relationships).forEach((relKey) => {
-        const relDef = schemaDef.relationships[relKey];
+        const relDef = schemaDef.properties[relKey];
         const nextPath = [...path, relKey];
         const subQuery = query.relationships[relKey];
 
