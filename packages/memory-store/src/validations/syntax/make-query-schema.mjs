@@ -52,14 +52,29 @@ export function makeQuerySchema(schema, allowRelProps) {
         allNonReferenceProperties: { type: "boolean" },
         allRefProps: { type: "boolean" },
         allReferenceProperties: { type: "boolean" },
-        constraints: resourceConstraints,
         excludedProps: resourceProperties,
         excludedProperties: resourceProperties,
-        first: { type: "boolean" },
         properties: resourceProperties,
         props: resourceProperties,
         relationships: resourceRelationships,
         rels: resourceRelationships,
+        // operations
+        constraints: resourceConstraints,
+        first: { type: "boolean" },
+        order: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["direction"],
+            anyOf: [{ required: ["function"] }, { required: ["property"] }],
+            properties: {
+              direction: { type: "string", enum: ["asc", "desc"] },
+              function: { type: "string" }, // TODO: verify it's a valid string from init
+              property: { type: "string" },
+            },
+          },
+        },
       },
     };
   };

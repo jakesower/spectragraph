@@ -25,8 +25,11 @@ function makeEmptyStore(schema) {
 
 export async function makeMemoryStore(schema, options = {}) {
   const store = makeEmptyStore(schema);
-  const syntaxValidations = syntaxValidationsForSchema(schema);
+
+  const { orderingFunctions = {} } = options;
   const customValidations = options.validations ?? [];
+
+  const syntaxValidations = syntaxValidationsForSchema(schema);
   const resourceValidations = groupBy(customValidations, (v) => v.resourceType);
 
   const dereference = (ref) => (ref ? store[ref.type][ref.id] : null);
@@ -87,6 +90,7 @@ export async function makeMemoryStore(schema, options = {}) {
     const getFromStore = ({ type, id }) =>
       id ? store[type][id] ?? null : Object.values(store[type]);
     const out = runQuery(normalQuery, getFromStore, {
+      orderingFunctions,
       schema,
       query: normalQuery,
       dereference,
