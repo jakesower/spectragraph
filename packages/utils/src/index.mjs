@@ -349,8 +349,7 @@ export function sortBy(xs, fn) {
   if (xs.length === 0) {
     return [];
   }
-  const first = xs[0];
-  const rest = xs.slice(1);
+  const [first, ...rest] = xs;
   let lts = [];
   let gts = [];
   let eqs = [first];
@@ -366,37 +365,19 @@ export function sortBy(xs, fn) {
     }
   }
 
-  return sortBy(fn, lts).concat(eqs).concat(sortBy(fn, gts));
+  return sortBy(lts, fn).concat(eqs).concat(sortBy(gts, fn));
 }
 
 export function sortByAll(xs, fns) {
-  if (fns.length === 0 || xs.length <= 1) {
-    return xs;
-  }
-
-  const [fn, ...restFns] = fns;
-  const [first, ...rest] = xs;
-
-  let lts = [];
-  let gts = [];
-  let eqs = [first];
-  for (let i = 0; i < rest.length; i += 1) {
-    const comp = fn(rest[i], first);
-
-    if (comp > 0) {
-      gts.push(rest[i]);
-    } else if (comp === 0) {
-      eqs.push(rest[i]);
-    } else {
-      lts.push(rest[i]);
+  const fn = (left, right) => {
+    for (let i = 0; i < fns.length; i += 1) {
+      const v = fns[i](left, right);
+      if (v !== 0) return v;
     }
-  }
+    return 0;
+  };
 
-  return [
-    ...sortByAll(fns, lts),
-    ...sortByAll(restFns, eqs),
-    ...sortByAll(fns, gts),
-  ];
+  return sortBy(xs, fn);
 }
 
 export function sortWith(fn, xs) {
