@@ -3,6 +3,7 @@ import { schema } from "../../fixtures/care-bear-schema.mjs";
 import { makeMemoryStore } from "../../../src/memory-store/memory-store.mjs";
 import { careBearData } from "../../fixtures/care-bear-data.mjs";
 import { ERRORS } from "../../../src/strings.mjs";
+import { PolygraphError } from "../../../src/validations/errors.mjs";
 
 test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign
@@ -16,11 +17,11 @@ test("gets the first result from a collection", async (t) => {
 });
 
 test("throws an error when trying to get the first on a singular resource", async (t) => {
-  const err = await t.throwsAsync(async () => {
-    await t.context.store.get({ type: "bears", id: "1", first: true });
-  });
-
-  t.deepEqual(err.message, ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR);
+  await t.throwsAsync(
+    async () => {
+      const bad = await t.context.store.get({ type: "bears", id: "1", first: true });
+      console.log(bad);
+    },
+    { instanceOf: PolygraphError, message: ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR },
+  );
 });
-
-test.todo("applies sorting before first");
