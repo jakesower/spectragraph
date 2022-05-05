@@ -90,7 +90,7 @@ export function makeQuerySchema(schema, allowRelProps) {
         },
         offset: {
           type: "integer",
-          minimum: 1,
+          minimum: 0,
         },
       },
     };

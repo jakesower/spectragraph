@@ -1,26 +1,22 @@
-import { sortByAll } from "@polygraph/utils";
+import { sortBy } from "@polygraph/utils";
 import { ERRORS } from "../../strings.mjs";
 import { PolygraphError } from "../../validations/errors.mjs";
 
 const compareFns = {
-  integer: (x, y) => x - y,
-  number: (x, y) => x - y,
-  string: (x, y) => x.localeCompare(y),
+  integer: (left, right) => left - right,
+  number: (left, right) => left - right,
+  string: (left, right) => left.localeCompare(right),
 };
 
-export function order(resources, { orderingFunctions, query, schema }) {
-  if (!query.order) return resources;
+export function orderFunction({ orderingFunctions, query, schema }) {
+  const { order, type: resType } = query;
 
-  if (!Array.isArray(resources)) {
-    throw new PolygraphError(ERRORS.ORDER_NOT_ALLOWED_ON_SINGULAR, resources);
-  }
-
-  const orderFns = query.order.map((orderConfig) => {
+  const fns = order.map((orderConfig) => {
     const { direction, function: fn, property } = orderConfig;
 
     const fnFromConfig = fn
       ? orderingFunctions[fn]
-      : compareFns[schema.resources[query.type].properties[property].type];
+      : compareFns[schema.resources[resType].properties[property].type];
 
     const fnWithProperty = property
       ? (left, right) => fnFromConfig(left[property], right[property])
@@ -31,5 +27,19 @@ export function order(resources, { orderingFunctions, query, schema }) {
       : (left, right) => fnWithProperty(right, left);
   });
 
-  return sortByAll(resources, orderFns);
+  return (left, right) => {
+    for (let i = 0; i < fns.length; i += 1) {
+      const v = fns[i](left, right);
+      if (v !== 0) return v;
+    }
+    return 0;
+  };
+}
+
+export function orderOperation(resources, { orderingFunctions, query, schema }) {
+  if (!Array.isArray(resources)) {
+    throw new PolygraphError(ERRORS.ORDER_NOT_ALLOWED_ON_SINGULAR, resources);
+  }
+
+  return sortBy(resources, orderFunction({ orderingFunctions, query, schema }));
 }

@@ -38,6 +38,19 @@ test("limits after sorting", async (t) => {
   ]);
 });
 
+test("limits after sorting with 1", async (t) => {
+  const result = await t.context.store.get({
+    type: "bears",
+    props: ["name"],
+    order: [{ property: "name", direction: "asc" }],
+    limit: 1,
+  });
+
+  t.deepEqual(result, [
+    { id: "2", name: "Cheer Bear" },
+  ]);
+});
+
 test("limits with an offset", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
@@ -93,6 +106,22 @@ test("returns nothing when the offset has surpassed the data size", async (t) =>
   });
 
   t.deepEqual(result, []);
+});
+
+test("allows a zero offset", async (t) => {
+  const result = await t.context.store.get({
+    type: "bears",
+    props: ["name"],
+    order: [{ property: "name", direction: "asc" }],
+    offset: 0,
+  });
+
+  t.deepEqual(result, [
+    { id: "2", name: "Cheer Bear" },
+    { id: "5", name: "Smart Heart Bear" },
+    { id: "1", name: "Tenderheart Bear" },
+    { id: "3", name: "Wish Bear" },
+  ]);
 });
 
 test("errors for a bad limit", async (t) => {
