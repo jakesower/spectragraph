@@ -2,6 +2,7 @@ import { pipeWithContext } from "@polygraph/utils";
 import { compileConstraints } from "./compile-constraints.mjs";
 import { expandRelated } from "./expand-related.mjs"; // eslint-disable-line import/no-cycle
 import { first } from "./first.mjs";
+import { limit } from "./limit.mjs";
 import { order } from "./order.mjs";
 import { selectProperties } from "./select-properties.mjs";
 
@@ -18,6 +19,7 @@ export function processResults(resourceOrResources, getFromStore, context) {
   const paramPipe = [
     compileConstraints(query),
     order,
+    limit,
     first,
     selectProperties,
     expandRelated(getFromStore),

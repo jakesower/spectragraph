@@ -9,6 +9,11 @@ const constraintDefs = {
 
 const sharedConstraints = mapObj(constraintDefinitions, () => ({}));
 
+const mutualExclusions = [
+  [["limit"], ["first"]],
+  [["offset"], ["first"]],
+];
+
 export function makeQuerySchema(schema, allowRelProps) {
   const resourceQuery = (resDef) => {
     const [relProps, nonRelProps] = partitionObj(
@@ -47,6 +52,10 @@ export function makeQuerySchema(schema, allowRelProps) {
     return {
       type: "object",
       additionalProperties: false,
+      allOf: mutualExclusions.map(([lefts, rights]) => ({
+        if: { required: lefts },
+        then: { not: { required: rights } },
+      })),
       properties: {
         allNonRefProps: { type: "boolean" },
         allNonReferenceProperties: { type: "boolean" },
@@ -74,6 +83,14 @@ export function makeQuerySchema(schema, allowRelProps) {
               property: { type: "string" },
             },
           },
+        },
+        limit: {
+          type: "integer",
+          minimum: 1,
+        },
+        offset: {
+          type: "integer",
+          minimum: 1,
         },
       },
     };
