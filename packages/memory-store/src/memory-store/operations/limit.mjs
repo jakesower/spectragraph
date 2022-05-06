@@ -73,6 +73,5 @@ export function limitOrderOperation(resources, { orderingFunctions, query, schem
     return nextBest;
   });
 
-  // console.log({ bestChunk, offset, limit, numRess, lo: limit + offset });
   return limit ? bestChunk.slice(0, limit) : bestChunk;
 }

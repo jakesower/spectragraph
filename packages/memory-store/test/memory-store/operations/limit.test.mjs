@@ -127,12 +127,10 @@ test("allows a zero offset", async (t) => {
 test("errors for a bad limit", async (t) => {
   await t.throwsAsync(
     async () => {
-      const badResult = await t.context.store.get({
+      await t.context.store.get({
         type: "bears",
         limit: 0,
       });
-
-      console.log(badResult);
     },
     { instanceOf: PolygraphError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
   );
@@ -141,13 +139,11 @@ test("errors for a bad limit", async (t) => {
 test("errors for a bad offset", async (t) => {
   await t.throwsAsync(
     async () => {
-      const badResult = await t.context.store.get({
+      await t.context.store.get({
         type: "bears",
         limit: 3,
         offset: -1,
       });
-
-      console.log(badResult);
     },
     { instanceOf: PolygraphError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
   );
