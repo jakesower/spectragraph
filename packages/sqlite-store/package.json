@@ -1,45 +1,34 @@
 {
   "name": "@polygraph/sqlite-store",
-  "version": "0.0.6",
-  "description": "Sqlite polygraph store.",
-  "main": "dist/index.js",
+  "version": "0.0.8",
+  "type": "module",
+  "exports": "./src/sqlite-store.mjs",
   "scripts": {
-    "build": "babel src -d dist",
+    "lint": "eslint \"src/**\" \"test/**\" --ext .mjs",
     "test": "NODE_ENV=test ava",
-    "test:watch": "NODE_ENV=test ava -w"
+    "test:watch": "NODE_ENV=test ava -w --verbose"
   },
   "keywords": [],
   "author": "Jake Sower",
   "license": "CC BY-NC-SA",
   "dependencies": {
-    "@polygraph/schema-utils": "^0.0.7",
-    "@polygraph/utils": "^0.0.6",
-    "sqlite3": "^5.0.7"
+    "@polygraph/core": "*",
+    "@polygraph/utils": "*",
+    "ajv": "^8.11.0",
+    "sqlite": "^4.1.1",
+    "sqlite3": "^5.0.8"
   },
   "devDependencies": {
-    "@babel/cli": "^7.17.10",
-    "@babel/core": "^7.17.10",
-    "@babel/preset-env": "^7.17.10",
     "ava": "^4.2.0",
-    "ts-node": "^10.7.0",
-    "typescript": "^4.6.4"
-  },
-  "ava": {
-    "compileEnhancements": false,
-    "files": [
-      "test/*.test.js"
-    ],
-    "require": [
-      "esm",
-      "ts-node/register"
-    ],
-    "extensions": [
-      "mjs",
-      "ts"
-    ]
+    "eslint": "^8.14.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-config-standard": "^17.0.0",
+    "eslint-plugin-ava": "^13.2.0",
+    "prettier": "^2.6.2"
   },
   "publishConfig": {
     "access": "public"
   },
-  "gitHead": "b73851fb5328b2ee1cfb9c97f12a08a69546cb79"
+  "gitHead": "451a467247458685a82d6d8edff5fc575dc02228"
 }
