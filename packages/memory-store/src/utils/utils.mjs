@@ -1,5 +1,3 @@
-import { pick } from "@polygraph/utils";
-
 export { asArray } from "./asArray.mjs";
 export { cardinalize } from "./cardinalize.mjs";
 export { normalizeQuery } from "./normalize-query.mjs";
@@ -15,4 +13,4 @@ export const refsEqual = (left, right) => (
   left.type === right.type && left.id === right.id
 );
 
-export const toRef = (ref) => ({ id: ref.id, type: ref.type});
+export const toRef = (ref) => ({ id: ref.id, type: ref.type });

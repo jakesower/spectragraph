@@ -1,12 +1,9 @@
 module.exports = {
   env: {
-    es2021: true,
+    es2022: true,
+    node: true,
   },
-  extends: [
-    "eslint:recommended",
-    "airbnb-base",
-    "prettier",
-  ],
+  extends: ["eslint:recommended", "airbnb-base", "prettier"],
   parserOptions: {
     ecmaVersion: 12,
     sourceType: "module",
@@ -29,13 +26,23 @@ module.exports = {
     "import/no-default-export": "error",
     "import/no-unresolved": ["warn"],
     "import/prefer-default-export": "off",
-    indent: ["error", 2, {
-      flatTernaryExpressions: true,
-    }],
+    indent: [
+      "error",
+      2,
+      {
+        flatTernaryExpressions: true,
+      },
+    ],
     "max-classes-per-file": "off",
-    "max-len": ["error", {
-      code: 90, comments: 125, ignoreStrings: true, ignoreTemplateLiterals: true,
-    }],
+    "max-len": [
+      "error",
+      {
+        code: 90,
+        comments: 125,
+        ignoreStrings: true,
+        ignoreTemplateLiterals: true,
+      },
+    ],
     "no-nested-ternary": "off",
     "no-param-reassign": "error",
     "no-use-before-define": ["error", { functions: false }],
@@ -50,6 +57,5 @@ module.exports = {
     // }],
     "sort-vars": "error",
   },
-  settings: {
-  },
+  settings: {},
 };
