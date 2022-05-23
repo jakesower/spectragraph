@@ -2,19 +2,11 @@ import test from "ava";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import { getInverse } from "@polygraph/core/schema-utils";
-import { groupBy, omit, pick } from "@polygraph/utils";
+import { groupBy, omit } from "@polygraph/utils";
 import { careBearSchema as schema } from "../fixtures/care-bear-schema.mjs";
 import { SQLiteStore } from "../../src/sqlite-store.mjs";
 import { careBearData } from "../fixtures/care-bear-data.mjs";
 import { ERRORS } from "../../src/errors.mjs";
-
-const propsTypesToColTypes = {
-  boolean: "INTEGER",
-  integer: "INTEGER",
-  number: "REAL",
-  relationship: "VARCHAR",
-  string: "VARCHAR",
-};
 
 // Test Setup
 test.beforeEach(async (t) => {
@@ -22,13 +14,11 @@ test.beforeEach(async (t) => {
 
   await Promise.all(
     Object.entries(schema.resources).map(async ([resType, resDef]) => {
-      const cols = groupBy(Object.entries(resDef.properties), ([propName, propDef]) => {
-        if (propDef.type !== "relationship") {
-          return "tableCols";
-        }
-        if (propDef.store?.join?.localColumn) {
-          return "localJoinCols";
-        }
+      const cols = groupBy(Object.entries(resDef.properties), ([, propDef]) => {
+        if (propDef.type !== "relationship") return "tableCols";
+        if (propDef.store?.join?.localColumn) return "localJoinCols";
+
+        // TODO: allow for one-way to-many relationships
         if (propDef?.store?.join?.joinColumn && resType <= propDef.relatedType) {
           return "joinCols";
         }
@@ -36,8 +26,6 @@ test.beforeEach(async (t) => {
       });
 
       const { joinCols = [], localJoinCols = [], tableCols = [] } = cols;
-      // console.log(cols);
-      // resource table
       const createNonRelTableCols = tableCols.map(
         ([propName, propDef]) => `${propName} ${propDef.store.sqlType}`,
       );
@@ -51,16 +39,17 @@ test.beforeEach(async (t) => {
       await db.run(createTableSql);
 
       // Create join tables if needed
-      console.log(resType, joinCols)
-      await Promise.all(Object.values(joinCols).map((relDef) => {
-        const inverse = getInverse(schema, relDef);
-        const joinTable = relDef.store.join.joinTable;
-        const localRelCol = relDef.store.join.joinColumn;
-        const foreignRelCol = inverse.store.join.joinColumn;
-        const joinTableSql = `CREATE TABLE ${joinTable} (${localRelCol} VARCHAR, ${foreignRelCol} VARCHAR)`
+      await Promise.all(
+        joinCols.map(([, relDef]) => {
+          const inverse = getInverse(schema, relDef);
+          const { joinTable } = relDef.store.join;
+          const localRelCol = relDef.store.join.joinColumn;
+          const foreignRelCol = inverse.store.join.joinColumn;
+          const joinTableSql = `CREATE TABLE ${joinTable} (${localRelCol} VARCHAR, ${foreignRelCol} VARCHAR)`;
 
-        return db.run(joinTableSql);
-      }))
+          return db.run(joinTableSql);
+        }),
+      );
 
       const tableColNames = tableCols.map(([colName]) => colName);
       const tableLocalJoinColNames = localJoinCols.map(([colName]) => colName);
@@ -70,9 +59,7 @@ test.beforeEach(async (t) => {
       );
       const dataStatement = `INSERT INTO ${resType} VALUES (${dataCols.join(", ")})`;
 
-      // const joinDataCols = joinData
-
-      await Promise.all(
+      return Promise.all(
         Object.values(careBearData[resType]).map((res) => {
           const tableData = tableColNames.map((colName) => res[colName]);
           const localJoinData = tableLocalJoinColNames.map(
@@ -81,20 +68,30 @@ test.beforeEach(async (t) => {
           const data = [...tableData, ...localJoinData];
           const tableQuery = db.run(dataStatement, data);
 
-          // const joinData = tableColNames.map((colName) => res[colName]);
-          return tableQuery;
+          const joinQueries = joinCols.map(([relName, relDef]) => {
+            const { joinTable } = relDef.store.join;
+            const joinDataStatement = `INSERT INTO ${joinTable} VALUES (?, ?)`;
+
+            return res[relName].map((relRef) =>
+              db.run(joinDataStatement, [res.id, relRef.id]),
+            );
+          });
+
+          return Promise.all([tableQuery, ...joinQueries]);
         }),
       );
     }),
   );
+  
+  const store = await SQLiteStore(schema, db);
 
   // eslint-disable-next-line no-param-reassign
-  t.context = { store: SQLiteStore(schema, db) };
+  t.context = { store };
 });
 
 // Actual Tests
 
-test("fetches a single resource", async (t) => {
+test.only("fetches a single resource", async (t) => {
   const result = await t.context.store.get({ type: "bears", id: "1" });
 
   t.deepEqual(result, { id: "1" });
