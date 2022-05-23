@@ -2,7 +2,9 @@
   "name": "@polygraph/sqlite-store",
   "version": "0.0.8",
   "type": "module",
-  "exports": "./src/sqlite-store.mjs",
+  "exports": {
+    ".": "./src/sqlite-store.mjs"
+  },
   "scripts": {
     "lint": "eslint \"src/**\" \"test/**\" --ext .mjs",
     "test": "NODE_ENV=test ava",
@@ -20,11 +22,10 @@
   },
   "devDependencies": {
     "ava": "^4.2.0",
-    "eslint": "^8.14.0",
+    "eslint": "^8.16.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-config-standard": "^17.0.0",
-    "eslint-plugin-ava": "^13.2.0",
     "prettier": "^2.6.2"
   },
   "publishConfig": {
