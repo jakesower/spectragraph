@@ -1,9 +1,8 @@
 {
+  "name": "polygraph",
   "license": "AGPL-3.0",
-  "scripts": {
-    "publish": "lerna run build && lerna publish"
-  },
-  "dependencies": {
-    "@microsoft/rush": "^5.68.1"
-  }
+  "workspaces": [
+    "packages/*"
+  ],
+  "dependencies": {}
 }

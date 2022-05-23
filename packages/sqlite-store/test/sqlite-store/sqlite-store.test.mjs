@@ -1,8 +1,9 @@
 import test from "ava";
-import { mapObj, omit } from "@polygraph/utils";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
-import { schema } from "../fixtures/care-bear-schema.mjs";
+import { getInverse } from "@polygraph/core/schema-utils";
+import { groupBy, omit, pick } from "@polygraph/utils";
+import { careBearSchema as schema } from "../fixtures/care-bear-schema.mjs";
 import { SQLiteStore } from "../../src/sqlite-store.mjs";
 import { careBearData } from "../fixtures/care-bear-data.mjs";
 import { ERRORS } from "../../src/errors.mjs";
@@ -21,25 +22,67 @@ test.beforeEach(async (t) => {
 
   await Promise.all(
     Object.entries(schema.resources).map(async ([resType, resDef]) => {
-      const createCols = Object.entries(resDef.properties).map(
-        ([propName, propDef]) => `${propName} ${propsTypesToColTypes[propDef.type]}`,
+      const cols = groupBy(Object.entries(resDef.properties), ([propName, propDef]) => {
+        if (propDef.type !== "relationship") {
+          return "tableCols";
+        }
+        if (propDef.store?.join?.localColumn) {
+          return "localJoinCols";
+        }
+        if (propDef?.store?.join?.joinColumn && resType <= propDef.relatedType) {
+          return "joinCols";
+        }
+        return "unneeded";
+      });
+
+      const { joinCols = [], localJoinCols = [], tableCols = [] } = cols;
+      // console.log(cols);
+      // resource table
+      const createNonRelTableCols = tableCols.map(
+        ([propName, propDef]) => `${propName} ${propDef.store.sqlType}`,
+      );
+      const createLocalJoinCols = localJoinCols.map(
+        ([propName]) => `${propName} VARCHAR`,
       );
 
-      const createSql = `CREATE TABLE ${resType} (${createCols.join(", ")})`;
-      console.log(createSql);
-      await db.run(createSql);
+      // -- Create resource table
+      const createTableCols = [...createNonRelTableCols, ...createLocalJoinCols];
+      const createTableSql = `CREATE TABLE ${resType} (${createTableCols.join(", ")})`;
+      await db.run(createTableSql);
 
-      const dataCols = Array(Object.keys(resDef.properties).length).fill("?");
+      // Create join tables if needed
+      console.log(resType, joinCols)
+      await Promise.all(Object.values(joinCols).map((relDef) => {
+        const inverse = getInverse(schema, relDef);
+        const joinTable = relDef.store.join.joinTable;
+        const localRelCol = relDef.store.join.joinColumn;
+        const foreignRelCol = inverse.store.join.joinColumn;
+        const joinTableSql = `CREATE TABLE ${joinTable} (${localRelCol} VARCHAR, ${foreignRelCol} VARCHAR)`
+
+        return db.run(joinTableSql);
+      }))
+
+      const tableColNames = tableCols.map(([colName]) => colName);
+      const tableLocalJoinColNames = localJoinCols.map(([colName]) => colName);
+
+      const dataCols = Array([...tableColNames, ...tableLocalJoinColNames].length).fill(
+        "?",
+      );
       const dataStatement = `INSERT INTO ${resType} VALUES (${dataCols.join(", ")})`;
+
+      // const joinDataCols = joinData
 
       await Promise.all(
         Object.values(careBearData[resType]).map((res) => {
-          const typedProps = Object.entries(res).map(([propName, propVal]) =>
-            resDef[propName] === "relationship" ? propVal.id : propVal,
+          const tableData = tableColNames.map((colName) => res[colName]);
+          const localJoinData = tableLocalJoinColNames.map(
+            (colName) => res[colName]?.id ?? null,
           );
+          const data = [...tableData, ...localJoinData];
+          const tableQuery = db.run(dataStatement, data);
 
-          console.log(dataStatement, typedProps);
-          return db.run(dataStatement, typedProps);
+          // const joinData = tableColNames.map((colName) => res[colName]);
+          return tableQuery;
         }),
       );
     }),
@@ -71,7 +114,11 @@ test.skip("fetches multiple resources", async (t) => {
 });
 
 test.skip("fetches a single resource specifying no sub queries desired", async (t) => {
-  const result = await t.context.store.get({ type: "bears", id: "1", rels: {} });
+  const result = await t.context.store.get({
+    type: "bears",
+    id: "1",
+    rels: {},
+  });
 
   t.deepEqual(result, { id: "1" });
 });
