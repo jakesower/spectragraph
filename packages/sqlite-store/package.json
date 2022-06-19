@@ -17,8 +17,7 @@
     "@polygraph/core": "*",
     "@polygraph/utils": "*",
     "ajv": "^8.11.0",
-    "sqlite": "^4.1.1",
-    "sqlite3": "^5.0.8"
+    "better-sqlite3": "^7.5.3"
   },
   "devDependencies": {
     "ava": "^4.2.0",
