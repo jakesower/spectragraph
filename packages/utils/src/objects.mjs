@@ -1,3 +1,5 @@
+export { pick } from "./general/pick.mjs";
+
 export async function combineObjs(leftObj, rightObj, combinerFn) {
   const output = {};
   const leftKeys = Object.keys(leftObj);
@@ -77,6 +79,14 @@ export async function objPromise(obj) {
   );
 
   return output;
+}
+
+export function omit(obj, keys) {
+  let out = { ...obj };
+  for (let key of keys) {
+    delete out[key];
+  }
+  return out;
 }
 
 export function partitionObj(obj, predicateFn) {

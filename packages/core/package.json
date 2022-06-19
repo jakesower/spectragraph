@@ -3,8 +3,7 @@
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    ".": "./src/core.mjs",
-    "./schema-utils": "./src/schema-utils.mjs"
+    "./*": "./src/*.mjs"
   },
   "scripts": {
     "test": "NODE_ENV=test ava",
@@ -19,5 +18,8 @@
     "eslint-config-prettier": "^8.5.0",
     "eslint-config-standard": "^17.0.0",
     "prettier": "^2.6.2"
+  },
+  "dependencies": {
+    "@polygraph/utils": "^0.0.6"
   }
 }

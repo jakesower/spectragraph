@@ -10,6 +10,7 @@
     ".": "./src/index.mjs",
     "./arrays": "./src/arrays.mjs",
     "./lenses": "./src/lenses.mjs",
+    "./pipes": "./src/pipes.mjs",
     "./objects": "./src/objects.mjs",
     "./sets": "./src/sets.mjs"
   },

@@ -32,8 +32,8 @@ export const careBearSchema = {
           inverse: "best_friend",
           store: {
             join: {
-              localColumn: "home_id",
-              foreignColumn: "home_id",
+              localColumn: "best_friend_id",
+              foreignColumn: "best_friend_id",
             },
           },
         },
@@ -88,7 +88,7 @@ export const careBearSchema = {
         name: { type: "string", optional: true, store: { sqlType: "VARCHAR" } },
         recurs: {
           type: "boolean",
-          default: false,
+          default: 0,
           store: { sqlType: "INTEGER" },
         },
         follows: {

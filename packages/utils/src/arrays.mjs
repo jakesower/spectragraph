@@ -26,8 +26,25 @@ export function intersection(leftArray, rightArray) {
   return output;
 }
 
+export function keyBy(items, fn) {
+  const output = {};
+  const l = items.length;
+  for (let i = 0; i < l; i += 1) {
+    output[fn(items[i])] = items[i];
+  }
+  return output;
+}
+
 export function last(items) {
   return items[items.length - 1];
+}
+
+export function multiApply(itemItemsOrNull, fn) {
+  if (itemItemsOrNull == null) return itemItemsOrNull;
+
+  return Array.isArray(itemItemsOrNull)
+    ? itemItemsOrNull.map(fn)
+    : fn(itemItemsOrNull);
 }
 
 export function partition(items, predicateFn) {
@@ -66,4 +83,16 @@ export function reduceChunksWithInit(items, init, chunkSize, fn) {
 
 export function splitAt(items, idx) {
   return [items.slice(0, idx), items.slice(idx)];
+}
+
+export function transpose(items) {
+  const out = [[]];
+  for (let i = 0; i < items.length; i += 1) {
+    for (let j = 0; j < items[i].length; j += 1) {
+      if (!out[j]) out[j] = [];
+      out[j][i] = items[i][j];
+    }
+  }
+
+  return out;
 }
