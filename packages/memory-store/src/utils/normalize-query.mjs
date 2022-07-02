@@ -4,7 +4,7 @@ import { difference } from "@polygraph/utils/arrays";
 import { PolygraphError } from "../validations/errors.mjs";
 import { ERRORS } from "../strings.mjs";
 
-function normalizeShorthandLonghandKeys(schema, query) {
+function normalizeShorthandLonghandKeys(query) {
   const shortLongPairs = [
     ["allNonRefProps", "allNonReferenceProperties"],
     ["allRefProps", "allReferenceProperties"],
@@ -104,7 +104,7 @@ function normalizeAndExpandRels(schema, query) {
 
 export function normalizeQuery(schema, query) {
   return pipeThru(query, [
-    (q) => normalizeShorthandLonghandKeys(schema, q),
+    (q) => normalizeShorthandLonghandKeys(q),
     (q) => normalizeProps(schema, q),
     (q) => normalizeAndExpandRels(schema, q),
   ]);

@@ -1,9 +1,10 @@
 import { pipeThru, uniq } from "@polygraph/utils";
 import { filterObj, mapObj, partitionObj } from "@polygraph/utils/objects";
 import { difference } from "@polygraph/utils/arrays";
+import { ensureValidGetQuerySyntax } from "../validations.mjs";
 import { ERRORS, PolygraphError } from "../errors.mjs";
 
-function normalizeShorthandLonghandKeys(schema, query) {
+function normalizeShorthandLonghandKeys(query) {
   const shortLongPairs = [
     ["allNonRefProps", "allNonReferenceProperties"],
     ["allRefProps", "allReferenceProperties"],
@@ -102,8 +103,10 @@ function normalizeAndExpandRels(schema, query) {
 }
 
 export function normalizeQuery(schema, query) {
+  ensureValidGetQuerySyntax(schema, query);
+
   return pipeThru(query, [
-    (q) => normalizeShorthandLonghandKeys(schema, q),
+    (q) => normalizeShorthandLonghandKeys(q),
     (q) => normalizeProps(schema, q),
     (q) => normalizeAndExpandRels(schema, q),
   ]);

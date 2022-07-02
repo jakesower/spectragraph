@@ -96,3 +96,10 @@ export function transpose(items) {
 
   return out;
 }
+
+export function zipObj(keys, vals) {
+  return keys.reduce((out, key, idx) => {
+    const o = { [key]: vals[idx] };
+    return { ...out, ...o };
+  }, {});
+}
