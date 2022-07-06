@@ -6,7 +6,7 @@ export { formatRef } from "./format-ref.mjs";
 export { multiApply } from "./multi-apply.mjs";
 export { normalizeResource } from "./normalize-resource.mjs";
 export { queryTree } from "./query-tree.mjs";
-export { subsetsOfSets } from "./subsetsOfSets.mjs";
+export { subsetsOfSets } from "./subsets-of-sets.mjs";
 
 // please let tuples/records come soon
 export const refsEqual = (left, right) => (

@@ -1,5 +1,5 @@
-export function joinClauses(schema, rootQuery) {
-  const relBuilders = {
+function makeRelBuilders(schema) {
+  return {
     one: {
       one({ localResDef, localTableName, relName, path }) {
         const localRelDef = localResDef.properties[relName];
@@ -60,6 +60,10 @@ export function joinClauses(schema, rootQuery) {
       },
     },
   };
+}
+
+export function joinClauses(schema, rootQuery) {
+  const relBuilders = makeRelBuilders(schema);
 
   const go = (query, path) => {
     const localResDef = schema.resources[query.type];
@@ -89,13 +93,12 @@ export function joinClauses(schema, rootQuery) {
 export function columnsToSelect(schema, rootQuery) {
   const go = (query, path) => {
     const localTableName = path.join("$");
+    const curColumns = ["id", ...query.properties].map(
+      (col) => `${localTableName}.${col}`,
+    );
 
     const subColumns = Object.entries(query.relationships).flatMap(
       ([relName, subQuery]) => go(subQuery, [...path, relName]),
-    );
-
-    const curColumns = ["id", ...query.properties].map(
-      (col) => `${localTableName}.${col}`,
     );
 
     return [...curColumns, ...subColumns];

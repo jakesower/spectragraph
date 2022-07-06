@@ -164,7 +164,7 @@ test("fetches all props", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     id: "1",
-    allNonRefProps: true,
+    allProps: true,
   });
 
   t.deepEqual(result, omit(careBearData.bears[1], ["home", "best_friend", "powers"]));
@@ -174,7 +174,7 @@ test("fetches all props except", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     id: "1",
-    allNonRefProps: true,
+    allProps: true,
     excludedProps: ["belly_badge"],
   });
 

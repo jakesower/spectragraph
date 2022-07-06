@@ -77,7 +77,7 @@ export function makeQueryTreeSchema(schema) {
   }));
 
   const out = {
-    $id: `schemas/${schema.urlName}/query-tree-schema`,
+    $id: `schemas/${schema.urlName}/set-query-tree-schema`,
     $schema: "http://json-schema.org/draft-07/schema",
     title: `${schema.title ?? "Polygraph"} Query Tree`,
     description: "Validations for queries and associated trees.",

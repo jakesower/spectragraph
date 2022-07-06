@@ -1,13 +1,12 @@
 import { pipeThru, uniq } from "@polygraph/utils";
-import { filterObj, mapObj, partitionObj } from "@polygraph/utils/objects";
+import { filterObj, mapObj } from "@polygraph/utils/objects";
 import { difference } from "@polygraph/utils/arrays";
-import { ensureValidGetQuerySyntax } from "../validations.mjs";
+import { ensureValidGetQuerySyntax, ensureValidSetQuerySyntax } from "../validation.mjs";
 import { ERRORS, PolygraphError } from "../errors.mjs";
 
 function normalizeShorthandLonghandKeys(query) {
   const shortLongPairs = [
-    ["allNonRefProps", "allNonReferenceProperties"],
-    ["allRefProps", "allReferenceProperties"],
+    ["allProps", "allProperties"],
     ["excludedProps", "excludedProperties"],
     ["props", "properties"],
     ["rels", "relationships"],
@@ -34,18 +33,16 @@ function normalizeShorthandLonghandKeys(query) {
 
 function normalizeProps(schema, query) {
   const schemaResDef = schema.resources[query.type];
-  const [relProps, nonRelProps] = partitionObj(
+  const nonRelProps = filterObj(
     schemaResDef.properties,
-    ({ type }) => type === "relationship",
+    ({ type }) => type !== "relationship",
   );
   const schemaNonRelKeys = Object.keys(nonRelProps);
-  const schemaRelKeys = Object.keys(relProps);
   const schemaPropKeys = Object.keys(schemaResDef.properties);
   const excludedProperties = query.excludedProperties ?? [];
 
   const availableProps = uniq([
-    ...(query.allNonReferenceProperties ? schemaNonRelKeys : []),
-    ...(query.allReferenceProperties ? schemaRelKeys : []),
+    ...(query.allProperties ? schemaNonRelKeys : []),
     ...(query.properties ?? []),
   ]);
   const properties = difference(availableProps, excludedProperties);
@@ -102,12 +99,20 @@ function normalizeAndExpandRels(schema, query) {
   return { ...query, relationships };
 }
 
-export function normalizeQuery(schema, query) {
-  ensureValidGetQuerySyntax(schema, query);
-
+function normalizeQuery(schema, query) {
   return pipeThru(query, [
     (q) => normalizeShorthandLonghandKeys(q),
     (q) => normalizeProps(schema, q),
     (q) => normalizeAndExpandRels(schema, q),
   ]);
+}
+
+export function normalizeGetQuery(schema, query) {
+  ensureValidGetQuerySyntax(schema, query);
+  return normalizeQuery(schema, query);
+}
+
+export function normalizeSetQuery(schema, query) {
+  ensureValidSetQuerySyntax(schema, query);
+  return normalizeQuery(schema, query);
 }
