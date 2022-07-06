@@ -40,6 +40,16 @@ export function filterObj(obj, predicateFn) {
   return output;
 }
 
+export function forEachObj(obj, fn) {
+  const keys = Object.keys(obj);
+  const l = keys.length;
+
+  for (let i = 0; i < l; i += 1) {
+    const val = obj[keys[i]];
+    fn(val, keys[i]);
+  }
+}
+
 // e.g. {a: {inner: 'thing'}, b: {other: 'item'}} => {a: {key: 'a', inner: 'thing'}, b: {key: 'b', other: 'item'}}
 export function inlineKey(obj, keyProp) {
   let result = {};

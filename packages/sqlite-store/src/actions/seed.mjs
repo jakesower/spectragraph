@@ -44,7 +44,6 @@ export function createTables(schema, db) {
 }
 
 export function seed(schema, db, seedData) {
-  // Object.entries(schema.resources).forEach(async ([resType, resDef]) => {
   Object.entries(schema.resources).map(async ([resType, resDef]) => {
     const cols = groupBy(Object.entries(resDef.properties), ([, propDef]) => {
       if (propDef.type !== "relationship") return "tableCols";

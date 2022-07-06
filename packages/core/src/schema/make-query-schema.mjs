@@ -1,5 +1,5 @@
 import { mapObj, partitionObj } from "@polygraph/utils/objects";
-import { constraintDefinitions } from "../constraints.mjs"
+import { constraintDefinitions } from "../constraints.mjs";
 
 const constraintDefs = {
   boolean: { type: "boolean" },
@@ -57,10 +57,8 @@ export function makeQuerySchema(schema, allowRelProps) {
         then: { not: { required: rights } },
       })),
       properties: {
-        allNonRefProps: { type: "boolean" },
-        allNonReferenceProperties: { type: "boolean" },
-        allRefProps: { type: "boolean" },
-        allReferenceProperties: { type: "boolean" },
+        allProps: { type: "boolean" },
+        allProperties: { type: "boolean" },
         excludedProps: resourceProperties,
         excludedProperties: resourceProperties,
         properties: resourceProperties,

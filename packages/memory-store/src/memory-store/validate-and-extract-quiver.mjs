@@ -124,7 +124,6 @@ export async function validateAndExtractQuiver(
 
     const relationships = {};
     const updatedRels = quiver.getRelationshipChanges(ref);
-    // console.log(ref, updatedRels)
     Object.entries(existingOrNewRels).forEach(([relType, existingRels]) => {
       if (relType in updatedRels) {
         const relDef = resDef.properties[relType];

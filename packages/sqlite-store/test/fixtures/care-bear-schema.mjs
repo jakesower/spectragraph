@@ -88,7 +88,7 @@ export const careBearSchema = {
         name: { type: "string", optional: true, store: { sqlType: "VARCHAR" } },
         recurs: {
           type: "boolean",
-          default: 0,
+          default: false,
           store: { sqlType: "INTEGER" },
         },
         follows: {

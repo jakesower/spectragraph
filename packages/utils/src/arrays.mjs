@@ -1,3 +1,11 @@
+export function asArray(maybeArray) {
+  return !maybeArray
+    ? []
+    : Array.isArray(maybeArray)
+    ? [...maybeArray]
+    : [maybeArray];
+}
+
 export function difference(left, right) {
   const rightSet = new Set(right);
   return left.filter((leftElt) => !rightSet.has(leftElt));
@@ -24,6 +32,19 @@ export function intersection(leftArray, rightArray) {
   }
 
   return output;
+}
+
+export function groupBy(items, fn) {
+  const out = {};
+  const l = items.length;
+
+  for (let i = 0; i < l; i += 1) {
+    const group = fn(items[i]);
+    out[group] = out[group] || [];
+    out[group][out[group].length] = items[i];
+  }
+
+  return out;
 }
 
 export function keyBy(items, fn) {
@@ -97,9 +118,20 @@ export function transpose(items) {
   return out;
 }
 
+export function uniq(items) {
+  return [...new Set(items)];
+}
+
 export function zipObj(keys, vals) {
   return keys.reduce((out, key, idx) => {
     const o = { [key]: vals[idx] };
+    return { ...out, ...o };
+  }, {});
+}
+
+export function zipObjWith(keys, vals, fn) {
+  return keys.reduce((out, key, idx) => {
+    const o = { [key]: fn(vals[idx], key) };
     return { ...out, ...o };
   }, {});
 }
