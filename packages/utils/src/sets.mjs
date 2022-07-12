@@ -70,3 +70,11 @@ export function combinationsBy(left, right, compareFn) {
 export function difference(left, right) {
   return new Set(Array.from(left).filter((leftElt) => !right.has(leftElt)));
 }
+
+export function equal(left, right) {
+  return left.size === right.size && [...left].every((l) => right.has(l));
+}
+
+export function union(left, right) {
+  return new Set([...[...left], [...right]]);
+}

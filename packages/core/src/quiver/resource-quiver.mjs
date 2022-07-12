@@ -1,14 +1,9 @@
-import { asArray } from "@polygraph/utils/arrays";
-import { combinations } from "@polygraph/utils/sets";
+import { asArray, differenceBy } from "@polygraph/utils/arrays";
 import { makeQuiver } from "./quiver.mjs";
+import { makeEmptyStore } from "../store.mjs";
 
 function formatRef(ref) {
   return `(${ref.type}, ${ref.id})`;
-}
-
-function makeRefKey(ref) {
-  const { type, id } = ref;
-  return JSON.stringify({ type, id });
 }
 
 /**
@@ -18,14 +13,13 @@ function makeRefKey(ref) {
 
 export function makeResourceQuiver(schema, builderFn) {
   const quiver = makeQuiver();
-  const explicitResources = new Set();
+  const buildStore = makeEmptyStore();
 
   const inverseOf = (resourceRef, relName) =>
     schema.resources[resourceRef.type].properties[relName].inverse;
 
-  const assertResource = (updatedResource, existingResource) => {
+  const assert = (updatedResource, existingResource) => {
     quiver.assertNode(updatedResource);
-    explicitResources.add(makeRefKey(updatedResource));
 
     Object.keys(updatedResource.relationships ?? {}).forEach((relKey) => {
       const schemaRelDef = schema.resources[updatedResource.type].properties[relKey];
@@ -33,7 +27,7 @@ export function makeResourceQuiver(schema, builderFn) {
         ({ id }) => ({ id, type: schemaRelDef.relatedType }),
       );
       const existingRels = existingResource ? asArray(existingResource[relKey]) : [];
-      const deltas = combinations(updatedRels, existingRels, (x) => x.id);
+      const missingFromUpdated = differenceBy(existingRels, updatedRels, (x) => x.id);
 
       quiver.assertArrowGroup(updatedResource, updatedRels, relKey);
 
@@ -44,7 +38,7 @@ export function makeResourceQuiver(schema, builderFn) {
         }
       });
 
-      deltas.rightOnly.forEach((target) => {
+      missingFromUpdated.forEach((target) => {
         const inverse = inverseOf(updatedResource, relKey);
         if (inverse) {
           quiver.retractArrow({
@@ -57,7 +51,7 @@ export function makeResourceQuiver(schema, builderFn) {
     });
   };
 
-  const retractResource = (resource, resourceType) => {
+  const retract = (resource, resourceType) => {
     if (!resource) {
       throw new Error(
         `Resources that do not exist cannot be deleted: ${formatRef(resource)}`,
@@ -83,13 +77,9 @@ export function makeResourceQuiver(schema, builderFn) {
     );
   };
 
-  builderFn({
-    assertResource,
-    retractResource,
-  });
+  builderFn({ assert, retract });
 
   return {
-    explicitResources,
     ...quiver,
     getRelationshipChanges: quiver.getArrowChanges,
     getResources: quiver.getNodes,
