@@ -92,7 +92,7 @@ test("uses defaults when creating a resource missing the property", async (t) =>
   t.deepEqual(getResult, getExpected);
 });
 
-test("does not use defaults when creating a resource has the property", async (t) => {
+test("does not use defaults when creating a resource that specifies the property", async (t) => {
   const nobody = {
     id: "nobody",
     name: "Friend",
@@ -253,7 +253,7 @@ test("replaces a property deep in the graph", async (t) => {
 
 // ----Relationships-------------------------------------------------------------------------------
 
-test.only("replaces a to-one relationship", async (t) => {
+test.skip("replaces a to-one relationship", async (t) => {
   const query = {
     type: "bears",
     id: "3",
@@ -436,3 +436,7 @@ test.skip("replaces or keeps existing data given a new resources", async (t) => 
   });
   t.deepEqual(getResult, [{ id: "1" }, { id: "4" }]);
 });
+
+// trees where a resource is specified more than once
+
+test.todo("should handle default values properly on multi-specification");

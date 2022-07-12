@@ -50,8 +50,8 @@ export function ensureValidSetQuerySyntax(schema, query) {
   }
 }
 
-export function ensureCreatedResourceFields(schema, query, resource) {
-  const resDef = schema.resources[query.type];
+export function ensureCreatedResourceFields(schema, resource) {
+  const resDef = schema.resources[resource.type];
   const requiredPropKeys = Object.keys(resDef.properties).filter((propKey) => {
     const propDef = resDef.properties[propKey];
     return (
@@ -59,7 +59,10 @@ export function ensureCreatedResourceFields(schema, query, resource) {
     );
   });
 
-  const missingQueryProps = difference(requiredPropKeys, query.properties);
+  const missingQueryProps = difference(
+    requiredPropKeys,
+    Object.keys(resource.properties),
+  );
   if (missingQueryProps.length > 0) {
     throw new PolygraphError(ERRORS.QUERY_MISSING_CREATE_FIELDS, {
       resource,

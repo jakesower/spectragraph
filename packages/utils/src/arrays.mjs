@@ -122,6 +122,21 @@ export function uniq(items) {
   return [...new Set(items)];
 }
 
+export function uniqBy(items, fn) {
+  let hits = new Set();
+  let out = [];
+
+  for (const item of items) {
+    const key = fn(item);
+    if (!hits.has(key)) {
+      hits.add(key);
+      out[out.length] = item;
+    }
+  }
+
+  return out;
+}
+
 export function zipObj(keys, vals) {
   return keys.reduce((out, key, idx) => {
     const o = { [key]: vals[idx] };
