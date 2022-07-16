@@ -9,8 +9,11 @@ export function createTables(schema, db) {
       if (propDef.type !== "relationship") return "tableCols";
       if (propDef.store?.join?.localColumn) return "localJoinCols";
 
-      // TODO: allow for one-way to-many relationships
-      if (propDef?.store?.join?.joinColumn && resType <= propDef.relatedType) {
+      const inverse = getInverse(schema, propDef);
+      if (
+        propDef?.store?.join?.joinColumn &&
+        (resType <= propDef.relatedType || !inverse)
+      ) {
         return "joinCols";
       }
       return "unneeded";
@@ -35,7 +38,9 @@ export function createTables(schema, db) {
       const inverse = getInverse(schema, relDef);
       const { joinTable } = relDef.store.join;
       const localRelCol = relDef.store.join.joinColumn;
-      const foreignRelCol = inverse.store.join.joinColumn;
+      const foreignRelCol = inverse
+        ? inverse.store.join.joinColumn
+        : relDef.store.join.foreignJoinColumn;
       const joinTableSql = `CREATE TABLE ${joinTable} (${localRelCol} VARCHAR, ${foreignRelCol} VARCHAR)`;
 
       return db.exec(joinTableSql);

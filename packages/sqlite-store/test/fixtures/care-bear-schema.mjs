@@ -99,6 +99,7 @@ export const careBearSchema = {
             join: {
               joinTable: "bears_companions",
               joinColumn: "companion_id",
+              foreignJoinColumn: "bears_id",
             },
           },
         },
