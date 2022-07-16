@@ -15,9 +15,19 @@ const combineQueryClauses = (left, right) => {
   return out;
 };
 
-export function get(schema, db, query, rootClauses = [], options = {}) {
+export function get(schema, db, baseQuery, rootClauses = [], options = {}) {
   const { shallowRelationships } = { ...DEFAULT_OPTIONS, ...options };
-  const resDef = schema.resources[query.type];
+  const resDef = schema.resources[baseQuery.type];
+
+  const query = shallowRelationships
+    ? {
+      ...baseQuery,
+      relationships: mapObj(baseQuery.relationships, (subQuery) => ({
+        ...subQuery,
+        relationships: {},
+      })),
+    }
+    : baseQuery;
 
   const idClauses = query.id
     ? {

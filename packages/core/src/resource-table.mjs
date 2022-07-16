@@ -3,6 +3,8 @@ import { mapObj } from "@polygraph/utils/objects";
 import { combinations, difference } from "@polygraph/utils/sets";
 import { makeEmptyStore } from "./store.mjs";
 
+const DELETED = Symbol("deleted");
+
 function formatRef(ref) {
   return `(${ref.type}, ${ref.id})`;
 }
@@ -19,19 +21,17 @@ export function makeResourceTable(schema) {
   const relationshipsStore = makeEmptyStore(schema);
   const resourceStatusesByType = mapObj(schema.resources, () => ({}));
 
-  // ensures
+  // ---Validation Functions-----------------------------------------------------------------------
   const ensureConsistentProperties = (resource) => {
     const { type, id } = resource;
     const stored = propertiesStore[type][id];
 
     if (stored) {
-      const diff = Object.keys(ensureConsistentProperties.properties)
+      const diff = Object.keys(resource.properties)
         .filter(
-          (resKey) =>
-            resKey in stored.properties &&
-            resource.properties[resKey] !== stored.properties[resKey],
+          (resKey) => resKey in stored && resource.properties[resKey] !== stored[resKey],
         )
-        .map((k) => `${k}: ${resource.properties[k]} ≠ ${stored.properties[k]})`);
+        .map((k) => `${k}: ${resource.properties[k]} ≠ ${stored[k]})`);
 
       if (diff.length > 0) {
         throw new Error(
@@ -52,8 +52,8 @@ export function makeResourceTable(schema) {
     Object.entries(resource.relationships).forEach(([relKey, relVal]) => {
       if (!(relKey in relationshipsStore[type][id])) return;
 
-      const relIdSet = asArray(relVal).map((r) => r.id);
-      const storedRelSet = relationshipsStore[type][id][relKey].asserted;
+      const relIdSet = new Set(asArray(relVal).map((r) => r.id));
+      const storedRelSet = relationshipsStore[type][id][relKey].asserted ?? new Set();
 
       const mismatches = storedRelSet.finalized
         ? [...difference(relIdSet, storedRelSet), ...difference(storedRelSet, relIdSet)]
@@ -73,17 +73,22 @@ export function makeResourceTable(schema) {
     });
   };
 
-  const ensureConsistentSingleRelationship = (resource, relatedId, relationshipKey) => {
+  const ensureConsistentSingleRelationship = (
+    resource,
+    relatedId,
+    relationshipKey,
+    status,
+  ) => {
     const { type, id } = resource;
     const stored = relationshipsStore[type][id]?.[relationshipKey];
 
     if (!stored) return;
 
-    if (stored.finalized && !stored.asserted.has(relatedId)) {
+    if (stored.finalized && !stored[status].has(relatedId)) {
       throw new Error(
         `${formatRef(resource)} had a complete set of relationships, but \n\n${formatRef(
           resource,
-        )} was asserted`,
+        )} was inconsistent`,
       );
     }
   };
@@ -91,7 +96,8 @@ export function makeResourceTable(schema) {
   const ensureConsistentDeletedResource = (resource) => {
     const { type, id } = resource;
 
-    if (id in propertiesStore[type] && propertiesStore[type][id] !== null) {
+    console.log({ resource, propertiesStore });
+    if (id in propertiesStore[type] && propertiesStore[type][id] !== DELETED) {
       throw new Error(
         `${formatRef(resource)} was marked as deleted, but also showed up in the tree`,
       );
@@ -101,53 +107,35 @@ export function makeResourceTable(schema) {
   const ensureResourceNotDeleted = (resource) => {
     const { type, id } = resource;
 
-    if (id in propertiesStore[type] && propertiesStore[type][id] === null) {
+    if (id in propertiesStore[type] && propertiesStore[type][id] === DELETED) {
       throw new Error(
         `${formatRef(resource)} was marked as deleted, but also showed up in the tree`,
       );
     }
   };
 
-  const deleteResource = (resource) => {
-    const { type, id } = resource;
-    const resDef = schema.resources[type];
+  // ---Resource Functions-------------------------------------------------------------------------
 
-    ensureConsistentDeletedResource(resource);
-    propertiesStore[type][id] = null;
-
-    Object.entries(resource.relationships).forEach(([relKey, relVal]) => {
-      const relDef = resDef.properties[relKey];
-      const { inverse, relatedType } = relDef;
-
-      if (inverse) {
-        asArray(relVal).forEach((relRes) => {
-          propertiesStore[relatedType][relRes.id] =
-            propertiesStore[relatedType][relRes.id] ?? {};
-          const storedRel = propertiesStore[relatedType][relRes.id][inverse];
-
-          propertiesStore[relatedType][relRes.id][inverse] = storedRel
-            ? { ...storedRel, retracted: storedRel.retracted.add(id) }
-            : {
-              asserted: new Set(),
-              finalized: false,
-              retracted: new Set(id),
-            };
-        });
-      }
-    });
-  };
-
-  const assertRelationship = (resource, relatedId, relationshipKey) => {
+  const setRelationshipStatus = (resource, relatedId, relationshipKey, status) => {
     const { type, id } = resource;
 
-    ensureConsistentSingleRelationship(resource, relatedId, relationshipKey);
+    ensureConsistentSingleRelationship(resource, relatedId, relationshipKey, status);
 
     relationshipsStore[type][id] = relationshipsStore[type][id] ?? {};
-    const stored = relationshipsStore[type][id][relationshipKey];
 
-    relationshipsStore[type][id][relationshipKey] = stored
-      ? { ...stored, asserted: stored.asserted.add(relatedId) }
-      : { asserted: new Set(relatedId), finalized: false, retracted: new Set() };
+    const stored = relationshipsStore[type][id][relationshipKey] ?? {};
+    const defaultStoreItem = {
+      asserted: new Set(),
+      existing: new Set(),
+      finalized: false,
+      retracted: new Set(),
+    };
+    const base = { ...defaultStoreItem, ...stored };
+
+    relationshipsStore[type][id][relationshipKey] = {
+      ...base,
+      [status]: base[status].add(relatedId),
+    };
   };
 
   const setProperties = (resource) => {
@@ -158,30 +146,51 @@ export function makeResourceTable(schema) {
     propertiesStore[type][id] = { ...stored, ...resource.properties };
   };
 
-  const setRelationships = (resource) => {
-    const { type, id } = resource;
+  const setRelationships = (updatedResource, existingResource) => {
+    const { type, id } = updatedResource;
     const resDef = schema.resources[type];
 
-    Object.entries(resource.relationships).forEach(
+    Object.entries(updatedResource.relationships).forEach(
       ([relationshipKey, relationshipVal]) => {
         relationshipsStore[type][id] = relationshipsStore[type][id] ?? {};
 
-        ensureConsistentRelationships(resource);
+        ensureConsistentRelationships(updatedResource);
 
         const stored = relationshipsStore[type][id][relationshipKey];
         if (!stored?.finalized) {
           const relatedIdSet = new Set(asArray(relationshipVal).map((r) => r.id));
-          const { inverse } = resDef.properties[relationshipKey];
+          const { inverse, relatedType } = resDef.properties[relationshipKey];
+
+          const existingIdSet = new Set(
+            asArray(existingResource?.[relationshipKey]).map((r) => r.id),
+          );
+
+          const retracted = difference(existingIdSet, relatedIdSet);
+          [...retracted].forEach((relId) => {
+            propertiesStore[relatedType][relId] =
+              propertiesStore[relatedType][relId] ?? {};
+            resourceStatusesByType[relatedType][relId] = "updated";
+          });
 
           relationshipsStore[type][id][relationshipKey] = {
             asserted: relatedIdSet,
             finalized: true,
-            retracted: stored?.retracted ?? new Set(),
+            existing: existingIdSet,
+            retracted,
           };
 
           if (inverse) {
             asArray(relationshipVal).forEach((relRes) => {
-              assertRelationship(relRes, id, relationshipKey);
+              setRelationshipStatus(relRes, id, inverse, "asserted");
+            });
+
+            retracted.forEach((invRelId) => {
+              setRelationshipStatus(
+                { type: relatedType, id: invRelId },
+                id,
+                inverse,
+                "retracted",
+              );
             });
           }
         }
@@ -189,8 +198,35 @@ export function makeResourceTable(schema) {
     );
   };
 
+  const deleteResource = (existingResource) => {
+    const { type, id } = existingResource;
+    const resDef = schema.resources[type];
+
+    ensureConsistentDeletedResource(existingResource);
+
+    propertiesStore[type][id] = DELETED;
+    resourceStatusesByType[type][id] = "deleted";
+
+    Object.entries(existingResource.relationships).forEach(([relKey, relVal]) => {
+      const relIds = asArray(relVal).map((rel) => rel.id);
+      const relDef = resDef.properties[relKey];
+      const { inverse, relatedType } = relDef;
+
+      if (inverse) {
+        relIds.forEach((relId) => {
+          setRelationshipStatus(
+            { type: relatedType, id: relId },
+            id,
+            inverse,
+            "retracted",
+          );
+        });
+      }
+    });
+  };
+
   const setResource = (updatedResource, existingResource) => {
-    const { type, id } = updatedResource;
+    const { type, id } = updatedResource ?? existingResource;
 
     if (!updatedResource) {
       deleteResource(existingResource);
@@ -198,9 +234,12 @@ export function makeResourceTable(schema) {
       return;
     }
 
+    relationshipsStore[type][id] = relationshipsStore[type][id] ?? {};
+    propertiesStore[type][id] = propertiesStore[type][id] ?? {};
+
     ensureResourceNotDeleted(updatedResource);
     setProperties(updatedResource);
-    setRelationships(updatedResource);
+    setRelationships(updatedResource, existingResource);
 
     resourceStatusesByType[type][id] = existingResource ? "updated" : "inserted";
   };
@@ -221,14 +260,15 @@ export function makeResourceTable(schema) {
         Object.entries(relationshipsStore[type][id] ?? {}).forEach(
           ([relKey, relIdSet]) => {
             const relCombos = combinations(relIdSet.asserted, relIdSet.retracted);
-
+            // console.log('relCombos', type, id, relCombos);
             if (relCombos.intersection.size > 0) {
               throw new Error("some relationships were asserted and retracted TODO");
             }
 
-            out[type][id].relationships[relKey] = relCombos.finalized
-              ? { set: relCombos.left }
-              : { added: relCombos.leftOnly, removed: relCombos.rightOnly };
+            out[type][id].relationships[relKey] = {
+              added: [...relCombos.leftOnly],
+              removed: [...relCombos.rightOnly],
+            };
           },
         );
       });

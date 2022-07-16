@@ -1,31 +1,34 @@
 // note that compareFn must be injective
 export function combinations(left, right) {
-  const leftOnlySet = new Set();
-  const [numLeft, numRight] = [left.length, right.length];
-  const rightOnly = [];
-  const intersection = [];
-  const union = [];
+  const leftArray = [...left];
+  const rightArray = [...right];
+
+  const leftOnly = new Set();
+  const [numLeft, numRight] = [leftArray.length, rightArray.length];
+  const rightOnly = new Set();
+  const intersection = new Set();
+  const union = new Set();
 
   for (let i = 0; i < numLeft; i += 1) {
-    leftOnlySet.add(left[i]);
-    union.push(left[i]);
+    leftOnly.add(leftArray[i]);
+    union.add(leftArray[i]);
   }
 
   for (let i = 0; i < numRight; i += 1) {
-    const rightItem = right[i];
-    if (leftOnlySet.has(rightItem)) {
-      leftOnlySet.delete(rightItem);
-      intersection.push(rightItem);
+    const rightItem = rightArray[i];
+    if (leftOnly.has(rightItem)) {
+      leftOnly.delete(rightItem);
+      intersection.add(rightItem);
     } else {
-      rightOnly.push(rightItem);
-      union.push(rightItem);
+      rightOnly.add(rightItem);
+      union.add(rightItem);
     }
   }
 
   return {
     left,
     right,
-    leftOnly: [...leftOnlySet],
+    leftOnly,
     rightOnly,
     intersection,
     union,

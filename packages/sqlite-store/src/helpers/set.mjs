@@ -1,8 +1,10 @@
 import { buildResourceTable } from "@polygraph/core/resource-table";
 import { normalizeGetQuery } from "@polygraph/core/query";
+import { normalizeResource } from "@polygraph/core/resource";
+import { getRelationshipProperties } from "@polygraph/core/schema";
 import { normalizeTree } from "@polygraph/core/tree";
 import { ensureCreatedResourceFields } from "@polygraph/core/validation";
-import { groupBy, uniq } from "@polygraph/utils/arrays";
+import { asArray, differenceBy, groupBy, transpose, uniq } from "@polygraph/utils/arrays";
 import { pipeThru } from "@polygraph/utils/functions";
 import { filterObj, mapObj } from "@polygraph/utils/objects";
 import { get } from "./get.mjs";
@@ -18,13 +20,18 @@ export function set(schema, db, rootQuery, rootTreeOrTrees) {
       : val;
 
   const rootTrees = normalizeTree(rootQuery, rootTreeOrTrees);
-
   const resourceTable = buildResourceTable(schema, ({ setResource }) => {
     const go = (tree) => {
+      // TODO: make this even resemble performant
       const existing = get(
         schema,
         db,
-        normalizeGetQuery(schema, { type: tree.type, id: tree.id, allProps: true }),
+        normalizeGetQuery(schema, {
+          type: tree.type,
+          id: tree.id,
+          allProps: true,
+          relationships: mapObj(tree.relationships, () => ({})),
+        }),
       );
       setResource(tree, existing);
       Object.values(tree.relationships).forEach((treeRels) => {
@@ -32,13 +39,29 @@ export function set(schema, db, rootQuery, rootTreeOrTrees) {
       });
     };
 
+    const rootQueryWithAllRels = {
+      ...rootQuery,
+      relationships: mapObj(
+        getRelationshipProperties(schema, rootQuery.type),
+        () => ({}),
+      ),
+    };
+
+    const rootExistingQuery = normalizeGetQuery(schema, rootQueryWithAllRels);
+    const rootExisting = asArray(get(schema, db, rootExistingQuery));
+
+    const absent = differenceBy(rootExisting, rootTrees, (res) => res.id);
+
     rootTrees.forEach(go);
+    absent.forEach((absentRes) => {
+      setResource(null, normalizeResource(schema, rootQuery.type, absentRes));
+    });
   });
 
-  const byStatus = groupBy(
-    Object.values(resourceTable).flatMap((t) => Object.values(t)),
-    (res) => res.status,
-  );
+  const resources = Object.values(resourceTable).flatMap((t) => Object.values(t));
+  const byStatus = groupBy(resources, (res) => res.status);
+
+  // console.log("ress", resources);
 
   (byStatus.inserted ?? []).forEach((res) => {
     ensureCreatedResourceFields(schema, res);
@@ -50,39 +73,111 @@ export function set(schema, db, rootQuery, rootTreeOrTrees) {
       (props) => mapObj(props, (prop) => prop.default),
     ]);
 
-    const insertProps = uniq([
-      ...Object.keys(defaultProps),
-      ...Object.keys(res.properties),
-    ]);
-    const insertPropsWithId = [...insertProps, "id"];
+    const propCols = uniq([...Object.keys(defaultProps), ...Object.keys(res.properties)]);
+    const propsWithDefaults = { ...defaultProps, ...res.properties };
+    const propVals = propCols.map((prop) =>
+      castPropToDb(res.type, prop, propsWithDefaults[prop]),
+    );
+
+    const relColPairs = Object.entries(res.relationships).flatMap(([relKey, relVal]) => {
+      const { localColumn } = resDef.properties[relKey].store.join;
+      return localColumn ? [[localColumn, [...relVal.added][0] ?? null]] : [];
+    });
+    const [relCols, relVals] = relColPairs.length > 0 ? transpose(relColPairs) : [[], []];
+
+    const allCols = [...propCols, ...relCols];
+    const allVals = [...propVals, ...relVals];
 
     const insertNodeQuery = db.prepare(
-      `INSERT INTO ${resDef.store.table} (${insertPropsWithId.join(", ")}) VALUES (${[
-        ...insertProps,
-        "id",
+      `INSERT INTO ${resDef.store.table} (${[...allCols, "id"].join(", ")}) VALUES (${[
+        ...allCols,
+        ["id"],
       ]
         .map(() => "?")
         .join(", ")})`,
     );
 
-    const defaultedProps = { ...defaultProps, ...res.properties };
-    insertNodeQuery.run([
-      ...insertProps.map((prop) => castPropToDb(res.type, prop, defaultedProps[prop])),
-      res.id,
-    ]);
+    insertNodeQuery.run([...allVals, res.id]);
   });
 
   (byStatus.updated ?? []).forEach((res) => {
-    if (Object.keys(res.properties).length === 0) return;
-
     const resDef = schema.resources[res.type];
-    const updateProps = Object.keys(res.properties);
+
+    const propCols = Object.keys(res.properties);
+    const propVals = propCols.map((prop) => res.properties[prop]);
+
+    const relColPairs = Object.entries(res.relationships).flatMap(([relKey, relVal]) => {
+      const { localColumn } = resDef.properties[relKey].store.join;
+      return localColumn ? [[localColumn, [...relVal.added][0] ?? null]] : [];
+    });
+    const [relCols, relVals] = relColPairs.length > 0 ? transpose(relColPairs) : [[], []];
+
+    const allCols = [...propCols, ...relCols];
+    const allVals = [...propVals, ...relVals];
+
+    if (allCols.length === 0) return;
+
     const updateNodeQuery = db.prepare(
-      `UPDATE ${resDef.store.table} SET ${updateProps
+      `UPDATE ${resDef.store.table} SET ${allCols
         .map((col) => `${col} = ?`)
         .join(", ")} WHERE id = ?`,
     );
 
-    updateNodeQuery.run([...updateProps.map((prop) => res.properties[prop]), res.id]);
+    updateNodeQuery.run([...allVals, res.id]);
+  });
+
+  (byStatus.deleted ?? []).forEach((res) => {
+    const resDef = schema.resources[res.type];
+    const updateNodeQuery = db.prepare(`DELETE FROM ${resDef.store.table} WHERE id = ?`);
+
+    updateNodeQuery.run([res.id]);
+  });
+
+  const joinTableCache = {};
+  resources.forEach((res) => {
+    const { type, id } = res;
+
+    Object.entries(res.relationships).forEach(([relKey, relVal]) => {
+      const relDef = schema.resources[type].properties[relKey];
+      const { joinColumn, joinTable } = relDef.store.join;
+
+      if (!joinTable) return;
+      if (!(joinTable in joinTableCache)) {
+        const { inverse, relatedType } = relDef;
+        const foreignJoinColumn =
+          relDef.store.join.foreignJoinColumn ??
+          schema.resources[relatedType].properties[inverse].store.join.joinColumn;
+
+        const insertStatement = db.prepare(
+          `INSERT INTO ${joinTable} (${joinColumn}, ${foreignJoinColumn}) VALUES (?, ?)`,
+        );
+        const deleteStatement = db.prepare(
+          `DELETE FROM ${joinTable} WHERE ${joinColumn} = ? AND ${foreignJoinColumn} = ?`,
+        );
+
+        joinTableCache[joinTable] = {
+          type,
+          relKey,
+          insertStatement,
+          deleteStatement,
+        };
+      } else if (
+        joinTableCache[joinTable].type !== type ||
+        joinTableCache[joinTable].relKey !== relKey
+      ) {
+        return;
+      }
+
+      const { insertStatement, deleteStatement } = joinTableCache[joinTable];
+
+      // will create dups
+      [...relVal.added].forEach((relId) => {
+        insertStatement.run([id, relId]);
+      });
+
+      [...relVal.removed].forEach((relId) => {
+        deleteStatement.run([id, relId]);
+      });
+    });
   });
 }

@@ -253,7 +253,7 @@ test("replaces a property deep in the graph", async (t) => {
 
 // ----Relationships-------------------------------------------------------------------------------
 
-test.skip("replaces a to-one relationship", async (t) => {
+test("replaces a to-one relationship", async (t) => {
   const query = {
     type: "bears",
     id: "3",
@@ -289,18 +289,93 @@ test.skip("replaces a to-one relationship", async (t) => {
   t.deepEqual(unlinkedRelCheck.actual, unlinkedRelCheck.expected);
 });
 
-test.skip("replaces a one-to-many-relationship", async (t) => {
-  await t.context.store.replaceOne(
-    { type: "homes", id: "1", relationships: { bears: {} } },
-    {
-      type: "homes",
-      id: "1",
-      bears: [
-        { type: "bears", id: "1" },
-        { type: "bears", id: "5" },
-      ],
-    },
-  );
+test("adds a one-to-many-relationship", async (t) => {
+  const query = { type: "homes", id: "1", relationships: { bears: {} } };
+
+  await t.context.store.set(query, {
+    type: "homes",
+    id: "1",
+    bears: [
+      { type: "bears", id: "1" },
+      { type: "bears", id: "2" },
+      { type: "bears", id: "3" },
+      { type: "bears", id: "5" },
+    ],
+  });
+
+  const bearResult = await t.context.store.get({
+    type: "bears",
+    id: "2",
+    relationships: { home: { properties: ["name"] } },
+  });
+  t.is(bearResult.home.name, "Care-a-Lot");
+
+  const smartHeartResult = await t.context.store.get({
+    type: "bears",
+    id: "5",
+    relationships: { home: { properties: ["name"] } },
+  });
+  t.is(smartHeartResult.home.name, "Care-a-Lot");
+
+  const careALotResult = await t.context.store.get({
+    type: "homes",
+    id: "1",
+    relationships: { bears: {} },
+  });
+  t.deepEqual(careALotResult, {
+    id: "1",
+    bears: [{ id: "1" }, { id: "2" }, { id: "3" }, { id: "5" }],
+  });
+});
+
+test("removes a one-to-many-relationship", async (t) => {
+  const query = { type: "homes", id: "1", relationships: { bears: {} } };
+
+  await t.context.store.set(query, {
+    type: "homes",
+    id: "1",
+    bears: [
+      { type: "bears", id: "1" },
+      { type: "bears", id: "2" },
+    ],
+  });
+
+  const bearResult = await t.context.store.get({
+    type: "bears",
+    id: "2",
+    relationships: { home: { properties: ["name"] } },
+  });
+  t.is(bearResult.home.name, "Care-a-Lot");
+
+  const wishBearResult = await t.context.store.get({
+    type: "bears",
+    id: "5",
+    relationships: { home: { properties: ["name"] } },
+  });
+  t.is(wishBearResult.home, null);
+
+  const careALotResult = await t.context.store.get({
+    type: "homes",
+    id: "1",
+    relationships: { bears: {} },
+  });
+  t.deepEqual(careALotResult, {
+    id: "1",
+    bears: [{ id: "1" }, { id: "2" }],
+  });
+});
+
+test("adds and replaces resources in a one-to-many-relationship", async (t) => {
+  const query = { type: "homes", id: "1", relationships: { bears: {} } };
+
+  await t.context.store.set(query, {
+    type: "homes",
+    id: "1",
+    bears: [
+      { type: "bears", id: "1" },
+      { type: "bears", id: "5" },
+    ],
+  });
 
   const bearResult = await t.context.store.get({
     type: "bears",
@@ -327,28 +402,76 @@ test.skip("replaces a one-to-many-relationship", async (t) => {
   t.is(careALotResult.bears.length, 2);
 });
 
-test.skip("creates a relationship and replaces a property deep in the graph", async (t) => {
-  const replaceResult = await t.context.store.replaceOne(
-    { type: "bears", id: "5", relationships: { home: { properties: ["caring_meter"] } } },
-    { type: "bears", id: "5", home: { id: "1", caring_meter: 0.3 } },
-  );
+test("adds a many-to-many relationship", async (t) => {
+  const query = { type: "bears", id: "1", relationships: { powers: {} } };
+  const update = { id: "1", powers: [{ id: "careBearStare" }, { id: "makeWish" }] };
 
-  const replaceExpected = {
-    ...emptyStore,
-    bears: { 5: { ...careBearData.bears[5], home: { type: "homes", id: "1" } } },
-    homes: {
-      1: {
-        ...careBearData.homes[1],
-        bears: ["1", "2", "3", "5"].map(toRef("bears")),
-        caring_meter: 0.3,
-      },
-    },
-  };
+  await t.context.store.set(query, update);
 
-  t.deepEqual(replaceResult, replaceExpected);
+  t.deepEqual(await t.context.store.get(query), update);
+
+  const powerResult = await t.context.store.get({
+    type: "powers",
+    id: "makeWish",
+    relationships: { bears: { properties: ["name"] } },
+  });
+  t.deepEqual(powerResult, {
+    id: "makeWish",
+    bears: [{ id: "1", name: "Tenderheart Bear" }],
+  });
 });
 
-// ----Replacement---------------------------------------------------------------------------------
+test("removes a many-to-many relationship", async (t) => {
+  const query = { type: "bears", id: "1", relationships: { powers: {} } };
+  const update = { id: "1", powers: [] };
+
+  await t.context.store.set(query, update);
+
+  t.deepEqual(await t.context.store.get(query), update);
+
+  const powerResult = await t.context.store.get({
+    type: "powers",
+    id: "careBearStare",
+    relationships: { bears: {} },
+  });
+  t.deepEqual(powerResult, {
+    id: "careBearStare",
+    bears: [{ id: "2" }, { id: "3" }, { id: "5" }],
+  });
+});
+
+test("adds and removes a many-to-many relationship",async (t) => {
+  const query = { type: "bears", id: "1", relationships: { powers: {} } };
+  const update = { id: "1", powers: [{ id: "makeWish" }] };
+
+  await t.context.store.set(query, update);
+
+  t.deepEqual(await t.context.store.get(query), update);
+
+  const powerResultAdd = await t.context.store.get({
+    type: "powers",
+    id: "makeWish",
+    relationships: { bears: { properties: ["name"] } },
+  });
+  t.deepEqual(powerResultAdd, {
+    id: "makeWish",
+    bears: [{ id: "1", name: "Tenderheart Bear" }],
+  });
+  
+  const powerResultRem = await t.context.store.get({
+    type: "powers",
+    id: "careBearStare",
+    relationships: { bears: {} },
+  });
+  t.deepEqual(powerResultRem, {
+    id: "careBearStare",
+    bears: [{ id: "2" }, { id: "3" }, { id: "5" }],
+  });
+});
+
+test.todo("adds and removes a symmetric many-to-many relationship");
+
+// ----Deleting Resources--------------------------------------------------------------------------
 
 test.skip("replaces existing data completely given a new resource", async (t) => {
   const query = {

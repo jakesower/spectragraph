@@ -11,15 +11,15 @@ export function defaultResource(schema, resourceType) {
 }
 
 export function normalizeResource(schema, type, resource) {
-  const [propKeys, relKeys] = partitionObj(
-    schema.resources[type],
+  const [relProps, nonRelProps] = partitionObj(
+    schema.resources[type].properties,
     (propDef) => propDef.type === "relationship",
   );
 
   return {
     type,
     id: resource.id,
-    properties: pick(resource, propKeys),
-    relationships: pick(resource, relKeys),
+    properties: pick(resource, Object.keys(nonRelProps)),
+    relationships: pick(resource, Object.keys(relProps)),
   };
 }

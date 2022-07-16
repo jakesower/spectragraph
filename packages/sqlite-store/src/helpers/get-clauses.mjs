@@ -59,6 +59,31 @@ function makeRelBuilders(schema) {
         ];
       },
     },
+    none: {
+      one({ localResDef, localTableName, relName, path }) {
+        // TODO
+      },
+      many({ localResDef, localTableName, relName, path }) {
+        const localRelDef = localResDef.properties[relName];
+        const localJoinColumn = localRelDef.store.join.joinColumn;
+
+        const foreignResDef = schema.resources[localRelDef.relatedType];
+        const foreignTable = foreignResDef.store.table;
+        const foreignTableName = [...path, relName].join("$");
+        const foreignRelDef = foreignResDef?.properties?.[localRelDef.inverse];
+        const foreignJoinColumn = foreignRelDef
+          ? foreignRelDef.store.join.joinColumn
+          : localRelDef.store.join.foreignJoinColumn;
+
+        const { joinTable } = localRelDef.store.join;
+        const joinTableName = `${localTableName}$$${relName}`;
+
+        return [
+          `LEFT JOIN ${joinTable} AS ${joinTableName} ON ${localTableName}.id = ${joinTableName}.${localJoinColumn}`,
+          `LEFT JOIN ${foreignTable} AS ${foreignTableName} ON ${foreignTableName}.id = ${joinTableName}.${foreignJoinColumn}`,
+        ];
+      },
+    },
   };
 }
 
@@ -76,7 +101,7 @@ export function joinClauses(schema, rootQuery) {
       const foreignRelDef = foreignResDef.properties[localRelDef.inverse];
 
       const localResCardinality = localRelDef.cardinality;
-      const foreignResCardinality = foreignRelDef.cardinality;
+      const foreignResCardinality = foreignRelDef?.cardinality ?? "none";
 
       const builderArgs = { localResDef, localTableName, relName, path };
       const joinSqls =
