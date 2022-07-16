@@ -61,8 +61,6 @@ export function set(schema, db, rootQuery, rootTreeOrTrees) {
   const resources = Object.values(resourceTable).flatMap((t) => Object.values(t));
   const byStatus = groupBy(resources, (res) => res.status);
 
-  // console.log("ress", resources);
-
   (byStatus.inserted ?? []).forEach((res) => {
     ensureCreatedResourceFields(schema, res);
 
