@@ -60,9 +60,9 @@ function makeRelBuilders(schema) {
       },
     },
     none: {
-      one({ localResDef, localTableName, relName, path }) {
-        // TODO
-      },
+      // one({ localResDef, localTableName, relName, path }) {
+      //   // TODO
+      // },
       many({ localResDef, localTableName, relName, path }) {
         const localRelDef = localResDef.properties[relName];
         const localJoinColumn = localRelDef.store.join.joinColumn;

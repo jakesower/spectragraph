@@ -1,6 +1,6 @@
 import test from "ava";
 import Database from "better-sqlite3";
-import { mapObj, omit } from "@polygraph/utils/objects";
+import { omit } from "@polygraph/utils/objects";
 import { ERRORS, PolygraphError } from "@polygraph/core/errors";
 import { careBearSchema as schema } from "../fixtures/care-bear-schema.mjs";
 import { SQLiteStore } from "../../src/sqlite-store.mjs";
@@ -39,10 +39,6 @@ const withoutRels = (resType, res) =>
       (prop) => schema.resources[resType].properties[prop].type === "relationship",
     ),
   );
-
-const emptyStore = mapObj(schema.resources, () => ({}));
-
-const toRef = (type) => (id) => ({ type, id });
 
 // ----Properties----------------------------------------------------------------------------------
 
@@ -440,7 +436,7 @@ test("removes a many-to-many relationship", async (t) => {
   });
 });
 
-test("adds and removes a many-to-many relationship",async (t) => {
+test("adds and removes a many-to-many relationship", async (t) => {
   const query = { type: "bears", id: "1", relationships: { powers: {} } };
   const update = { id: "1", powers: [{ id: "makeWish" }] };
 
@@ -457,7 +453,7 @@ test("adds and removes a many-to-many relationship",async (t) => {
     id: "makeWish",
     bears: [{ id: "1", name: "Tenderheart Bear" }],
   });
-  
+
   const powerResultRem = await t.context.store.get({
     type: "powers",
     id: "careBearStare",
@@ -473,7 +469,7 @@ test.todo("adds and removes a symmetric many-to-many relationship");
 
 // ----Deleting Resources--------------------------------------------------------------------------
 
-test.skip("replaces existing data completely given a new resource", async (t) => {
+test("replaces existing data completely given a new resource", async (t) => {
   const query = {
     type: "bears",
     allProps: true,
@@ -518,46 +514,17 @@ test.skip("replaces existing data completely given a new resource", async (t) =>
   t.deepEqual(getResultManyRel, getExpectedManyRel);
 });
 
-test.skip("replaces or keeps existing data given a new resources", async (t) => {
+test("replaces or keeps existing data given a new resources", async (t) => {
   const query = {
     type: "bears",
     allProps: true,
-    relationships: {
-      home: {},
-      powers: {},
-    },
+    relationships: {},
   };
 
-  const replaceResult = await t.context.store.replaceMany(query, [
-    grumpyBear,
-    careBearData.bears["1"],
-  ]);
-  const replaceExpected = {
-    ...emptyStore,
-    bears: {
-      1: careBearData.bears["1"],
-      2: null,
-      3: null,
-      4: grumpyBear,
-      5: null,
-    },
-    homes: {
-      1: { ...careBearData.homes[1], bears: ["1", "4"].map(toRef("bears")) },
-    },
-    powers: {
-      careBearStare: {
-        ...careBearData.powers.careBearStare,
-        bears: ["1", "4"].map(toRef("bears")),
-      },
-    },
-  };
+  const update = [careBearData.bears["1"], grumpyBear];
+  await t.context.store.set(query, update);
 
-  t.deepEqual(replaceResult, replaceExpected);
-
-  const getResult = await t.context.store.get({
-    type: "bears",
-  });
-  t.deepEqual(getResult, [{ id: "1" }, { id: "4" }]);
+  t.deepEqual(await t.context.store.get({ type: "bears" }), [{ id: "1" }, { id: "4" }]);
 });
 
 // trees where a resource is specified more than once

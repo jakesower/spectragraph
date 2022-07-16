@@ -1,6 +1,5 @@
 import { zipObjWith } from "@polygraph/utils/arrays";
 import { mapObj } from "@polygraph/utils/objects";
-import { logSql } from "../dev-utils.mjs";
 import { columnsToSelect, joinClauses } from "./get-clauses.mjs";
 
 const CLAUSE_KEYS = ["select", "join", "vars", "where"];

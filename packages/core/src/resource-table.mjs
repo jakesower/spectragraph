@@ -96,7 +96,6 @@ export function makeResourceTable(schema) {
   const ensureConsistentDeletedResource = (resource) => {
     const { type, id } = resource;
 
-    console.log({ resource, propertiesStore });
     if (id in propertiesStore[type] && propertiesStore[type][id] !== DELETED) {
       throw new Error(
         `${formatRef(resource)} was marked as deleted, but also showed up in the tree`,
@@ -260,7 +259,6 @@ export function makeResourceTable(schema) {
         Object.entries(relationshipsStore[type][id] ?? {}).forEach(
           ([relKey, relIdSet]) => {
             const relCombos = combinations(relIdSet.asserted, relIdSet.retracted);
-            // console.log('relCombos', type, id, relCombos);
             if (relCombos.intersection.size > 0) {
               throw new Error("some relationships were asserted and retracted TODO");
             }
