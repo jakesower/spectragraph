@@ -9,7 +9,7 @@ import { pipeThru } from "@polygraph/utils/functions";
 import { filterObj, mapObj } from "@polygraph/utils/objects";
 import { get } from "./get.mjs";
 
-export function set(schema, db, rootQuery, rootTreeOrTrees) {
+export async function set(schema, db, rootQuery, rootTreeOrTrees) {
   const castPropToDb = (resType, propKey, val) =>
     schema.resources[resType].properties[propKey].type === "boolean"
       ? val === true
@@ -20,10 +20,10 @@ export function set(schema, db, rootQuery, rootTreeOrTrees) {
       : val;
 
   const rootTrees = normalizeTree(rootQuery, rootTreeOrTrees);
-  const resourceTable = buildResourceTable(schema, ({ setResource }) => {
-    const go = (tree) => {
+  const resourceTable = await buildResourceTable(schema, async ({ setResource }) => {
+    const go = async (tree) => {
       // TODO: make this even resemble performant
-      const existing = get(
+      const existing = await get(
         schema,
         db,
         normalizeGetQuery(schema, {
@@ -34,9 +34,9 @@ export function set(schema, db, rootQuery, rootTreeOrTrees) {
         }),
       );
       setResource(tree, existing);
-      Object.values(tree.relationships).forEach((treeRels) => {
-        treeRels.forEach(go);
-      });
+      await Promise.all(
+        Object.values(tree.relationships).map(async (treeRels) => treeRels.forEach(go)),
+      );
     };
 
     const rootQueryWithAllRels = {
@@ -48,11 +48,11 @@ export function set(schema, db, rootQuery, rootTreeOrTrees) {
     };
 
     const rootExistingQuery = normalizeGetQuery(schema, rootQueryWithAllRels);
-    const rootExisting = asArray(get(schema, db, rootExistingQuery));
+    const rootExisting = asArray(await get(schema, db, rootExistingQuery));
 
     const absent = differenceBy(rootExisting, rootTrees, (res) => res.id);
 
-    rootTrees.forEach(go);
+    await Promise.all(rootTrees.map(go));
     absent.forEach((absentRes) => {
       setResource(null, normalizeResource(schema, rootQuery.type, absentRes));
     });
