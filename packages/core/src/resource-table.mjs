@@ -282,8 +282,8 @@ export function makeResourceTable(schema) {
   };
 }
 
-export function buildResourceTable(schema, builderFn) {
+export async function buildResourceTable(schema, builderFn) {
   const resourceTable = makeResourceTable(schema);
-  builderFn(resourceTable);
+  await builderFn(resourceTable);
   return resourceTable.finalize();
 }
