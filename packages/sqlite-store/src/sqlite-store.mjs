@@ -2,14 +2,14 @@ import { normalizeGetQuery, normalizeSetQuery } from "@polygraph/core/query";
 import { defaultStoreOptions } from "@polygraph/core/store";
 import { get as getQuery } from "./helpers/get.mjs";
 import { set as setQuery } from "./helpers/set.mjs";
-import { sqliteConstraintExpressions } from "./operations/expressions.mjs";
+import { sqliteConstraintOperators } from "./operations/constraint-operators.mjs";
 
 export async function SQLiteStore(schema, db, userConfig = {}) {
   const fullStoreConfig = {
     ...defaultStoreOptions,
     expressionDefinitions: {
       ...defaultStoreOptions.expressionDefinitions,
-      ...sqliteConstraintExpressions,
+      ...sqliteConstraintOperators,
       ...(userConfig.expressionDefinitions ?? {}),
     },
     ...userConfig,

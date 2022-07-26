@@ -54,11 +54,14 @@ const operations = {
       }
 
       // an object of properties has been passed in
-      const propExprs = Object.entries(constraints).map(([propKey, propValOrExpr]) =>
-        isExpression(propValOrExpr)
-          ? { [propKey]: [{ $prop: propKey }, ...propValOrExpr] }
-          : { $eq: [{ $prop: propKey }, propValOrExpr] },
-      );
+      const propExprs = Object.entries(constraints).map(([propKey, propValOrExpr]) => {
+        if (isExpression(propValOrExpr)) {
+          const [operation, args] = Object.entries(propValOrExpr)[0];
+          return { [operation]: [{ $prop: propKey }, args] };
+        }
+
+        return { $eq: [{ $prop: propKey }, propValOrExpr] };
+      });
 
       const objectExpression = { $and: propExprs };
       const constraintConditions = compileExpression(

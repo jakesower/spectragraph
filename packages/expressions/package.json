@@ -1,9 +1,9 @@
 {
-  "name": "@polygraph/core",
+  "name": "@polygraph/expressions",
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    "./*": "./src/*.mjs"
+    ".": "./src/expressions.mjs"
   },
   "scripts": {
     "test": "NODE_ENV=test ava",
@@ -19,9 +19,5 @@
     "eslint-config-standard": "^17.0.0",
     "prettier": "^2.6.2"
   },
-  "dependencies": {
-    "@polygraph/expressions": "npm:expressions@^0.0.1",
-    "@polygraph/utils": "^0.0.6",
-    "ajv": "^8.11.0"
-  }
+  "dependencies": {}
 }

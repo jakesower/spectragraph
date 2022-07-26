@@ -3,6 +3,7 @@ import { mapObj } from "@polygraph/utils/objects";
 import { buildSql } from "../build-sql.mjs";
 import { composeClauses } from "../compose-clauses.mjs";
 import { runQuery } from "../operations/operations.mjs";
+import { castValToDb } from "./db-utils.mjs";
 import { columnsToSelect, joinClauses } from "./get-clauses.mjs";
 
 export function get(query, context) {
@@ -18,7 +19,7 @@ export function get(query, context) {
     const composedModifiers = composeClauses(queryModifiers);
     const sql = buildSql(composedModifiers);
     const statement = db.prepare(sql).raw();
-    const allResults = statement.all(composedModifiers.vars) ?? null;
+    const allResults = statement.all(composedModifiers.vars.map(castValToDb)) ?? null;
 
     const chunkInto = (items, chunkSizes) => {
       let offset = 0;

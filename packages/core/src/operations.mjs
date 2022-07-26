@@ -1,6 +1,6 @@
+import { compileExpression, isValidExpression } from "@polygraph/expressions";
 import { sortBy } from "@polygraph/utils";
 import { ERRORS, PolygraphError } from "./errors.mjs";
-import { compileExpression, makeIsExpression } from "./expressions.mjs";
 
 const compareFns = {
   integer: (left, right) => left - right,
@@ -85,11 +85,10 @@ export const coreOperations = {
 
       const { constraints } = query;
       const { expressionDefinitions } = config;
-      const isExpression = makeIsExpression(expressionDefinitions);
       const resources = await next(vars);
 
       // an expression has been passed as the constraint value
-      if (isExpression(constraints)) {
+      if (isValidExpression(constraints)) {
         return resources.filter(
           compileExpression(expressionDefinitions, constraints, context),
         );
@@ -97,7 +96,7 @@ export const coreOperations = {
 
       // an object of properties has been passed in
       const propExprs = Object.entries(constraints).map(([propKey, propValOrExpr]) =>
-        isExpression(propValOrExpr)
+        isValidExpression(propValOrExpr)
           ? { [propKey]: [{ $prop: propKey }, ...propValOrExpr] }
           : { $eq: [{ $prop: propKey }, propValOrExpr] },
       );

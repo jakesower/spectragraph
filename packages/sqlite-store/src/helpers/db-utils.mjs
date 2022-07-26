@@ -1,12 +1,10 @@
-export function castFromDb(schema, resType, props, db) {
-  const castProp = (val, prop) =>
-    relResDef.properties[prop].type === "boolean"
-      ? val === 0
-        ? false
-        : val === 1
-          ? true
-          : undefined
-      : val === null
-        ? undefined
-        : val;
-}
+export const castPropToDb = (schema, resType, propKey, val) =>
+  schema.resources[resType].properties[propKey].type === "boolean"
+    ? val === true
+      ? 1
+      : val === false
+        ? 0
+        : undefined
+    : val;
+
+export const castValToDb = (val) => (val === true ? 1 : val === false ? 0 : val);
