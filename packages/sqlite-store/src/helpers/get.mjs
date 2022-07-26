@@ -5,14 +5,15 @@ import { composeClauses } from "../compose-clauses.mjs";
 import { runQuery } from "../operations/operations.mjs";
 import { columnsToSelect, joinClauses } from "./get-clauses.mjs";
 
-export function get(schema, db, query, rootClauses = []) {
+export function get(query, context) {
+  const { schema, db, rootClauses = [] } = context;
+
   const queryParts = {
     select: columnsToSelect(schema, query),
     from: schema.resources[query.type].store.table,
     join: joinClauses(schema, query),
   };
 
-  const context = { schema, query };
   return runQuery([queryParts, ...rootClauses], context, (queryModifiers) => {
     const composedModifiers = composeClauses(queryModifiers);
     const sql = buildSql(composedModifiers);
@@ -59,9 +60,10 @@ export function get(schema, db, query, rootClauses = []) {
         ...relValues.map(getQueryChunkSize),
       ];
 
+      // TODO: this needs to map the obj into a `new Map()` to preserve numeric key order
       const relExtractors = mapObj(subQuery.relationships, buildExtractor);
 
-      return (row, obj) => {
+      return (row, out) => {
         const chunks = chunkInto(row, chunkSizes);
         const [, props, ...relChunks] = chunks;
         const [id] = row;
@@ -69,14 +71,14 @@ export function get(schema, db, query, rootClauses = []) {
         if (!id) return;
 
         // eslint-disable-next-line no-param-reassign
-        obj[id] = obj[id] ?? {
+        out.set(id, {
           id,
           properties: zipObjWith(subQuery.properties, props, castProp),
-          relationships: mapObj(subQuery.relationships, () => ({})),
-        };
+          relationships: mapObj(subQuery.relationships, () => new Map()),
+        });
 
         relKeys.forEach((relKey, idx) => {
-          relExtractors[relKey](relChunks[idx], obj[id].relationships[relKey]);
+          relExtractors[relKey](relChunks[idx], out[id].relationships[relKey]);
         });
       };
     };
@@ -84,7 +86,7 @@ export function get(schema, db, query, rootClauses = []) {
     const finalizer = (subQuery, objResTree) => {
       const subResDef = schema.resources[subQuery.type];
 
-      return Object.values(objResTree).map(({ id, properties, relationships }) => ({
+      return [...objResTree.values()].map(({ id, properties, relationships }) => ({
         id,
         ...properties,
         ...mapObj(relationships, (rel, relName) => {
@@ -96,7 +98,7 @@ export function get(schema, db, query, rootClauses = []) {
       }));
     };
 
-    const structuredResults = {};
+    const structuredResults = new Map();
     const rootExtractor = buildExtractor(query);
     allResults.forEach((row) => rootExtractor(row, structuredResults));
 

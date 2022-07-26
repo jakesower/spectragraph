@@ -1,10 +1,15 @@
+import { deepEqual } from "@polygraph/utils/generics";
+
 const compileComparative = (predicate) => ({
-  compile: (expression) => (value, field) => predicate(value[field], expression),
+  compile: (exprVal, context) => (runVal) => {
+    const [left, right] = exprVal.map((expr) => context.runExpression(expr, runVal));
+    return predicate(left, right);
+  },
 });
 
 // TODO: optimize at least $in and $nin
 
-export const $eq = compileComparative((x, y) => x === y);
+export const $eq = compileComparative(deepEqual);
 export const $gt = compileComparative((x, y) => x > y);
 export const $gte = compileComparative((x, y) => x >= y);
 export const $in = compileComparative((input, expr) => expr.includes(input));
