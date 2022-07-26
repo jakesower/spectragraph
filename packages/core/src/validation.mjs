@@ -1,7 +1,7 @@
 import Ajv from "ajv";
 import { difference } from "@polygraph/utils/arrays";
 import { makeQuerySchema } from "./schema/make-query-schema.mjs";
-import { constraintDefinitions } from "./constraints.mjs";
+import { coreExpressions } from "./expressions.mjs";
 import { ERRORS, PolygraphError } from "./errors.mjs";
 
 export const typeValidations = {
@@ -17,7 +17,7 @@ export function ensureValidGetQuerySyntax(schema, query) {
     $data: true,
     schemas: [getQuerySchema],
   });
-  ajv.addVocabulary(Object.keys(constraintDefinitions));
+  ajv.addVocabulary(Object.keys(coreExpressions));
 
   const getQuerySyntax = ajv.getSchema(
     `schemas/${schema.urlName}/query-schema-with-rel-props`,
@@ -38,7 +38,7 @@ export function ensureValidSetQuerySyntax(schema, query) {
     $data: true,
     schemas: [setQuerySchema],
   });
-  ajv.addVocabulary(Object.keys(constraintDefinitions));
+  ajv.addVocabulary(Object.keys(coreExpressions));
 
   const setQuerySyntax = ajv.getSchema(`schemas/${schema.urlName}/query-schema`);
 

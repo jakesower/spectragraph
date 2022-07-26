@@ -1,6 +1,5 @@
 import test from "ava";
 import Database from "better-sqlite3";
-import { ERRORS, PolygraphError } from "@polygraph/core/errors";
 import { careBearSchema as schema } from "../../fixtures/care-bear-schema.mjs";
 import { SQLiteStore } from "../../../src/sqlite-store.mjs";
 import { careBearData } from "../../fixtures/care-bear-data.mjs";
@@ -18,16 +17,32 @@ test.beforeEach(async (t) => {
   t.context = { store };
 });
 
-test.skip("filters on a property equality constraint", async (t) => {
+test("filters on a property equality constraint in expression form", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
-    constraints: { name: "Cheer Bear" },
+    props: ["name"],
+    constraints: { $eq: [{ $prop: "name" }, "Cheer Bear"] },
   });
 
-  t.deepEqual(result, [{ id: "2" }]);
+  t.deepEqual(result, [{ id: "2", name: "Cheer Bear" }]);
 });
 
-test.skip("filters on multiple property equality constraints", async (t) => {
+test.only("filters on a property equality constraint", async (t) => {
+  const result = await t.context.store.get({
+    type: "homes",
+    props: ["caring_meter"],
+    constraints: {
+      caring_meter: 1,
+    },
+  });
+
+  t.deepEqual(result, [
+    { id: "1", caring_meter: 1 },
+    { id: "2", caring_meter: 1 },
+  ]);
+});
+
+test("filters on multiple property equality constraints", async (t) => {
   const result = await t.context.store.get({
     type: "homes",
     constraints: {

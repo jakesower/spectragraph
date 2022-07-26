@@ -18,16 +18,7 @@ test.beforeEach(async (t) => {
   t.context = { store };
 });
 
-test.beforeEach(async (t) => {
-  // eslint-disable-next-line no-param-reassign
-  t.context = {
-    store: await makeMemoryStore(schema, {
-      initialData: careBearData,
-    }),
-  };
-});
-
-test.skip("limits the number of returned values", async (t) => {
+test("limits the number of returned values", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     props: ["name"],
@@ -37,7 +28,9 @@ test.skip("limits the number of returned values", async (t) => {
   t.deepEqual(result, [{ id: "1", name: "Tenderheart Bear" }]);
 });
 
-test.skip("limits after sorting", async (t) => {
+// INCLUDES SORTING
+
+test("limits after sorting", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     props: ["name"],
@@ -51,7 +44,7 @@ test.skip("limits after sorting", async (t) => {
   ]);
 });
 
-test.skip("limits after sorting with 1", async (t) => {
+test("limits after sorting with 1", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     props: ["name"],
@@ -64,7 +57,7 @@ test.skip("limits after sorting with 1", async (t) => {
   ]);
 });
 
-test.skip("limits with an offset", async (t) => {
+test("limits with an offset", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     props: ["name"],
@@ -79,7 +72,7 @@ test.skip("limits with an offset", async (t) => {
   ]);
 });
 
-test.skip("allows for offset only", async (t) => {
+test("allows for offset only", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     props: ["name"],
@@ -94,7 +87,7 @@ test.skip("allows for offset only", async (t) => {
   ]);
 });
 
-test.skip("allows for limit + offset to exceed size of data", async (t) => {
+test("allows for limit + offset to exceed size of data", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     props: ["name"],
@@ -109,7 +102,7 @@ test.skip("allows for limit + offset to exceed size of data", async (t) => {
   ]);
 });
 
-test.skip("returns nothing when the offset has surpassed the data size", async (t) => {
+test("returns nothing when the offset has surpassed the data size", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     props: ["name"],
@@ -121,7 +114,7 @@ test.skip("returns nothing when the offset has surpassed the data size", async (
   t.deepEqual(result, []);
 });
 
-test.skip("allows a zero offset", async (t) => {
+test("allows a zero offset", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     props: ["name"],
@@ -137,7 +130,7 @@ test.skip("allows a zero offset", async (t) => {
   ]);
 });
 
-test.skip("errors for a bad limit", async (t) => {
+test("errors for a bad limit", async (t) => {
   await t.throwsAsync(
     async () => {
       await t.context.store.get({
@@ -149,7 +142,7 @@ test.skip("errors for a bad limit", async (t) => {
   );
 });
 
-test.skip("errors for a bad offset", async (t) => {
+test("errors for a bad offset", async (t) => {
   await t.throwsAsync(
     async () => {
       await t.context.store.get({

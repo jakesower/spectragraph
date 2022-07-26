@@ -12,6 +12,7 @@
     "./functions": "./src/functions.mjs",
     "./generics": "./src/generics.mjs",
     "./lenses": "./src/lenses.mjs",
+    "./maps": "./src/maps.mjs",
     "./pipes": "./src/pipes.mjs",
     "./objects": "./src/objects.mjs",
     "./sets": "./src/sets.mjs",

@@ -1,5 +1,5 @@
 import { mapObj, partitionObj } from "@polygraph/utils/objects";
-import { constraintDefinitions } from "../constraints.mjs";
+import { coreExpressions } from "../expressions.mjs";
 
 const constraintDefs = {
   boolean: { type: "boolean" },
@@ -7,7 +7,7 @@ const constraintDefs = {
   string: { type: "string" },
 };
 
-const sharedConstraints = mapObj(constraintDefinitions, () => ({}));
+const sharedConstraints = mapObj(coreExpressions, () => ({}));
 
 const mutualExclusions = [
   [["limit"], ["first"]],
