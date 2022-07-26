@@ -27,7 +27,7 @@ test("filters on a property equality constraint in expression form", async (t) =
   t.deepEqual(result, [{ id: "2", name: "Cheer Bear" }]);
 });
 
-test.only("filters on a property equality constraint", async (t) => {
+test("filters on a property equality constraint", async (t) => {
   const result = await t.context.store.get({
     type: "homes",
     props: ["caring_meter"],
@@ -54,7 +54,7 @@ test("filters on multiple property equality constraints", async (t) => {
   t.deepEqual(result, [{ id: "2" }]);
 });
 
-test.skip("filters using $eq operator", async (t) => {
+test("filters using $eq operator", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     constraints: {
@@ -65,7 +65,7 @@ test.skip("filters using $eq operator", async (t) => {
   t.deepEqual(result, [{ id: "5" }]);
 });
 
-test.skip("filters using $gt operator", async (t) => {
+test("filters using $gt operator", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     constraints: {
@@ -76,7 +76,7 @@ test.skip("filters using $gt operator", async (t) => {
   t.deepEqual(result, [{ id: "5" }]);
 });
 
-test.skip("filters using $lt operator", async (t) => {
+test("filters using $lt operator", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     constraints: {
@@ -87,7 +87,7 @@ test.skip("filters using $lt operator", async (t) => {
   t.deepEqual(result, [{ id: "1" }, { id: "2" }, { id: "3" }]);
 });
 
-test.skip("filters using $lte operator", async (t) => {
+test("filters using $lte operator", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     constraints: {
@@ -98,7 +98,7 @@ test.skip("filters using $lte operator", async (t) => {
   t.deepEqual(result, [{ id: "1" }, { id: "2" }, { id: "3" }]);
 });
 
-test.skip("filters using $gte operator", async (t) => {
+test("filters using $gte operator", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     constraints: {
@@ -109,7 +109,7 @@ test.skip("filters using $gte operator", async (t) => {
   t.deepEqual(result, [{ id: "5" }]);
 });
 
-test.skip("filters using $in 1", async (t) => {
+test("filters using $in 1", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     constraints: {
@@ -120,7 +120,7 @@ test.skip("filters using $in 1", async (t) => {
   t.deepEqual(result, [{ id: "5" }]);
 });
 
-test.skip("filters using $in 2", async (t) => {
+test("filters using $in 2", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     constraints: {
@@ -131,7 +131,18 @@ test.skip("filters using $in 2", async (t) => {
   t.deepEqual(result, []);
 });
 
-test.skip("filters using $ne operator", async (t) => {
+test("filters using $nin", async (t) => {
+  const result = await t.context.store.get({
+    type: "bears",
+    constraints: {
+      year_introduced: { $nin: [2005, 2022] },
+    },
+  });
+
+  t.deepEqual(result, [{ id: "1" }, { id: "2" }, { id: "3" }]);
+});
+
+test("filters using $ne operator", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     constraints: {
