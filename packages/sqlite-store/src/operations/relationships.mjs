@@ -1,4 +1,4 @@
-import { intersperse, last } from "@polygraph/utils/arrays";
+import { last } from "@polygraph/utils/arrays";
 import { getPath } from "@polygraph/utils/lenses";
 
 function makeRelBuilders(schema) {

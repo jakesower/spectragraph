@@ -2,10 +2,7 @@ import { ERRORS, PolygraphError } from "@polygraph/core/errors";
 import { compileExpression, isValidExpression } from "@polygraph/expressions";
 import { coreOperations } from "@polygraph/core/operations";
 import { flatMapQuery } from "@polygraph/core/query";
-import { mapTreeWithQuery } from "@polygraph/core/tree";
-import { asArray } from "@polygraph/utils/arrays";
 import { multiApply } from "@polygraph/utils/functions";
-import { EACH, overEachPath } from "@polygraph/utils/lenses";
 import { pipeThru } from "@polygraph/utils/pipes";
 import { preQueryRelationships } from "./relationships.mjs";
 
