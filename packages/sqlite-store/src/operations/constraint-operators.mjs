@@ -1,36 +1,34 @@
 const comparative = (sqlOperator) => ({
-  compile:
-    (exprVal, { runExpression }) =>
-      (runVal) => {
-        const [left, right] = exprVal.map((expr) => runExpression(expr, runVal));
+  compile: (exprVal, compile) => () => {
+    const [left, right] = exprVal.map((v) => compile(v)());
 
-        return {
-          where: [`${left?.where ?? "?"} ${sqlOperator} ${right?.where ?? "?"}`],
-          vars: [...(left?.vars ?? [left]), ...(right?.vars ?? [right])],
-        };
-      },
+    return {
+      where: [`${left?.where ?? "?"} ${sqlOperator} ${right?.where ?? "?"}`],
+      vars: [...(left?.vars ?? [left]), ...(right?.vars ?? [right])],
+    };
+  },
 });
 
 export const sqliteConstraintOperators = {
   $and: {
-    compile:
-      (exprVal, { runExpression }) =>
-        (runVal) => {
-          const predicates = exprVal.map((expr) => runExpression(expr, runVal));
+    compile: (exprVal, compile) => () => {
+      const predicates = exprVal.map((val) => compile(val)());
+      const wheres = predicates.map((pred) => pred.where).filter(Boolean);
+      if (wheres.length === 0) return {};
 
-          return {
-            where: [
-              `(${predicates
-                .map((pred) => pred.where)
-                .filter(Boolean)
-                .join(") AND (")})`,
-            ],
-            vars: predicates.flatMap((pred) => pred.vars ?? []),
-          };
-        },
+      return {
+        where: [
+          `(${predicates
+            .map((pred) => pred.where)
+            .filter(Boolean)
+            .join(") AND (")})`,
+        ],
+        vars: predicates.flatMap((pred) => pred.vars ?? []),
+      };
+    },
   },
   $prop: {
-    compile: (exprVal, { query, schema }) => {
+    compile: (exprVal, _, { query, schema }) => {
       if (!(exprVal in schema.resources[query.type].properties)) {
         throw new Error("invalid property");
       }
@@ -50,11 +48,11 @@ export const sqliteConstraintOperators = {
   $ne: comparative("!="),
   $in: {
     compile:
-      (args, { runExpression }) =>
+      (args, compile) =>
         (vars) => {
           const [item, array] = args;
-          const itemVal = runExpression(item, vars);
-          const arrayVals = array.map((arg) => runExpression(arg, vars));
+          const itemVal = compile(item)(vars);
+          const arrayVals = array.map((arg) => compile(arg)(vars));
 
           if (array.length === 0) return {};
 
@@ -66,11 +64,11 @@ export const sqliteConstraintOperators = {
   },
   $nin: {
     compile:
-      (args, { runExpression }) =>
+      (args, compile) =>
         (vars) => {
           const [item, array] = args;
-          const itemVal = runExpression(item, vars);
-          const arrayVals = array.map((arg) => runExpression(arg, vars));
+          const itemVal = compile(item)(vars);
+          const arrayVals = array.map((arg) => compile(arg)(vars));
 
           if (array.length === 0) return {};
 

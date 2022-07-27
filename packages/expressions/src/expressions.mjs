@@ -7,14 +7,17 @@ export function isValidExpression(expression, operators) {
   );
 }
 
-export function compileExpression(expression, operators) {
+export function compileExpression(expression, operators, context) {
+  // eslint-disable-next-line no-use-before-define
+  const evaluate = (subExpression) => compile(subExpression)();
+
   const compile = (subExpression) => {
     const looksLikeExpression =
       typeof subExpression === "object" && !Array.isArray(subExpression);
 
     if (!looksLikeExpression) return () => subExpression;
 
-    if (!isValidExpression(subExpression)) {
+    if (!isValidExpression(subExpression, operators)) {
       throw new Error(
         "objects passed as expressions must contain a single, valid expression; check the operators or wrap the object in $literal",
       );
@@ -23,7 +26,7 @@ export function compileExpression(expression, operators) {
     const [operation, args] = Object.entries(subExpression)[0];
     const operator = operators[operation];
 
-    return operator.compile(args, compile);
+    return operator.compile(args, compile, context);
   };
 
   return compile(expression);

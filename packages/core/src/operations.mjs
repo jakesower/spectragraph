@@ -48,7 +48,6 @@ async function orderOperation(vars, next, context) {
   }
 
   // SELECT cols mean sort fields might be omitted
-  console.log({ context, resources, query: context.query });
   return sortBy(resources, orderFunction(context));
 }
 

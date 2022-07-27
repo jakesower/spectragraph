@@ -1,61 +1,58 @@
 import { ERRORS, PolygraphError } from "@polygraph/core/errors";
-import { compileExpression } from "@polygraph/core/expressions";
+import { compileExpression, isValidExpression } from "@polygraph/expressions";
 import { coreOperations } from "@polygraph/core/operations";
-import { pipeThruMiddleware } from "@polygraph/utils/pipes";
-import { firstOperation } from "./first.mjs";
+import { flatMapQuery } from "@polygraph/core/query";
+import { mapTreeWithQuery } from "@polygraph/core/tree";
+import { asArray } from "@polygraph/utils/arrays";
+import { multiApply } from "@polygraph/utils/functions";
+import { EACH, overEachPath } from "@polygraph/utils/lenses";
+import { pipeThru } from "@polygraph/utils/pipes";
+import { preQueryRelationships } from "./relationships.mjs";
 
 const operations = {
   id: {
-    apply: async (conditions, next, { query, schema }) => {
-      if (!query.id) return next(conditions);
-
+    preQuery: async (id, { query, schema }) => {
       const { table } = schema.resources[query.type].store;
-      const result = await next([
-        ...conditions,
-        { where: [`${table}.id = ?`], vars: [query.id] },
-      ]);
-
-      if (!Array.isArray(result)) {
+      return { where: [`${table}.id = ?`], vars: [id] };
+    },
+    postQuery: (_, resources) => {
+      if (!Array.isArray(resources)) {
         throw new PolygraphError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
       }
 
-      return result[0] ?? null;
+      return resources[0] ?? null;
     },
     incompatibeWith: ["first"],
   },
   ...coreOperations,
+  // properties: {
+  //   preQuery: (properties) =>
+  // },
   first: {
-    apply: firstOperation,
+    preQuery: (_, { queryPath }) =>
+      queryPath.length === 0 ? [{ limit: 1, offset: 0 }] : [],
+    postQuery: (_, resources) => {
+      if (!Array.isArray(resources)) {
+        throw new PolygraphError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
+      }
+
+      return resources[0] ?? null;
+    },
     incompatibeWith: ["id"],
   },
   constraints: {
-    apply: async (conditions, next, context) => {
-      const { config, query } = context;
-      const { constraints } = query;
+    preQuery: (constraints, context) => {
+      const { config } = context;
       const { expressionDefinitions } = config;
 
-      if (!query) return next(conditions);
-
-      const isExpression = (value) =>
-        typeof value === "object" &&
-        !Array.isArray(value) &&
-        Object.keys(value).length === 1 &&
-        Object.keys(value)[0] in expressionDefinitions;
-
       // an expression has been passed as the constraint value
-      if (isExpression(constraints)) {
-        const constraintConditions = compileExpression(
-          config.expressionDefinitions,
-          query.constraints,
-          context,
-        )();
-
-        return next([...conditions, constraintConditions]);
+      if (isValidExpression(constraints, expressionDefinitions)) {
+        return compileExpression(constraints, expressionDefinitions, context)();
       }
 
       // an object of properties has been passed in
       const propExprs = Object.entries(constraints).map(([propKey, propValOrExpr]) => {
-        if (isExpression(propValOrExpr)) {
+        if (isValidExpression(propValOrExpr, expressionDefinitions)) {
           const [operation, args] = Object.entries(propValOrExpr)[0];
           return { [operation]: [{ $prop: propKey }, args] };
         }
@@ -64,39 +61,96 @@ const operations = {
       });
 
       const objectExpression = { $and: propExprs };
-      const constraintConditions = compileExpression(
-        config.expressionDefinitions,
-        objectExpression,
-        context,
-      )();
-
-      const resources = next([...conditions, constraintConditions]);
-
-      return resources;
+      return compileExpression(objectExpression, expressionDefinitions, context)();
     },
   },
   order: {
-    apply: (conditions, next, context) => {
-      const { query } = context;
-      if (!("order" in query)) return next(conditions);
-
-      return next([...conditions, { orderBy: query.order }]);
-    },
+    preQuery: (order, { queryTable }) => [
+      { orderBy: order.map((o) => ({ ...o, table: queryTable })) },
+    ],
   },
   limit: {
-    apply: (conditions, next, { query }) => {
-      if (!("limit" in query) && !("offset" in query)) return next(conditions);
-
-      const modifier = { limit: query.limit ?? -1, offset: query.offset ?? 0 };
-
-      return next([...conditions, modifier]);
+    preQuery: (limit, { query, queryPath }) =>
+      queryPath.length === 0 ? [{ limit, offset: query.offset ?? 0 }] : [],
+    postQuery: (limit, resources, { query, queryPath }) => {
+      const { offset = 0 } = query;
+      const out = queryPath.length === 0 ? resources : resources.slice(offset, limit);
+      // console.log({ limit, resources, query, queryPath, offset, out });
+      return out;
     },
+  },
+  offset: {
+    preQuery: (offset, { query }) => {
+      if (!query.limit) {
+        return [{ limit: -1, offset }];
+      }
+      return [];
+    },
+  },
+  relationships: {
+    preQuery: (_, context) =>
+      preQueryRelationships(context.query, context.queryPath, context),
+    // flatMapQuery(context.query, (subQuery, queryPath) =>
+    //   preQueryRelationships(subQuery, queryPath, context),
+    // ),
   },
 };
 
-export function runQuery(initModifiers, context, run) {
-  return pipeThruMiddleware(initModifiers, context, [
-    ...Object.values(operations).map((op) => op.apply),
-    run,
-  ]);
+const applyOverPaths = (resources, path, fn) => {
+  if (path.length === 0) return fn(resources);
+
+  const [head, ...tail] = path;
+  return multiApply(resources, (resource) => ({
+    ...resource,
+    [head]: applyOverPaths(resource[head], tail, fn),
+  }));
+};
+
+const gatherPreOperations = (query, context) =>
+  flatMapQuery(query, (subQuery, queryPath) =>
+    Object.entries(subQuery)
+      .flatMap(([operationKey, operationArg]) => {
+        const operation = operations[operationKey]?.preQuery;
+
+        if (!operation) return null;
+
+        const argContext = {
+          ...context,
+          query: subQuery,
+          queryPath,
+          queryTable: [query.type, ...queryPath].join("$"),
+          rootQuery: query,
+        };
+        return operation(operationArg, argContext);
+      })
+      .filter(Boolean),
+  );
+
+const gatherPostOperationFunctions = (query, context) =>
+  flatMapQuery(query, (subQuery, queryPath) =>
+    Object.entries(subQuery)
+      .map(([operationKey, operationArg]) => {
+        const operation = operations[operationKey]?.postQuery;
+
+        if (!operation) return null;
+
+        const argContext = { ...context, queryPath };
+        return (resources) =>
+          applyOverPaths(resources, queryPath, (resource) =>
+            operation(operationArg, resource, argContext),
+          );
+      })
+      .filter(Boolean),
+  );
+
+export async function runQuery(query, context, run) {
+  const queryModifierPromises = gatherPreOperations(query, context);
+  const queryModifiers = await Promise.all(queryModifierPromises);
+  // console.log(queryModifiers);
+
+  const resources = await run(queryModifiers);
+
+  const postOps = gatherPostOperationFunctions(query, context);
+
+  return pipeThru(resources, postOps);
 }

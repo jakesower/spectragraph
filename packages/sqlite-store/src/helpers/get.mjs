@@ -4,22 +4,29 @@ import { buildSql } from "../build-sql.mjs";
 import { composeClauses } from "../compose-clauses.mjs";
 import { runQuery } from "../operations/operations.mjs";
 import { castValToDb } from "./db-utils.mjs";
-import { columnsToSelect, joinClauses } from "./get-clauses.mjs";
+// import { columnsToSelect, joinClauses } from "./get-clauses.mjs";
 
 export function get(query, context) {
   const { schema, db, rootClauses = [] } = context;
 
-  const queryParts = {
-    select: columnsToSelect(schema, query),
+  const initModifiers = {
+    // select: columnsToSelect(schema, query),
     from: schema.resources[query.type].store.table,
-    join: joinClauses(schema, query),
+    // join: joinClauses(schema, query),
   };
 
-  return runQuery([queryParts, ...rootClauses], context, (queryModifiers) => {
-    const composedModifiers = composeClauses(queryModifiers);
+  return runQuery(query, context, (queryModifiers) => {
+    const composedModifiers = composeClauses([
+      initModifiers,
+      ...rootClauses,
+      ...queryModifiers,
+    ]);
+    // console.log(queryModifiers)
     const sql = buildSql(composedModifiers);
+    const vars = composedModifiers.vars.map(castValToDb);
+    // console.log(sql, vars);
     const statement = db.prepare(sql).raw();
-    const allResults = statement.all(composedModifiers.vars.map(castValToDb)) ?? null;
+    const allResults = statement.all(vars) ?? null;
 
     const chunkInto = (items, chunkSizes) => {
       let offset = 0;
@@ -71,15 +78,17 @@ export function get(query, context) {
 
         if (!id) return;
 
-        // eslint-disable-next-line no-param-reassign
-        out.set(id, {
-          id,
-          properties: zipObjWith(subQuery.properties, props, castProp),
-          relationships: mapObj(subQuery.relationships, () => new Map()),
-        });
+        if (!out.get(id)) {
+          // eslint-disable-next-line no-param-reassign
+          out.set(id, {
+            id,
+            properties: zipObjWith(subQuery.properties, props, castProp),
+            relationships: mapObj(subQuery.relationships, () => new Map()),
+          });
+        }
 
         relKeys.forEach((relKey, idx) => {
-          relExtractors[relKey](relChunks[idx], out[id].relationships[relKey]);
+          relExtractors[relKey](relChunks[idx], out.get(id).relationships[relKey]);
         });
       };
     };

@@ -153,7 +153,7 @@ test("filters using $ne operator", async (t) => {
   t.deepEqual(result, [{ id: "1" }, { id: "2" }, { id: "3" }]);
 });
 
-test.skip("filters related resources", async (t) => {
+test("filters related resources", async (t) => {
   const result = await t.context.store.get({
     type: "powers",
     id: "careBearStare",

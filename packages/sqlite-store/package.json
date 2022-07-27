@@ -15,6 +15,7 @@
   "license": "CC BY-NC-SA",
   "dependencies": {
     "@polygraph/core": "*",
+    "@polygraph/expressions": "^0.0.1",
     "@polygraph/utils": "*",
     "ajv": "^8.11.0",
     "better-sqlite3": "^7.5.3"
