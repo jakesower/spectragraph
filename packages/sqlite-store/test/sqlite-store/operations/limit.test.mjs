@@ -28,6 +28,18 @@ test("limits the number of returned values", async (t) => {
   t.deepEqual(result, [{ id: "1", name: "Tenderheart Bear" }]);
 });
 
+test("limits with to-many subquery", async (t) => {
+  const result = await t.context.store.get({
+    type: "homes",
+    relationships: {
+      bears: {},
+    },
+    limit: 1,
+  });
+
+  t.deepEqual(result, [{ id: "1", bears: [{ id: "1" }, { id: "2" }, { id: "3" }] }]);
+});
+
 // INCLUDES SORTING
 
 test("limits after sorting", async (t) => {
@@ -165,6 +177,41 @@ test("limits subquery results", async (t) => {
 
   t.deepEqual(result, [
     { id: "1", bears: [{ id: "1" }] },
+    { id: "2", bears: [] },
+    { id: "3", bears: [] },
+  ]);
+});
+
+test("offsets subquery results", async (t) => {
+  const result = await t.context.store.get({
+    type: "homes",
+    relationships: {
+      bears: {
+        offset: 1,
+      },
+    },
+  });
+
+  t.deepEqual(result, [
+    { id: "1", bears: [{ id: "2" }, { id: "3" }] },
+    { id: "2", bears: [] },
+    { id: "3", bears: [] },
+  ]);
+});
+
+test("limits and offsets subquery results", async (t) => {
+  const result = await t.context.store.get({
+    type: "homes",
+    relationships: {
+      bears: {
+        limit: 1,
+        offset: 1,
+      },
+    },
+  });
+
+  t.deepEqual(result, [
+    { id: "1", bears: [{ id: "2" }] },
     { id: "2", bears: [] },
     { id: "3", bears: [] },
   ]);

@@ -26,3 +26,7 @@ export function flatMapQueryTree(query, tree, fn) {
 
   return go(query, tree, []);
 }
+
+export function flattenSubQueries(query) {
+  return [query, ...Object.values(query.relationships).map(flattenSubQueries)];
+}
