@@ -118,7 +118,6 @@ test("searches on a field that is not a returned prop", async (t) => {
   ]);
 });
 
-// test.todo("orders on nested fields");
 test("orders nested fields", async (t) => {
   const result = await t.context.store.get({
     type: "powers",
