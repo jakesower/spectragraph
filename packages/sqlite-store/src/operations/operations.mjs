@@ -1,95 +1,120 @@
 import { ERRORS, PolygraphError } from "@polygraph/core/errors";
 import { compileExpression, isValidExpression } from "@polygraph/expressions";
-import { coreOperations } from "@polygraph/core/operations";
-import { flatMapQuery } from "@polygraph/core/query";
+import { flatMapQuery, flattenSubQueries } from "@polygraph/core/query";
 import { multiApply } from "@polygraph/utils/functions";
 import { pipeThru } from "@polygraph/utils/pipes";
 import { preQueryRelationships } from "./relationships.mjs";
 
+const hasToManyRelationship = (schema, query) =>
+  flattenSubQueries(query).some((subQuery) =>
+    Object.keys(subQuery.relationships).some(
+      (relKey) => schema.resources[query.type].properties[relKey].cardinality === "many",
+    ),
+  );
+
 const operations = {
   id: {
-    preQuery: async (id, { query, schema }) => {
-      const { table } = schema.resources[query.type].store;
-      return { where: [`${table}.id = ?`], vars: [id] };
+    preQuery: {
+      apply: async (id, { query, schema }) => {
+        const { table } = schema.resources[query.type].store;
+        return { where: [`${table}.id = ?`], vars: [id] };
+      },
     },
-    postQuery: (_, resources) => {
-      if (!Array.isArray(resources)) {
-        throw new PolygraphError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
-      }
+    postQuery: {
+      apply: (_, resources) => {
+        if (!Array.isArray(resources)) {
+          throw new PolygraphError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
+        }
 
-      return resources[0] ?? null;
+        return resources[0] ?? null;
+      },
     },
     incompatibeWith: ["first"],
   },
-  ...coreOperations,
-  // properties: {
-  //   preQuery: (properties) =>
-  // },
   first: {
-    preQuery: (_, { queryPath }) =>
-      queryPath.length === 0 ? [{ limit: 1, offset: 0 }] : [],
-    postQuery: (_, resources) => {
-      if (!Array.isArray(resources)) {
-        throw new PolygraphError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
-      }
+    preQuery: {
+      apply: (_, { queryPath }) =>
+        queryPath.length === 0 ? [{ limit: 1, offset: 0 }] : [],
+    },
+    postQuery: {
+      apply: (_, resources) => {
+        if (!Array.isArray(resources)) {
+          throw new PolygraphError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
+        }
 
-      return resources[0] ?? null;
+        return resources[0] ?? null;
+      },
     },
     incompatibeWith: ["id"],
   },
   constraints: {
-    preQuery: (constraints, context) => {
-      const { config } = context;
-      const { expressionDefinitions } = config;
+    preQuery: {
+      apply: (constraints, context) => {
+        const { config } = context;
+        const { expressionDefinitions } = config;
 
-      // an expression has been passed as the constraint value
-      if (isValidExpression(constraints, expressionDefinitions)) {
-        return compileExpression(constraints, expressionDefinitions, context)();
-      }
-
-      // an object of properties has been passed in
-      const propExprs = Object.entries(constraints).map(([propKey, propValOrExpr]) => {
-        if (isValidExpression(propValOrExpr, expressionDefinitions)) {
-          const [operation, args] = Object.entries(propValOrExpr)[0];
-          return { [operation]: [{ $prop: propKey }, args] };
+        // an expression has been passed as the constraint value
+        if (isValidExpression(constraints, expressionDefinitions)) {
+          return compileExpression(constraints, expressionDefinitions, context)();
         }
 
-        return { $eq: [{ $prop: propKey }, propValOrExpr] };
-      });
+        // an object of properties has been passed in
+        const propExprs = Object.entries(constraints).map(([propKey, propValOrExpr]) => {
+          if (isValidExpression(propValOrExpr, expressionDefinitions)) {
+            const [operation, args] = Object.entries(propValOrExpr)[0];
+            return { [operation]: [{ $prop: propKey }, args] };
+          }
 
-      const objectExpression = { $and: propExprs };
-      return compileExpression(objectExpression, expressionDefinitions, context)();
+          return { $eq: [{ $prop: propKey }, propValOrExpr] };
+        });
+
+        const objectExpression = { $and: propExprs };
+        return compileExpression(objectExpression, expressionDefinitions, context)();
+      },
     },
   },
   order: {
-    preQuery: (order, { queryTable }) => [
-      { orderBy: order.map((o) => ({ ...o, table: queryTable })) },
-    ],
+    preQuery: {
+      apply: (order, { queryTable }) => [
+        { orderBy: order.map((o) => ({ ...o, table: queryTable })) },
+      ],
+    },
   },
   limit: {
-    preQuery: (limit, { query, queryPath }) =>
-      queryPath.length === 0 ? [{ limit, offset: query.offset ?? 0 }] : [],
-    postQuery: (limit, resources, { query, queryPath }) => {
-      const { offset = 0 } = query;
-      const out = queryPath.length === 0 ? resources : resources.slice(offset, limit);
-      // console.log({ limit, resources, query, queryPath, offset, out });
-      return out;
+    preQuery: {
+      apply: (limit, { query, queryPath, schema }) =>
+        queryPath.length > 0 || hasToManyRelationship(schema, query)
+          ? []
+          : [{ limit, offset: query.offset ?? 0 }],
+    },
+    postQuery: {
+      apply: (limit, resources, { query, queryPath, schema }) => {
+        const { offset = 0 } = query;
+
+        return queryPath.length > 0 || hasToManyRelationship(schema, query)
+          ? resources.slice(offset, limit + offset)
+          : resources;
+      },
     },
   },
   offset: {
-    preQuery: (offset, { query }) => {
-      if (!query.limit) {
-        return [{ limit: -1, offset }];
-      }
-      return [];
+    preQuery: {
+      apply: (offset, { query }) => {
+        if (!query.limit) {
+          return [{ limit: -1, offset }];
+        }
+        return [];
+      },
     },
   },
   relationships: {
-    preQuery: (_, context) =>
-      preQueryRelationships(context.query, context.queryPath, context),
-    // flatMapQuery(context.query, (subQuery, queryPath) =>
-    //   preQueryRelationships(subQuery, queryPath, context),
-    // ),
+    preQuery: {
+      apply: (_, context) =>
+        preQueryRelationships(context.query, context.queryPath, context),
+      // flatMapQuery(context.query, (subQuery, queryPath) =>
+      //   preQueryRelationships(subQuery, queryPath, context),
+      // ),
+    },
   },
 };
 
@@ -103,11 +128,12 @@ const applyOverPaths = (resources, path, fn) => {
   }));
 };
 
+// TODO: tsort operations
 const gatherPreOperations = (query, context) =>
   flatMapQuery(query, (subQuery, queryPath) =>
     Object.entries(subQuery)
       .flatMap(([operationKey, operationArg]) => {
-        const operation = operations[operationKey]?.preQuery;
+        const operation = operations[operationKey]?.preQuery?.apply;
 
         if (!operation) return null;
 
@@ -118,6 +144,7 @@ const gatherPreOperations = (query, context) =>
           queryTable: [query.type, ...queryPath].join("$"),
           rootQuery: query,
         };
+
         return operation(operationArg, argContext);
       })
       .filter(Boolean),
@@ -127,11 +154,11 @@ const gatherPostOperationFunctions = (query, context) =>
   flatMapQuery(query, (subQuery, queryPath) =>
     Object.entries(subQuery)
       .map(([operationKey, operationArg]) => {
-        const operation = operations[operationKey]?.postQuery;
+        const operation = operations[operationKey]?.postQuery?.apply;
 
         if (!operation) return null;
 
-        const argContext = { ...context, queryPath };
+        const argContext = { ...context, query: subQuery, queryPath };
         return (resources) =>
           applyOverPaths(resources, queryPath, (resource) =>
             operation(operationArg, resource, argContext),
@@ -143,7 +170,6 @@ const gatherPostOperationFunctions = (query, context) =>
 export async function runQuery(query, context, run) {
   const queryModifierPromises = gatherPreOperations(query, context);
   const queryModifiers = await Promise.all(queryModifierPromises);
-  // console.log(queryModifiers);
 
   const resources = await run(queryModifiers);
 

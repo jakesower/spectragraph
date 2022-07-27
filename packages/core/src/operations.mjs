@@ -8,8 +8,8 @@ const compareFns = {
   string: (left, right) => left.localeCompare(right),
 };
 
-export function orderFunction({ config, query, schema }) {
-  const { order, type: resType } = query;
+export function orderFunction(order, { config, query, schema }) {
+  const { type: resType } = query;
   const { orderingFunctions } = config;
 
   const fns = order.map((orderConfig) => {
@@ -36,26 +36,16 @@ export function orderFunction({ config, query, schema }) {
   };
 }
 
-async function orderOperation(vars, next, context) {
-  if (!("order" in context.query) || context.query.order.length === 0) {
-    return next(vars);
-  }
-
-  const resources = await next(vars);
-
+function orderOperation(order, resources, context) {
   if (!Array.isArray(resources)) {
     throw new PolygraphError(ERRORS.ORDER_NOT_ALLOWED_ON_SINGULAR, resources);
   }
 
   // SELECT cols mean sort fields might be omitted
-  return sortBy(resources, orderFunction(context));
+  return sortBy(resources, orderFunction(order, context));
 }
 
-async function firstOperation(vars, next, { query }) {
-  if (!query.first) return next(vars);
-
-  const resources = await next(vars);
-
+function firstOperation(_, resources) {
   if (!Array.isArray(resources)) {
     throw new PolygraphError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
   }
@@ -64,50 +54,48 @@ async function firstOperation(vars, next, { query }) {
 }
 
 export const coreOperations = {
-  first: { apply: firstOperation },
+  first: { postQuery: { apply: firstOperation } },
   limit: {
-    apply: async (vars, next, { query }) => {
-      const resources = await next(vars);
-      const { limit, offset = 0 } = query;
-
-      return resources.slice(offset, limit && limit + offset);
+    postQuery: {
+      apply: (limit, resources, { query }) => {
+        const { offset = 0 } = query;
+        return resources.slice(offset, limit && limit + offset);
+      },
     },
   },
   order: {
-    apply: orderOperation,
+    postQuery: { apply: orderOperation },
   },
   constraints: {
-    apply: async (vars, next, context) => {
-      const { config, query } = context;
+    postQuery: {
+      apply: (constraints, resources, context) => {
+        const { config } = context;
 
-      if (!query.constraints) return next(vars);
+        const { expressionDefinitions } = config;
 
-      const { constraints } = query;
-      const { expressionDefinitions } = config;
-      const resources = await next(vars);
+        // an expression has been passed as the constraint value
+        if (isValidExpression(constraints, expressionDefinitions)) {
+          return resources.filter(
+            compileExpression(constraints, expressionDefinitions, context),
+          );
+        }
 
-      // an expression has been passed as the constraint value
-      if (isValidExpression(constraints)) {
-        return resources.filter(
-          compileExpression(expressionDefinitions, constraints, context),
+        // an object of properties has been passed in
+        const propExprs = Object.entries(constraints).map(([propKey, propValOrExpr]) =>
+          isValidExpression(propValOrExpr, expressionDefinitions)
+            ? { [propKey]: [{ $prop: propKey }, ...propValOrExpr] }
+            : { $eq: [{ $prop: propKey }, propValOrExpr] },
         );
-      }
 
-      // an object of properties has been passed in
-      const propExprs = Object.entries(constraints).map(([propKey, propValOrExpr]) =>
-        isValidExpression(propValOrExpr)
-          ? { [propKey]: [{ $prop: propKey }, ...propValOrExpr] }
-          : { $eq: [{ $prop: propKey }, propValOrExpr] },
-      );
+        const objectExpression = { $and: propExprs };
+        const filterFn = compileExpression(
+          objectExpression,
+          expressionDefinitions,
+          context,
+        );
 
-      const objectExpression = { $and: propExprs };
-      const filterFn = compileExpression(
-        expressionDefinitions,
-        objectExpression,
-        context,
-      );
-
-      return resources.filter(filterFn);
+        return resources.filter(filterFn);
+      },
     },
   },
 };
