@@ -118,25 +118,25 @@ test("searches on a field that is not a returned prop", async (t) => {
   ]);
 });
 
-test.todo("orders on nested fields");
-// test.todo("orders nested fields", async (t) => {
-//   const result = await t.context.store.get({
-//     type: "powers",
-//     props: ["name"],
-//     order: [{ property: "name", direction: "desc" }],
-//     relationships: {
-//       bears: {
-//         order: [{ property: "name", direction: "asc" }],
-//       },
-//     },
-//   });
+// test.todo("orders on nested fields");
+test("orders nested fields", async (t) => {
+  const result = await t.context.store.get({
+    type: "powers",
+    props: ["name"],
+    order: [{ property: "name", direction: "desc" }],
+    relationships: {
+      bears: {
+        order: [{ property: "name", direction: "asc" }],
+      },
+    },
+  });
 
-//   t.deepEqual(result, [
-//     { id: "makeWish", name: "Make a Wish", bears: [] },
-//     {
-//       id: "careBearStare",
-//       name: "Care Bear Stare",
-//       bears: [{ id: "2" }, { id: "5" }, { id: "1" }, { id: "3" }],
-//     },
-//   ]);
-// });
+  t.deepEqual(result, [
+    { id: "makeWish", name: "Make a Wish", bears: [] },
+    {
+      id: "careBearStare",
+      name: "Care Bear Stare",
+      bears: [{ id: "2" }, { id: "5" }, { id: "1" }, { id: "3" }],
+    },
+  ]);
+});

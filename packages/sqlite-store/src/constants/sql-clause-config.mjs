@@ -32,7 +32,8 @@ export const SQL_CLAUSE_CONFIG = {
       if (val.length === 0) return "";
 
       const orderClauses = val.map(
-        ({ property, direction }) => `${property}${direction === "desc" ? " DESC" : ""}`,
+        ({ property, direction, table }) =>
+          `${table}.${property}${direction === "desc" ? " DESC" : ""}`,
       );
       return `ORDER BY ${orderClauses.join(", ")}`;
     },

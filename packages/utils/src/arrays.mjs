@@ -34,6 +34,18 @@ export function intersection(leftArray, rightArray) {
   return output;
 }
 
+export function intersperse(items, interItem) {
+  if (items.length <= 1) return items;
+
+  const output = [items[0]];
+  for (let i = 1; i < items.length; i += 1) {
+    output.push(interItem);
+    output.push(items[i]);
+  }
+
+  return output;
+}
+
 export function groupBy(items, fn) {
   const out = {};
   const l = items.length;
@@ -101,15 +113,16 @@ export function reduceChunksWithInit(items, init, chunkSize, fn) {
 
   return out;
 }
+
 export function reverse(items) {
   const output = [];
 
-  for (let i = (items.length - 1); i >= 0; i -= 1) {
+  for (let i = items.length - 1; i >= 0; i -= 1) {
     output.push(items[i]);
   }
 
   return output;
-};
+}
 
 export function splitAt(items, idx) {
   return [items.slice(0, idx), items.slice(idx)];

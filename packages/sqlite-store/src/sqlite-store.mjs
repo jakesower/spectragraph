@@ -18,7 +18,12 @@ export async function SQLiteStore(schema, db, userConfig = {}) {
   return {
     get: async (query) => {
       const normalQuery = normalizeGetQuery(schema, query);
-      return getQuery(normalQuery, { config: fullStoreConfig, db, schema, query });
+      return getQuery(normalQuery, {
+        config: fullStoreConfig,
+        db,
+        schema,
+        query: normalQuery,
+      });
     },
     set: async (query, tree) => {
       const normalQuery = normalizeSetQuery(schema, query);

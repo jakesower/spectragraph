@@ -52,9 +52,7 @@ test("limits after sorting with 1", async (t) => {
     limit: 1,
   });
 
-  t.deepEqual(result, [
-    { id: "2", name: "Cheer Bear" },
-  ]);
+  t.deepEqual(result, [{ id: "2", name: "Cheer Bear" }]);
 });
 
 test("limits with an offset", async (t) => {
@@ -153,4 +151,21 @@ test("errors for a bad offset", async (t) => {
     },
     { instanceOf: PolygraphError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
   );
+});
+
+test("limits subquery results", async (t) => {
+  const result = await t.context.store.get({
+    type: "homes",
+    relationships: {
+      bears: {
+        limit: 1,
+      },
+    },
+  });
+
+  t.deepEqual(result, [
+    { id: "1", bears: [{ id: "1" }] },
+    { id: "2", bears: [] },
+    { id: "3", bears: [] },
+  ]);
 });
