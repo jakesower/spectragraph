@@ -1,5 +1,5 @@
 {
-  "name": "@polygraph/json-api-server",
+  "name": "@blossom/json-api-server",
   "version": "0.0.1",
   "type": "module",
   "exports": {
@@ -12,7 +12,7 @@
   "keywords": [],
   "author": "Jake Sower",
   "devDependencies": {
-    "@polygraph/memory-store": "^0.0.1",
+    "@blossom/memory-store": "^0.0.1",
     "ava": "^4.2.0",
     "eslint": "^8.16.0",
     "eslint-config-airbnb-base": "^15.0.0",
@@ -21,8 +21,8 @@
     "prettier": "^2.6.2"
   },
   "dependencies": {
-    "@polygraph/core": "^0.0.1",
-    "@polygraph/utils": "*",
+    "@blossom/core": "^0.0.1",
+    "@blossom/utils": "*",
     "ajv": "^8.11.0",
     "express": "^4.18.1"
   }

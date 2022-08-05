@@ -1,7 +1,7 @@
-import { pipeThru, uniq } from "@polygraph/utils";
-import { filterObj, mapObj, partitionObj } from "@polygraph/utils/objects";
-import { difference } from "@polygraph/utils/arrays";
-import { PolygraphError } from "../validations/errors.mjs";
+import { pipeThru, uniq } from "@blossom/utils";
+import { filterObj, mapObj, partitionObj } from "@blossom/utils/objects";
+import { difference } from "@blossom/utils/arrays";
+import { blossomError } from "../validations/errors.mjs";
 import { ERRORS } from "../strings.mjs";
 
 function normalizeShorthandLonghandKeys(query) {
@@ -16,7 +16,7 @@ function normalizeShorthandLonghandKeys(query) {
   const outQuery = { ...query };
   shortLongPairs.forEach(([shorthand, longhand]) => {
     if (shorthand in query && longhand in query) {
-      throw new PolygraphError(ERRORS.SHORTHAND_LONGHAND_BOTH_USED, {
+      throw new blossomError(ERRORS.SHORTHAND_LONGHAND_BOTH_USED, {
         query,
         shorthand,
         longhand,
@@ -52,7 +52,7 @@ function normalizeProps(schema, query) {
 
   const invalidProperties = difference(properties, schemaPropKeys);
   if (invalidProperties.length > 0) {
-    throw new PolygraphError(ERRORS.INVALID_PROPS, {
+    throw new blossomError(ERRORS.INVALID_PROPS, {
       invalidProperties,
       queryProperties: properties,
       schemaProperties: schemaPropKeys,
@@ -61,7 +61,7 @@ function normalizeProps(schema, query) {
 
   const invalidExcludedProperties = difference(excludedProperties, schemaPropKeys);
   if (invalidProperties.length > 0) {
-    throw new PolygraphError(ERRORS.INVALID_EXCLUDED_PROPS, {
+    throw new blossomError(ERRORS.INVALID_EXCLUDED_PROPS, {
       invalidProperties: invalidExcludedProperties,
       queryProperties: properties,
       schemaProperties: schemaPropKeys,
@@ -87,7 +87,7 @@ function normalizeAndExpandRels(schema, query) {
   const invalidRelationships = difference(queryRelationshipKeys, schemaRelationshipKeys);
 
   if (invalidRelationships.length > 0) {
-    throw new PolygraphError(ERRORS.INVALID_RELATIONSHIPS, {
+    throw new blossomError(ERRORS.INVALID_RELATIONSHIPS, {
       invalidRelationships,
       queryRelationshipKeys,
       schemaRelationshipKeys,

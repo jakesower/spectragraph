@@ -1,6 +1,6 @@
 import test from "ava";
 import Database from "better-sqlite3";
-import { ERRORS, PolygraphError } from "@polygraph/core/errors";
+import { ERRORS, blossomError } from "@blossom/core/errors";
 import { careBearSchema as schema } from "../../fixtures/care-bear-schema.mjs";
 import { SQLiteStore } from "../../../src/sqlite-store.mjs";
 import { careBearData } from "../../fixtures/care-bear-data.mjs";
@@ -29,6 +29,6 @@ test("throws an error when trying to get the first on a singular resource", asyn
       const bad = await t.context.store.get({ type: "bears", id: "1", first: true });
       console.log(bad);
     },
-    { instanceOf: PolygraphError, message: ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR },
+    { instanceOf: blossomError, message: ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR },
   );
 });

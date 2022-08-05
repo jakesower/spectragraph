@@ -1,5 +1,5 @@
 import test from "ava";
-import { omit } from "@polygraph/utils";
+import { omit } from "@blossom/utils";
 import { schema } from "../fixtures/care-bear-schema.mjs";
 import { makeMemoryStore } from "../../src/memory-store/memory-store.mjs";
 import { careBearData } from "../fixtures/care-bear-data.mjs";

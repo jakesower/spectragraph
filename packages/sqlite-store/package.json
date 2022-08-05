@@ -1,5 +1,5 @@
 {
-  "name": "@polygraph/sqlite-store",
+  "name": "@blossom/sqlite-store",
   "version": "0.0.8",
   "type": "module",
   "exports": {
@@ -14,9 +14,9 @@
   "author": "Jake Sower",
   "license": "CC BY-NC-SA",
   "dependencies": {
-    "@polygraph/core": "*",
-    "@polygraph/expressions": "^0.0.1",
-    "@polygraph/utils": "*",
+    "@blossom/core": "*",
+    "@blossom/expressions": "^0.0.1",
+    "@blossom/utils": "*",
     "ajv": "^8.11.0",
     "better-sqlite3": "^7.5.3"
   },

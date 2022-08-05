@@ -1,7 +1,7 @@
 import test from "ava";
 import Database from "better-sqlite3";
-import { omit } from "@polygraph/utils/objects";
-import { ERRORS, PolygraphError } from "@polygraph/core/errors";
+import { omit } from "@blossom/utils/objects";
+import { ERRORS, blossomError } from "@blossom/core/errors";
 import { careBearSchema as schema } from "../fixtures/care-bear-schema.mjs";
 import { SQLiteStore } from "../../src/sqlite-store.mjs";
 import { careBearData, grumpyBear } from "../fixtures/care-bear-data.mjs";
@@ -135,7 +135,7 @@ test("does not allow refs to be updated", async (t) => {
       );
       console.log(replaceResult);
     },
-    { instanceOf: PolygraphError, message: ERRORS.INVALID_SET_QUERY_SYNTAX },
+    { instanceOf: blossomError, message: ERRORS.INVALID_SET_QUERY_SYNTAX },
   );
 });
 
@@ -147,7 +147,7 @@ test("fails to create a resource that doesn't have a required field in the tree"
         grumpyBear,
       );
     },
-    { instanceOf: PolygraphError, message: ERRORS.QUERY_MISSING_CREATE_FIELDS },
+    { instanceOf: blossomError, message: ERRORS.QUERY_MISSING_CREATE_FIELDS },
   );
 });
 

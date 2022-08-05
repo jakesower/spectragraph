@@ -1,4 +1,4 @@
-import { asArray, differenceBy } from "@polygraph/utils/arrays";
+import { asArray, differenceBy } from "@blossom/utils/arrays";
 import { makeQuiver } from "./quiver.mjs";
 import { makeEmptyStore } from "../store.mjs";
 

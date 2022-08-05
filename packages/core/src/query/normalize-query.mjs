@@ -1,8 +1,8 @@
-import { pipeThru, uniq } from "@polygraph/utils";
-import { filterObj, mapObj, omit } from "@polygraph/utils/objects";
-import { difference } from "@polygraph/utils/arrays";
+import { pipeThru, uniq } from "@blossom/utils";
+import { filterObj, mapObj, omit } from "@blossom/utils/objects";
+import { difference } from "@blossom/utils/arrays";
 import { ensureValidGetQuerySyntax, ensureValidSetQuerySyntax } from "../validation.mjs";
-import { ERRORS, PolygraphError } from "../errors.mjs";
+import { ERRORS, blossomError } from "../errors.mjs";
 
 function normalizeShorthandLonghandKeys(query) {
   const shortLongPairs = [
@@ -15,7 +15,7 @@ function normalizeShorthandLonghandKeys(query) {
   const outQuery = { ...query };
   shortLongPairs.forEach(([shorthand, longhand]) => {
     if (shorthand in query && longhand in query) {
-      throw new PolygraphError(ERRORS.SHORTHAND_LONGHAND_BOTH_USED, {
+      throw new blossomError(ERRORS.SHORTHAND_LONGHAND_BOTH_USED, {
         query,
         shorthand,
         longhand,
@@ -49,7 +49,7 @@ function normalizeProps(schema, query) {
 
   const invalidProperties = difference(properties, schemaPropKeys);
   if (invalidProperties.length > 0) {
-    throw new PolygraphError(ERRORS.INVALID_PROPS, {
+    throw new blossomError(ERRORS.INVALID_PROPS, {
       invalidProperties,
       queryProperties: properties,
       schemaProperties: schemaPropKeys,
@@ -58,7 +58,7 @@ function normalizeProps(schema, query) {
 
   const invalidExcludedProperties = difference(excludedProperties, schemaPropKeys);
   if (invalidProperties.length > 0) {
-    throw new PolygraphError(ERRORS.INVALID_EXCLUDED_PROPS, {
+    throw new blossomError(ERRORS.INVALID_EXCLUDED_PROPS, {
       invalidProperties: invalidExcludedProperties,
       queryProperties: properties,
       schemaProperties: schemaPropKeys,
@@ -84,7 +84,7 @@ function normalizeAndExpandRels(schema, query) {
   const invalidRelationships = difference(queryRelationshipKeys, schemaRelationshipKeys);
 
   if (invalidRelationships.length > 0) {
-    throw new PolygraphError(ERRORS.INVALID_RELATIONSHIPS, {
+    throw new blossomError(ERRORS.INVALID_RELATIONSHIPS, {
       invalidRelationships,
       queryRelationshipKeys,
       schemaRelationshipKeys,

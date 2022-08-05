@@ -1,4 +1,4 @@
-import { filterObj } from "@polygraph/utils/objects";
+import { filterObj } from "@blossom/utils/objects";
 
 export function getInverse(schema, relationshipPropertyDefinition) {
   const { inverse, relatedType } = relationshipPropertyDefinition;

@@ -1,6 +1,6 @@
-import { asArray } from "@polygraph/utils/arrays";
-import { mapObj } from "@polygraph/utils/objects";
-import { combinations, difference } from "@polygraph/utils/sets";
+import { asArray } from "@blossom/utils/arrays";
+import { mapObj } from "@blossom/utils/objects";
+import { combinations, difference } from "@blossom/utils/sets";
 import { makeEmptyStore } from "./store.mjs";
 
 const DELETED = Symbol("deleted");

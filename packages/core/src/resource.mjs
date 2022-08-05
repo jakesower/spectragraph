@@ -1,4 +1,4 @@
-import { mapObj, partitionObj, pick } from "@polygraph/utils/objects";
+import { mapObj, partitionObj, pick } from "@blossom/utils/objects";
 
 export function defaultResource(schema, resourceType) {
   return mapObj(schema.resources[resourceType].properties, (propDef) =>

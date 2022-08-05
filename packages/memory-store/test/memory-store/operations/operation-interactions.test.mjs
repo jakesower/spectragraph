@@ -2,7 +2,7 @@ import test from "ava";
 import { schema } from "../../fixtures/care-bear-schema.mjs";
 import { makeMemoryStore } from "../../../src/memory-store/memory-store.mjs";
 import { careBearData } from "../../fixtures/care-bear-data.mjs";
-import { PolygraphError } from "../../../src/validations/errors.mjs";
+import { blossomError } from "../../../src/validations/errors.mjs";
 import { ERRORS } from "../../../src/strings.mjs";
 
 const sortResWithMemory = () => {
@@ -52,7 +52,7 @@ test("limit is incompatible with first", async (t) => {
 
       console.log(badResult);
     },
-    { instanceOf: PolygraphError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
+    { instanceOf: blossomError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
   );
 });
 
@@ -67,7 +67,7 @@ test("offset is incompatible with first", async (t) => {
 
       console.log(badResult);
     },
-    { instanceOf: PolygraphError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
+    { instanceOf: blossomError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
   );
 });
 

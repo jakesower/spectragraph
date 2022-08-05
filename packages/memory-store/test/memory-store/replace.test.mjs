@@ -1,10 +1,10 @@
 import test from "ava";
-import { mapObj } from "@polygraph/utils/objects";
+import { mapObj } from "@blossom/utils/objects";
 import { schema } from "../fixtures/care-bear-schema.mjs";
 import { makeMemoryStore } from "../../src/memory-store/memory-store.mjs";
 import { careBearData, grumpyBear } from "../fixtures/care-bear-data.mjs";
 import { ERRORS } from "../../src/strings.mjs";
-import { PolygraphError } from "../../src/validations/errors.mjs";
+import { blossomError } from "../../src/validations/errors.mjs";
 
 test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign
@@ -77,7 +77,7 @@ test("does not allow refs to be updated", async (t) => {
       grumpyBear,
     );
     console.log(replaceResult);
-  }, { instanceOf: PolygraphError, message: ERRORS.INVALID_SET_QUERY_SYNTAX });
+  }, { instanceOf: blossomError, message: ERRORS.INVALID_SET_QUERY_SYNTAX });
 });
 
 test("fails to create a resource that doesn't have a required field in the tree", async (t) => {
@@ -87,7 +87,7 @@ test("fails to create a resource that doesn't have a required field in the tree"
       grumpyBear,
     );
     console.log(replaceResult);
-  }, { instanceOf: PolygraphError, message: ERRORS.QUERY_MISSING_CREATE_FIELDS });
+  }, { instanceOf: blossomError, message: ERRORS.QUERY_MISSING_CREATE_FIELDS });
 });
 
 test("replaces a property when part of the query", async (t) => {

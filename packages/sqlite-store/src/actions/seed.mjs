@@ -1,5 +1,5 @@
-import { getInverse } from "@polygraph/core/schema";
-import { groupBy } from "@polygraph/utils";
+import { getInverse } from "@blossom/core/schema";
+import { groupBy } from "@blossom/utils";
 
 const boolToNum = (val) => (val === true ? 1 : val === false ? 0 : val) ?? null;
 

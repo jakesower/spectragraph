@@ -1,5 +1,5 @@
-import { sortBy } from "@polygraph/utils";
-import { reduceChunksWithInit, splitAt } from "@polygraph/utils/arrays";
+import { sortBy } from "@blossom/utils";
+import { reduceChunksWithInit, splitAt } from "@blossom/utils/arrays";
 import { orderFunction } from "./order.mjs";
 
 export function limitOperation(resources, { query }) {

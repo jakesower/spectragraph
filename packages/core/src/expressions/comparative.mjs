@@ -1,4 +1,4 @@
-import { deepEqual } from "@polygraph/utils/generics";
+import { deepEqual } from "@blossom/utils/generics";
 
 const compileComparative = (predicate) => ({
   compile: (exprVal, context) => (runVal) => {

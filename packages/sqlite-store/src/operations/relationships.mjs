@@ -1,5 +1,5 @@
-import { last } from "@polygraph/utils/arrays";
-import { getPath } from "@polygraph/utils/lenses";
+import { last } from "@blossom/utils/arrays";
+import { getPath } from "@blossom/utils/lenses";
 
 function makeRelBuilders(schema) {
   return {
