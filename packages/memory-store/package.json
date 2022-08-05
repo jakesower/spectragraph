@@ -1,5 +1,5 @@
 {
-  "name": "@polygraph/memory-store",
+  "name": "@blossom/memory-store",
   "version": "0.0.1",
   "type": "module",
   "exports": {
@@ -14,7 +14,7 @@
   "author": "Jake Sower",
   "license": "AGPL-3.0",
   "dependencies": {
-    "@polygraph/utils": "*",
+    "@blossom/utils": "*",
     "ajv": "^8.11.0"
   },
   "devDependencies": {},

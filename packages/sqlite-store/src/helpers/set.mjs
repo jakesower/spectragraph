@@ -1,12 +1,12 @@
-import { buildResourceTable } from "@polygraph/core/resource-table";
-import { normalizeGetQuery } from "@polygraph/core/query";
-import { normalizeResource } from "@polygraph/core/resource";
-import { getRelationshipProperties } from "@polygraph/core/schema";
-import { normalizeTree } from "@polygraph/core/tree";
-import { ensureCreatedResourceFields } from "@polygraph/core/validation";
-import { asArray, differenceBy, groupBy, transpose, uniq } from "@polygraph/utils/arrays";
-import { pipeThru } from "@polygraph/utils/functions";
-import { filterObj, mapObj } from "@polygraph/utils/objects";
+import { buildResourceTable } from "@blossom/core/resource-table";
+import { normalizeGetQuery } from "@blossom/core/query";
+import { normalizeResource } from "@blossom/core/resource";
+import { getRelationshipProperties } from "@blossom/core/schema";
+import { normalizeTree } from "@blossom/core/tree";
+import { ensureCreatedResourceFields } from "@blossom/core/validation";
+import { asArray, differenceBy, groupBy, transpose, uniq } from "@blossom/utils/arrays";
+import { pipeThru } from "@blossom/utils/functions";
+import { filterObj, mapObj } from "@blossom/utils/objects";
 import { get } from "./get.mjs";
 
 export async function set(rootQuery, context) {

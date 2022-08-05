@@ -1,5 +1,5 @@
-import { asArray } from "@polygraph/utils/arrays";
-import { mapObj, pick } from "@polygraph/utils/objects";
+import { asArray } from "@blossom/utils/arrays";
+import { mapObj, pick } from "@blossom/utils/objects";
 
 export function normalizeTree(query, treeOrTrees) {
   return asArray(treeOrTrees).map((tree) => {

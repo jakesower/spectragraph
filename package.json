@@ -1,5 +1,5 @@
 {
-  "name": "polygraph",
+  "name": "blossom",
   "license": "AGPL-3.0",
   "workspaces": [
     "packages/*"

@@ -1,4 +1,4 @@
-import { pick } from "@polygraph/utils";
+import { pick } from "@blossom/utils";
 import { multiApply } from "../../utils/multi-apply.mjs";
 
 export function selectProperties(resources, { query, schema }) {

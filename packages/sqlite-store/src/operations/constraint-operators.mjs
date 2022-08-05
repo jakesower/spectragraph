@@ -1,4 +1,4 @@
-import { mapObj } from "@polygraph/utils/objects";
+import { mapObj } from "@blossom/utils/objects";
 
 const comparative = (sqlOperator) => ({
   compile: (exprVal, compile) => () => {

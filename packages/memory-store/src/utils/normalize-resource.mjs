@@ -1,6 +1,6 @@
-import { mapObj, partitionObj } from "@polygraph/utils/objects";
+import { mapObj, partitionObj } from "@blossom/utils/objects";
 import { typeValidations } from "../validations/type-validations.mjs";
-import { PolygraphError } from "../validations/errors.mjs";
+import { blossomError } from "../validations/errors.mjs";
 
 export function normalizeResource(schema, resourceType, resource) {
   const schemaDef = schema.resources[resourceType];
@@ -11,7 +11,7 @@ export function normalizeResource(schema, resourceType, resource) {
 
   const properties = mapObj(nonRelProps, (propDef, propKey) => {
     if (!(propKey in resource)) {
-      throw new PolygraphError(
+      throw new blossomError(
         "a property was missing from the resource",
         {
           resourceType, resource, property: propKey, expectedType: propDef.type,
@@ -21,7 +21,7 @@ export function normalizeResource(schema, resourceType, resource) {
 
     const value = resource[propKey];
     if (!typeValidations[propDef.type](value)) {
-      throw new PolygraphError(
+      throw new blossomError(
         "a property did not meet the validation criteria",
         {
           resourceType, resource, value, expectedType: propDef.type,
@@ -35,7 +35,7 @@ export function normalizeResource(schema, resourceType, resource) {
   const relationships = mapObj(relProps, (relDef, relKey) => {
     const ensureValidRef = (ref) => {
       if (ref.type !== relDef.relatedType) {
-        throw new PolygraphError(
+        throw new blossomError(
           "relationship types must match the proper related resource type",
           {
             resourceType, resource, relationship: relKey, ref,
@@ -43,7 +43,7 @@ export function normalizeResource(schema, resourceType, resource) {
         );
       }
       if (!("id" in ref)) {
-        throw new PolygraphError(
+        throw new blossomError(
           "resources require an id field to be present",
           {
             resourceType, resource, relationship: relKey, ref,
@@ -53,7 +53,7 @@ export function normalizeResource(schema, resourceType, resource) {
     };
 
     if (!(relKey in resource)) {
-      throw new PolygraphError(
+      throw new blossomError(
         "a relationship was missing from the resource",
         {
           resourceType, resource, relationship: relKey,
@@ -64,7 +64,7 @@ export function normalizeResource(schema, resourceType, resource) {
     const relRefOrRefs = resource[relKey];
     if (relDef.cardinality === "one") {
       if (Array.isArray(relRefOrRefs)) {
-        throw new PolygraphError(
+        throw new blossomError(
           "a to-one relationship has multiple values when it should have a single value or be null",
           { resourceType, resource, value: relRefOrRefs },
         );
@@ -77,7 +77,7 @@ export function normalizeResource(schema, resourceType, resource) {
     if (relDef.cardinality === "many") {
       if (!Array.isArray(relRefOrRefs)) {
         if (relRefOrRefs == null) {
-          throw new PolygraphError(
+          throw new blossomError(
             "a to-many relationship has a null value instead of an empty array",
             {
               resourceType, resource, relationship: relKey, value: relRefOrRefs,
@@ -85,7 +85,7 @@ export function normalizeResource(schema, resourceType, resource) {
           );
         }
 
-        throw new PolygraphError(
+        throw new blossomError(
           "a to-many relationship has a single value instead of an array of values",
           {
             resourceType, resource, relationship: relKey, value: relRefOrRefs,
@@ -102,7 +102,7 @@ export function normalizeResource(schema, resourceType, resource) {
   });
 
   if (!resource.id) {
-    throw new PolygraphError("resources must have an id", { resource });
+    throw new blossomError("resources must have an id", { resource });
   }
 
   return {

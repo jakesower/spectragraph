@@ -1,4 +1,4 @@
-import { mapObj } from "@polygraph/utils";
+import { mapObj } from "@blossom/utils";
 import { multiApply } from "../../utils/multi-apply.mjs";
 import { processResults } from "./run-query.mjs"; // eslint-disable-line import/no-cycle
 

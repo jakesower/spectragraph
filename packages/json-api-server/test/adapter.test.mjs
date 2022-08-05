@@ -1,5 +1,5 @@
 import test from "ava";
-import { makeMemoryStore } from "@polygraph/memory-store";
+import { makeMemoryStore } from "@blossom/memory-store";
 import { careBearSchema as schema } from "./fixtures/care-bear-schema.mjs";
 import { careBearData } from "./fixtures/care-bear-data.mjs";
 import { JsonApiAdapter } from "../src/api.mjs";

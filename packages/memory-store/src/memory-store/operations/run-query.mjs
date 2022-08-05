@@ -1,4 +1,4 @@
-import { pipeWithContext } from "@polygraph/utils";
+import { pipeWithContext } from "@blossom/utils";
 import { compileConstraints } from "./compile-constraints.mjs";
 import { expandRelatedOperation } from "./expand-related.mjs"; // eslint-disable-line import/no-cycle
 import { firstOperation, firstOrderOperation } from "./first.mjs";

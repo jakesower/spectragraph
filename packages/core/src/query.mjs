@@ -1,6 +1,6 @@
-import { intersperse, multiApply } from "@polygraph/utils/arrays";
-import { getPath } from "@polygraph/utils/lenses";
-import { mapObj } from "@polygraph/utils/objects";
+import { intersperse, multiApply } from "@blossom/utils/arrays";
+import { getPath } from "@blossom/utils/lenses";
+import { mapObj } from "@blossom/utils/objects";
 
 export {
   denormalizeQuery,

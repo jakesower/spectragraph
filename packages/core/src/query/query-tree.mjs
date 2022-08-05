@@ -1,6 +1,6 @@
-import { mapObj, pick } from "@polygraph/utils";
-import { multiApply } from "@polygraph/utils/functions";
-import { PolygraphError } from "../errors.mjs";
+import { mapObj, pick } from "@blossom/utils";
+import { multiApply } from "@blossom/utils/functions";
+import { blossomError } from "../errors.mjs";
 
 // TODO: Is this used?
 
@@ -11,7 +11,7 @@ function withRootData(schema, fullDataTree) {
     const getId = () => {
       const idField = schemaDef.idField ?? "id";
       if (!dataTree[idField]) {
-        throw new PolygraphError(
+        throw new blossomError(
           "resources require an id field to be present",
           { fullDataTree, path, idField },
         );

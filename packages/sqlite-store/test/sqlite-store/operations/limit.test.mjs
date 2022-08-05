@@ -1,6 +1,6 @@
 import test from "ava";
 import Database from "better-sqlite3";
-import { ERRORS, PolygraphError } from "@polygraph/core/errors";
+import { ERRORS, blossomError } from "@blossom/core/errors";
 import { careBearSchema as schema } from "../../fixtures/care-bear-schema.mjs";
 import { SQLiteStore } from "../../../src/sqlite-store.mjs";
 import { careBearData } from "../../fixtures/care-bear-data.mjs";
@@ -148,7 +148,7 @@ test("errors for a bad limit", async (t) => {
         limit: 0,
       });
     },
-    { instanceOf: PolygraphError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
+    { instanceOf: blossomError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
   );
 });
 
@@ -161,7 +161,7 @@ test("errors for a bad offset", async (t) => {
         offset: -1,
       });
     },
-    { instanceOf: PolygraphError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
+    { instanceOf: blossomError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
   );
 });
 

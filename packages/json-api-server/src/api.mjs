@@ -1,8 +1,8 @@
-import { denormalizeQuery, mapQuery, normalizeGetQuery } from "@polygraph/core/query";
-import { flattenQueryTree, normalizeTree } from "@polygraph/core/tree";
-import { asArray } from "@polygraph/utils/arrays";
-import { pick } from "@polygraph/utils/objects";
-import { pipeThru, pipeThruWithContext } from "@polygraph/utils/pipes";
+import { denormalizeQuery, mapQuery, normalizeGetQuery } from "@blossom/core/query";
+import { flattenQueryTree, normalizeTree } from "@blossom/core/tree";
+import { asArray } from "@blossom/utils/arrays";
+import { pick } from "@blossom/utils/objects";
+import { pipeThru, pipeThruWithContext } from "@blossom/utils/pipes";
 
 // things to do:
 // - wrap/unwrap HTTP stuff

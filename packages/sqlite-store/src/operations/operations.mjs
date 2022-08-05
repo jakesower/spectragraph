@@ -1,8 +1,8 @@
-import { ERRORS, PolygraphError } from "@polygraph/core/errors";
-import { compileExpression, isValidExpression } from "@polygraph/expressions";
-import { flatMapQuery, flattenSubQueries } from "@polygraph/core/query";
-import { multiApply } from "@polygraph/utils/functions";
-import { pipeThru } from "@polygraph/utils/pipes";
+import { ERRORS, blossomError } from "@blossom/core/errors";
+import { compileExpression, isValidExpression } from "@blossom/expressions";
+import { flatMapQuery, flattenSubQueries } from "@blossom/core/query";
+import { multiApply } from "@blossom/utils/functions";
+import { pipeThru } from "@blossom/utils/pipes";
 import { preQueryRelationships } from "./relationships.mjs";
 
 const hasToManyRelationship = (schema, query) =>
@@ -23,7 +23,7 @@ const operations = {
     postQuery: {
       apply: (_, resources) => {
         if (!Array.isArray(resources)) {
-          throw new PolygraphError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
+          throw new blossomError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
         }
 
         return resources[0] ?? null;
@@ -39,7 +39,7 @@ const operations = {
     postQuery: {
       apply: (_, resources) => {
         if (!Array.isArray(resources)) {
-          throw new PolygraphError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
+          throw new blossomError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
         }
 
         return resources[0] ?? null;

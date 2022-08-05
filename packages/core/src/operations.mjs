@@ -1,6 +1,6 @@
-import { compileExpression, isValidExpression } from "@polygraph/expressions";
-import { sortBy } from "@polygraph/utils";
-import { ERRORS, PolygraphError } from "./errors.mjs";
+import { compileExpression, isValidExpression } from "@blossom/expressions";
+import { sortBy } from "@blossom/utils";
+import { ERRORS, blossomError } from "./errors.mjs";
 
 const compareFns = {
   integer: (left, right) => left - right,
@@ -38,7 +38,7 @@ export function orderFunction(order, { config, query, schema }) {
 
 function orderOperation(order, resources, context) {
   if (!Array.isArray(resources)) {
-    throw new PolygraphError(ERRORS.ORDER_NOT_ALLOWED_ON_SINGULAR, resources);
+    throw new blossomError(ERRORS.ORDER_NOT_ALLOWED_ON_SINGULAR, resources);
   }
 
   // SELECT cols mean sort fields might be omitted
@@ -47,7 +47,7 @@ function orderOperation(order, resources, context) {
 
 function firstOperation(_, resources) {
   if (!Array.isArray(resources)) {
-    throw new PolygraphError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
+    throw new blossomError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
   }
 
   return resources[0];

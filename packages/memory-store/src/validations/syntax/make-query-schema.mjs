@@ -1,4 +1,4 @@
-import { mapObj, partitionObj } from "@polygraph/utils/objects";
+import { mapObj, partitionObj } from "@blossom/utils/objects";
 import { constraintDefinitions } from "../../memory-store/operations/constraints/constraint-definitions.mjs";
 
 const constraintDefs = {
@@ -112,7 +112,7 @@ export function makeQuerySchema(schema, allowRelProps) {
       allowRelProps ? "-with-rel-props" : ""
     }`,
     $schema: "http://json-schema.org/draft-07/schema",
-    title: `${schema.title ?? "Polygraph"} Query`,
+    title: `${schema.title ?? "blossom"} Query`,
     description: "Validations for queries.",
     type: "object",
     oneOf: Object.values(topResources),
