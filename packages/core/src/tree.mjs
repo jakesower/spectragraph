@@ -16,3 +16,7 @@ export function normalizeTree(query, treeOrTrees) {
     };
   });
 }
+
+export function flattenQueryTree(tree) {
+  return [tree, ...Object.values(tree.relationships ?? {}).flatMap(flattenQueryTree)];
+}

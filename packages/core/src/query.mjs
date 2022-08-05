@@ -1,4 +1,12 @@
-export { normalizeGetQuery, normalizeSetQuery } from "./query/normalize-query.mjs";
+import { intersperse, multiApply } from "@polygraph/utils/arrays";
+import { getPath } from "@polygraph/utils/lenses";
+import { mapObj } from "@polygraph/utils/objects";
+
+export {
+  denormalizeQuery,
+  normalizeGetQuery,
+  normalizeSetQuery,
+} from "./query/normalize-query.mjs";
 export { queryTree } from "./query/query-tree.mjs";
 
 export function flatMapQuery(query, fn) {
@@ -17,8 +25,16 @@ export function flatMapQuery(query, fn) {
 export function flatMapQueryTree(query, tree, fn) {
   const go = (subQuery, subTree, path) => {
     const nodeResult = fn(subQuery, subTree, path);
+    console.log({
+      subQuery,
+      subTree,
+      path,
+      nodeResult,
+      oe: JSON.stringify(Object.entries(subQuery.relationships)),
+    });
     const relResults = Object.entries(subQuery.relationships).flatMap(
-      ([relKey, relQuery]) => go(relQuery, subTree?.[relKey], [...path, relKey]),
+      ([relKey, relQuery]) =>
+        multiApply(subTree?.[relKey], (rel) => go(relQuery, rel, [...path, relKey])),
     );
 
     return [nodeResult, ...relResults];
@@ -29,4 +45,23 @@ export function flatMapQueryTree(query, tree, fn) {
 
 export function flattenSubQueries(query) {
   return [query, ...Object.values(query.relationships).map(flattenSubQueries)];
+}
+
+export function getQueryPath(query, path) {
+  return getPath(query, intersperse(path, "relationships"));
+}
+
+export function mapQuery(query, fn) {
+  const go = (subQuery, path) => {
+    const nodeResult = fn(subQuery, path);
+    console.log({ subQuery, path, nodeResult });
+    return {
+      ...nodeResult,
+      relationships: mapObj(nodeResult.relationships, (relQuery, relKey) =>
+        go(relQuery, [...path, relKey]),
+      ),
+    };
+  };
+
+  return go(query, []);
 }

@@ -11,6 +11,24 @@ export function pipeThru(val, fns) {
   return pipe(fns)(val);
 }
 
+export async function pipeThruAsyncWithContext(val, context, fns) {
+  return fns.reduce(
+    (acc, fn) => async (val) => {
+      const out = await fn(await acc(val), context);
+      console.log({ out });
+      return out;
+    },
+    (x) => x
+  )(val);
+}
+
+export function pipeThruWithContext(val, context, fns) {
+  return fns.reduce(
+    (acc, fn) => (val) => fn(acc(val), context),
+    (x) => x
+  )(val);
+}
+
 export function prop(key) {
   return (obj) => obj[key];
 }

@@ -2,6 +2,8 @@ import { mapObj, pick } from "@polygraph/utils";
 import { multiApply } from "@polygraph/utils/functions";
 import { PolygraphError } from "../errors.mjs";
 
+// TODO: Is this used?
+
 function withRootData(schema, fullDataTree) {
   const internalQueryTree = (query, dataTree, path) => {
     const schemaDef = schema.resources[query.type];

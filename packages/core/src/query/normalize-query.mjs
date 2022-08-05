@@ -1,5 +1,5 @@
 import { pipeThru, uniq } from "@polygraph/utils";
-import { filterObj, mapObj } from "@polygraph/utils/objects";
+import { filterObj, mapObj, omit } from "@polygraph/utils/objects";
 import { difference } from "@polygraph/utils/arrays";
 import { ensureValidGetQuerySyntax, ensureValidSetQuerySyntax } from "../validation.mjs";
 import { ERRORS, PolygraphError } from "../errors.mjs";
@@ -99,20 +99,32 @@ function normalizeAndExpandRels(schema, query) {
   return { ...query, relationships };
 }
 
-function normalizeQuery(schema, query) {
-  return pipeThru(query, [
+function normalizeQuery(schema, rawQuery) {
+  return pipeThru(rawQuery, [
     (q) => normalizeShorthandLonghandKeys(q),
     (q) => normalizeProps(schema, q),
     (q) => normalizeAndExpandRels(schema, q),
   ]);
 }
 
-export function normalizeGetQuery(schema, query) {
-  ensureValidGetQuerySyntax(schema, query);
-  return normalizeQuery(schema, query);
+export function denormalizeQuery(query) {
+  const go = (subQuery, relKey) => ({
+    ...omit(subQuery, relKey ? ["type", "id"] : []),
+    ...(subQuery.properties.length > 0 ? { properties: subQuery.properties } : {}),
+    ...(Object.keys(subQuery.relationships).length > 0
+      ? { relationships: mapObj(subQuery.relationships, go) }
+      : {}),
+  });
+
+  return go(query, null);
 }
 
-export function normalizeSetQuery(schema, query) {
-  ensureValidSetQuerySyntax(schema, query);
-  return normalizeQuery(schema, query);
+export function normalizeGetQuery(schema, rawQuery) {
+  ensureValidGetQuerySyntax(schema, rawQuery);
+  return normalizeQuery(schema, rawQuery);
+}
+
+export function normalizeSetQuery(schema, rawQuery) {
+  ensureValidSetQuerySyntax(schema, rawQuery);
+  return normalizeQuery(schema, rawQuery);
 }

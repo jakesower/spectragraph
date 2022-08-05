@@ -128,6 +128,20 @@ export function splitAt(items, idx) {
   return [items.slice(0, idx), items.slice(idx)];
 }
 
+export function takeWhile(items, predicateFn) {
+  const output = [];
+
+  for (let i = 0; i < items.length; i += 1) {
+    if (predicateFn(items[i])) {
+      output.push(items[i]);
+    } else {
+      return output;
+    }
+  }
+
+  return output;
+}
+
 export function transpose(items) {
   const out = [[]];
   for (let i = 0; i < items.length; i += 1) {
