@@ -1,3 +1,5 @@
+import { mapObj } from "@polygraph/utils/objects";
+
 const comparative = (sqlOperator) => ({
   compile: (exprVal, compile) => () => {
     const [left, right] = exprVal.map((v) => compile(v)());
@@ -9,7 +11,7 @@ const comparative = (sqlOperator) => ({
   },
 });
 
-export const sqliteConstraintOperators = {
+const sqliteConstraintOperatorDefs = {
   $and: {
     compile: (exprVal, compile) => () => {
       const predicates = exprVal.map((val) => compile(val)());
@@ -47,35 +49,36 @@ export const sqliteConstraintOperators = {
   $lte: comparative("<="),
   $ne: comparative("!="),
   $in: {
-    compile:
-      (args, compile) =>
-        (vars) => {
-          const [item, array] = args;
-          const itemVal = compile(item)(vars);
-          const arrayVals = array.map((arg) => compile(arg)(vars));
+    compile: (args, compile) => (vars) => {
+      const [item, array] = args;
+      const itemVal = compile(item)(vars);
+      const arrayVals = array.map((arg) => compile(arg)(vars));
 
-          if (array.length === 0) return {};
+      if (array.length === 0) return {};
 
-          return {
-            where: `${itemVal.where} IN (${arrayVals.map(() => "?").join(", ")})`,
-            vars: arrayVals,
-          };
-        },
+      return {
+        where: `${itemVal.where} IN (${arrayVals.map(() => "?").join(", ")})`,
+        vars: arrayVals,
+      };
+    },
   },
   $nin: {
-    compile:
-      (args, compile) =>
-        (vars) => {
-          const [item, array] = args;
-          const itemVal = compile(item)(vars);
-          const arrayVals = array.map((arg) => compile(arg)(vars));
+    compile: (args, compile) => (vars) => {
+      const [item, array] = args;
+      const itemVal = compile(item)(vars);
+      const arrayVals = array.map((arg) => compile(arg)(vars));
 
-          if (array.length === 0) return {};
+      if (array.length === 0) return {};
 
-          return {
-            where: `${itemVal.where} NOT IN (${arrayVals.map(() => "?").join(", ")})`,
-            vars: arrayVals,
-          };
-        },
+      return {
+        where: `${itemVal.where} NOT IN (${arrayVals.map(() => "?").join(", ")})`,
+        vars: arrayVals,
+      };
+    },
   },
 };
+
+export const sqliteConstraintOperators = mapObj(sqliteConstraintOperatorDefs, (def) => ({
+  ...def,
+  preQuery: true,
+}));

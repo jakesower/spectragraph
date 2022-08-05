@@ -8,9 +8,6 @@ export function isValidExpression(expression, operators) {
 }
 
 export function compileExpression(expression, operators, context) {
-  // eslint-disable-next-line no-use-before-define
-  const evaluate = (subExpression) => compile(subExpression)();
-
   const compile = (subExpression) => {
     const looksLikeExpression =
       typeof subExpression === "object" && !Array.isArray(subExpression);

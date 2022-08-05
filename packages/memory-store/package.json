@@ -1,8 +1,10 @@
 {
   "name": "@polygraph/memory-store",
-  "version": "0.0.8",
+  "version": "0.0.1",
   "type": "module",
-  "exports": "./src/memory-store.mjs",
+  "exports": {
+    ".": "./src/memory-store/memory-store.mjs"
+  },
   "scripts": {
     "lint": "eslint \"src/**\" \"test/**\" --ext .mjs",
     "test": "NODE_ENV=test ava",
@@ -14,7 +16,7 @@
   "dependencies": {
     "@polygraph/utils": "*",
     "ajv": "^8.11.0"
-  }, 
+  },
   "devDependencies": {},
   "publishConfig": {
     "access": "public"
