@@ -5,7 +5,7 @@ import { makeResourceQuiver } from "../data-structures/resource-quiver.mjs";
 import { ERRORS } from "../strings.mjs";
 import { normalizeResource, queryTree } from "../utils/utils.mjs";
 import { normalizeQuery } from "../utils/normalize-query.mjs";
-import { blossomError } from "../validations/errors.mjs";
+import { BlossomError } from "../validations/errors.mjs";
 import { syntaxValidations as syntaxValidationsForSchema } from "../validations/syntax-validations.mjs";
 import { validateAndExtractQuiver } from "./validate-and-extract-quiver.mjs";
 import { runQuery } from "./operations/run-query.mjs";
@@ -80,7 +80,7 @@ export async function makeMemoryStore(schema, options = {}) {
   const get = (query) => {
     const { getQuerySyntax } = syntaxValidations;
     if (!getQuerySyntax(query)) {
-      throw new blossomError(ERRORS.INVALID_GET_QUERY_SYNTAX, {
+      throw new BlossomError(ERRORS.INVALID_GET_QUERY_SYNTAX, {
         query,
         schemaErrors: JSON.stringify(getQuerySyntax.errors, null, 2),
       });
@@ -126,7 +126,7 @@ export async function makeMemoryStore(schema, options = {}) {
   const replaceOne = async (query, tree) => {
     const { queryTreeSyntax } = syntaxValidations;
     if (!queryTreeSyntax({ query, tree })) {
-      throw new blossomError(ERRORS.INVALID_SET_QUERY_SYNTAX, {
+      throw new BlossomError(ERRORS.INVALID_SET_QUERY_SYNTAX, {
         query,
         tree,
         schemaErrors: queryTreeSyntax.errors,

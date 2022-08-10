@@ -2,7 +2,7 @@
 
 import { mapObj, partitionObj } from "@blossom/utils/objects";
 import { asArray, cardinalize, denormalizeResource } from "../utils/utils.mjs";
-import { blossomError } from "../validations/errors.mjs";
+import { BlossomError } from "../validations/errors.mjs";
 import { makeRefKey } from "../utils/make-ref-key.mjs";
 import { normalizeResource } from "../utils/normalize-resource.mjs";
 import { typeValidations } from "../validations/type-validations.mjs";
@@ -73,7 +73,7 @@ export async function validateAndExtractQuiver(
     const isReferenceOnly = !quiver.explicitResources.has(makeRefKey(ref));
 
     if (isReferenceOnly && !(id in store[type])) {
-      throw new blossomError(ERRORS.RESOURCE_REFERENCE_NOT_IN_STORE, {
+      throw new BlossomError(ERRORS.RESOURCE_REFERENCE_NOT_IN_STORE, {
         ref,
         referencingResources: getReferencingResources(quiver, ref),
       });
@@ -108,13 +108,13 @@ export async function validateAndExtractQuiver(
               !(checkPropName in updatedProperties),
           );
 
-          throw new blossomError(ERRORS.QUERY_MISSING_CREATE_FIELDS, {
+          throw new BlossomError(ERRORS.QUERY_MISSING_CREATE_FIELDS, {
             updatedProperties,
             missingRequiredProperties,
           });
         }
 
-        throw new blossomError(ERRORS.INVALID_PROPS, {
+        throw new BlossomError(ERRORS.INVALID_PROPS, {
           prop,
           expectedType: propDef.type,
         });
@@ -138,7 +138,7 @@ export async function validateAndExtractQuiver(
           (updatedRel.asserted ?? []).forEach((r) => updatedRelIds.add(r.id));
 
           if (relDef.cardinality === "one" && updatedRelIds.size > 1) {
-            throw new blossomError(ERRORS.MULTIPLE_TO_ONE_RELATIONSHIPS, {
+            throw new BlossomError(ERRORS.MULTIPLE_TO_ONE_RELATIONSHIPS, {
               updatedRel,
               relType,
               updatedRelIds,

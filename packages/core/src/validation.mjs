@@ -2,7 +2,7 @@ import Ajv from "ajv";
 import { difference } from "@blossom/utils/arrays";
 import { makeQuerySchema } from "./schema/make-query-schema.mjs";
 import { coreExpressions } from "./expressions.mjs";
-import { ERRORS, blossomError } from "./errors.mjs";
+import { ERRORS, BlossomError } from "./errors.mjs";
 
 export const typeValidations = {
   boolean: (val) => val === true || val === false,
@@ -24,7 +24,7 @@ export function ensureValidGetQuerySyntax(schema, query) {
   );
 
   if (!getQuerySyntax(query)) {
-    throw new blossomError(ERRORS.INVALID_GET_QUERY_SYNTAX, {
+    throw new BlossomError(ERRORS.INVALID_GET_QUERY_SYNTAX, {
       query,
       schemaErrors: JSON.stringify(getQuerySyntax.errors, null, 2),
     });
@@ -43,7 +43,7 @@ export function ensureValidSetQuerySyntax(schema, query) {
   const setQuerySyntax = ajv.getSchema(`schemas/${schema.urlName}/query-schema`);
 
   if (!setQuerySyntax(query)) {
-    throw new blossomError(ERRORS.INVALID_SET_QUERY_SYNTAX, {
+    throw new BlossomError(ERRORS.INVALID_SET_QUERY_SYNTAX, {
       query,
       schemaErrors: JSON.stringify(setQuerySyntax.errors, null, 2),
     });
@@ -64,7 +64,7 @@ export function ensureCreatedResourceFields(schema, resource) {
     Object.keys(resource.properties),
   );
   if (missingQueryProps.length > 0) {
-    throw new blossomError(ERRORS.QUERY_MISSING_CREATE_FIELDS, {
+    throw new BlossomError(ERRORS.QUERY_MISSING_CREATE_FIELDS, {
       resource,
       missingQueryProps,
     });

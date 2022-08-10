@@ -2,7 +2,7 @@ import { pipeThru, uniq } from "@blossom/utils";
 import { filterObj, mapObj, omit } from "@blossom/utils/objects";
 import { difference } from "@blossom/utils/arrays";
 import { ensureValidGetQuerySyntax, ensureValidSetQuerySyntax } from "../validation.mjs";
-import { ERRORS, blossomError } from "../errors.mjs";
+import { ERRORS, BlossomError } from "../errors.mjs";
 
 function normalizeShorthandLonghandKeys(query) {
   const shortLongPairs = [
@@ -15,7 +15,7 @@ function normalizeShorthandLonghandKeys(query) {
   const outQuery = { ...query };
   shortLongPairs.forEach(([shorthand, longhand]) => {
     if (shorthand in query && longhand in query) {
-      throw new blossomError(ERRORS.SHORTHAND_LONGHAND_BOTH_USED, {
+      throw new BlossomError(ERRORS.SHORTHAND_LONGHAND_BOTH_USED, {
         query,
         shorthand,
         longhand,
@@ -49,7 +49,7 @@ function normalizeProps(schema, query) {
 
   const invalidProperties = difference(properties, schemaPropKeys);
   if (invalidProperties.length > 0) {
-    throw new blossomError(ERRORS.INVALID_PROPS, {
+    throw new BlossomError(ERRORS.INVALID_PROPS, {
       invalidProperties,
       queryProperties: properties,
       schemaProperties: schemaPropKeys,
@@ -58,7 +58,7 @@ function normalizeProps(schema, query) {
 
   const invalidExcludedProperties = difference(excludedProperties, schemaPropKeys);
   if (invalidProperties.length > 0) {
-    throw new blossomError(ERRORS.INVALID_EXCLUDED_PROPS, {
+    throw new BlossomError(ERRORS.INVALID_EXCLUDED_PROPS, {
       invalidProperties: invalidExcludedProperties,
       queryProperties: properties,
       schemaProperties: schemaPropKeys,
@@ -84,7 +84,7 @@ function normalizeAndExpandRels(schema, query) {
   const invalidRelationships = difference(queryRelationshipKeys, schemaRelationshipKeys);
 
   if (invalidRelationships.length > 0) {
-    throw new blossomError(ERRORS.INVALID_RELATIONSHIPS, {
+    throw new BlossomError(ERRORS.INVALID_RELATIONSHIPS, {
       invalidRelationships,
       queryRelationshipKeys,
       schemaRelationshipKeys,
@@ -101,9 +101,10 @@ function normalizeAndExpandRels(schema, query) {
 
 function normalizeQuery(schema, rawQuery) {
   return pipeThru(rawQuery, [
-    (q) => normalizeShorthandLonghandKeys(q),
-    (q) => normalizeProps(schema, q),
-    (q) => normalizeAndExpandRels(schema, q),
+    (nq) => normalizeShorthandLonghandKeys(nq),
+    (nq) => normalizeProps(schema, nq),
+    (nq) => normalizeAndExpandRels(schema, nq),
+    (nq) => ({ ...nq, rawQuery, schema }),
   ]);
 }
 
