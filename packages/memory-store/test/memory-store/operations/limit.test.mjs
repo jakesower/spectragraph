@@ -2,7 +2,7 @@ import test from "ava";
 import { schema } from "../../fixtures/care-bear-schema.mjs";
 import { makeMemoryStore } from "../../../src/memory-store/memory-store.mjs";
 import { careBearData } from "../../fixtures/care-bear-data.mjs";
-import { blossomError } from "../../../src/validations/errors.mjs";
+import { BlossomError } from "../../../src/validations/errors.mjs";
 import { ERRORS } from "../../../src/strings.mjs";
 
 test.beforeEach(async (t) => {
@@ -132,7 +132,7 @@ test("errors for a bad limit", async (t) => {
         limit: 0,
       });
     },
-    { instanceOf: blossomError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
+    { instanceOf: BlossomError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
   );
 });
 
@@ -145,6 +145,6 @@ test("errors for a bad offset", async (t) => {
         offset: -1,
       });
     },
-    { instanceOf: blossomError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
+    { instanceOf: BlossomError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
   );
 });

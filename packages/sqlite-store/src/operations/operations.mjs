@@ -1,4 +1,4 @@
-import { ERRORS, blossomError } from "@blossom/core/errors";
+import { ERRORS, BlossomError } from "@blossom/core/errors";
 import { compileExpression, isValidExpression } from "@blossom/expressions";
 import { flatMapQuery, flattenSubQueries } from "@blossom/core/query";
 import { multiApply } from "@blossom/utils/functions";
@@ -23,7 +23,7 @@ const operations = {
     postQuery: {
       apply: (_, resources) => {
         if (!Array.isArray(resources)) {
-          throw new blossomError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
+          throw new BlossomError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
         }
 
         return resources[0] ?? null;
@@ -39,7 +39,7 @@ const operations = {
     postQuery: {
       apply: (_, resources) => {
         if (!Array.isArray(resources)) {
-          throw new blossomError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
+          throw new BlossomError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
         }
 
         return resources[0] ?? null;

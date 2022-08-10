@@ -20,6 +20,5 @@
   "devDependencies": {},
   "publishConfig": {
     "access": "public"
-  },
-  "gitHead": "451a467247458685a82d6d8edff5fc575dc02228"
+  }
 }

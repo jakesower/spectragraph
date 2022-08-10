@@ -1,6 +1,6 @@
 import { mapObj, pick } from "@blossom/utils";
 import { multiApply } from "@blossom/utils/functions";
-import { blossomError } from "../errors.mjs";
+import { BlossomError } from "../errors.mjs";
 
 // TODO: Is this used?
 
@@ -11,7 +11,7 @@ function withRootData(schema, fullDataTree) {
     const getId = () => {
       const idField = schemaDef.idField ?? "id";
       if (!dataTree[idField]) {
-        throw new blossomError(
+        throw new BlossomError(
           "resources require an id field to be present",
           { fullDataTree, path, idField },
         );

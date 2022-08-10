@@ -1,6 +1,6 @@
 import { sortBy } from "@blossom/utils";
 import { ERRORS } from "../../strings.mjs";
-import { blossomError } from "../../validations/errors.mjs";
+import { BlossomError } from "../../validations/errors.mjs";
 
 const compareFns = {
   integer: (left, right) => left - right,
@@ -38,7 +38,7 @@ export function orderFunction({ orderingFunctions, query, schema }) {
 
 export function orderOperation(resources, { orderingFunctions, query, schema }) {
   if (!Array.isArray(resources)) {
-    throw new blossomError(ERRORS.ORDER_NOT_ALLOWED_ON_SINGULAR, resources);
+    throw new BlossomError(ERRORS.ORDER_NOT_ALLOWED_ON_SINGULAR, resources);
   }
 
   return sortBy(resources, orderFunction({ orderingFunctions, query, schema }));

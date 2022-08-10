@@ -1,6 +1,9 @@
 import { compileExpression, isValidExpression } from "@blossom/expressions";
+import { flatMapQuery } from "@blossom/core/query";
+import { multiApply } from "@blossom/utils/functions";
+import { pipeThru } from "@blossom/utils/pipes";
 import { sortBy } from "@blossom/utils";
-import { ERRORS, blossomError } from "./errors.mjs";
+import { ERRORS, BlossomError } from "./errors.mjs";
 
 const compareFns = {
   integer: (left, right) => left - right,
@@ -38,7 +41,7 @@ export function orderFunction(order, { config, query, schema }) {
 
 function orderOperation(order, resources, context) {
   if (!Array.isArray(resources)) {
-    throw new blossomError(ERRORS.ORDER_NOT_ALLOWED_ON_SINGULAR, resources);
+    throw new BlossomError(ERRORS.ORDER_NOT_ALLOWED_ON_SINGULAR, resources);
   }
 
   // SELECT cols mean sort fields might be omitted
@@ -47,7 +50,7 @@ function orderOperation(order, resources, context) {
 
 function firstOperation(_, resources) {
   if (!Array.isArray(resources)) {
-    throw new blossomError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
+    throw new BlossomError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
   }
 
   return resources[0];
@@ -56,6 +59,8 @@ function firstOperation(_, resources) {
 export const coreOperations = {
   first: { postQuery: { apply: firstOperation } },
   limit: {
+    handles: ["limit", "offset"],
+    if: (unhandledArgs) => unhandledArgs.limit || unhandledArgs.offset,
     postQuery: {
       apply: (limit, resources, { query }) => {
         const { offset = 0 } = query;
@@ -99,3 +104,111 @@ export const coreOperations = {
     },
   },
 };
+
+// buildStoreQuery has the job of calling for children, then composing the
+// results into a query for the store
+
+// const runBuildStoreQuery = (query, buildStoreQuery, argHandlers, context) => {
+//   const preQueryArgHandlers = Object.entries(argHandlers)
+//     .filter(([, argHandler]) => argHandler.preQuery)
+//     .map(([argName, argHandler]) => argHandler(query[argName], context));
+
+//   const buildTraverse = (subQuery) => {
+//     const childLevels = mapObj(subQuery.relationships, (relQuery) => {
+//       const builtQuery = pipeThru(relQuery, preQueryArgHandlers);
+//     });
+//     const level = buildStoreQuery(subQuery);
+//   };
+
+//   return buildStoreQuery();
+// };
+
+// const runQuery = (query, stages, argHandlers) => {
+//   const { buildStoreQuery, runStoreQuery, buildResults } = stages;
+//   // const traverse = (subQuery) =>
+// };
+
+const applyOverPaths = (resources, path, fn) => {
+  if (path.length === 0) return fn(resources);
+
+  const [head, ...tail] = path;
+  return multiApply(resources, (resource) => ({
+    ...resource,
+    [head]: applyOverPaths(resource[head], tail, fn),
+  }));
+};
+
+const gatherPreOperations = (query, context) => {
+  const { operations } = context;
+
+  return flatMapQuery(query, (subQuery, queryPath) =>
+    Object.entries(subQuery)
+      .flatMap(([operationKey, operationArg]) => {
+        const operation = operations[operationKey]?.preQuery?.apply;
+
+        if (!operation) return null;
+
+        const argContext = {
+          ...context,
+          query: subQuery,
+          queryPath,
+          queryTable: [query.type, ...queryPath].join("$"),
+          rootQuery: query,
+        };
+
+        return operation(operationArg, argContext);
+      })
+      .filter(Boolean),
+  );
+};
+
+const gatherPostOperationFunctions = (query, context) => {
+  const { operations } = context;
+
+  return flatMapQuery(query, (subQuery, queryPath) =>
+    Object.entries(subQuery)
+      .map(([operationKey, operationArg]) => {
+        const operation = operations[operationKey]?.postQuery?.apply;
+
+        if (!operation) return null;
+
+        const argContext = { ...context, query: subQuery, queryPath };
+        return (resources) =>
+          applyOverPaths(resources, queryPath, (resource) =>
+            operation(operationArg, resource, argContext),
+          );
+      })
+      .filter(Boolean),
+  );
+};
+
+export async function runQuery(query, context, run) {
+  const queryModifierPromises = gatherPreOperations(query, context);
+  const queryModifiers = await Promise.all(queryModifierPromises);
+
+  const resources = await run(queryModifiers);
+
+  const postOps = gatherPostOperationFunctions(query, context);
+
+  return pipeThru(resources, postOps);
+}
+
+// const runGqlStoreQuery = async (query, context) => {
+//   const { resolversByType, transport } = context;
+//   const built = buildStoreQuery(query, operations);
+//   const gqlQuery = `
+//     ${resolversByType[subQuery.type[cardinality.cardinality]]} {
+//       ${subQuery.properties.join("\n ")}
+//       ${Object.values(children).join("\n ")}
+//     }
+//   `;
+
+//   const result = await transport.get({ gqlQuery });
+
+//   return result.data;
+// };
+
+// // const buildSqlStoreQuery = (levelQuery, getBuiltChildren) => {
+// //   return [...levelQuery, Object.values(getBuiltChildren())];
+
+// // }
