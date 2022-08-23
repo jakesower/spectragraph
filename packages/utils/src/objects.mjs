@@ -99,6 +99,17 @@ export function omit(obj, keys) {
   return out;
 }
 
+export async function promiseAllObj(obj) {
+  const promiseArray = Object.entries(obj).map(async ([key, valPromise]) => {
+    const val = await valPromise;
+    return [key, val];
+  });
+
+  const entries = await Promise.all(promiseArray);
+
+  return Object.fromEntries(entries);
+}
+
 export function partitionObj(obj, predicateFn) {
   const keys = Object.keys(obj);
   const l = keys.length;

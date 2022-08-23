@@ -1,11 +1,11 @@
 import test from "ava";
 import { schema } from "../../fixtures/care-bear-schema.mjs";
-import { MemoryStore } from "../../../src/memory-store.mjs";
+import { makeMemoryStore } from "../../../src/memory-store/memory-store.mjs";
 import { careBearData } from "../../fixtures/care-bear-data.mjs";
 
 test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign
-  t.context = { store: await MemoryStore(schema, { initialData: careBearData }) };
+  t.context = { store: await makeMemoryStore(schema, { initialData: careBearData }) };
 });
 
 test("filters on a property equality constraint", async (t) => {

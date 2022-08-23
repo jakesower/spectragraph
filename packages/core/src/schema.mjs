@@ -1,4 +1,13 @@
-import { filterObj } from "@blossom/utils/objects";
+import { filterObj, mapObj } from "@blossom/utils/objects";
+
+export function compileSchema(rawSchema) {
+  const resources = mapObj(rawSchema.resources, (resDef) => ({
+    idField: "id",
+    ...resDef,
+  }));
+
+  return { ...rawSchema, resources };
+}
 
 export function getInverse(schema, relationshipPropertyDefinition) {
   const { inverse, relatedType } = relationshipPropertyDefinition;

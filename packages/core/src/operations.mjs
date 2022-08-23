@@ -1,7 +1,11 @@
 import { compileExpression, isValidExpression } from "@blossom/expressions";
 import { flatMapQuery } from "@blossom/core/query";
-import { multiApply } from "@blossom/utils/functions";
-import { pipeThru } from "@blossom/utils/pipes";
+import {
+  pipeThruAsyncWithContext,
+  pipeThruMiddlewareAsync,
+  // pipeThruMiddlewareAsyncDebug as pipeThruMiddlewareAsync,
+} from "@blossom/utils/pipes";
+import { mapObj, pick, promiseAllObj } from "@blossom/utils/objects";
 import { sortBy } from "@blossom/utils";
 import { ERRORS, BlossomError } from "./errors.mjs";
 
@@ -10,6 +14,13 @@ const compareFns = {
   number: (left, right) => left - right,
   string: (left, right) => left.localeCompare(right),
 };
+
+function compileOperation(operationDef, operationName) {
+  return {
+    if: (query) => operationName in query,
+    ...operationDef,
+  };
+}
 
 export function orderFunction(order, { config, query, schema }) {
   const { type: resType } = query;
@@ -39,42 +50,75 @@ export function orderFunction(order, { config, query, schema }) {
   };
 }
 
-function orderOperation(order, resources, context) {
-  if (!Array.isArray(resources)) {
-    throw new BlossomError(ERRORS.ORDER_NOT_ALLOWED_ON_SINGULAR, resources);
-  }
-
-  // SELECT cols mean sort fields might be omitted
-  return sortBy(resources, orderFunction(order, context));
-}
-
-function firstOperation(_, resources) {
-  if (!Array.isArray(resources)) {
-    throw new BlossomError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
-  }
-
-  return resources[0];
-}
-
 export const coreOperations = {
-  first: { postQuery: { apply: firstOperation } },
-  limit: {
-    handles: ["limit", "offset"],
-    if: (unhandledArgs) => unhandledArgs.limit || unhandledArgs.offset,
+  first: {
     postQuery: {
-      apply: (limit, resources, { query }) => {
-        const { offset = 0 } = query;
-        return resources.slice(offset, limit && limit + offset);
+      apply: async (resources, next) => {
+        const result = await next(resources);
+
+        if (!Array.isArray(result)) {
+          throw new BlossomError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
+        }
+
+        return result[0] ?? null;
+      },
+    },
+  },
+  id: {
+    postQuery: {
+      apply: async (resources, next, { query }) => {
+        const resource = resources.find((res) => res[query.idField] === query.id);
+        if (!resource) return null;
+
+        const result = await next([resource]);
+        return result[0] ?? null;
+      },
+    },
+  },
+  properties: {
+    postQuery: {
+      apply: async (queryTrees, next, { query }) => {
+        const { properties, relationships } = query;
+
+        const withProcessedChildren = await next(queryTrees);
+
+        return withProcessedChildren.map((res) =>
+          pick(res, [query.idField, ...properties, ...Object.keys(relationships)]),
+        );
+      },
+    },
+  },
+  limit: {
+    if: (query) => query.limit || query.offset,
+    postQuery: {
+      apply: async (resources, next, { query }) => {
+        const { limit, offset = 0 } = query;
+        const result = await next(resources);
+
+        return result.slice(offset, limit && limit + offset);
       },
     },
   },
   order: {
-    postQuery: { apply: orderOperation },
+    postQuery: {
+      apply: async (resources, next, context) => {
+        const { order } = context.query;
+        const result = await next(resources);
+
+        if (!Array.isArray(result)) {
+          throw new BlossomError(ERRORS.ORDER_NOT_ALLOWED_ON_SINGULAR, result);
+        }
+
+        // SELECT cols mean sort fields might be omitted
+        return sortBy(result, orderFunction(order, context));
+      },
+    },
   },
   constraints: {
     postQuery: {
-      apply: (constraints, resources, context) => {
-        const { config } = context;
+      apply: (resources, context) => {
+        const { config, query } = context;
+        const { constraints } = query;
 
         const { expressionDefinitions } = config;
 
@@ -103,39 +147,47 @@ export const coreOperations = {
       },
     },
   },
-};
+  ids: {
+    postQuery: {
+      apply: async (resources, next, { query }) => {
+        const nextRess = await Promise.all(
+          resources.filter((res) => query.ids.includes(res[query.idField])),
+        );
+        return next(nextRess);
+      },
+    },
+  },
+  relationships: {
+    postQuery: {
+      // resolver style -- no attempt to optimize
+      apply: async (resources, next, context) => {
+        const { query } = context;
 
-// buildStoreQuery has the job of calling for children, then composing the
-// results into a query for the store
+        const withExpandedRelationships = await Promise.all(
+          resources.map(async (resource) => {
+            const relResults = await promiseAllObj(
+              mapObj(query.relationships, async (relQuery, relName) => {
+                if (!resource[relName]) return null;
 
-// const runBuildStoreQuery = (query, buildStoreQuery, argHandlers, context) => {
-//   const preQueryArgHandlers = Object.entries(argHandlers)
-//     .filter(([, argHandler]) => argHandler.preQuery)
-//     .map(([argName, argHandler]) => argHandler(query[argName], context));
+                const relVal = resource[relName];
+                const idClause = Array.isArray(relVal) ? { ids: relVal } : { id: relVal };
+                const ran = await runQuery(
+                  { ...context, query: { ...relQuery, ...idClause } },
+                  context.run,
+                );
 
-//   const buildTraverse = (subQuery) => {
-//     const childLevels = mapObj(subQuery.relationships, (relQuery) => {
-//       const builtQuery = pipeThru(relQuery, preQueryArgHandlers);
-//     });
-//     const level = buildStoreQuery(subQuery);
-//   };
+                return ran;
+              }),
+            );
 
-//   return buildStoreQuery();
-// };
+            return { ...resource, ...relResults };
+          }),
+        );
 
-// const runQuery = (query, stages, argHandlers) => {
-//   const { buildStoreQuery, runStoreQuery, buildResults } = stages;
-//   // const traverse = (subQuery) =>
-// };
-
-const applyOverPaths = (resources, path, fn) => {
-  if (path.length === 0) return fn(resources);
-
-  const [head, ...tail] = path;
-  return multiApply(resources, (resource) => ({
-    ...resource,
-    [head]: applyOverPaths(resource[head], tail, fn),
-  }));
+        return next(withExpandedRelationships);
+      },
+    },
+  },
 };
 
 const gatherPreOperations = (query, context) => {
@@ -162,35 +214,38 @@ const gatherPreOperations = (query, context) => {
   );
 };
 
-const gatherPostOperationFunctions = (query, context) => {
+const gatherPostOperations = (query, context) => {
+  // TODO: incorporate multiple ops that can handle the same properties
   const { operations } = context;
 
-  return flatMapQuery(query, (subQuery, queryPath) =>
-    Object.entries(subQuery)
-      .map(([operationKey, operationArg]) => {
-        const operation = operations[operationKey]?.postQuery?.apply;
-
-        if (!operation) return null;
-
-        const argContext = { ...context, query: subQuery, queryPath };
-        return (resources) =>
-          applyOverPaths(resources, queryPath, (resource) =>
-            operation(operationArg, resource, argContext),
-          );
-      })
-      .filter(Boolean),
-  );
+  // need to track handled stuff?
+  return Object.values(operations).flatMap((opDef) => {
+    if (!opDef.postQuery || !opDef.if(query)) return [];
+    return [opDef.postQuery.apply];
+  });
 };
 
-export async function runQuery(query, context, run) {
-  const queryModifierPromises = gatherPreOperations(query, context);
-  const queryModifiers = await Promise.all(queryModifierPromises);
+export async function runQuery(storeContext, run) {
+  const context = {
+    ...storeContext,
+    config: { orderingFunctions: {} },
+    operations: mapObj(
+      { ...coreOperations, ...(storeContext.operations ?? {}) },
+      compileOperation,
+    ),
+    run,
+  };
 
-  const resources = await run(queryModifiers);
+  const { query } = context;
 
-  const postOps = gatherPostOperationFunctions(query, context);
+  const preOps = gatherPreOperations(query, context);
+  const preRunPipe = [...preOps, run];
+  const resources = await pipeThruAsyncWithContext(query, context, preRunPipe);
 
-  return pipeThru(resources, postOps);
+  const postOps = gatherPostOperations(query, context);
+  const result = await pipeThruMiddlewareAsync(resources, context, postOps);
+
+  return result;
 }
 
 // const runGqlStoreQuery = async (query, context) => {

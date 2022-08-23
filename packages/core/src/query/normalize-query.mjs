@@ -99,12 +99,12 @@ function normalizeAndExpandRels(schema, query) {
   return { ...query, relationships };
 }
 
-function normalizeQuery(schema, rawQuery) {
+export function normalizeQuery(schema, rawQuery) {
   return pipeThru(rawQuery, [
     (nq) => normalizeShorthandLonghandKeys(nq),
     (nq) => normalizeProps(schema, nq),
     (nq) => normalizeAndExpandRels(schema, nq),
-    (nq) => ({ ...nq, rawQuery, schema }),
+    (nq) => ({ ...nq, idField: schema.idField ?? "id", rawQuery, schema }),
   ]);
 }
 

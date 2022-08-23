@@ -61,6 +61,7 @@ export function makeQuerySchema(schema, allowRelProps) {
         allProperties: { type: "boolean" },
         excludedProps: resourceProperties,
         excludedProperties: resourceProperties,
+        idField: { oneOf: [{ type: "string" }, { type: "number" }] },
         properties: resourceProperties,
         props: resourceProperties,
         relationships: resourceRelationships,

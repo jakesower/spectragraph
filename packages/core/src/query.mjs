@@ -4,6 +4,7 @@ import { mapObj } from "@blossom/utils/objects";
 
 export {
   denormalizeQuery,
+  normalizeQuery,
   normalizeGetQuery,
   normalizeSetQuery,
 } from "./query/normalize-query.mjs";
@@ -25,13 +26,6 @@ export function flatMapQuery(query, fn) {
 export function flatMapQueryTree(query, tree, fn) {
   const go = (subQuery, subTree, path) => {
     const nodeResult = fn(subQuery, subTree, path);
-    console.log({
-      subQuery,
-      subTree,
-      path,
-      nodeResult,
-      oe: JSON.stringify(Object.entries(subQuery.relationships)),
-    });
     const relResults = Object.entries(subQuery.relationships).flatMap(
       ([relKey, relQuery]) =>
         multiApply(subTree?.[relKey], (rel) => go(relQuery, rel, [...path, relKey])),
@@ -54,7 +48,7 @@ export function getQueryPath(query, path) {
 export function mapQuery(query, fn) {
   const go = (subQuery, path) => {
     const nodeResult = fn(subQuery, path);
-    console.log({ subQuery, path, nodeResult });
+
     return {
       ...nodeResult,
       relationships: mapObj(nodeResult.relationships, (relQuery, relKey) =>
