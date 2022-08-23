@@ -7,8 +7,8 @@ export const careBearData = {
       belly_badge: "red heart with pink outline",
       fur_color: "tan",
       best_friend: null,
-      home: { type: "homes", id: "1" },
-      powers: [{ type: "powers", id: "careBearStare" }],
+      home: "1",
+      powers: ["careBearStare"],
     },
     2: {
       id: "2",
@@ -16,9 +16,9 @@ export const careBearData = {
       year_introduced: 1982,
       belly_badge: "rainbow",
       fur_color: "carnation pink",
-      home: { type: "homes", id: "1" },
-      powers: [{ type: "powers", id: "careBearStare" }],
-      best_friend: { type: "bears", id: "3" },
+      home: "1",
+      powers: ["careBearStare"],
+      best_friend: "3",
     },
     3: {
       id: "3",
@@ -26,9 +26,9 @@ export const careBearData = {
       year_introduced: 1982,
       belly_badge: "shooting star",
       fur_color: "turquoise",
-      home: { type: "homes", id: "1" },
-      powers: [{ type: "powers", id: "careBearStare" }],
-      best_friend: { type: "bears", id: "2" },
+      home: "1",
+      powers: ["careBearStare"],
+      best_friend: "2",
     },
     5: {
       id: "5",
@@ -38,7 +38,7 @@ export const careBearData = {
       fur_color: "watermelon pink",
       best_friend: null,
       home: null,
-      powers: [{ type: "powers", id: "careBearStare" }],
+      powers: ["careBearStare"],
     },
   },
   homes: {
@@ -48,7 +48,7 @@ export const careBearData = {
       location: "Kingdom of Caring",
       caring_meter: 1,
       is_in_clouds: true,
-      bears: [{ type: "bears", id: "1" }, { type: "bears", id: "2" }, { type: "bears", id: "3" }],
+      bears: ["1", "2", "3"],
     },
     2: {
       id: "2",
@@ -73,12 +73,7 @@ export const careBearData = {
       name: "Care Bear Stare",
       description: "Purges evil.",
       type: "group power",
-      bears: [
-        { type: "bears", id: "1" },
-        { type: "bears", id: "2" },
-        { type: "bears", id: "3" },
-        { type: "bears", id: "5" },
-      ],
+      bears: ["1", "2", "3", "5"],
     },
     makeWish: {
       id: "makeWish",
@@ -98,6 +93,17 @@ export const grumpyBear = {
   belly_badge: "raincloud",
   fur_color: "blue",
   best_friend: null,
-  home: { type: "homes", id: "1" },
-  powers: [{ type: "powers", id: "careBearStare" }],
+  home: "1",
+  powers: ["careBearStare"],
+};
+
+export const grumpyBearTree = {
+  id: "4",
+  name: "Grumpy Bear",
+  year_introduced: 1982,
+  belly_badge: "raincloud",
+  fur_color: "blue",
+  best_friend: null,
+  home: { id: "1" },
+  powers: [{ id: "careBearStare" }],
 };

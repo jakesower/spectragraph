@@ -1,12 +1,13 @@
 import test from "ava";
-import { ERRORS, BlossomError } from "@blossom/core/errors";
 import { schema } from "../../fixtures/care-bear-schema.mjs";
-import { MemoryStore } from "../../../src/memory-store.mjs";
+import { makeMemoryStore } from "../../../src/memory-store/memory-store.mjs";
 import { careBearData } from "../../fixtures/care-bear-data.mjs";
+import { ERRORS } from "../../../src/strings.mjs";
+import { BlossomError } from "../../../src/validations/errors.mjs";
 
-test.beforeEach((t) => {
+test.beforeEach(async (t) => {
   // eslint-disable-next-line no-param-reassign
-  t.context = { store: MemoryStore(schema).seed(careBearData) };
+  t.context = { store: await makeMemoryStore(schema, { initialData: careBearData }) };
 });
 
 test("gets the first result from a collection", async (t) => {

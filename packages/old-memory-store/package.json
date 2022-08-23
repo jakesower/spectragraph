@@ -1,9 +1,9 @@
 {
-  "name": "@blossom/memory-store",
+  "name": "@blossom/old-memory-store",
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    ".": "./src/memory-store/memory-store.mjs"
+    ".": "./src/old-memory-store/memory-store.mjs"
   },
   "scripts": {
     "lint": "eslint \"src/**\" \"test/**\" --ext .mjs",
@@ -14,7 +14,6 @@
   "author": "Jake Sower",
   "license": "AGPL-3.0",
   "dependencies": {
-    "@blossom/core": "^0.0.1",
     "@blossom/utils": "*",
     "ajv": "^8.11.0"
   },
