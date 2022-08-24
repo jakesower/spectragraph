@@ -13,12 +13,12 @@
   "author": "Jake Sower",
   "devDependencies": {
     "@blossom/memory-store": "^0.0.1",
-    "ava": "^4.2.0",
-    "eslint": "^8.16.0",
+    "ava": "^4.3.1",
+    "eslint": "^8.22.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-config-standard": "^17.0.0",
-    "prettier": "^2.6.2"
+    "prettier": "^2.7.1"
   },
   "dependencies": {
     "@blossom/core": "^0.0.1",
