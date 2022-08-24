@@ -40,16 +40,16 @@ export function get(query, context) {
       return chunks;
     };
 
-    const getQueryChunkSize = (subQuery) =>
-      Object.values(subQuery.relationships).reduce(
+    const getQueryChunkSize = (subquery) =>
+      Object.values(subquery.relationships).reduce(
         (sum, relQuery) => sum + getQueryChunkSize(relQuery),
-        subQuery.properties.length + 1,
+        subquery.properties.length + 1,
       );
 
-    const buildExtractor = (subQuery) => {
-      const relKeys = Object.keys(subQuery.relationships);
-      const relValues = Object.values(subQuery.relationships);
-      const relResDef = schema.resources[subQuery.type];
+    const buildExtractor = (subquery) => {
+      const relKeys = Object.keys(subquery.relationships);
+      const relValues = Object.values(subquery.relationships);
+      const relResDef = schema.resources[subquery.type];
 
       const castProp = (val, prop) =>
         relResDef.properties[prop].type === "boolean"
@@ -64,12 +64,12 @@ export function get(query, context) {
 
       const chunkSizes = [
         1,
-        subQuery.properties.length,
+        subquery.properties.length,
         ...relValues.map(getQueryChunkSize),
       ];
 
       // TODO: this needs to map the obj into a `new Map()` to preserve numeric key order
-      const relExtractors = mapObj(subQuery.relationships, buildExtractor);
+      const relExtractors = mapObj(subquery.relationships, buildExtractor);
 
       return (row, out) => {
         const chunks = chunkInto(row, chunkSizes);
@@ -82,8 +82,8 @@ export function get(query, context) {
           // eslint-disable-next-line no-param-reassign
           out.set(id, {
             id,
-            properties: zipObjWith(subQuery.properties, props, castProp),
-            relationships: mapObj(subQuery.relationships, () => new Map()),
+            properties: zipObjWith(subquery.properties, props, castProp),
+            relationships: mapObj(subquery.relationships, () => new Map()),
           });
         }
 
@@ -93,14 +93,14 @@ export function get(query, context) {
       };
     };
 
-    const finalizer = (subQuery, objResTree) => {
-      const subResDef = schema.resources[subQuery.type];
+    const finalizer = (subquery, objResTree) => {
+      const subResDef = schema.resources[subquery.type];
 
       return [...objResTree.values()].map(({ id, properties, relationships }) => ({
         id,
         ...properties,
         ...mapObj(relationships, (rel, relName) => {
-          const vals = finalizer(subQuery.relationships[relName], rel);
+          const vals = finalizer(subquery.relationships[relName], rel);
           return subResDef.properties[relName].cardinality === "one"
             ? vals[0] ?? null
             : vals;

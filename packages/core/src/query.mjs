@@ -11,9 +11,9 @@ export {
 export { queryTree } from "./query/query-tree.mjs";
 
 export function flatMapQuery(query, fn) {
-  const go = (subQuery, path) => {
-    const nodeResult = fn(subQuery, path);
-    const relResults = Object.entries(subQuery.relationships).flatMap(
+  const go = (subquery, path) => {
+    const nodeResult = fn(subquery, path);
+    const relResults = Object.entries(subquery.relationships).flatMap(
       ([relKey, relQuery]) => go(relQuery, [...path, relKey]),
     );
 
@@ -24,9 +24,9 @@ export function flatMapQuery(query, fn) {
 }
 
 export function flatMapQueryTree(query, tree, fn) {
-  const go = (subQuery, subTree, path) => {
-    const nodeResult = fn(subQuery, subTree, path);
-    const relResults = Object.entries(subQuery.relationships).flatMap(
+  const go = (subquery, subTree, path) => {
+    const nodeResult = fn(subquery, subTree, path);
+    const relResults = Object.entries(subquery.relationships).flatMap(
       ([relKey, relQuery]) =>
         multiApply(subTree?.[relKey], (rel) => go(relQuery, rel, [...path, relKey])),
     );
@@ -46,8 +46,8 @@ export function getQueryPath(query, path) {
 }
 
 export function mapQuery(query, fn) {
-  const go = (subQuery, path) => {
-    const nodeResult = fn(subQuery, path);
+  const go = (subquery, path) => {
+    const nodeResult = fn(subquery, path);
 
     return {
       ...nodeResult,

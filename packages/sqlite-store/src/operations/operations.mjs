@@ -6,8 +6,8 @@ import { pipeThru } from "@blossom/utils/pipes";
 import { preQueryRelationships } from "./relationships.mjs";
 
 const hasToManyRelationship = (schema, query) =>
-  flattenSubQueries(query).some((subQuery) =>
-    Object.keys(subQuery.relationships).some(
+  flattenSubQueries(query).some((subquery) =>
+    Object.keys(subquery.relationships).some(
       (relKey) => schema.resources[query.type].properties[relKey].cardinality === "many",
     ),
   );
@@ -111,8 +111,8 @@ const operations = {
     preQuery: {
       apply: (_, context) =>
         preQueryRelationships(context.query, context.queryPath, context),
-      // flatMapQuery(context.query, (subQuery, queryPath) =>
-      //   preQueryRelationships(subQuery, queryPath, context),
+      // flatMapQuery(context.query, (subquery, queryPath) =>
+      //   preQueryRelationships(subquery, queryPath, context),
       // ),
     },
   },
@@ -130,8 +130,8 @@ const applyOverPaths = (resources, path, fn) => {
 
 // TODO: tsort operations
 const gatherPreOperations = (query, context) =>
-  flatMapQuery(query, (subQuery, queryPath) =>
-    Object.entries(subQuery)
+  flatMapQuery(query, (subquery, queryPath) =>
+    Object.entries(subquery)
       .flatMap(([operationKey, operationArg]) => {
         const operation = operations[operationKey]?.preQuery?.apply;
 
@@ -139,7 +139,7 @@ const gatherPreOperations = (query, context) =>
 
         const argContext = {
           ...context,
-          query: subQuery,
+          query: subquery,
           queryPath,
           queryTable: [query.type, ...queryPath].join("$"),
           rootQuery: query,
@@ -151,14 +151,14 @@ const gatherPreOperations = (query, context) =>
   );
 
 const gatherPostOperationFunctions = (query, context) =>
-  flatMapQuery(query, (subQuery, queryPath) =>
-    Object.entries(subQuery)
+  flatMapQuery(query, (subquery, queryPath) =>
+    Object.entries(subquery)
       .map(([operationKey, operationArg]) => {
         const operation = operations[operationKey]?.postQuery?.apply;
 
         if (!operation) return null;
 
-        const argContext = { ...context, query: subQuery, queryPath };
+        const argContext = { ...context, query: subquery, queryPath };
         return (resources) =>
           applyOverPaths(resources, queryPath, (resource) =>
             operation(operationArg, resource, argContext),

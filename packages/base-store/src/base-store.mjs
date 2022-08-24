@@ -34,7 +34,7 @@ export function BaseStore(schema, config) {
 
   // const allResolvers = mapObj(schema.resources, ())
 
-  const traverse = (subQuery) => {};
+  const traverse = (subquery) => {};
 
   return {
     get(query) {

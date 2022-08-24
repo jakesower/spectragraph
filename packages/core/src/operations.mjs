@@ -193,8 +193,8 @@ export const coreOperations = {
 const gatherPreOperations = (query, context) => {
   const { operations } = context;
 
-  return flatMapQuery(query, (subQuery, queryPath) =>
-    Object.entries(subQuery)
+  return flatMapQuery(query, (subquery, queryPath) =>
+    Object.entries(subquery)
       .flatMap(([operationKey, operationArg]) => {
         const operation = operations[operationKey]?.preQuery?.apply;
 
@@ -202,7 +202,7 @@ const gatherPreOperations = (query, context) => {
 
         const argContext = {
           ...context,
-          query: subQuery,
+          query: subquery,
           queryPath,
           queryTable: [query.type, ...queryPath].join("$"),
           rootQuery: query,
@@ -247,23 +247,3 @@ export async function runQuery(storeContext, run) {
 
   return result;
 }
-
-// const runGqlStoreQuery = async (query, context) => {
-//   const { resolversByType, transport } = context;
-//   const built = buildStoreQuery(query, operations);
-//   const gqlQuery = `
-//     ${resolversByType[subQuery.type[cardinality.cardinality]]} {
-//       ${subQuery.properties.join("\n ")}
-//       ${Object.values(children).join("\n ")}
-//     }
-//   `;
-
-//   const result = await transport.get({ gqlQuery });
-
-//   return result.data;
-// };
-
-// // const buildSqlStoreQuery = (levelQuery, getBuiltChildren) => {
-// //   return [...levelQuery, Object.values(getBuiltChildren())];
-
-// // }

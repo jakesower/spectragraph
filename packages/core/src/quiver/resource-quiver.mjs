@@ -1,6 +1,5 @@
 import { asArray, differenceBy } from "@blossom/utils/arrays";
 import { makeQuiver } from "./quiver.mjs";
-import { makeEmptyStore } from "../store.mjs";
 
 function formatRef(ref) {
   return `(${ref.type}, ${ref.id})`;
@@ -13,7 +12,6 @@ function formatRef(ref) {
 
 export function makeResourceQuiver(schema, builderFn) {
   const quiver = makeQuiver();
-  const buildStore = makeEmptyStore();
 
   const inverseOf = (resourceRef, relName) =>
     schema.resources[resourceRef.type].properties[relName].inverse;
