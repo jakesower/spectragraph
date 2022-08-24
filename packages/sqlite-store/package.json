@@ -18,15 +18,15 @@
     "@blossom/expressions": "^0.0.1",
     "@blossom/utils": "*",
     "ajv": "^8.11.0",
-    "better-sqlite3": "^7.5.3"
+    "better-sqlite3": "^7.6.2"
   },
   "devDependencies": {
-    "ava": "^4.2.0",
-    "eslint": "^8.16.0",
+    "ava": "^4.3.1",
+    "eslint": "^8.22.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-config-standard": "^17.0.0",
-    "prettier": "^2.6.2"
+    "prettier": "^2.7.1"
   },
   "publishConfig": {
     "access": "public"
