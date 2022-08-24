@@ -14,9 +14,17 @@ const transport = axios.create({
   },
 });
 
+const resolverMap = {
+  bears: {
+    one: { name: "bear" },
+    some: { name: "bears" },
+    all: { name: "bears" },
+  },
+};
+
 // Test Setup
 test.beforeEach(async (t) => {
-  const store = await GraphQLStore(schema, transport);
+  const store = await GraphQLStore(schema, { resolverMap, transport });
 
   // eslint-disable-next-line no-param-reassign
   t.context = { store };

@@ -6,6 +6,7 @@
     "./*": "./src/*.mjs"
   },
   "scripts": {
+    "test-server": "node test/server/server.mjs",
     "test": "NODE_ENV=test ava",
     "test:watch": "NODE_ENV=test ava -w --verbose"
   },

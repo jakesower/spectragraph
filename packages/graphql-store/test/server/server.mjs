@@ -14,7 +14,10 @@ const rootResolvers = Object.entries(careBearSchema.resources)
       console.log({ id, out });
       return out;
     },
-    [resName]: () => careBearData[resName],
+    [resName]: (...args) => {
+      console.log(resName, careBearData[resName]);
+      return Object.values(careBearData[resName]);
+    },
   }))
   .reduce((acc, item) => ({ ...acc, ...item }), {});
 
