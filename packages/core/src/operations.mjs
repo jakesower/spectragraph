@@ -171,10 +171,8 @@ export const coreOperations = {
 
                 const relVal = resource[relName];
                 const idClause = Array.isArray(relVal) ? { ids: relVal } : { id: relVal };
-                const ran = await runQuery(
-                  { ...context, query: { ...relQuery, ...idClause } },
-                  context.run,
-                );
+                const subquery = { ...relQuery, ...idClause };
+                const ran = await runQuery(subquery, context, context.run);
 
                 return ran;
               }),
@@ -225,7 +223,7 @@ const gatherPostOperations = (query, context) => {
   });
 };
 
-export async function runQuery(storeContext, run) {
+export async function runQuery(query, storeContext, run) {
   const context = {
     ...storeContext,
     config: { orderingFunctions: {} },
@@ -233,10 +231,9 @@ export async function runQuery(storeContext, run) {
       { ...coreOperations, ...(storeContext.operations ?? {}) },
       compileOperation,
     ),
+    query,
     run,
   };
-
-  const { query } = context;
 
   const preOps = gatherPreOperations(query, context);
   const preRunPipe = [...preOps, run];
