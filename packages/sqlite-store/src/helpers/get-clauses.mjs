@@ -94,7 +94,7 @@ export function joinClauses(schema, rootQuery) {
     const localResDef = schema.resources[query.type];
     const localTableName = path.join("$");
 
-    return Object.entries(query.relationships).flatMap(([relName, subQuery]) => {
+    return Object.entries(query.relationships).flatMap(([relName, subquery]) => {
       const localRelDef = localResDef.properties[relName];
 
       const foreignResDef = schema.resources[localRelDef.relatedType];
@@ -107,7 +107,7 @@ export function joinClauses(schema, rootQuery) {
       const joinSqls =
         relBuilders[foreignResCardinality][localResCardinality](builderArgs);
 
-      return [...joinSqls, ...go(subQuery, [...path, relName])];
+      return [...joinSqls, ...go(subquery, [...path, relName])];
     });
   };
 
@@ -123,7 +123,7 @@ export function columnsToSelect(schema, rootQuery) {
     );
 
     const subColumns = Object.entries(query.relationships).flatMap(
-      ([relName, subQuery]) => go(subQuery, [...path, relName]),
+      ([relName, subquery]) => go(subquery, [...path, relName]),
     );
 
     return [...curColumns, ...subColumns];

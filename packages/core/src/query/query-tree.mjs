@@ -39,14 +39,14 @@ function withRootData(schema, fullDataTree) {
       Object.keys(query.relationships).forEach((relKey) => {
         const relDef = schemaDef.properties[relKey];
         const nextPath = [...path, relKey];
-        const subQuery = query.relationships[relKey];
+        const subquery = query.relationships[relKey];
 
         if (relDef.cardinality === "one" && dataTree[relKey] != null) {
-          internalQueryTree(subQuery, dataTree[relKey], nextPath).forEachResource(fn);
+          internalQueryTree(subquery, dataTree[relKey], nextPath).forEachResource(fn);
         } else if (relDef.cardinality === "many") {
           dataTree[relKey].forEach((subTree, idx) => {
             const nextPathWithIdx = [...nextPath, idx];
-            internalQueryTree(subQuery, subTree, nextPathWithIdx).forEachResource(fn);
+            internalQueryTree(subquery, subTree, nextPathWithIdx).forEachResource(fn);
           });
         }
       });

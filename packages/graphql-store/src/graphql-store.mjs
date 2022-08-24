@@ -34,8 +34,8 @@ export function GraphQLStore(schema, config) {
         );
 
         const gqlQuery = `
-          ${resolverMap[subQuery.type[cardinality.cardinality]]} {
-            ${subQuery.properties.join("\n ")}
+          ${resolverMap[subquery.type[cardinality.cardinality]]} {
+            ${subquery.properties.join("\n ")}
             ${Object.values(children).join("\n ")}
           }
         `;

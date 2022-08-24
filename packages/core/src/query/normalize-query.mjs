@@ -109,11 +109,11 @@ export function normalizeQuery(schema, rawQuery) {
 }
 
 export function denormalizeQuery(query) {
-  const go = (subQuery, relKey) => ({
-    ...omit(subQuery, relKey ? ["type", "id"] : []),
-    ...(subQuery.properties.length > 0 ? { properties: subQuery.properties } : {}),
-    ...(Object.keys(subQuery.relationships).length > 0
-      ? { relationships: mapObj(subQuery.relationships, go) }
+  const go = (subquery, relKey) => ({
+    ...omit(subquery, relKey ? ["type", "id"] : []),
+    ...(subquery.properties.length > 0 ? { properties: subquery.properties } : {}),
+    ...(Object.keys(subquery.relationships).length > 0
+      ? { relationships: mapObj(subquery.relationships, go) }
       : {}),
   });
 

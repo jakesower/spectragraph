@@ -33,16 +33,16 @@ export function JsonApiAdapter(schema, store) {
   };
 
   const queryNodeBuilders = {
-    properties: (subQuery, subQueryPath, { params }) => {
-      const fields = params.fields?.[subQuery.type];
-      if (!fields) return subQuery;
+    properties: (subquery, subqueryPath, { params }) => {
+      const fields = params.fields?.[subquery.type];
+      if (!fields) return subquery;
 
       return {
-        ...subQuery,
+        ...subquery,
         properties: fields,
       };
     },
-    relationships: (subQuery, subQueryPath, { params }) => {
+    relationships: (subquery, subqueryPath, { params }) => {
       
     }
   };
@@ -53,13 +53,13 @@ export function JsonApiAdapter(schema, store) {
       const normal = normalizeGetQuery(schema, curQuery);
       console.log({ normal });
 
-      return mapQuery(normal, (subQuery, subQueryPath) => {
+      return mapQuery(normal, (subquery, subqueryPath) => {
         const pipeFns = builderFns.map(
-          (builderFn) => (sq) => builderFn(sq, subQueryPath, context),
+          (builderFn) => (sq) => builderFn(sq, subqueryPath, context),
         );
-        console.log("piped", pipeThru(subQuery, pipeFns));
+        console.log("piped", pipeThru(subquery, pipeFns));
 
-        return pipeThru(subQuery, pipeFns);
+        return pipeThru(subquery, pipeFns);
       });
     },
   };
