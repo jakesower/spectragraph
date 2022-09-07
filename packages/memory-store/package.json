@@ -1,21 +1,30 @@
 {
   "name": "@blossom-js/memory-store",
   "version": "0.0.4",
-  "type": "module",
-  "exports": {
-    ".": "./src/memory-store.js"
-  },
-  "main": "./dist/export.js",
-  "module": "./src/memory-store.js",
   "scripts": {
-    "build": "babel src/memory-store.js --out-file dist/export.js",
+    "build:cjs": "babel src -d dist",
     "lint": "eslint \"src/**\" \"test/**\" --ext .js",
     "test": "NODE_ENV=test ava",
     "test:watch": "NODE_ENV=test ava -w --verbose"
   },
+  "type": "module",
+  "exports": {
+    ".": [
+      {
+        "import": "./src/memory-store.js",
+        "require": "./dist/memory-store.js"
+      },
+      "./dist/memory-store.js"
+    ]
+  },
   "keywords": [],
   "author": "Jake Sower",
   "license": "AGPL-3.0",
+  "devDependencies": {
+    "@babel/cli": "^7.18.10",
+    "@babel/core": "^7.19.0",
+    "@babel/preset-env": "^7.19.0"
+  },
   "dependencies": {
     "@blossom-js/core": "^0.0.1",
     "@blossom-js/utils": "*",

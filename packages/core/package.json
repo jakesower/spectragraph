@@ -3,16 +3,22 @@
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    "./*": "./src/*.js"
+    "./*": {
+      "import": "./src/*.js",
+      "require": "./dist/*.js"
+    }
   },
   "scripts": {
-    "build": "babel src/memory-store.js --out-file dist/export.js",
+    "build:cjs": "babel src -d dist",
     "test": "NODE_ENV=test ava",
     "test:watch": "NODE_ENV=test ava -w --verbose"
   },
   "keywords": [],
   "author": "Jake Sower",
   "devDependencies": {
+    "@babel/cli": "^7.18.10",
+    "@babel/core": "^7.19.0",
+    "@babel/preset-env": "^7.19.0",
     "ava": "^4.3.1",
     "eslint": "^8.22.0",
     "eslint-config-airbnb-base": "^15.0.0",
@@ -21,9 +27,6 @@
     "prettier": "^2.7.1"
   },
   "dependencies": {
-    "@babel/cli": "^7.18.10",
-    "@babel/core": "^7.19.0",
-    "@babel/preset-env": "^7.19.0",
     "@blossom-js/utils": "*",
     "ajv": "^8.11.0"
   },
