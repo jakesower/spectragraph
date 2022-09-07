@@ -3,10 +3,10 @@
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    ".": "./src/base-store/base-store.mjs"
+    ".": "./src/base-store/base-store.js"
   },
   "scripts": {
-    "lint": "eslint \"src/**\" \"test/**\" --ext .mjs",
+    "lint": "eslint \"src/**\" \"test/**\" --ext .js",
     "test": "NODE_ENV=test ava",
     "test:watch": "NODE_ENV=test ava -w --verbose"
   },
@@ -14,10 +14,12 @@
   "author": "Jake Sower",
   "license": "AGPL-3.0",
   "dependencies": {
+    "@babel/cli": "^7.18.10",
+    "@babel/core": "^7.19.0",
+    "@babel/preset-env": "^7.19.0",
     "@blossom-js/core": "*",
     "@blossom-js/utils": "*"
   },
-  "devDependencies": {},
   "publishConfig": {
     "access": "public"
   },

@@ -19,8 +19,7 @@ module.exports = {
       "error",
       "ignorePackages",
       {
-        js: "never",
-        mjs: "always",
+        js: "never"
       },
     ],
     "import/no-default-export": "error",
