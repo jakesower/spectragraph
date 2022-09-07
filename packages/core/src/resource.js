@@ -18,7 +18,7 @@ export function normalizeResource(schema, type, resource) {
 
   return {
     type,
-    id: resource.id,
+    id: resource[schema.idField],
     properties: pick(resource, Object.keys(nonRelProps)),
     relationships: pick(resource, Object.keys(relProps)),
   };
