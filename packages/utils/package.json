@@ -48,11 +48,11 @@
   "author": "Jake Sower",
   "license": "ISC",
   "devDependencies": {
-    "ava": "^4.3.1",
     "@babel/cli": "^7.18.10",
     "@babel/core": "^7.19.0",
     "@babel/preset-env": "^7.19.0",
-    "eslint": "^8.22.0",
+    "ava": "^4.3.3",
+    "eslint": "^8.23.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-config-standard": "^17.0.0",

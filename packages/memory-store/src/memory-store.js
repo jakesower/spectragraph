@@ -1,14 +1,23 @@
 import { compileQuery, normalizeQuery } from "@blossom-js/core/query";
 import { defaultResource, normalizeResource } from "@blossom-js/core/resource";
 import { buildResourceTable } from "@blossom-js/core/resource-table";
-import { compileSchema, getRelationshipProperties } from "@blossom-js/core/schema";
+import {
+  compileSchema,
+  getRelationshipProperties,
+} from "@blossom-js/core/schema";
 import { normalizeTree } from "@blossom-js/core/tree";
 import {
   ensureCreatedResourceFields,
   ensureValidGetQuerySyntax,
   ensureValidSetQuerySyntax,
 } from "@blossom-js/core/validation";
-import { asArray, difference, differenceBy, groupBy, uniq } from "@blossom-js/utils/arrays";
+import {
+  asArray,
+  difference,
+  differenceBy,
+  groupBy,
+  uniq,
+} from "@blossom-js/utils/arrays";
 import { deepClone } from "@blossom-js/utils/generics";
 import { mapObj } from "@blossom-js/utils/objects";
 
@@ -37,14 +46,10 @@ export function MemoryStore(rawSchema) {
   }
 
   const get = (query) => {
-    const run = (storeQuery) => {
-      console.log('storequery', storeQuery.type, storeQuery)
-      return Object.values(store[storeQuery.type])
-    };
-
-    const context = { query, run, schema, debug: false };
-
+    const run = (storeQuery) => Object.values(store[storeQuery.type]);
+    const context = { query, run, schema };
     const runner = compileQuery(query, context);
+
     return runner();
   };
 
@@ -55,52 +60,67 @@ export function MemoryStore(rawSchema) {
     const context = { query: rootQuery, rootQuery, schema };
 
     const rootTrees = normalizeTree(rootQuery, rawTreeOrTrees);
-    const resourceTable = await buildResourceTable(schema, async ({ setResource }) => {
-      const go = async (tree) => {
-        const getQuery = normalizeQuery(schema, {
-          type: tree.type,
-          id: tree.id,
-          allProps: true,
-          relationships: mapObj(tree.relationships, () => ({})),
+    const resourceTable = await buildResourceTable(
+      schema,
+      async ({ setResource }) => {
+        const go = async (tree) => {
+          const getQuery = normalizeQuery(schema, {
+            type: tree.type,
+            id: tree.id,
+            allProps: true,
+            relationships: mapObj(tree.relationships, () => ({})),
+          });
+
+          // TODO: make this even resemble performant
+          const existing = await get(getQuery, { ...context, query: getQuery });
+          setResource(tree, existing);
+
+          return Promise.all(
+            Object.values(tree.relationships).flatMap(async (treeRels) =>
+              Promise.all(treeRels.flatMap(go))
+            )
+          );
+        };
+
+        const rootQueryWithAllRels = {
+          ...rootQuery,
+          args: {
+            ...rootQuery.args,
+            relationships: mapObj(
+              getRelationshipProperties(schema, rootQuery.type),
+              () => ({}),
+            ),
+          },
+        };
+
+        const rootExisting = asArray(
+          await get(rootQueryWithAllRels, {
+            ...context,
+            query: rootQueryWithAllRels,
+          })
+        );
+
+        const absent = differenceBy(
+          rootExisting,
+          rootTrees,
+          (res) => res[schema.idField],
+        );
+
+        const out = await Promise.all(rootTrees.flatMap(go));
+        absent.forEach((absentRes) => {
+          setResource(
+            null,
+            normalizeResource(schema, rootQuery.type, absentRes)
+          );
         });
 
-        // TODO: make this even resemble performant
-        const existing = await get(getQuery, { ...context, query: getQuery });
-        setResource(tree, existing);
+        return out;
+      }
+    );
 
-        return Promise.all(
-          Object.values(tree.relationships).flatMap(async (treeRels) =>
-            Promise.all(treeRels.flatMap(go)),
-          ),
-        );
-      };
-
-      const rootQueryWithAllRels = {
-        ...rootQuery,
-        args: {
-          ...rootQuery.args,
-          relationships: mapObj(
-            getRelationshipProperties(schema, rootQuery.type),
-            () => ({}),
-          ),
-        },
-      };
-
-      const rootExisting = asArray(
-        await get(rootQueryWithAllRels, { ...context, query: rootQueryWithAllRels }),
-      );
-
-      const absent = differenceBy(rootExisting, rootTrees, (res) => res.id);
-
-      const out = await Promise.all(rootTrees.flatMap(go));
-      absent.forEach((absentRes) => {
-        setResource(null, normalizeResource(schema, rootQuery.type, absentRes));
-      });
-
-      return out;
-    });
-
-    const resources = Object.values(resourceTable).flatMap((t) => Object.values(t));
+    const resources = Object.values(resourceTable).flatMap((t) =>
+      Object.values(t)
+    );
     const byStatus = groupBy(resources, (res) => res.status);
     const { inserted = [], updated = [], deleted = [] } = byStatus;
 
@@ -114,7 +134,9 @@ export function MemoryStore(rawSchema) {
         ...res.properties,
         ...mapObj(res.relationships, (rel, relName) => {
           const relDef = resDef.properties[relName];
-          return relDef.cardinality === "one" ? rel.added[0] ?? null : rel.added;
+          return relDef.cardinality === "one"
+            ? rel.added[0] ?? null
+            : rel.added;
         }),
       };
 
@@ -135,9 +157,9 @@ export function MemoryStore(rawSchema) {
             ? null
             : relChanges.added[0] ?? existing[relName] ?? null
           : uniq([
-            ...difference(existing[relName], relChanges.removed),
-            ...relChanges.added,
-          ]);
+              ...difference(existing[relName], relChanges.removed),
+              ...relChanges.added,
+            ]);
       });
 
       const treeToUpdate = {
