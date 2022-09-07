@@ -1,7 +1,7 @@
 import test from "ava";
 import Database from "better-sqlite3";
-import { omit } from "@blossom/utils";
-import { ERRORS } from "@blossom/core/errors";
+import { omit } from "@blossom-js/utils";
+import { ERRORS } from "@blossom-js/core/errors";
 import { careBearSchema as schema } from "../fixtures/care-bear-schema.mjs";
 import { SQLiteStore } from "../../src/sqlite-store.mjs";
 import { careBearData } from "../fixtures/care-bear-data.mjs";

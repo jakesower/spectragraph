@@ -1,8 +1,8 @@
 /* eslint-disable import/no-cycle */
 
-import { intersperse, multiApply } from "@blossom/utils/arrays";
-import { getPath } from "@blossom/utils/lenses";
-import { mapObj } from "@blossom/utils/objects";
+import { intersperse, multiApply } from "@blossom-js/utils/arrays";
+import { getPath } from "@blossom-js/utils/lenses";
+import { mapObj } from "@blossom-js/utils/objects";
 import { BlossomError, ERRORS } from "./errors.mjs";
 import { buildOperationPipe, coreQueryPipe, coreResultsPipe } from "./operations.mjs";
 

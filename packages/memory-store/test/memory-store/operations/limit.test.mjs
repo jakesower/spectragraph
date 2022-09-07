@@ -1,5 +1,5 @@
 import test from "ava";
-import { ERRORS, BlossomError } from "@blossom/core/errors";
+import { ERRORS, BlossomError } from "@blossom-js/core/errors";
 import { schema } from "../../fixtures/care-bear-schema.mjs";
 import { MemoryStore } from "../../../src/memory-store.mjs";
 import { careBearData } from "../../fixtures/care-bear-data.mjs";

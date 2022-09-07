@@ -1,4 +1,4 @@
-import { mapObj, partitionObj } from "@blossom/utils/objects";
+import { mapObj, partitionObj } from "@blossom-js/utils/objects";
 import { coreExpressions } from "../expressions.mjs";
 
 const constraintDefs = {

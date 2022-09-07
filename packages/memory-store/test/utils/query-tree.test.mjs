@@ -1,6 +1,6 @@
 import test from "ava";
-import { omit, pick } from "@blossom/utils";
-import { partitionObj } from "@blossom/utils/objects";
+import { omit, pick } from "@blossom-js/utils";
+import { partitionObj } from "@blossom-js/utils/objects";
 import { schema } from "../fixtures/care-bear-schema.mjs";
 import { queryTree } from "../../src/utils/query-tree.mjs";
 import { careBearData } from "../fixtures/care-bear-data.mjs";

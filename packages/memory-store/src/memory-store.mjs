@@ -1,16 +1,16 @@
-import { compileQuery, normalizeQuery } from "@blossom/core/query";
-import { defaultResource, normalizeResource } from "@blossom/core/resource";
-import { buildResourceTable } from "@blossom/core/resource-table";
-import { compileSchema, getRelationshipProperties } from "@blossom/core/schema";
-import { normalizeTree } from "@blossom/core/tree";
+import { compileQuery, normalizeQuery } from "@blossom-js/core/query";
+import { defaultResource, normalizeResource } from "@blossom-js/core/resource";
+import { buildResourceTable } from "@blossom-js/core/resource-table";
+import { compileSchema, getRelationshipProperties } from "@blossom-js/core/schema";
+import { normalizeTree } from "@blossom-js/core/tree";
 import {
   ensureCreatedResourceFields,
   ensureValidGetQuerySyntax,
   ensureValidSetQuerySyntax,
-} from "@blossom/core/validation";
-import { asArray, difference, differenceBy, groupBy, uniq } from "@blossom/utils/arrays";
-import { deepClone } from "@blossom/utils/generics";
-import { mapObj } from "@blossom/utils/objects";
+} from "@blossom-js/core/validation";
+import { asArray, difference, differenceBy, groupBy, uniq } from "@blossom-js/utils/arrays";
+import { deepClone } from "@blossom-js/utils/generics";
+import { mapObj } from "@blossom-js/utils/objects";
 
 /**
  * TODO:

@@ -1,5 +1,5 @@
 import Ajv from "ajv";
-import { difference } from "@blossom/utils/arrays";
+import { difference } from "@blossom-js/utils/arrays";
 import { makeQuerySchema } from "./schema/make-query-schema.mjs";
 import { coreExpressions } from "./expressions.mjs";
 import { ERRORS, BlossomError } from "./errors.mjs";

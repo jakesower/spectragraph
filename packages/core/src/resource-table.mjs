@@ -1,6 +1,6 @@
-import { asArray } from "@blossom/utils/arrays";
-import { mapObj } from "@blossom/utils/objects";
-import { combinations, difference } from "@blossom/utils/sets";
+import { asArray } from "@blossom-js/utils/arrays";
+import { mapObj } from "@blossom-js/utils/objects";
+import { combinations, difference } from "@blossom-js/utils/sets";
 import { makeEmptyStore } from "./store.mjs";
 
 const DELETED = Symbol("deleted");

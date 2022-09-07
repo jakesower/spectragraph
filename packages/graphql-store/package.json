@@ -1,5 +1,5 @@
 {
-  "name": "@blossom/graphql-store",
+  "name": "@blossom-js/graphql-store",
   "version": "0.0.1",
   "type": "module",
   "exports": {
@@ -25,9 +25,13 @@
     "prettier": "^2.7.1"
   },
   "dependencies": {
-    "@blossom/core": "^0.0.1",
-    "@blossom/utils": "*",
+    "@blossom-js/core": "^0.0.1",
+    "@blossom-js/utils": "*",
     "ajv": "^8.11.0",
     "graphql-tag": "^2.12.6"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "private": false
 }

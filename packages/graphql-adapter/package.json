@@ -1,5 +1,5 @@
 {
-  "name": "@blossom/graphql-adapter",
+  "name": "@blossom-js/graphql-adapter",
   "version": "0.0.1",
   "type": "module",
   "exports": {
@@ -12,7 +12,7 @@
   "keywords": [],
   "author": "Jake Sower",
   "devDependencies": {
-    "@blossom/memory-store": "^0.0.1",
+    "@blossom-js/memory-store": "^0.0.1",
     "ava": "^4.3.1",
     "eslint": "^8.22.0",
     "eslint-config-airbnb-base": "^15.0.0",
@@ -21,9 +21,13 @@
     "prettier": "^2.7.1"
   },
   "dependencies": {
-    "@blossom/core": "^0.0.1",
-    "@blossom/utils": "*",
+    "@blossom-js/core": "^0.0.1",
+    "@blossom-js/utils": "*",
     "ajv": "^8.11.0",
     "express": "^4.18.1"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "private": false
 }

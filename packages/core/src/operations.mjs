@@ -1,10 +1,10 @@
 /* eslint-disable import/no-cycle */
 
-import { compileExpression, isValidExpression } from "@blossom/expressions";
-import { reverse } from "@blossom/utils/arrays";
-import { multiApply, multiApplyAsync } from "@blossom/utils/functions";
-import { mapObj, pick, promiseAllObj } from "@blossom/utils/objects";
-import { sortBy } from "@blossom/utils";
+import { compileExpression, isValidExpression } from "@blossom-js/expressions";
+import { reverse } from "@blossom-js/utils/arrays";
+import { multiApply, multiApplyAsync } from "@blossom-js/utils/functions";
+import { mapObj, pick, promiseAllObj } from "@blossom-js/utils/objects";
+import { sortBy } from "@blossom-js/utils";
 import { ERRORS, BlossomError } from "./errors.mjs";
 import { compileQuery } from "./query.mjs";
 

@@ -1,5 +1,5 @@
-import { mapObj, pick } from "@blossom/utils";
-import { multiApply } from "@blossom/utils/functions";
+import { mapObj, pick } from "@blossom-js/utils";
+import { multiApply } from "@blossom-js/utils/functions";
 import { BlossomError } from "../errors.mjs";
 
 // TODO: Is this used?

@@ -1,4 +1,4 @@
-import { difference } from "@blossom/utils/sets";
+import { difference } from "@blossom-js/utils/sets";
 
 function formatRef(ref) {
   return `(${ref.type}, ${ref.id})`;

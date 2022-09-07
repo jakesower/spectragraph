@@ -1,5 +1,5 @@
-import { normalizeGetQuery } from "@blossom/core/query";
-import { mapObj } from "@blossom/utils/objects";
+import { normalizeGetQuery } from "@blossom-js/core/query";
+import { mapObj } from "@blossom-js/utils/objects";
 
 export function BaseStore(schema, config) {
   const { resolvers } = config;

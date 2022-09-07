@@ -1,6 +1,6 @@
 import test from "ava";
-import { ERRORS } from "@blossom/core/errors";
-import { omit } from "@blossom/utils";
+import { ERRORS } from "@blossom-js/core/errors";
+import { omit } from "@blossom-js/utils";
 import { schema } from "../../fixtures/care-bear-schema.mjs";
 import { careBearData } from "../../fixtures/care-bear-data.mjs";
 import { BaseStore } from "../../../src/base-store.mjs";
