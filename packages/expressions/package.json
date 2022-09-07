@@ -1,5 +1,5 @@
 {
-  "name": "@blossom/expressions",
+  "name": "@blossom-js/expressions",
   "version": "0.0.1",
   "type": "module",
   "exports": {
@@ -19,5 +19,9 @@
     "eslint-config-standard": "^17.0.0",
     "prettier": "^2.7.1"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "publishConfig": {
+    "access": "public"
+  },
+  "private": false
 }

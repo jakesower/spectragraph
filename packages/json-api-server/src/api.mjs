@@ -1,8 +1,8 @@
-import { denormalizeQuery, mapQuery, normalizeGetQuery } from "@blossom/core/query";
-import { flattenQueryTree, normalizeTree } from "@blossom/core/tree";
-import { asArray } from "@blossom/utils/arrays";
-import { pick } from "@blossom/utils/objects";
-import { pipeThru, pipeThruWithContext } from "@blossom/utils/pipes";
+import { denormalizeQuery, mapQuery, normalizeGetQuery } from "@blossom-js/core/query";
+import { flattenQueryTree, normalizeTree } from "@blossom-js/core/tree";
+import { asArray } from "@blossom-js/utils/arrays";
+import { pick } from "@blossom-js/utils/objects";
+import { pipeThru, pipeThruWithContext } from "@blossom-js/utils/pipes";
 
 // things to do:
 // - wrap/unwrap HTTP stuff

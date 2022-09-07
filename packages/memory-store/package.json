@@ -1,10 +1,11 @@
 {
-  "name": "@blossom/memory-store",
-  "version": "0.0.1",
+  "name": "@blossom-js/memory-store",
+  "version": "0.0.2",
   "type": "module",
   "exports": {
     ".": "./src/memory-store/memory-store.mjs"
   },
+  "main": "./src/memory-store/memory-store.mjs",
   "scripts": {
     "lint": "eslint \"src/**\" \"test/**\" --ext .mjs",
     "test": "NODE_ENV=test ava",
@@ -14,12 +15,13 @@
   "author": "Jake Sower",
   "license": "AGPL-3.0",
   "dependencies": {
-    "@blossom/core": "^0.0.1",
-    "@blossom/utils": "*",
+    "@blossom-js/core": "^0.0.1",
+    "@blossom-js/utils": "*",
     "ajv": "^8.11.0"
   },
   "devDependencies": {},
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "private": false
 }

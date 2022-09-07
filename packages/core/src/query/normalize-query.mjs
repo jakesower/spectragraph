@@ -1,6 +1,6 @@
-import { pipeThru, uniq } from "@blossom/utils";
-import { filterObj, mapObj, omit } from "@blossom/utils/objects";
-import { difference } from "@blossom/utils/arrays";
+import { pipeThru, uniq } from "@blossom-js/utils";
+import { filterObj, mapObj, omit } from "@blossom-js/utils/objects";
+import { difference } from "@blossom-js/utils/arrays";
 import { ensureValidGetQuerySyntax, ensureValidSetQuerySyntax } from "../validation.mjs";
 import { ERRORS, BlossomError } from "../errors.mjs";
 

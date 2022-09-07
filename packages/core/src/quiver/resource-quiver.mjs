@@ -1,4 +1,4 @@
-import { asArray, differenceBy } from "@blossom/utils/arrays";
+import { asArray, differenceBy } from "@blossom-js/utils/arrays";
 import { makeQuiver } from "./quiver.mjs";
 
 function formatRef(ref) {

@@ -1,4 +1,4 @@
-import { filterObj, mapObj } from "@blossom/utils/objects";
+import { filterObj, mapObj } from "@blossom-js/utils/objects";
 
 export function compileSchema(rawSchema) {
   const resources = mapObj(rawSchema.resources, (resDef) => ({

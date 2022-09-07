@@ -1,5 +1,5 @@
 import test from "ava";
-import { mapObj } from "@blossom/utils/objects";
+import { mapObj } from "@blossom-js/utils/objects";
 import { schema } from "../fixtures/care-bear-schema.mjs";
 import { makeMemoryStore } from "../../src/memory-store/memory-store.mjs";
 import { careBearData, grumpyBear } from "../fixtures/care-bear-data.mjs";

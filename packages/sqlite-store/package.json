@@ -1,5 +1,5 @@
 {
-  "name": "@blossom/sqlite-store",
+  "name": "@blossom-js/sqlite-store",
   "version": "0.0.8",
   "type": "module",
   "exports": {
@@ -14,9 +14,9 @@
   "author": "Jake Sower",
   "license": "CC BY-NC-SA",
   "dependencies": {
-    "@blossom/core": "*",
-    "@blossom/expressions": "^0.0.1",
-    "@blossom/utils": "*",
+    "@blossom-js/core": "*",
+    "@blossom-js/expressions": "^0.0.1",
+    "@blossom-js/utils": "*",
     "ajv": "^8.11.0",
     "better-sqlite3": "^7.6.2"
   },
@@ -31,5 +31,6 @@
   "publishConfig": {
     "access": "public"
   },
+  "private": false,
   "gitHead": "451a467247458685a82d6d8edff5fc575dc02228"
 }

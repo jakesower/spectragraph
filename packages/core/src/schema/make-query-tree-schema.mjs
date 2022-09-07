@@ -1,4 +1,4 @@
-import { mapObj, partitionObj } from "@blossom/utils/objects";
+import { mapObj, partitionObj } from "@blossom-js/utils/objects";
 
 // 3 kinds of potential trees: (going with #3 for now)
 // - strict adherence to query props/rels

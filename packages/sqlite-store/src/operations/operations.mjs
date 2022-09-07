@@ -1,8 +1,8 @@
-import { ERRORS, BlossomError } from "@blossom/core/errors";
-import { compileExpression, isValidExpression } from "@blossom/expressions";
-import { flatMapQuery, flattenSubQueries } from "@blossom/core/query";
-import { multiApply } from "@blossom/utils/functions";
-import { pipeThru } from "@blossom/utils/pipes";
+import { ERRORS, BlossomError } from "@blossom-js/core/errors";
+import { compileExpression, isValidExpression } from "@blossom-js/expressions";
+import { flatMapQuery, flattenSubQueries } from "@blossom-js/core/query";
+import { multiApply } from "@blossom-js/utils/functions";
+import { pipeThru } from "@blossom-js/utils/pipes";
 import { preQueryRelationships } from "./relationships.mjs";
 
 const hasToManyRelationship = (schema, query) =>

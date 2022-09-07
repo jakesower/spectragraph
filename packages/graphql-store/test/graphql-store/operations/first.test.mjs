@@ -1,6 +1,6 @@
 import test from "ava";
 import Database from "better-sqlite3";
-import { ERRORS, BlossomError } from "@blossom/core/errors";
+import { ERRORS, BlossomError } from "@blossom-js/core/errors";
 import { careBearSchema as schema } from "../../fixtures/care-bear-schema.mjs";
 import { SQLiteStore } from "../../../src/sqlite-store.mjs";
 import { careBearData } from "../../fixtures/care-bear-data.mjs";

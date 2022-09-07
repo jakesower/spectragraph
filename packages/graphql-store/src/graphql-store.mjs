@@ -1,8 +1,8 @@
-import { BlossomError } from "@blossom/core/errors";
-import { runQuery } from "@blossom/core/operations";
-import { compileQuery, normalizeGetQuery } from "@blossom/core/query";
-import { compileSchema } from "@blossom/core/schema";
-import { ensureValidGetQuerySyntax } from "@blossom/core/validation";
+import { BlossomError } from "@blossom-js/core/errors";
+import { runQuery } from "@blossom-js/core/operations";
+import { compileQuery, normalizeGetQuery } from "@blossom-js/core/query";
+import { compileSchema } from "@blossom-js/core/schema";
+import { ensureValidGetQuerySyntax } from "@blossom-js/core/validation";
 
 export function GraphQLStore(rawSchema, config) {
   const schema = compileSchema(rawSchema);

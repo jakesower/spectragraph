@@ -1,5 +1,5 @@
 {
-  "name": "@blossom/base-store",
+  "name": "@blossom-js/base-store",
   "version": "0.0.1",
   "type": "module",
   "exports": {
@@ -14,11 +14,12 @@
   "author": "Jake Sower",
   "license": "AGPL-3.0",
   "dependencies": {
-    "@blossom/core": "*",
-    "@blossom/utils": "*"
+    "@blossom-js/core": "*",
+    "@blossom-js/utils": "*"
   },
   "devDependencies": {},
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "private": false
 }

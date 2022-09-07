@@ -1,4 +1,4 @@
-import { mapObj } from "@blossom/utils/objects";
+import { mapObj } from "@blossom-js/utils/objects";
 
 const comparative = (sqlOperator) => ({
   compile: (exprVal, compile) => () => {

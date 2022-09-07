@@ -1,5 +1,5 @@
-import { getInverse } from "@blossom/core/schema";
-import { groupBy } from "@blossom/utils";
+import { getInverse } from "@blossom-js/core/schema";
+import { groupBy } from "@blossom-js/utils";
 
 const boolToNum = (val) => (val === true ? 1 : val === false ? 0 : val) ?? null;
 
