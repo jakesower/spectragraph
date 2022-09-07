@@ -1,22 +1,49 @@
 {
   "name": "@blossom-js/utils",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "",
-  "type": "module",
   "scripts": {
-    "test": "echo 'oh hey'"
+    "build:cjs": "babel src -d dist"
   },
+  "type": "module",
   "exports": {
-    ".": "./src/index.mjs",
-    "./arrays": "./src/arrays.mjs",
-    "./functions": "./src/functions.mjs",
-    "./generics": "./src/generics.mjs",
-    "./lenses": "./src/lenses.mjs",
-    "./maps": "./src/maps.mjs",
-    "./pipes": "./src/pipes.mjs",
-    "./objects": "./src/objects.mjs",
-    "./sets": "./src/sets.mjs",
-    "./trees": "./src/trees.mjs"
+    ".": "./src/index.js",
+    "./arrays": {
+      "import": "./src/arrays.js",
+      "require": "./dist/arrays.js"
+    },
+    "./functions": {
+      "import": "./src/functions.js",
+      "require": "./dist/functions.js"
+    },
+    "./generics": {
+      "import": "./src/generics.js",
+      "require": "./dist/generics.js"
+    },
+    "./lenses": {
+      "import": "./src/lenses.js",
+      "require": "./dist/lenses.js"
+    },
+    "./maps": {
+      "import": "./src/maps.js",
+      "require": "./dist/maps.js"
+    },
+    "./pipes": {
+      "import": "./src/pipes.js",
+      "require": "./dist/pipes.js"
+    },
+    "./objects": {
+      "import": "./src/objects.js",
+      "require": "./dist/objects.js"
+    },
+    "./sets": {
+      "import": "./src/sets.js",
+      "require": "./dist/sets.js"
+    },
+    "./trees": {
+      "import": "./src/trees.js",
+      "require": "./dist/trees.js"
+    }
   },
   "keywords": [],
   "author": "Jake Sower",
@@ -34,6 +61,9 @@
   },
   "gitHead": "b73851fb5328b2ee1cfb9c97f12a08a69546cb79",
   "dependencies": {
+    "@babel/cli": "^7.18.10",
+    "@babel/core": "^7.19.0",
+    "@babel/preset-env": "^7.19.0",
     "deep-equal": "^2.0.5"
   }
 }

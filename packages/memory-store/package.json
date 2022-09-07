@@ -1,13 +1,15 @@
 {
   "name": "@blossom-js/memory-store",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "type": "module",
   "exports": {
-    ".": "./src/memory-store/memory-store.mjs"
+    ".": "./src/memory-store.js"
   },
-  "main": "./src/memory-store/memory-store.mjs",
+  "main": "./dist/export.js",
+  "module": "./src/memory-store.js",
   "scripts": {
-    "lint": "eslint \"src/**\" \"test/**\" --ext .mjs",
+    "build": "babel src/memory-store.js --out-file dist/export.js",
+    "lint": "eslint \"src/**\" \"test/**\" --ext .js",
     "test": "NODE_ENV=test ava",
     "test:watch": "NODE_ENV=test ava -w --verbose"
   },
@@ -19,9 +21,7 @@
     "@blossom-js/utils": "*",
     "ajv": "^8.11.0"
   },
-  "devDependencies": {},
   "publishConfig": {
     "access": "public"
-  },
-  "private": false
+  }
 }

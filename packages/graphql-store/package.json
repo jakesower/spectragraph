@@ -3,10 +3,10 @@
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    "./*": "./src/*.mjs"
+    "./*": "./src/*.js"
   },
   "scripts": {
-    "test-server": "node test/server/server.mjs",
+    "test-server": "node test/server/server.js",
     "test": "NODE_ENV=test ava",
     "test:watch": "NODE_ENV=test ava -w --verbose"
   },
@@ -25,6 +25,9 @@
     "prettier": "^2.7.1"
   },
   "dependencies": {
+    "@babel/cli": "^7.18.10",
+    "@babel/core": "^7.19.0",
+    "@babel/preset-env": "^7.19.0",
     "@blossom-js/core": "^0.0.1",
     "@blossom-js/utils": "*",
     "ajv": "^8.11.0",
