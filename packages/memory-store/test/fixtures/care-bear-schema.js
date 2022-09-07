@@ -51,6 +51,7 @@ export const schema = {
     powers: {
       singular: "power",
       plural: "powers",
+      idField: "powerId",
       properties: {
         name: { type: "string" },
         description: { type: "string" },
