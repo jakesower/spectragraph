@@ -44,14 +44,14 @@ test("fetches null for a nonexistent resource", async (t) => {
   t.deepEqual(result, null);
 });
 
-test.only("fetches multiple resources", async (t) => {
+test("fetches multiple resources", async (t) => {
   const result = await t.context.store.get({ type: "bears" });
   const expected = ["1", "2", "3", "5"].map((id) => ({ id }));
 
   t.deepEqual(result, expected);
 });
 
-test.skip("fetches a single resource specifying no sub queries desired", async (t) => {
+test("fetches a single resource specifying no sub queries desired", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
     id: "1",
@@ -61,7 +61,7 @@ test.skip("fetches a single resource specifying no sub queries desired", async (
   t.deepEqual(result, { id: "1" });
 });
 
-test.skip("fetches a single resource with a many-to-one relationship", async (t) => {
+test.only("fetches a single resource with a many-to-one relationship", async (t) => {
   const q = {
     type: "bears",
     id: "1",

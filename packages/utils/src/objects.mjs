@@ -129,6 +129,10 @@ export function partitionObj(obj, predicateFn) {
   return [outTrue, outFalse];
 }
 
+export function select(obj, keys) {
+  return keys.map((k) => obj[k]);
+}
+
 export function withObj(obj, fn) {
   return Object.fromEntries(fn(Object.entries(obj)));
 }

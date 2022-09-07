@@ -32,7 +32,7 @@ test("fetches null for a nonexistent resource", async (t) => {
   t.deepEqual(result, null);
 });
 
-test("fetches a single resource specifying no sub queries desired", async (t) => {
+test("fetches a single resource specifying no subqueries desired", async (t) => {
   const result = await t.context.store.get({ type: "bears", id: "1", rels: {} });
 
   t.deepEqual(result, { id: "1" });

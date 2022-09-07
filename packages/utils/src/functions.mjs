@@ -6,6 +6,14 @@ export function multiApply(itemItemsOrNull, fn) {
     : fn(itemItemsOrNull);
 }
 
+export function multiApplyAsync(itemItemsOrNull, fn) {
+  if (itemItemsOrNull == null) return Promise.resolve(itemItemsOrNull);
+
+  return Array.isArray(itemItemsOrNull)
+    ? Promise.all(itemItemsOrNull.map(fn))
+    : fn(itemItemsOrNull);
+}
+
 export function pipe(fns) {
   return fns.reduce(
     (acc, fn) => (val) => fn(acc(val)),

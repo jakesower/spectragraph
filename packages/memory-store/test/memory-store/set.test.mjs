@@ -153,7 +153,7 @@ test("replaces a property when part of the query", async (t) => {
   t.deepEqual(getResult, getExpected);
 });
 
-test("replaces a property if allProps is specified", async (t) => {
+test.only("replaces a property if allProps is specified", async (t) => {
   const query = { type: "bears", id: "5", allProps: true };
   await t.context.store.set(query, {
     id: "5",

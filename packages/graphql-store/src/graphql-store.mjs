@@ -1,12 +1,8 @@
 import { BlossomError } from "@blossom/core/errors";
 import { runQuery } from "@blossom/core/operations";
-import { normalizeGetQuery } from "@blossom/core/query";
+import { compileQuery, normalizeGetQuery } from "@blossom/core/query";
 import { compileSchema } from "@blossom/core/schema";
-import {
-  ensureCreatedResourceFields,
-  ensureValidGetQuerySyntax,
-  ensureValidSetQuerySyntax,
-} from "@blossom/core/validation";
+import { ensureValidGetQuerySyntax } from "@blossom/core/validation";
 
 export function GraphQLStore(rawSchema, config) {
   const schema = compileSchema(rawSchema);
@@ -32,10 +28,15 @@ export function GraphQLStore(rawSchema, config) {
       }
     }`;
 
-    return runQuery(query, config, async (queryClauses) => {
-      const { data } = await transport.post("", { query: gqlString });
-      return data.data[gqlTopResolver];
+    const compiledQuery = compileQuery(query, {
+      ...config,
+      run: async () => {
+        const { data } = await transport.post("", { query: gqlString });
+        return data.data[gqlTopResolver];
+      },
     });
+
+    return compiledQuery();
   };
 
   return {

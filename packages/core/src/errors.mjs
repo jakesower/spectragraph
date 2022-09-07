@@ -30,4 +30,6 @@ export const ERRORS = {
     "resource references must already be present in the store to be used",
   SHORTHAND_LONGHAND_BOTH_USED:
     "both the shorthand and longhand versions of an option were used",
+  UNHANDLED_ARGUMENTS:
+    "one or more arguments in the query are not handled by the operation definitions",
 };

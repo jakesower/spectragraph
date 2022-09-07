@@ -1,13 +1,12 @@
+/* eslint-disable import/no-cycle */
+
 import { compileExpression, isValidExpression } from "@blossom/expressions";
-import { flatMapQuery } from "@blossom/core/query";
-import {
-  pipeThruAsyncWithContext,
-  pipeThruMiddlewareAsync,
-  // pipeThruMiddlewareAsyncDebug as pipeThruMiddlewareAsync,
-} from "@blossom/utils/pipes";
+import { reverse } from "@blossom/utils/arrays";
+import { multiApply, multiApplyAsync } from "@blossom/utils/functions";
 import { mapObj, pick, promiseAllObj } from "@blossom/utils/objects";
 import { sortBy } from "@blossom/utils";
 import { ERRORS, BlossomError } from "./errors.mjs";
+import { compileQuery } from "./query.mjs";
 
 const compareFns = {
   integer: (left, right) => left - right,
@@ -15,15 +14,8 @@ const compareFns = {
   string: (left, right) => left.localeCompare(right),
 };
 
-function compileOperation(operationDef, operationName) {
-  return {
-    if: (query) => operationName in query,
-    ...operationDef,
-  };
-}
-
-export function orderFunction(order, { config, query, schema }) {
-  const { type: resType } = query;
+export function orderFunction({ config, query, schema }) {
+  const { order, type: resType } = query;
   const { orderingFunctions } = config;
 
   const fns = order.map((orderConfig) => {
@@ -50,197 +42,212 @@ export function orderFunction(order, { config, query, schema }) {
   };
 }
 
+const defaultOperationConfig = {
+  apply: () => {
+    throw new Error("operations must have an apply method defined");
+  },
+  incompatibleWith: [],
+  redundantWith: [],
+  sequenceAfter: [],
+};
+
 export const coreOperations = {
   first: {
-    postQuery: {
-      apply: async (resources, next) => {
-        const result = await next(resources);
+    apply: (results) => {
+      if (!Array.isArray(results)) {
+        throw new BlossomError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
+      }
 
-        if (!Array.isArray(result)) {
-          throw new BlossomError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
-        }
-
-        return result[0] ?? null;
-      },
+      return results[0];
     },
+    handlesAny: ["first"],
+    id: "first",
+    incompatibleWith: ["id"],
+    redundantWith: ["limit"],
+    sequenceAfter: ["id", "ids", "limitOffset", "order", "where"],
   },
-  id: {
-    postQuery: {
-      apply: async (resources, next, { query }) => {
-        const resource = resources.find((res) => res[query.idField] === query.id);
-        if (!resource) return null;
-
-        const result = await next([resource]);
-        return result[0] ?? null;
-      },
-    },
+  scopeToId: {
+    apply: (results, { query }) =>
+      [results.find((res) => res[query.idField] === query.args.id)] ?? null,
+    visitsAny: ["id"],
+    id: "scopeToId",
+    incompatibleWith: ["first", "ids", "where", "order", "limit", "offset"],
+    sequenceAfter: [],
   },
-  properties: {
-    postQuery: {
-      apply: async (queryTrees, next, { query }) => {
-        const { properties, relationships } = query;
-
-        const withProcessedChildren = await next(queryTrees);
-
-        return withProcessedChildren.map((res) =>
-          pick(res, [query.idField, ...properties, ...Object.keys(relationships)]),
-        );
-      },
-    },
-  },
-  limit: {
-    if: (query) => query.limit || query.offset,
-    postQuery: {
-      apply: async (resources, next, { query }) => {
-        const { limit, offset = 0 } = query;
-        const result = await next(resources);
-
-        return result.slice(offset, limit && limit + offset);
-      },
-    },
-  },
-  order: {
-    postQuery: {
-      apply: async (resources, next, context) => {
-        const { order } = context.query;
-        const result = await next(resources);
-
-        if (!Array.isArray(result)) {
-          throw new BlossomError(ERRORS.ORDER_NOT_ALLOWED_ON_SINGULAR, result);
-        }
-
-        // SELECT cols mean sort fields might be omitted
-        return sortBy(result, orderFunction(order, context));
-      },
-    },
-  },
-  constraints: {
-    postQuery: {
-      apply: (resources, context) => {
-        const { config, query } = context;
-        const { constraints } = query;
-
-        const { expressionDefinitions } = config;
-
-        // an expression has been passed as the constraint value
-        if (isValidExpression(constraints, expressionDefinitions)) {
-          return resources.filter(
-            compileExpression(constraints, expressionDefinitions, context),
-          );
-        }
-
-        // an object of properties has been passed in
-        const propExprs = Object.entries(constraints).map(([propKey, propValOrExpr]) =>
-          isValidExpression(propValOrExpr, expressionDefinitions)
-            ? { [propKey]: [{ $prop: propKey }, ...propValOrExpr] }
-            : { $eq: [{ $prop: propKey }, propValOrExpr] },
-        );
-
-        const objectExpression = { $and: propExprs };
-        const filterFn = compileExpression(
-          objectExpression,
-          expressionDefinitions,
-          context,
-        );
-
-        return resources.filter(filterFn);
-      },
-    },
+  singularizeId: {
+    apply: (results) => results[0] ?? null,
+    handlesAny: ["id"],
+    id: "singularizeId",
   },
   ids: {
-    postQuery: {
-      apply: async (resources, next, { query }) => {
-        const nextRess = await Promise.all(
-          resources.filter((res) => query.ids.includes(res[query.idField])),
-        );
-        return next(nextRess);
-      },
+    apply: (results, { query }) =>
+      results.filter((res) => query.args.ids.includes(res[query.idField])),
+    handlesAny: ["ids"],
+    id: "ids",
+    incompatibleWith: ["id"],
+    sequenceAfter: [],
+  },
+  properties: {
+    apply: (results, { query }) => {
+      const { properties, relationships } = query.args;
+      return multiApply(results, (res) =>
+        pick(res, [query.idField, ...properties, ...Object.keys(relationships)]),
+      );
     },
+    handlesAny: ["properties"],
+    id: "properties",
+    sequenceAfter: ["id", "ids", "first"],
+  },
+  limitOffset: {
+    apply: async (results, { query }) => {
+      const { limit, offset = 0 } = query;
+      return results.slice(offset, limit && limit + offset);
+    },
+    handlesAny: ["limit", "offset"],
+    id: "limitOffset",
+    sequenceAfter: ["id", "ids", "where", "order"],
+  },
+  order: {
+    apply: async (results, context) => {
+      if (!Array.isArray(results)) {
+        throw new BlossomError(ERRORS.ORDER_NOT_ALLOWED_ON_SINGULAR, results);
+      }
+
+      // SELECT cols mean sort fields might be omitted
+      return sortBy(results, orderFunction(context));
+    },
+    handlesAny: ["order"],
+    id: "order",
+    sequenceAfter: ["id", "ids", "where"],
+  },
+  where: {
+    apply: (results, context) => {
+      const { config, query } = context;
+      const { where } = query;
+
+      const { expressionDefinitions } = config;
+
+      // an expression has been passed as the constraint value
+      if (isValidExpression(where, expressionDefinitions)) {
+        return results.filter(compileExpression(where, expressionDefinitions, context));
+      }
+
+      // an object of properties has been passed in
+      const propExprs = Object.entries(where).map(([propKey, propValOrExpr]) =>
+        isValidExpression(propValOrExpr, expressionDefinitions)
+          ? { [propKey]: [{ $prop: propKey }, ...propValOrExpr] }
+          : { $eq: [{ $prop: propKey }, propValOrExpr] },
+      );
+
+      const objectExpression = { $and: propExprs };
+      const filterFn = compileExpression(
+        objectExpression,
+        expressionDefinitions,
+        context,
+      );
+
+      return results.filter(filterFn);
+    },
+    handlesAny: ["where"],
+    id: "where",
+    sequenceAfter: ["id", "ids"],
   },
   relationships: {
-    postQuery: {
-      // resolver style -- no attempt to optimize
-      apply: async (resources, next, context) => {
-        const { query } = context;
+    apply: async (results, context) => {
+      const { query } = context;
 
-        const withExpandedRelationships = await Promise.all(
-          resources.map(async (resource) => {
-            const relResults = await promiseAllObj(
-              mapObj(query.relationships, async (relQuery, relName) => {
-                if (!resource[relName]) return null;
+      return multiApplyAsync(results, async (resource) => {
+        const relResults = await promiseAllObj(
+          mapObj(query.args.relationships, async (relQuery, relName) => {
+            if (!resource[relName]) return null;
 
-                const relVal = resource[relName];
-                const idClause = Array.isArray(relVal) ? { ids: relVal } : { id: relVal };
-                const subquery = { ...relQuery, ...idClause };
-                const ran = await runQuery(subquery, context, context.run);
+            const relVal = resource[relName];
+            const idClause = Array.isArray(relVal) ? { ids: relVal } : { id: relVal };
+            const subquery = { ...relQuery, args: { ...relQuery.args, ...idClause } };
+            const subqueryRunner = compileQuery(subquery, context);
+            const ran = subqueryRunner();
 
-                return ran;
-              }),
-            );
-
-            return { ...resource, ...relResults };
+            return ran;
           }),
         );
 
-        return next(withExpandedRelationships);
-      },
+        return { ...resource, ...relResults };
+      });
     },
+    handlesAny: ["relationships"],
+    id: "relationships",
+    sequenceAfter: ["id", "ids", "first"],
   },
 };
 
-const gatherPreOperations = (query, context) => {
-  const { operations } = context;
+export const coreQueryPipe = [];
+export const coreResultsPipe = [
+  coreOperations.scopeToId,
+  coreOperations.ids,
+  coreOperations.where,
+  coreOperations.order,
+  coreOperations.offset,
+  coreOperations.limit,
+  coreOperations.first,
+  coreOperations.singularizeId,
+  coreOperations.relationships,
+  coreOperations.properties,
+];
 
-  return flatMapQuery(query, (subquery, queryPath) =>
-    Object.entries(subquery)
-      .flatMap(([operationKey, operationArg]) => {
-        const operation = operations[operationKey]?.preQuery?.apply;
+export function operationsPipe(operations) {
+  return (init, context) => {
+    const { debug = false } = context;
 
-        if (!operation) return null;
+    if (debug) {
+      console.log("-----Beginning Operations Pipe-----");
+      console.log("initial value", init);
+    }
 
-        const argContext = {
-          ...context,
-          query: subquery,
-          queryPath,
-          queryTable: [query.type, ...queryPath].join("$"),
-          rootQuery: query,
-        };
+    return reverse(operations).reduce(
+      (pipe, operation, idx) => async (val) => {
+        const num = operations.length - idx;
+        const nextVal = await operation.apply(val, context);
+        if (debug) {
+          console.log(
+            `-----After Operation #${num} (${operation.id ?? "anonymous"})-----`,
+          );
+          console.log(nextVal);
+        }
 
-        return operation(operationArg, argContext);
-      })
-      .filter(Boolean),
-  );
-};
-
-const gatherPostOperations = (query, context) => {
-  // TODO: incorporate multiple ops that can handle the same properties
-  const { operations } = context;
-
-  // need to track handled stuff?
-  return Object.values(operations).flatMap((opDef) => {
-    if (!opDef.postQuery || !opDef.if(query)) return [];
-    return [opDef.postQuery.apply];
-  });
-};
-
-export async function runQuery(query, storeContext, run) {
-  const context = {
-    ...storeContext,
-    config: { orderingFunctions: {} },
-    operations: mapObj(
-      { ...coreOperations, ...(storeContext.operations ?? {}) },
-      compileOperation,
-    ),
-    query,
-    run,
+        return pipe(nextVal);
+      },
+      (x) => x,
+    )(init);
   };
-
-  const preOps = gatherPreOperations(query, context);
-  const preRunPipe = [...preOps, run];
-  const resources = await pipeThruAsyncWithContext(query, context, preRunPipe);
-
-  const postOps = gatherPostOperations(query, context);
-  const result = await pipeThruMiddlewareAsync(resources, context, postOps);
-
-  return result;
 }
+
+export const buildOperationPipe = (query, operations) => {
+  const workingPipe = [];
+  const workingArgs = { ...query.args };
+
+  operations.forEach((operationDef) => {
+    const operation = { ...defaultOperationConfig, ...operationDef };
+    const shouldHandle =
+      operation.handlesAny?.some((arg) => arg in workingArgs) ||
+      operation.handlesAll?.every((arg) => arg in workingArgs) ||
+      operation.visitsAny?.some((arg) => arg in workingArgs) ||
+      operation.visitsAll?.every((arg) => arg in workingArgs);
+
+    if (shouldHandle) {
+      const handledKeys = [
+        ...(operation.handlesAny ?? []),
+        ...(operation.handlesAll ?? []),
+      ];
+
+      workingPipe.push(operationDef);
+      handledKeys.forEach((key) => {
+        delete workingArgs[key];
+      });
+    }
+  });
+
+  return {
+    apply: operationsPipe(workingPipe),
+    query: { ...query, args: workingArgs },
+  };
+};
