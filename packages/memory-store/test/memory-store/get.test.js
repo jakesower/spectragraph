@@ -33,7 +33,11 @@ test("fetches null for a nonexistent resource", async (t) => {
 });
 
 test("fetches a single resource specifying no subqueries desired", async (t) => {
-  const result = await t.context.store.get({ type: "bears", id: "1", rels: {} });
+  const result = await t.context.store.get({
+    type: "bears",
+    id: "1",
+    rels: {},
+  });
 
   t.deepEqual(result, { id: "1" });
 });
@@ -90,6 +94,15 @@ test("fetches a single resource with a subset of props on a relationship", async
   t.like(result, { id: "1", home: { id: "1", caring_meter: 1 } });
 });
 
+test.only("uses explicitly set id fields", async (t) => {
+  const result = await t.context.store.get({
+    type: "powers",
+    id: "careBearStare",
+  });
+
+  t.deepEqual(result, { powerId: "careBearStare" });
+});
+
 test("fetches a single resource with many-to-many relationship", async (t) => {
   const result = await t.context.store.get({
     type: "bears",
@@ -97,7 +110,7 @@ test("fetches a single resource with many-to-many relationship", async (t) => {
     rels: { powers: {} },
   });
 
-  t.deepEqual(result, { id: "1", powers: [{ id: "careBearStare" }] });
+  t.deepEqual(result, { id: "1", powers: [{ powerId: "careBearStare" }] });
 });
 
 test("fetches multiple sub queries of various types", async (t) => {
@@ -117,7 +130,7 @@ test("fetches multiple sub queries of various types", async (t) => {
   t.deepEqual(result, {
     id: "1",
     home: { id: "1", bears: [{ id: "1" }, { id: "2" }, { id: "3" }] },
-    powers: [{ id: "careBearStare" }],
+    powers: [{ powerId: "careBearStare" }],
   });
 });
 
@@ -144,7 +157,10 @@ test("fetches all props", async (t) => {
     allProps: true,
   });
 
-  t.deepEqual(result, omit(careBearData.bears[1], ["home", "best_friend", "powers"]));
+  t.deepEqual(
+    result,
+    omit(careBearData.bears[1], ["home", "best_friend", "powers"]),
+  );
 });
 
 test("fetches all props except", async (t) => {
@@ -157,7 +173,12 @@ test("fetches all props except", async (t) => {
 
   t.deepEqual(
     result,
-    omit(careBearData.bears[1], ["belly_badge", "home", "best_friend", "powers"]),
+    omit(careBearData.bears[1], [
+      "belly_badge",
+      "home",
+      "best_friend",
+      "powers",
+    ]),
   );
 });
 

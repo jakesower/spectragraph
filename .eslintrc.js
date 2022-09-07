@@ -10,7 +10,16 @@ module.exports = {
   },
   rules: {
     "array-callback-return": ["error"],
-    "comma-dangle": ["error", "always-multiline"],
+    "comma-dangle": [
+      2,
+      {
+        arrays: "always-multiline",
+        objects: "always-multiline",
+        imports: "always-multiline",
+        exports: "always-multiline",
+        functions: "always-multiline",
+      },
+    ],
     curly: ["error", "multi-line"],
     eqeqeq: ["error", "always", { null: "ignore" }],
     "func-names": "off",
