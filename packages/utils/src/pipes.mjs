@@ -121,3 +121,58 @@ export function pipeThruMiddlewareAsyncDebug(init, context, middlewares) {
 
   return fn(init);
 }
+
+export function pipeWithContext(fns) {
+  return (init, context) =>
+    fns.reduce(
+      (acc, fn) => (val) => fn(acc(val), context),
+      (x) => x
+    )(init);
+}
+
+export function pipeWithContextAsyncDebug(fns) {
+  const l = fns.length;
+
+  return (init, context) => {
+    console.log("-----Beginning Pipe-----");
+    console.log(init);
+    return fns.reduce(
+      (acc, fn, idx) => async (val) => {
+        const out = await fn(acc(val), context);
+        console.log(
+          `-----After Pipe Function #${idx + 1} (${
+            fn.name ?? "anonymous"
+          })-----`
+        );
+        console.log(out);
+        return out;
+      },
+      (x) => x
+    )(init);
+  };
+}
+
+export function pipeWithContextDebug(fns) {
+  const l = fns.length;
+
+  return (init, context) =>
+    fns.reduce(
+      (acc, fn, idx) => (val) => {
+        console.log(
+          `-----Incoming to Pipe Function #${l - idx} (${
+            fn.name ?? "anonymous"
+          })-----`
+        );
+        console.log(val);
+        const out = fn(acc(val), context);
+        console.log(
+          `-----Outgoing from Pipe Function #${l - idx} (${
+            fn.name ?? "anonymous"
+          })-----`
+        );
+        console.log(out);
+        return out;
+      },
+      (x) => x
+    )(init);
+}

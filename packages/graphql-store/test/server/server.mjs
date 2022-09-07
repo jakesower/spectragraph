@@ -7,17 +7,10 @@ import { makeGraphqlSchema } from "./make-graphql-schema.mjs";
 
 const schema = buildSchema(makeGraphqlSchema(careBearSchema));
 
-const rootResolvers = Object.entries(careBearSchema.resources)
-  .map(([resName, resDef]) => ({
-    [`${resName}ById`]: ({ id }) => {
-      const out = careBearData[resName][id];
-      console.log({ id, out });
-      return out;
-    },
-    [resName]: (...args) => {
-      console.log(resName, careBearData[resName]);
-      return Object.values(careBearData[resName]);
-    },
+const rootResolvers = Object.keys(careBearSchema.resources)
+  .map((resName) => ({
+    [`${resName}ById`]: ({ id }) => careBearData[resName][id],
+    [resName]: () => Object.values(careBearData[resName]),
   }))
   .reduce((acc, item) => ({ ...acc, ...item }), {});
 

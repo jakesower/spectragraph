@@ -100,12 +100,31 @@ function normalizeAndExpandRels(schema, query) {
 }
 
 export function normalizeQuery(schema, rawQuery) {
-  return pipeThru(rawQuery, [
+  const nonArgQueryProps = [
+    "allProperties",
+    "excludedProperties",
+    "idField",
+    "rawQuery",
+    "schema",
+    "type",
+  ];
+  const idField = schema.idField ?? "id";
+
+  const args = pipeThru(rawQuery, [
     (nq) => normalizeShorthandLonghandKeys(nq),
     (nq) => normalizeProps(schema, nq),
     (nq) => normalizeAndExpandRels(schema, nq),
-    (nq) => ({ ...nq, idField: schema.idField ?? "id", rawQuery, schema }),
+    (nq) => omit(nq, nonArgQueryProps),
   ]);
+
+  return {
+    args,
+    ...(rawQuery.id ? { id: rawQuery.id } : {}),
+    idField,
+    rawQuery,
+    schema,
+    type: rawQuery.type,
+  };
 }
 
 export function denormalizeQuery(query) {

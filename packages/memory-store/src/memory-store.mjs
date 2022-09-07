@@ -1,5 +1,4 @@
-import { runQuery } from "@blossom/core/operations";
-import { normalizeQuery } from "@blossom/core/query";
+import { compileQuery, normalizeQuery } from "@blossom/core/query";
 import { defaultResource, normalizeResource } from "@blossom/core/resource";
 import { buildResourceTable } from "@blossom/core/resource-table";
 import { compileSchema, getRelationshipProperties } from "@blossom/core/schema";
@@ -37,11 +36,16 @@ export function MemoryStore(rawSchema) {
     return this;
   }
 
-  const get = (rawQuery) => {
-    const query = normalizeQuery(schema, rawQuery);
-    const context = { query, schema };
+  const get = (query) => {
+    const run = (storeQuery) => {
+      console.log('storequery', storeQuery.type, storeQuery)
+      return Object.values(store[storeQuery.type])
+    };
 
-    return runQuery(context, (storeQuery) => Object.values(store[storeQuery.type]));
+    const context = { query, run, schema, debug: false };
+
+    const runner = compileQuery(query, context);
+    return runner();
   };
 
   const set = async (rawQuery, rawTreeOrTrees) => {
@@ -73,15 +77,17 @@ export function MemoryStore(rawSchema) {
 
       const rootQueryWithAllRels = {
         ...rootQuery,
-        relationships: mapObj(
-          getRelationshipProperties(schema, rootQuery.type),
-          () => ({}),
-        ),
+        args: {
+          ...rootQuery.args,
+          relationships: mapObj(
+            getRelationshipProperties(schema, rootQuery.type),
+            () => ({}),
+          ),
+        },
       };
 
-      const rootExistingQuery = normalizeQuery(schema, rootQueryWithAllRels);
       const rootExisting = asArray(
-        await get(rootExistingQuery, { ...context, query: rootExistingQuery }),
+        await get(rootQueryWithAllRels, { ...context, query: rootQueryWithAllRels }),
       );
 
       const absent = differenceBy(rootExisting, rootTrees, (res) => res.id);
@@ -151,7 +157,9 @@ export function MemoryStore(rawSchema) {
   return {
     get(rawQuery) {
       ensureValidGetQuerySyntax(schema, rawQuery);
-      return get(rawQuery);
+      const query = normalizeQuery(schema, rawQuery);
+
+      return get(query);
     },
     seed,
     set(rawQuery, rootTreeOrTrees) {
