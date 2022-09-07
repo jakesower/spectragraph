@@ -3,15 +3,25 @@
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    ".": "./src/expressions.js"
+    ".": [
+      {
+        "import": "./src/expressions.js",
+        "require": "./dist/expressions.js"
+      },
+      "./dist/expressions.js"
+    ]
   },
   "scripts": {
+    "build:cjs": "babel src -d dist",
     "test": "NODE_ENV=test ava",
     "test:watch": "NODE_ENV=test ava -w --verbose"
   },
   "keywords": [],
   "author": "Jake Sower",
   "devDependencies": {
+    "@babel/cli": "^7.18.10",
+    "@babel/core": "^7.19.0",
+    "@babel/preset-env": "^7.19.0",
     "ava": "^4.3.1",
     "eslint": "^8.22.0",
     "eslint-config-airbnb-base": "^15.0.0",

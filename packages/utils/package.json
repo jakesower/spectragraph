@@ -7,7 +7,6 @@
   },
   "type": "module",
   "exports": {
-    ".": "./src/index.js",
     "./arrays": {
       "import": "./src/arrays.js",
       "require": "./dist/arrays.js"
@@ -50,6 +49,9 @@
   "license": "ISC",
   "devDependencies": {
     "ava": "^4.3.1",
+    "@babel/cli": "^7.18.10",
+    "@babel/core": "^7.19.0",
+    "@babel/preset-env": "^7.19.0",
     "eslint": "^8.22.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^8.5.0",
@@ -61,9 +63,6 @@
   },
   "gitHead": "b73851fb5328b2ee1cfb9c97f12a08a69546cb79",
   "dependencies": {
-    "@babel/cli": "^7.18.10",
-    "@babel/core": "^7.19.0",
-    "@babel/preset-env": "^7.19.0",
     "deep-equal": "^2.0.5"
   }
 }
