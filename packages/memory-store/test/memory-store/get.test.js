@@ -94,13 +94,21 @@ test("fetches a single resource with a subset of props on a relationship", async
   t.like(result, { id: "1", home: { id: "1", caring_meter: 1 } });
 });
 
-test.only("uses explicitly set id fields", async (t) => {
+test("uses explicitly set id fields", async (t) => {
   const result = await t.context.store.get({
     type: "powers",
     id: "careBearStare",
   });
 
   t.deepEqual(result, { powerId: "careBearStare" });
+});
+
+test("always returns explicitly set id fields", async (t) => {
+  const result = await t.context.store.get({
+    type: "powers",
+  });
+
+  t.deepEqual(result, [{ powerId: "careBearStare" }, { powerId: "makeWish" }]);
 });
 
 test("fetches a single resource with many-to-many relationship", async (t) => {

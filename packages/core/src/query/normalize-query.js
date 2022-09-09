@@ -108,7 +108,7 @@ export function normalizeQuery(schema, rawQuery) {
     "schema",
     "type",
   ];
-  const idField = schema.idField ?? "id";
+  const idField = schema.resources[rawQuery.type].idField ?? "id";
 
   const args = pipeThru(rawQuery, [
     (nq) => normalizeShorthandLonghandKeys(nq),

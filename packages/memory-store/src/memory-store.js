@@ -77,8 +77,8 @@ export function MemoryStore(rawSchema) {
 
           return Promise.all(
             Object.values(tree.relationships).flatMap(async (treeRels) =>
-              Promise.all(treeRels.flatMap(go))
-            )
+              Promise.all(treeRels.flatMap(go)),
+            ),
           );
         };
 
@@ -97,7 +97,7 @@ export function MemoryStore(rawSchema) {
           await get(rootQueryWithAllRels, {
             ...context,
             query: rootQueryWithAllRels,
-          })
+          }),
         );
 
         const absent = differenceBy(
@@ -110,16 +110,16 @@ export function MemoryStore(rawSchema) {
         absent.forEach((absentRes) => {
           setResource(
             null,
-            normalizeResource(schema, rootQuery.type, absentRes)
+            normalizeResource(schema, rootQuery.type, absentRes),
           );
         });
 
         return out;
-      }
+      },
     );
 
     const resources = Object.values(resourceTable).flatMap((t) =>
-      Object.values(t)
+      Object.values(t),
     );
     const byStatus = groupBy(resources, (res) => res.status);
     const { inserted = [], updated = [], deleted = [] } = byStatus;
