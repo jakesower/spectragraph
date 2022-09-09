@@ -69,14 +69,14 @@ export const careBearData = {
   },
   powers: {
     careBearStare: {
-      id: "careBearStare",
+      powerId: "careBearStare",
       name: "Care Bear Stare",
       description: "Purges evil.",
       type: "group power",
       bears: ["1", "2", "3", "5"],
     },
     makeWish: {
-      id: "makeWish",
+      powerId: "makeWish",
       name: "Make a Wish",
       description: "Makes a wish on Twinkers",
       type: "individual power",

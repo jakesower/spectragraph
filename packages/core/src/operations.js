@@ -66,8 +66,10 @@ export const coreOperations = {
     sequenceAfter: ["id", "ids", "limitOffset", "order", "where"],
   },
   scopeToId: {
-    apply: (results, { query }) =>
-      [results.find((res) => res[query.idField] === query.args.id)] ?? null,
+    apply: (results, { query }) => {
+      const found = results.find((res) => res[query.idField] === query.args.id);
+      return found ? [found] : [];
+    },
     visitsAny: ["id"],
     id: "scopeToId",
     incompatibleWith: ["first", "ids", "where", "order", "limit", "offset"],
