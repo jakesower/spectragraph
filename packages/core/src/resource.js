@@ -1,4 +1,4 @@
-import { mapObj, partitionObj, pick } from "@blossom-js/utils/objects";
+import { mapObj, partitionObj, pick } from "@taxonic/utils/objects";
 
 export function defaultResource(schema, resourceType) {
   return mapObj(schema.resources[resourceType].properties, (propDef) =>

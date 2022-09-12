@@ -1,6 +1,6 @@
 import test from "ava";
 import Database from "better-sqlite3";
-import { ERRORS, BlossomError } from "@blossom-js/core/errors";
+import { ERRORS, TaxonicError } from "@taxonic/core/errors";
 import { careBearSchema as schema } from "../../fixtures/care-bear-schema.js";
 import { SQLiteStore } from "../../../src/sqlite-store.js";
 import { careBearData } from "../../fixtures/care-bear-data.js";
@@ -29,6 +29,6 @@ test("throws an error when trying to get the first on a singular resource", asyn
       const bad = await t.context.store.get({ type: "bears", id: "1", first: true });
       console.log(bad);
     },
-    { instanceOf: BlossomError, message: ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR },
+    { instanceOf: TaxonicError, message: ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR },
   );
 });

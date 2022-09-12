@@ -1,8 +1,8 @@
-import { difference, uniq } from "@blossom-js/utils/arrays";
-import { filterObj, mapObj, omit } from "@blossom-js/utils/objects";
-import { pipeThru } from "@blossom-js/utils/pipes";
+import { difference, uniq } from "@taxonic/utils/arrays";
+import { filterObj, mapObj, omit } from "@taxonic/utils/objects";
+import { pipeThru } from "@taxonic/utils/pipes";
 import { ensureValidGetQuerySyntax, ensureValidSetQuerySyntax } from "../validation.js";
-import { ERRORS, BlossomError } from "../errors.js";
+import { ERRORS, TaxonicError } from "../errors.js";
 
 function normalizeShorthandLonghandKeys(query) {
   const shortLongPairs = [
@@ -15,7 +15,7 @@ function normalizeShorthandLonghandKeys(query) {
   const outQuery = { ...query };
   shortLongPairs.forEach(([shorthand, longhand]) => {
     if (shorthand in query && longhand in query) {
-      throw new BlossomError(ERRORS.SHORTHAND_LONGHAND_BOTH_USED, {
+      throw new TaxonicError(ERRORS.SHORTHAND_LONGHAND_BOTH_USED, {
         query,
         shorthand,
         longhand,
@@ -49,7 +49,7 @@ function normalizeProps(schema, query) {
 
   const invalidProperties = difference(properties, schemaPropKeys);
   if (invalidProperties.length > 0) {
-    throw new BlossomError(ERRORS.INVALID_PROPS, {
+    throw new TaxonicError(ERRORS.INVALID_PROPS, {
       invalidProperties,
       queryProperties: properties,
       schemaProperties: schemaPropKeys,
@@ -58,7 +58,7 @@ function normalizeProps(schema, query) {
 
   const invalidExcludedProperties = difference(excludedProperties, schemaPropKeys);
   if (invalidProperties.length > 0) {
-    throw new BlossomError(ERRORS.INVALID_EXCLUDED_PROPS, {
+    throw new TaxonicError(ERRORS.INVALID_EXCLUDED_PROPS, {
       invalidProperties: invalidExcludedProperties,
       queryProperties: properties,
       schemaProperties: schemaPropKeys,
@@ -84,7 +84,7 @@ function normalizeAndExpandRels(schema, query) {
   const invalidRelationships = difference(queryRelationshipKeys, schemaRelationshipKeys);
 
   if (invalidRelationships.length > 0) {
-    throw new BlossomError(ERRORS.INVALID_RELATIONSHIPS, {
+    throw new TaxonicError(ERRORS.INVALID_RELATIONSHIPS, {
       invalidRelationships,
       queryRelationshipKeys,
       schemaRelationshipKeys,

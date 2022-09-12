@@ -1,5 +1,5 @@
 {
-  "name": "@blossom-js/base-store",
+  "name": "@taxonic/base-store",
   "version": "0.0.1",
   "type": "module",
   "exports": {
@@ -17,8 +17,8 @@
     "@babel/cli": "^7.18.10",
     "@babel/core": "^7.19.0",
     "@babel/preset-env": "^7.19.0",
-    "@blossom-js/core": "*",
-    "@blossom-js/utils": "*"
+    "@taxonic/core": "*",
+    "@taxonic/utils": "*"
   },
   "publishConfig": {
     "access": "public"

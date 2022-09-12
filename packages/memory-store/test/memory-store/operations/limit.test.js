@@ -1,5 +1,5 @@
 import test from "ava";
-import { ERRORS, BlossomError } from "@blossom-js/core/errors";
+import { ERRORS, TaxonicError } from "@taxonic/core/errors";
 import { schema } from "../../fixtures/care-bear-schema.js";
 import { MemoryStore } from "../../../src/memory-store.js";
 import { careBearData } from "../../fixtures/care-bear-data.js";
@@ -125,7 +125,7 @@ test("errors for a bad limit", async (t) => {
         limit: 0,
       });
     },
-    { instanceOf: BlossomError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
+    { instanceOf: TaxonicError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
   );
 });
 
@@ -138,6 +138,6 @@ test("errors for a bad offset", async (t) => {
         offset: -1,
       });
     },
-    { instanceOf: BlossomError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
+    { instanceOf: TaxonicError, message: ERRORS.INVALID_GET_QUERY_SYNTAX },
   );
 });

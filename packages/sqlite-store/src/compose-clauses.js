@@ -1,4 +1,4 @@
-import { mapObj } from "@blossom-js/utils/objects";
+import { mapObj } from "@taxonic/utils/objects";
 import { SQL_CLAUSE_CONFIG } from "./constants/sql-clause-config.js";
 
 export function composeClauses(queryModifiers) {

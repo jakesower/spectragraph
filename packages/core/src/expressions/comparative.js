@@ -1,4 +1,4 @@
-import { deepEqual } from "@blossom-js/utils/generics";
+import { deepEqual } from "@taxonic/utils/generics";
 
 const compileComparative = (predicate) => ({
   compile: (exprVal, context) => (runVal) => {

@@ -1,5 +1,5 @@
-import { zipObjWith } from "@blossom-js/utils/arrays";
-import { mapObj } from "@blossom-js/utils/objects";
+import { zipObjWith } from "@taxonic/utils/arrays";
+import { mapObj } from "@taxonic/utils/objects";
 import { buildSql } from "../build-sql.js";
 import { composeClauses } from "../compose-clauses.js";
 import { runQuery } from "../operations/operations.js";

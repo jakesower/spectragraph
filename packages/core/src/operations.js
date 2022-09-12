@@ -1,10 +1,10 @@
 /* eslint-disable import/no-cycle */
 
-import { compileExpression, isValidExpression } from "@blossom-js/expressions";
-import { reverse, sortBy } from "@blossom-js/utils/arrays";
-import { multiApply, multiApplyAsync } from "@blossom-js/utils/functions";
-import { mapObj, pick, promiseAllObj } from "@blossom-js/utils/objects";
-import { ERRORS, BlossomError } from "./errors.js";
+import { compileExpression, isValidExpression } from "@taxonic/expressions";
+import { reverse, sortBy } from "@taxonic/utils/arrays";
+import { multiApply, multiApplyAsync } from "@taxonic/utils/functions";
+import { mapObj, pick, promiseAllObj } from "@taxonic/utils/objects";
+import { ERRORS, TaxonicError } from "./errors.js";
 import { compileQuery } from "./query.js";
 
 const compareFns = {
@@ -54,7 +54,7 @@ export const coreOperations = {
   first: {
     apply: (results) => {
       if (!Array.isArray(results)) {
-        throw new BlossomError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
+        throw new TaxonicError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
       }
 
       return results[0];
@@ -111,7 +111,7 @@ export const coreOperations = {
   order: {
     apply: async (results, context) => {
       if (!Array.isArray(results)) {
-        throw new BlossomError(ERRORS.ORDER_NOT_ALLOWED_ON_SINGULAR, results);
+        throw new TaxonicError(ERRORS.ORDER_NOT_ALLOWED_ON_SINGULAR, results);
       }
 
       // SELECT cols mean sort fields might be omitted

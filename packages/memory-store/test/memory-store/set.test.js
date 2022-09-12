@@ -1,6 +1,6 @@
 import test from "ava";
-import { omit } from "@blossom-js/utils/objects";
-import { ERRORS, BlossomError } from "@blossom-js/core/errors";
+import { omit } from "@taxonic/utils/objects";
+import { ERRORS, TaxonicError } from "@taxonic/core/errors";
 import { schema } from "../fixtures/care-bear-schema.js";
 import { MemoryStore } from "../../src/memory-store.js";
 import { careBearData, grumpyBearTree } from "../fixtures/care-bear-data.js";
@@ -127,7 +127,7 @@ test("does not allow refs to be updated", async (t) => {
       );
       console.log(replaceResult);
     },
-    { instanceOf: BlossomError, message: ERRORS.INVALID_SET_QUERY_SYNTAX },
+    { instanceOf: TaxonicError, message: ERRORS.INVALID_SET_QUERY_SYNTAX },
   );
 });
 
@@ -136,7 +136,7 @@ test("fails to create a resource that doesn't have a required field in the tree"
     async () => {
       await t.context.store.set({ type: "bears", id: "4" }, grumpyBearTree);
     },
-    { instanceOf: BlossomError, message: ERRORS.QUERY_MISSING_CREATE_FIELDS },
+    { instanceOf: TaxonicError, message: ERRORS.QUERY_MISSING_CREATE_FIELDS },
   );
 });
 

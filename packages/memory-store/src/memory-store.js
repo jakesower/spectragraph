@@ -1,25 +1,25 @@
-import { compileQuery, normalizeQuery } from "@blossom-js/core/query";
-import { defaultResource, normalizeResource } from "@blossom-js/core/resource";
-import { buildResourceTable } from "@blossom-js/core/resource-table";
+import { compileQuery, normalizeQuery } from "@taxonic/core/query";
+import { defaultResource, normalizeResource } from "@taxonic/core/resource";
+import { buildResourceTable } from "@taxonic/core/resource-table";
 import {
   compileSchema,
   getRelationshipProperties,
-} from "@blossom-js/core/schema";
-import { normalizeTree } from "@blossom-js/core/tree";
+} from "@taxonic/core/schema";
+import { normalizeTree } from "@taxonic/core/tree";
 import {
   ensureCreatedResourceFields,
   ensureValidGetQuerySyntax,
   ensureValidSetQuerySyntax,
-} from "@blossom-js/core/validation";
+} from "@taxonic/core/validation";
 import {
   asArray,
   difference,
   differenceBy,
   groupBy,
   uniq,
-} from "@blossom-js/utils/arrays";
-import { deepClone } from "@blossom-js/utils/generics";
-import { mapObj } from "@blossom-js/utils/objects";
+} from "@taxonic/utils/arrays";
+import { deepClone } from "@taxonic/utils/generics";
+import { mapObj } from "@taxonic/utils/objects";
 
 /**
  * TODO:

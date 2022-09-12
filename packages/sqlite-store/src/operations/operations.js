@@ -1,8 +1,8 @@
-import { ERRORS, BlossomError } from "@blossom-js/core/errors";
-import { compileExpression, isValidExpression } from "@blossom-js/expressions";
-import { flatMapQuery, flattenSubQueries } from "@blossom-js/core/query";
-import { multiApply } from "@blossom-js/utils/functions";
-import { pipeThru } from "@blossom-js/utils/pipes";
+import { ERRORS, TaxonicError } from "@taxonic/core/errors";
+import { compileExpression, isValidExpression } from "@taxonic/expressions";
+import { flatMapQuery, flattenSubQueries } from "@taxonic/core/query";
+import { multiApply } from "@taxonic/utils/functions";
+import { pipeThru } from "@taxonic/utils/pipes";
 import { preQueryRelationships } from "./relationships.js";
 
 const hasToManyRelationship = (schema, query) =>
@@ -23,7 +23,7 @@ const operations = {
     postQuery: {
       apply: (_, resources) => {
         if (!Array.isArray(resources)) {
-          throw new BlossomError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
+          throw new TaxonicError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
         }
 
         return resources[0] ?? null;
@@ -39,7 +39,7 @@ const operations = {
     postQuery: {
       apply: (_, resources) => {
         if (!Array.isArray(resources)) {
-          throw new BlossomError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
+          throw new TaxonicError(ERRORS.FIRST_NOT_ALLOWED_ON_SINGULAR, {});
         }
 
         return resources[0] ?? null;

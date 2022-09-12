@@ -1,5 +1,5 @@
 {
-  "name": "blossom",
+  "name": "taxonic",
   "license": "AGPL-3.0",
   "workspaces": [
     "packages/*"
