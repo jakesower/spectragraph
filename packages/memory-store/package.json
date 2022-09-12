@@ -1,6 +1,6 @@
 {
   "name": "@taxonic/memory-store",
-  "version": "0.0.4",
+  "version": "0.0.1",
   "scripts": {
     "build:cjs": "babel src -d dist",
     "lint": "eslint \"src/**\" \"test/**\" --ext .js",

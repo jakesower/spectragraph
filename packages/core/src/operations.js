@@ -101,7 +101,7 @@ export const coreOperations = {
   },
   limitOffset: {
     apply: async (results, { query }) => {
-      const { limit, offset = 0 } = query;
+      const { limit, offset = 0 } = query.args;
       return results.slice(offset, limit && limit + offset);
     },
     handlesAny: ["limit", "offset"],
@@ -187,8 +187,7 @@ export const coreResultsPipe = [
   coreOperations.ids,
   coreOperations.where,
   coreOperations.order,
-  coreOperations.offset,
-  coreOperations.limit,
+  coreOperations.limitOffset,
   coreOperations.first,
   coreOperations.singularizeId,
   coreOperations.relationships,
@@ -222,17 +221,17 @@ export function operationsPipe(operations) {
   };
 }
 
-export const buildOperationPipe = (query, operations) => {
+export const buildOperationPipe = (queryArgs, operations) => {
   const workingPipe = [];
-  const workingArgs = { ...query.args };
+  const unhandledArgs = { ...queryArgs };
 
   operations.forEach((operationDef) => {
     const operation = { ...defaultOperationConfig, ...operationDef };
     const shouldHandle =
-      operation.handlesAny?.some((arg) => arg in workingArgs) ||
-      operation.handlesAll?.every((arg) => arg in workingArgs) ||
-      operation.visitsAny?.some((arg) => arg in workingArgs) ||
-      operation.visitsAll?.every((arg) => arg in workingArgs);
+      operation.handlesAny?.some((arg) => arg in unhandledArgs) ||
+      operation.handlesAll?.every((arg) => arg in unhandledArgs) ||
+      operation.visitsAny?.some((arg) => arg in unhandledArgs) ||
+      operation.visitsAll?.every((arg) => arg in unhandledArgs);
 
     if (shouldHandle) {
       const handledKeys = [
@@ -242,13 +241,13 @@ export const buildOperationPipe = (query, operations) => {
 
       workingPipe.push(operationDef);
       handledKeys.forEach((key) => {
-        delete workingArgs[key];
+        delete unhandledArgs[key];
       });
     }
   });
 
   return {
     apply: operationsPipe(workingPipe),
-    query: { ...query, args: workingArgs },
+    unhandledArgs,
   };
 };
