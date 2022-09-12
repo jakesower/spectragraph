@@ -7,24 +7,26 @@ import { GraphQLStore } from "../../src/graphql-store.js";
 import { careBearData } from "../fixtures/care-bear-data.js";
 
 const transport = axios.create({
-  baseURL: "http://localhost:4000/graphql",
+  baseURL: "http://localhost:8000/",
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",
   },
 });
 
-const resolverMap = {
+const graphqlConfig = {
   bears: {
-    one: { name: "bear" },
-    some: { name: "bears" },
-    all: { name: "bears" },
+    argsHandled: ["id"],
+    resolvers: {
+      all: "bears",
+      one: "bearsById",
+    },
   },
 };
 
 // Test Setup
 test.beforeEach(async (t) => {
-  const store = await GraphQLStore(schema, { resolverMap, transport });
+  const store = await GraphQLStore(schema, { graphqlConfig, transport });
 
   // eslint-disable-next-line no-param-reassign
   t.context = { store };
@@ -32,8 +34,9 @@ test.beforeEach(async (t) => {
 
 // Actual Tests
 
-test("fetches a single resource", async (t) => {
-  const result = await t.context.store.get({ type: "bears", id: "1" });
+test.only("fetches a single resource", async (t) => {
+  const query = t.context.store.compileGetQuery({ type: "bears", id: "1" });
+  const result = await query({});
 
   t.deepEqual(result, { id: "1" });
 });
@@ -61,7 +64,7 @@ test("fetches a single resource specifying no sub queries desired", async (t) =>
   t.deepEqual(result, { id: "1" });
 });
 
-test.only("fetches a single resource with a many-to-one relationship", async (t) => {
+test("fetches a single resource with a many-to-one relationship", async (t) => {
   const q = {
     type: "bears",
     id: "1",
@@ -190,7 +193,7 @@ test.skip("fetches all props except", async (t) => {
 
   t.deepEqual(
     result,
-    omit(careBearData.bears[1], ["belly_badge", "home", "best_friend", "powers"]),
+    omit(careBearData.bears[1], ["belly_badge", "home", "best_friend", "powers"])
   );
 });
 

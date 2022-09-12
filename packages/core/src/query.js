@@ -4,7 +4,11 @@ import { intersperse, multiApply } from "@taxonic/utils/arrays";
 import { getPath } from "@taxonic/utils/lenses";
 import { mapObj } from "@taxonic/utils/objects";
 import { TaxonicError, ERRORS } from "./errors.js";
-import { buildOperationPipe, coreQueryPipe, coreResultsPipe } from "./operations.js";
+import {
+  buildOperationPipe,
+  coreQueryPipe,
+  coreResultsPipe,
+} from "./operations.js";
 
 import {
   denormalizeQuery,
@@ -13,7 +17,12 @@ import {
   normalizeSetQuery,
 } from "./query/normalize-query.js";
 
-export { denormalizeQuery, normalizeQuery, normalizeGetQuery, normalizeSetQuery };
+export {
+  denormalizeQuery,
+  normalizeQuery,
+  normalizeGetQuery,
+  normalizeSetQuery,
+};
 export { queryTree } from "./query/query-tree.js";
 
 export function flatMapQuery(query, fn) {
@@ -34,7 +43,9 @@ export function flatMapQueryTree(query, tree, fn) {
     const nodeResult = fn(subquery, subTree, path);
     const relResults = Object.entries(subquery.relationships).flatMap(
       ([relKey, relQuery]) =>
-        multiApply(subTree?.[relKey], (rel) => go(relQuery, rel, [...path, relKey])),
+        multiApply(subTree?.[relKey], (rel) =>
+          go(relQuery, rel, [...path, relKey]),
+        ),
     );
 
     return [nodeResult, ...relResults];
@@ -67,23 +78,29 @@ export function mapQuery(query, fn) {
 }
 
 export function compileQuery(query, storeContext) {
-  return async () => {
-    const { queryOperations, resultsOperations, run } = storeContext;
+  return async (runVars = {}) => {
+    const {
+      initStoreQuery = {},
+      queryOperations = [],
+      resultsOperations = [],
+      run,
+    } = storeContext;
 
-    const { apply: queryOperationsPipe, query: postQueryPipeQuery } = buildOperationPipe(
-      query,
-      [...(queryOperations ?? []), ...coreQueryPipe],
-    );
-    const { apply: resultsOperationsPipe, query: unhandledArguments } =
-      buildOperationPipe(postQueryPipeQuery, [
-        ...(resultsOperations ?? []),
-        ...coreResultsPipe,
+    const { apply: queryOperationsPipe, unhandledArgs: postQueryArgs } =
+      buildOperationPipe(query.args, [
+        ...(queryOperations ?? []),
+        ...coreQueryPipe,
       ]);
+
+    const { apply: resultsOperationsPipe, unhandledArgs } = buildOperationPipe(
+      postQueryArgs,
+      [...(resultsOperations ?? []), ...coreResultsPipe],
+    );
 
     // TODO: compile subqueries here as well
 
-    if (Object.keys(unhandledArguments.args).length > 0) {
-      throw new TaxonicError(ERRORS.UNHANDLED_ARGUMENTS, unhandledArguments.args);
+    if (Object.keys(unhandledArgs).length > 0) {
+      throw new TaxonicError(ERRORS.UNHANDLED_ARGUMENTS, unhandledArgs);
     }
 
     const context = {
@@ -92,18 +109,21 @@ export function compileQuery(query, storeContext) {
       query,
       queryOperationsPipe,
       resultsOperationsPipe,
+      runVars,
     };
 
     if (storeContext.debug) {
       console.log("-----starting query run-----");
       console.log("---(query)---");
       console.log(query);
+      console.log("---(run variables)---");
+      console.log(runVars);
       console.log("---(context)---");
       console.log(context);
     }
 
-    const storeQuery = queryOperationsPipe(query, context);
-    const storeResults = await run(storeQuery);
+    const storeQuery = await queryOperationsPipe(initStoreQuery, context);
+    const storeResults = await run(storeQuery, context);
     const taxonicResults = await resultsOperationsPipe(storeResults, context);
 
     return taxonicResults;

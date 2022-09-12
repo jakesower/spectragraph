@@ -44,7 +44,7 @@ function combinations(left, right) {
     var rightItem = rightArray[_i];
 
     if (leftOnly.has(rightItem)) {
-      leftOnly["delete"](rightItem);
+      leftOnly.delete(rightItem);
       intersection.add(rightItem);
     } else {
       rightOnly.add(rightItem);
@@ -82,7 +82,7 @@ function combinationsBy(left, right, compareFn) {
     var rightComp = compareFn(item);
 
     if (leftOnlyMap.has(rightComp)) {
-      leftOnlyMap["delete"](rightComp);
+      leftOnlyMap.delete(rightComp);
       intersection.push(item);
     } else {
       rightOnly.push(item);
