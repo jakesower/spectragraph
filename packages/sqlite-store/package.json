@@ -1,5 +1,5 @@
 {
-  "name": "@blossom-js/sqlite-store",
+  "name": "@taxonic/sqlite-store",
   "version": "0.0.8",
   "type": "module",
   "exports": {
@@ -17,9 +17,9 @@
     "@babel/cli": "^7.18.10",
     "@babel/core": "^7.19.0",
     "@babel/preset-env": "^7.19.0",
-    "@blossom-js/core": "*",
-    "@blossom-js/expressions": "^0.0.1",
-    "@blossom-js/utils": "*",
+    "@taxonic/core": "*",
+    "@taxonic/expressions": "^0.0.1",
+    "@taxonic/utils": "*",
     "ajv": "^8.11.0",
     "better-sqlite3": "^7.6.2"
   },

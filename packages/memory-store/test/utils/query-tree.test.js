@@ -1,5 +1,5 @@
 import test from "ava";
-import { omit, partitionObj, pick } from "@blossom-js/utils/objects";
+import { omit, partitionObj, pick } from "@taxonic/utils/objects";
 import { schema } from "../fixtures/care-bear-schema.js";
 import { queryTree } from "../../src/utils/query-tree.js";
 import { careBearData } from "../fixtures/care-bear-data.js";

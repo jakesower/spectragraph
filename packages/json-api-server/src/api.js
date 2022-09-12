@@ -1,8 +1,8 @@
-import { denormalizeQuery, mapQuery, normalizeGetQuery } from "@blossom-js/core/query";
-import { flattenQueryTree, normalizeTree } from "@blossom-js/core/tree";
-import { asArray } from "@blossom-js/utils/arrays";
-import { pick } from "@blossom-js/utils/objects";
-import { pipeThru, pipeThruWithContext } from "@blossom-js/utils/pipes";
+import { denormalizeQuery, mapQuery, normalizeGetQuery } from "@taxonic/core/query";
+import { flattenQueryTree, normalizeTree } from "@taxonic/core/tree";
+import { asArray } from "@taxonic/utils/arrays";
+import { pick } from "@taxonic/utils/objects";
+import { pipeThru, pipeThruWithContext } from "@taxonic/utils/pipes";
 
 // things to do:
 // - wrap/unwrap HTTP stuff
@@ -97,19 +97,19 @@ export function JsonApiAdapter(schema, store) {
 
       // console.log("sq", skeletonQuery);
 
-      const blossomQuery = await pipeThruWithContext(skeletonQuery, req, [
+      const taxonicQuery = await pipeThruWithContext(skeletonQuery, req, [
         ...Object.values(queryBuilders),
         denormalizeQuery,
       ]);
-      // console.log("bq", blossomQuery);
-      // console.log("bqr", blossomQuery.relationships);
+      // console.log("bq", taxonicQuery);
+      // console.log("bqr", taxonicQuery.relationships);
 
-      const blossomResults = await store.get(blossomQuery);
+      const taxonicResults = await store.get(taxonicQuery);
 
-      console.log({ blossomQuery, blossomResults });
+      console.log({ taxonicQuery, taxonicResults });
 
-      const query = normalizeGetQuery(schema, blossomQuery);
-      const queryTrees = asArray(blossomResults).flatMap((res) =>
+      const query = normalizeGetQuery(schema, taxonicQuery);
+      const queryTrees = asArray(taxonicResults).flatMap((res) =>
         normalizeTree(query, res),
       );
 

@@ -1,4 +1,4 @@
-const blossomToGraphqlTypes = ({ type, relatedType, cardinality }) =>
+const taxonicToGraphqlTypes = ({ type, relatedType, cardinality }) =>
   type === "boolean"
     ? "Boolean"
     : type === "integer"
@@ -16,7 +16,7 @@ const blossomToGraphqlTypes = ({ type, relatedType, cardinality }) =>
 export function makeGraphqlSchema(schema) {
   const resourceTypes = Object.entries(schema.resources).map(([resName, resDef]) => {
     const propTypes = Object.entries(resDef.properties).map(
-      ([propName, propDef]) => `  ${propName}: ${blossomToGraphqlTypes(propDef)}`,
+      ([propName, propDef]) => `  ${propName}: ${taxonicToGraphqlTypes(propDef)}`,
     );
 
     return `type ${resName} {\n${propTypes.join("\n")}\n}`;

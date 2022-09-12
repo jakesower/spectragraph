@@ -1,5 +1,5 @@
-import { last } from "@blossom-js/utils/arrays";
-import { getPath } from "@blossom-js/utils/lenses";
+import { last } from "@taxonic/utils/arrays";
+import { getPath } from "@taxonic/utils/lenses";
 
 function makeRelBuilders(schema) {
   return {

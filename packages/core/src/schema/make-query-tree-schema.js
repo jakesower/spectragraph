@@ -1,4 +1,4 @@
-import { mapObj, partitionObj } from "@blossom-js/utils/objects";
+import { mapObj, partitionObj } from "@taxonic/utils/objects";
 
 // 3 kinds of potential trees: (going with #3 for now)
 // - strict adherence to query props/rels
@@ -79,7 +79,7 @@ export function makeQueryTreeSchema(schema) {
   const out = {
     $id: `schemas/${schema.urlName}/set-query-tree-schema`,
     $schema: "http://json-schema.org/draft-07/schema",
-    title: `${schema.title ?? "blossom"} Query Tree`,
+    title: `${schema.title ?? "taxonic"} Query Tree`,
     description: "Validations for queries and associated trees.",
     type: "object",
     required: ["query", "tree"],

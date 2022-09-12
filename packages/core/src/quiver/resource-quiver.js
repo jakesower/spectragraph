@@ -1,4 +1,4 @@
-import { asArray, differenceBy } from "@blossom-js/utils/arrays";
+import { asArray, differenceBy } from "@taxonic/utils/arrays";
 import { makeQuiver } from "./quiver.js";
 
 function formatRef(ref) {

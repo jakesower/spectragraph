@@ -1,9 +1,9 @@
 /* eslint-disable import/no-cycle */
 
-import { intersperse, multiApply } from "@blossom-js/utils/arrays";
-import { getPath } from "@blossom-js/utils/lenses";
-import { mapObj } from "@blossom-js/utils/objects";
-import { BlossomError, ERRORS } from "./errors.js";
+import { intersperse, multiApply } from "@taxonic/utils/arrays";
+import { getPath } from "@taxonic/utils/lenses";
+import { mapObj } from "@taxonic/utils/objects";
+import { TaxonicError, ERRORS } from "./errors.js";
 import { buildOperationPipe, coreQueryPipe, coreResultsPipe } from "./operations.js";
 
 import {
@@ -83,7 +83,7 @@ export function compileQuery(query, storeContext) {
     // TODO: compile subqueries here as well
 
     if (Object.keys(unhandledArguments.args).length > 0) {
-      throw new BlossomError(ERRORS.UNHANDLED_ARGUMENTS, unhandledArguments.args);
+      throw new TaxonicError(ERRORS.UNHANDLED_ARGUMENTS, unhandledArguments.args);
     }
 
     const context = {
@@ -104,8 +104,8 @@ export function compileQuery(query, storeContext) {
 
     const storeQuery = queryOperationsPipe(query, context);
     const storeResults = await run(storeQuery);
-    const blossomResults = await resultsOperationsPipe(storeResults, context);
+    const taxonicResults = await resultsOperationsPipe(storeResults, context);
 
-    return blossomResults;
+    return taxonicResults;
   };
 }

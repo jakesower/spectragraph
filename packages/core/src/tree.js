@@ -1,5 +1,5 @@
-import { asArray } from "@blossom-js/utils/arrays";
-import { mapObj, pick } from "@blossom-js/utils/objects";
+import { asArray } from "@taxonic/utils/arrays";
+import { mapObj, pick } from "@taxonic/utils/objects";
 
 export function normalizeTree(query, treeOrTrees) {
   return asArray(treeOrTrees).map((tree) => {

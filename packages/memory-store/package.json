@@ -1,5 +1,5 @@
 {
-  "name": "@blossom-js/memory-store",
+  "name": "@taxonic/memory-store",
   "version": "0.0.4",
   "scripts": {
     "build:cjs": "babel src -d dist",
@@ -32,8 +32,8 @@
     "prettier": "^2.7.1"
   },
   "dependencies": {
-    "@blossom-js/core": "^0.0.1",
-    "@blossom-js/utils": "*",
+    "@taxonic/core": "^0.0.1",
+    "@taxonic/utils": "*",
     "ajv": "^8.11.0"
   },
   "publishConfig": {

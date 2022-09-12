@@ -1,7 +1,7 @@
 import test from "ava";
 import Database from "better-sqlite3";
-import { omit } from "@blossom-js/utils/objects";
-import { ERRORS, BlossomError } from "@blossom-js/core/errors";
+import { omit } from "@taxonic/utils/objects";
+import { ERRORS, TaxonicError } from "@taxonic/core/errors";
 import { careBearSchema as schema } from "../fixtures/care-bear-schema.js";
 import { SQLiteStore } from "../../src/sqlite-store.js";
 import { careBearData, grumpyBear } from "../fixtures/care-bear-data.js";
@@ -135,7 +135,7 @@ test("does not allow refs to be updated", async (t) => {
       );
       console.log(replaceResult);
     },
-    { instanceOf: BlossomError, message: ERRORS.INVALID_SET_QUERY_SYNTAX },
+    { instanceOf: TaxonicError, message: ERRORS.INVALID_SET_QUERY_SYNTAX },
   );
 });
 
@@ -147,7 +147,7 @@ test("fails to create a resource that doesn't have a required field in the tree"
         grumpyBear,
       );
     },
-    { instanceOf: BlossomError, message: ERRORS.QUERY_MISSING_CREATE_FIELDS },
+    { instanceOf: TaxonicError, message: ERRORS.QUERY_MISSING_CREATE_FIELDS },
   );
 });
 

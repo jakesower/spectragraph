@@ -1,8 +1,7 @@
-import { BlossomError } from "@blossom-js/core/errors";
-import { runQuery } from "@blossom-js/core/operations";
-import { compileQuery, normalizeGetQuery } from "@blossom-js/core/query";
-import { compileSchema } from "@blossom-js/core/schema";
-import { ensureValidGetQuerySyntax } from "@blossom-js/core/validation";
+import { TaxonicError } from "@taxonic/core/errors";
+import { compileQuery, normalizeGetQuery } from "@taxonic/core/query";
+import { compileSchema } from "@taxonic/core/schema";
+import { ensureValidGetQuerySyntax } from "@taxonic/core/validation";
 
 export function GraphQLStore(rawSchema, config) {
   const schema = compileSchema(rawSchema);
@@ -11,7 +10,7 @@ export function GraphQLStore(rawSchema, config) {
     const { resolverMap, transport } = config;
 
     if (!resolverMap || !transport) {
-      throw new BlossomError(
+      throw new TaxonicError(
         "GraphQLStore requires a resolver map and a transport to be passed in the config",
       );
     }

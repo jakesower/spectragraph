@@ -1,4 +1,4 @@
-export class BlossomError extends Error {
+export class TaxonicError extends Error {
   constructor(message, details = {}) {
     super(message);
     Object.keys(details).forEach((key) => {

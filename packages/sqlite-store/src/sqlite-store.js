@@ -1,5 +1,5 @@
-import { normalizeGetQuery, normalizeSetQuery } from "@blossom-js/core/query";
-import { defaultStoreOptions } from "@blossom-js/core/store";
+import { normalizeGetQuery, normalizeSetQuery } from "@taxonic/core/query";
+import { defaultStoreOptions } from "@taxonic/core/store";
 import { get as getQuery } from "./helpers/get.js";
 import { set as setQuery } from "./helpers/set.js";
 import { sqliteConstraintOperators } from "./operations/constraint-operators.js";

@@ -1,6 +1,6 @@
-import { multiApply } from "@blossom-js/utils/functions";
-import { mapObj, pick } from "@blossom-js/utils/objects";
-import { BlossomError } from "../errors.js";
+import { multiApply } from "@taxonic/utils/functions";
+import { mapObj, pick } from "@taxonic/utils/objects";
+import { TaxonicError } from "../errors.js";
 
 // TODO: Is this used?
 
@@ -11,7 +11,7 @@ function withRootData(schema, fullDataTree) {
     const getId = () => {
       const idField = schemaDef.idField ?? "id";
       if (!dataTree[idField]) {
-        throw new BlossomError(
+        throw new TaxonicError(
           "resources require an id field to be present",
           { fullDataTree, path, idField },
         );
