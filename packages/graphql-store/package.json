@@ -1,33 +1,47 @@
 {
-  "name": "@blossom/graphql-store",
+  "name": "@taxonic/graphql-store",
   "version": "0.0.1",
-  "type": "module",
-  "exports": {
-    "./*": "./src/*.mjs"
-  },
   "scripts": {
-    "test-server": "node test/server/server.mjs",
+    "build:cjs": "babel src -d dist",
+    "test-server": "node test/server/server.js",
     "test": "NODE_ENV=test ava",
     "test:watch": "NODE_ENV=test ava -w --verbose"
+  },
+  "type": "module",
+  "exports": {
+    ".": [
+      {
+        "import": "./src/graphql-store.js",
+        "require": "./dist/graphql-store.js"
+      },
+      "./dist/graphql-store.js"
+    ]
   },
   "keywords": [],
   "author": "Jake Sower",
   "devDependencies": {
-    "ava": "^4.3.1",
+    "@babel/cli": "^7.18.10",
+    "@babel/core": "^7.19.0",
+    "@babel/preset-env": "^7.19.0",
+    "apollo-server": "^3.10.2",
+    "apollo-server-core": "^3.10.2",
+    "ava": "^4.3.3",
     "axios": "^0.27.2",
-    "eslint": "^8.22.0",
+    "eslint": "^8.23.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-config-standard": "^17.0.0",
-    "express": "^4.18.1",
-    "express-graphql": "^0.12.0",
     "graphql": "^16.6.0",
     "prettier": "^2.7.1"
   },
   "dependencies": {
-    "@blossom/core": "^0.0.1",
-    "@blossom/utils": "*",
+    "@taxonic/core": "^0.0.1",
+    "@taxonic/utils": "*",
     "ajv": "^8.11.0",
     "graphql-tag": "^2.12.6"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "private": false
 }

@@ -1,29 +1,40 @@
 {
-  "name": "@blossom/graphql-adapter",
+  "name": "@taxonic/graphql-adapter",
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    "./*": "./src/*.mjs"
+    "./*": {
+      "import": "./src/*.js",
+      "require": "./dist/*.js"
+    }
   },
   "scripts": {
+    "build:cjs": "babel src -d dist",
     "test": "NODE_ENV=test ava",
     "test:watch": "NODE_ENV=test ava -w --verbose"
   },
   "keywords": [],
   "author": "Jake Sower",
   "devDependencies": {
-    "@blossom/memory-store": "^0.0.1",
-    "ava": "^4.3.1",
-    "eslint": "^8.22.0",
+    "@taxonic/memory-store": "^0.0.1",
+    "ava": "^4.3.3",
+    "eslint": "^8.23.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-config-standard": "^17.0.0",
     "prettier": "^2.7.1"
   },
   "dependencies": {
-    "@blossom/core": "^0.0.1",
-    "@blossom/utils": "*",
+    "@babel/cli": "^7.18.10",
+    "@babel/core": "^7.19.0",
+    "@babel/preset-env": "^7.19.0",
+    "@taxonic/core": "^0.0.1",
+    "@taxonic/utils": "*",
     "ajv": "^8.11.0",
     "express": "^4.18.1"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "private": false
 }
