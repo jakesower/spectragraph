@@ -1,12 +1,12 @@
 {
-  "name": "@blossom/sqlite-store",
-  "version": "0.0.8",
+  "name": "@taxonic/sqlite-store",
+  "version": "0.0.1",
   "type": "module",
   "exports": {
-    ".": "./src/sqlite-store.mjs"
+    ".": "./src/sqlite-store.js"
   },
   "scripts": {
-    "lint": "eslint \"src/**\" \"test/**\" --ext .mjs",
+    "lint": "eslint \"src/**\" \"test/**\" --ext .js",
     "test": "NODE_ENV=test ava",
     "test:watch": "NODE_ENV=test ava -w --verbose"
   },
@@ -14,15 +14,18 @@
   "author": "Jake Sower",
   "license": "CC BY-NC-SA",
   "dependencies": {
-    "@blossom/core": "*",
-    "@blossom/expressions": "^0.0.1",
-    "@blossom/utils": "*",
+    "@babel/cli": "^7.18.10",
+    "@babel/core": "^7.19.0",
+    "@babel/preset-env": "^7.19.0",
+    "@taxonic/core": "*",
+    "@taxonic/expressions": "^0.0.1",
+    "@taxonic/utils": "*",
     "ajv": "^8.11.0",
     "better-sqlite3": "^7.6.2"
   },
   "devDependencies": {
-    "ava": "^4.3.1",
-    "eslint": "^8.22.0",
+    "ava": "^4.3.3",
+    "eslint": "^8.23.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-config-standard": "^17.0.0",
@@ -31,5 +34,6 @@
   "publishConfig": {
     "access": "public"
   },
+  "private": false,
   "gitHead": "451a467247458685a82d6d8edff5fc575dc02228"
 }
