@@ -1,5 +1,5 @@
 {
-  "name": "@taxonic/core",
+  "name": "@data-prism/core",
   "version": "0.0.1",
   "type": "module",
   "exports": {
@@ -27,7 +27,6 @@
     "prettier": "^2.7.1"
   },
   "dependencies": {
-    "@taxonic/utils": "*",
     "ajv": "^8.11.0"
   },
   "publishConfig": {
