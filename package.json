@@ -1,8 +1,8 @@
 {
-  "name": "data-prism",
-  "license": "AGPL-3.0",
-  "workspaces": [
-    "packages/*"
-  ],
-  "dependencies": {}
+	"name": "data-prism",
+	"license": "AGPL-3.0",
+	"workspaces": [
+		"packages/*"
+	],
+	"dependencies": {}
 }

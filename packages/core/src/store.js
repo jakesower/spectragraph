@@ -1,17 +1,6 @@
-import { coreExpressions } from "./expressions.js";
+import { createSignal } from "solid-js";
 
-export function makeEmptyStore(schema) {
-  const resources = {};
-  const resTypes = Object.keys(schema.resources);
+export const [sources, setSources] = createSignal({});
 
-  resTypes.forEach((resourceName) => {
-    resources[resourceName] = {};
-  });
-
-  return resources;
-}
-
-export const defaultStoreOptions = {
-  expressionDefinitions: coreExpressions,
-  orderingFunctions: {},
-};
+// export const source = sourceSignal[0];
+// export const 

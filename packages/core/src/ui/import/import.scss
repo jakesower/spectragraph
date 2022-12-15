@@ -1,0 +1,8 @@
+main.import {
+	--section-background-color: var(--import-background-color);
+	--section-background-color-light: var(--import-background-color-light);
+
+	section.sidebar {
+		background-color: var(--import-background-color);
+	}
+}
