@@ -1,87 +1,54 @@
-# taxonic Core
+# Data Prism
 
-taxonic is a set of loosely coupled abstractions and interfaces that allow various data sources to be accessed and operated on uniformly. It is suitable for any data store that can be represented as a graph, including native graph databases, relational data stores, and many APIs.
+## Remix
 
-This repository is the source of the glue that attempts to hold all of the adapters and other abstractions together into something coherent. This also serves as the heart of documentation of said abstractions.
+### Operations
 
-## Core Abstractions
+Operations are the core concept for remixing. They get used in two ways: collection and application. The collection aspect is when an operation is selected and gather its parameters. Application involves taking that information and applying it to a source.
 
-- Schema
-- Store
-- Query
-- Tree
-- Graph
+### Operation Types
 
-### Stores
+#### Combine
 
-Stores connect other taxonic data to actual data stores. They are the workhorses of the project and can be used to wrap well defined APIs, such as JSON:API. It is also intended to be extensible in that it can wrap a variety of data stores well. It is particularly well suited to wrapping whatever custom API may need to be tamed.
+A `combine` operation is any operation involving two (or more?) sources. They include joins, set combinations, and appends.
 
-It is only suited for graph read/write operations. More RPC-style calls, such as `/api/user/3/sendReminderEmail` are not supported.
+### Derive
 
-### Schemata
+A `derive` operation produces one or more new columns based on information in the source. This can be per-row, such as adding two numbers; or calculated from the whole source, such as the percentile of a value across the source.
 
-All taxonic stores require a schema to describe the shape and type of the data the stores will operate on. Use of a schema enables users of a store to be able to reason about the data more readily. It is meant to be both human and machine readable, making it suitable for automatic documentation generation and similar. Additionally, it operates as a powerful source of truth since stores are programatically dependent on it.
+### Filter
 
-Schemata are defined fully in JSON.
+A `filter` collects criteria for which rows should be included in the result source. All filters are per-row and always produce a boolean. (What about "top 10%" or the like? Depend on derived columns?)
 
-### Queries
+*TODO: The following headings are not categories of operations, but are useful and familiar enough to make them worthy of their own sections. All could be replecated with the above types except for limiting columns in the result. Well, sorta. The key difference is producing a transformed result source (totally different columns), which using the above types of operations would be difficult, and would require an "embedded source" in some fashion. It's totally not worth it.*
 
-Queries are declarative JSON objects that correspond to a question that the store can answer. There are adapters that allow for a diversity of expression forms, but these are ultimately made uniform before being given to a store. Query capabilities:
+### Sort
 
-- Search for one or all of a type
-- Walk relationships within the graph
+A `sort` takes a list of columns with a direction and produces a sorted list based on those columns in order, preferring columns earlier in the list.
 
-Desired capabilities:
+### Limit & Offset
 
-- Sort based on one or more criteria
-- Pagination options
-- Sparse attributes
-- Node matching (e.g. `WHERE` and `HAVING` style clauses) via defined operations
+Not so much an operation, `limit` and `offset` describe how many rows should be in the result set and which index to start with, respectively.
 
-### Mutation
+### Group
 
-Mutations are JSON objects that represent changes to be made in the store.
+The `group` operation takes a list of columns (parameter columns) and produces a result set with the following qualities:
 
-- `create` a new node, possibly with relationships
-- `update` an existing node's attributes (TODO: combine replaceRelationship(s) with this?)
-- `delete` an existing node along with its relationships
-- `replaceRelationship` for a to-one relationship
-- `deleteRelationship` for a to-one relationship
-- `appendRelationship` to a node with a to-many relationship
-- `replaceRelationships` for a to-many relationship
-- `deleteRelationships` for a to-many relationship
+- The result columns will the same as the parameter columns, with the addition of a special column for the original rows.
+- Rows will be composed of each unique combination of the parameter columns with all rows having that combination in the special column.
+- Alternatively, the cartesian product of the unique values of the paremeter columns can be used, with some special columns being empty in some rows.
 
-Additionally, `merge` incorporates a number of the other operations in its function.
+The resulting source lends itself to particular `aggregate` operations, such as counting the number of result rows in the special column. These are ultimately identical to `derive` operations. However, it is useful to treat them differently because the central utility of `group` is to apply `aggregate` operations to it, though it is possible to simply preserve the special column if desired. The result source of a `group` is fundamentally different than any other operation type. (A `derive` operation could theoretically be capable of this, but it's impractical and distracting.)
 
-(Should the CUD operations only function on nodes?)
+### Column
 
-### Graph
+### Order of Operations
 
-Data within taxonic is modeled on graphs. In particular, graphs that result from queries have one or more roots. From those roots, other nodes may be traversed to, depending on what was returned.
+- Join
+- Compute
+- Filter
+- Sort
+- Limit/Offset
+- Group with Aggregates
 
-There are three types of nodes within a tree:
-
-|-Node Type-|-Compatible With-|-Description-|-Must Specify Id-|
-| **Root Node:** | Leaf Node | Nodes corresponding to the top level of the query. | Yes, unless `id` specified in query |
-| **Leaf Node:** | Root Node | Nodes that have no nested relationships, and thus represent terminal nodes. Root nodes may be leaf nodes. | Yes, unless a root node and `id` specified in query |
-| **Branch Node:** | | Nodes that are neither root nodes nor leaf nodes. | Yes |
-
-## Philosophy
-
-### What taxonic Does
-
-taxonic is suitable for data graphs with very little logic around them. It is designed to be particularly good at reading well-defined data connected to other well-defined data via well-defined relationships.
-
-The schema has knack for finding its way to the heart of any data layer that uses it. The fact that it is written in JSON makes it highly portable and suitable for use by any number of programs.
-
-### What taxonic Does Not Do
-
-taxonic is not suited for some things too:
-
-- RPC style systems. taxonic reads and writes graphs to stores.
-- Loosely related data. The schema is the centerpiece for the data layer and does not allow for this.
-- An ORM. taxonic works in pure data, with no functionality attached to the data itself.
-
-## Outstanding Questions
-
-- What should be the default for relationships on resources? When unspecified? When others are specified? Explicitly identified in props? Explicitly identified in rels with `referencesOnly`?
+Following this pattern will create a new source, which may be temporary. Keeping things ordered will promote simplicity instead of the hodge-podge operations in any order.
