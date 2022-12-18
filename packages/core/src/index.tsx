@@ -8,5 +8,5 @@ render(
 			<DataPrism />
 		</Router>
 	),
-	document.body,
+	document.body as HTMLElement,
 );

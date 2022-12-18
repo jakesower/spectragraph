@@ -1,13 +1,16 @@
-import { createSignal, For } from "solid-js";
-import { useSources } from "../../contexts/source-context.jsx";
+import { Component, createSignal, For } from "solid-js";
+import { useSources } from "../../contexts/source-context.js";
 import "./data-table.scss";
 
 const perPage = 10;
 
-export function DataTable() {
+export const DataTable: Component = () => {
 	const [sources] = useSources();
 	const [page, setPage] = createSignal(1);
-	const totalPages = Math.ceil(sources.csv.length / perPage);
+
+	if (!sources.csv) return null;
+
+	const totalPages = Math.ceil(sources.csv.data.length / perPage);
 
 	return (
 		<>
@@ -25,13 +28,13 @@ export function DataTable() {
 				<table class="data-table">
 					<thead>
 						<tr>
-							<For each={Object.keys(sources.csv?.[0] ?? {})}>
+							<For each={Object.keys(sources.csv?.data?.[0] ?? {})}>
 								{(col) => <th class={col.length > 40 ? "long" : ""}>{col}</th>}
 							</For>
 						</tr>
 					</thead>
 					<tbody>
-						<For each={sources.csv.slice((page() - 1) * perPage, page() * perPage)}>
+						<For each={sources.csv.data.slice((page() - 1) * perPage, page() * perPage)}>
 							{(row) => (
 								<tr>
 									<For each={Object.values(row)}>{(cell) => <td>{cell}</td>}</For>
@@ -43,7 +46,7 @@ export function DataTable() {
 			</div>
 			<div class="controls footer">
 				<div class="page-nav">
-					{(page() - 1) * perPage + 1} - {page() * perPage} of {sources.csv.length}{" "}
+					{(page() - 1) * perPage + 1} - {page() * perPage} of {sources.csv.data.length}{" "}
 					<button
 						type="button"
 						disabled={page() === 1}
@@ -62,4 +65,4 @@ export function DataTable() {
 			</div>
 		</>
 	);
-}
+};

@@ -1,30 +1,21 @@
 import { createContext, createEffect, useContext } from "solid-js";
-import { createStore } from "solid-js/store";
+import { createStore, SetStoreFunction } from "solid-js/store";
 
-const SourceContext = createContext();
+export type Record = { [k: string]: string | number | boolean | null };
+export type Source = { data: Record[] };
+export type SourceMap = { [k: string]: Source };
+
+const SourceContext = createContext<[SourceMap, SetStoreFunction<SourceMap>]>();
 
 export function SourceProvider(props) {
 	const stored = localStorage.getItem("sources");
 	const init = stored ? JSON.parse(stored) : {};
-	const [sources, setSources] = createStore(init);
+	const [sources, setSources] = createStore<SourceMap>(init);
 
 	createEffect(() => {
 		localStorage.setItem("sources", JSON.stringify(sources));
 	});
 
-	// const [sources, setSources] = createStore({});
-	// const value = [
-	// 	sources,
-	// 	{
-	// 		setSource: (id, data) => {
-	// 			console.log("got", id, data);
-	// 			setSources((cur) => ({ ...cur, [id]: data }));
-	// 		},
-	// 		moo: () => {},
-	// 	},
-	// ];
-
-	// eslint-disable-next-line max-len
 	return (
 		<SourceContext.Provider value={[sources, setSources]}>
 			{props.children}
