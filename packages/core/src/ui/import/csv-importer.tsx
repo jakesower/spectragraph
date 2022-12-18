@@ -1,6 +1,12 @@
 import { parse } from "csv-parse/browser/esm";
+import { Component } from "solid-js";
+import { Record } from "../../contexts/source-context";
 
-export function CsvImporter(props) {
+type Props = {
+	onChange: (rawRecords: Record[]) => void;
+};
+
+export const CsvImporter: Component<Props> = (props) => {
 	const { onChange } = props;
 
 	const readFile = (ev) => {
@@ -9,9 +15,11 @@ export function CsvImporter(props) {
 
 		const r = new FileReader();
 		r.onload = function () {
-			parse(this.result, { columns: true }, (err, data) => {
-				onChange(data);
-			});
+			if (this.result) {
+				parse(this.result as Buffer, { columns: true }, (err, data) => {
+					onChange(data);
+				});
+			}
 		};
 
 		r.readAsText(file);
@@ -22,4 +30,4 @@ export function CsvImporter(props) {
 			<input type="file" onChange={readFile} />
 		</div>
 	);
-}
+};

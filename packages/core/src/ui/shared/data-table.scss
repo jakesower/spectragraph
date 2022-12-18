@@ -31,10 +31,6 @@ section.data-table {
 					outline: none;
 					border-color: transparent;
 					padding: 0.2rem 0.5rem;
-
-					&:focus {
-						// border-color: var(--section-background-color);
-					}
 				}
 			}
 		}
