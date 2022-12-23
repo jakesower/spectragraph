@@ -1,8 +1,7 @@
 import { createContext, createEffect, useContext } from "solid-js";
 import { createStore, SetStoreFunction } from "solid-js/store";
+import { Source } from "../data/source";
 
-export type Record = { [k: string]: string | number | boolean | null };
-export type Source = { data: Record[] };
 export type SourceMap = { [k: string]: Source };
 
 const SourceContext = createContext<[SourceMap, SetStoreFunction<SourceMap>]>();

@@ -15,10 +15,22 @@ export const Import: Component = () => {
 						{([sourceName, source]) => (
 							<div class="source-list-item">
 								<h2 class="source-name">{sourceName}</h2>
-								<div class="row-count">{source.data.length} records</div>
+								<div class="row-count">{source.records.length} records</div>
 								<div class="columns">
-									<For each={Object.keys(source[0] ?? {})}>
-										{(k) => <div class="column">{k}</div>}
+									<For each={Object.entries(source.columns ?? {})}>
+										{([colName, colData]) => {
+											const { description, title, types } = colData;
+											return (
+												<div class="column">
+													<h3 class="column-name">{colName}</h3>
+													<div class="title">{title}</div>
+													<div class="description">{description}</div>
+													<ul>
+														<For each={colData.types}>{(type) => <li>{type}</li>}</For>
+													</ul>
+												</div>
+											);
+										}}
 									</For>
 								</div>
 							</div>
@@ -26,8 +38,8 @@ export const Import: Component = () => {
 					</For>
 				</div>
 				<CsvImporter
-					onChange={(data) => {
-						setSources({ csv: { data } });
+					onChange={(source) => {
+						setSources({ csv: source });
 					}}
 				/>
 			</section>
