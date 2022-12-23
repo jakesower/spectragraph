@@ -4,6 +4,7 @@ import { Route, Routes } from "@solidjs/router";
 import { Import } from "./import/import.jsx";
 import { SourceProvider } from "../contexts/source-context.jsx";
 import { Remix } from "./remix/remix.jsx";
+import "./reset.css";
 import "./variables.scss";
 import "./data-prism.scss";
 

@@ -4,5 +4,13 @@ main.import {
 
 	section.sidebar {
 		background-color: var(--import-background-color);
+
+		.column {
+			border: 1px solid black;
+			border-radius: 5px;
+			padding: 8px 12px;
+			margin: 12px;
+			background-color: #f6f6f6;
+		}
 	}
 }
