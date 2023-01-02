@@ -14,20 +14,6 @@ export const DataTable: Component = () => {
 
 	return (
 		<>
-			<div class="controls">
-				<button class="control sources" type="button">
-					Sources
-				</button>
-				<div class="control splitter" />
-				<div class="control search">
-					<label for="data-table-search">Search:</label>{" "}
-					<input type="search" id="data-table-search" class="data-table-search" />
-				</div>
-				<div class="control columns">Columns</div>
-				<div class="control filter">Filters</div>
-				<div class="control sort">Sorting</div>
-				<div class="control page">Pages</div>
-			</div>
 			<div class="data-table-wrapper">
 				<table class="data-table">
 					<thead>
