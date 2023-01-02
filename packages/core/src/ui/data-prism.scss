@@ -20,53 +20,34 @@ a {
 	nav.navigation {
 		width: 100%;
 		display: flex;
+		align-items: center;
+		border-bottom: 1px solid black;
 
-		h1 {
+		.controls {
+			flex-grow: 1;
+			display: flex;
+			width: 100%;
+			align-items: center;
+			gap: 15px;
+
+			&.left {
+				order: 1;
+				justify-content: flex-end;
+			}
+
+			&.right {
+				order: 3;
+				justify-content: flex-start;
+			}
+		}
+
+		.title {
+			order: 0;
+			flex-shrink: 0;
 			font-size: 1.4rem;
 			padding: 5px 14px 0;
 			font-weight: 700;
-			margin: 0;
-			background-color: #000;
-			color: #fff;
-		}
-
-		a {
-			flex: 1;
-			text-align: center;
-			padding: 8px 0;
-			font-weight: 400;
-			opacity: 0.8;
-			background-color: var(--section-background-color);
-
-			&.import {
-				--section-background-color: var(--import-background-color);
-				--section-background-color-light: var(--import-background-color-light);
-			}
-
-			&.remix {
-				--section-background-color: var(--remix-background-color);
-				--section-background-color-light: var(--remix-background-color-light);
-			}
-
-			&.chart {
-				background-color: var(--chart-background-color);
-			}
-
-			&.active,
-			&:hover {
-				opacity: 1;
-				font-weight: 600;
-			}
-
-			&.active {
-				$x-offset: 15px;
-				$y-offset: 0;
-				$blur-radius: 10px;
-				$spread-radius: -20px;
-				// background: radial-gradient(var(--section-background-color) 88%, #000 92%, var(--section-background-color) 94%);
-			// 	box-shadow: inset $x-offset $y-offset $blur-radius $spread-radius #000,
-			// 		inset calc(-1 * $x-offset) $y-offset $blur-radius $spread-radius #000;
-			}
+			margin: 0 40px;
 		}
 	}
 
@@ -75,7 +56,6 @@ a {
 		display: flex;
 		flex-direction: row;
 		overflow: hidden;
-		border-top: 6px solid var(--section-background-color);
 		box-shadow: inset 0 2px 20px -18px black;
 
 		section {
@@ -94,6 +74,7 @@ a {
 				width: 400px;
 				padding: 0.4rem;
 				box-shadow: 5px 0 20px -15px black;
+				resize: horizontal;
 			}
 
 			&.data-table {
