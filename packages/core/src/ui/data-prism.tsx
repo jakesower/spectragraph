@@ -1,5 +1,5 @@
 import { Component } from "solid-js";
-import { Navigation } from "./navigation.jsx";
+import { Header } from "./header.jsx";
 import { Route, Routes } from "@solidjs/router";
 import { Import } from "./import/import.jsx";
 import { SourceProvider } from "../contexts/source-context.jsx";
@@ -12,7 +12,7 @@ export const DataPrism: Component = () => {
 	return (
 		<SourceProvider>
 			<div class="root">
-				<Navigation />
+				<Header />
 				<Routes>
 					<Route path="/import" component={Import} />
 					<Route path="/remix" component={Remix} />
