@@ -1,5 +1,14 @@
 # Data Prism
 
+## Uses
+
+- Remix (derive, filter, sort, etc.)
+- Join (part of remix, but distinct use)
+- Schemify (wrap another source)
+- Upload
+- Add URL (includes permalink/archive)
+- Chart
+
 ## Remix
 
 ### Operations
