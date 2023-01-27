@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluate, expressionDefinitions } from "../src/lib/expressions.js";
+import { evaluate } from "../src/expressions";
 
 const kids = {
 	xinema: { name: "Ximena", age: 4 },
@@ -140,41 +140,3 @@ it("implements the $nin expression", () => {
 	expect(evaluate(exp, kids.yousef)).toBe(true);
 	expect(evaluate(exp, kids.zoe)).toBe(false);
 });
-
-// test.skip("runs $ne expressions", async (t) => {
-// 	const result = evaluate(expressionDefinitions, {
-// 		$ne: [{ $var: "age" }, 5],
-// 	});
-
-// 	t.is(compiled(kids.xinema), true);
-// 	t.is(compiled(kids.yousef), false);
-// 	t.is(compiled(kids.zoe), true);
-// });
-
-// test.skip("runs $in expressions", async (t) => {
-// 	const result = evaluate(expressionDefinitions, {
-// 		$in: [{ $var: "age" }, [4, 6]],
-// 	});
-
-// 	t.is(compiled(kids.xinema), true);
-// 	t.is(compiled(kids.yousef), false);
-// 	t.is(compiled(kids.zoe), true);
-// });
-
-// test.skip("runs $nin expressions", async (t) => {
-// 	const result = evaluate(expressionDefinitions, {
-// 		$nin: [{ $var: "age" }, [4, 6]],
-// 	});
-
-// 	t.is(compiled(kids.xinema), false);
-// 	t.is(compiled(kids.yousef), true);
-// 	t.is(compiled(kids.zoe), false);
-// });
-
-// test.skip("runs $quantile expression", async (t) => {
-// 	const result = evaluate(expressionDefinitions, {
-// 		$quantile: { values: [4, 6, 7, 17, 8, 7], order: 4 },
-// 	});
-
-// 	t.is(compiled(), [1, 1, 2, 4, 3, 2]);
-// });

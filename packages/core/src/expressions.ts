@@ -1,5 +1,11 @@
 import { mapValues } from "lodash-es";
-import { filterDefinitions } from "../definitions/filters";
+import { filterDefinitions } from "./definitions/filters";
+
+export type Expression<Input, Output> = {
+	apply: (params: Input) => Output;
+	name: string;
+};
+
 /*
 
 Qualities of Expressions:
@@ -45,13 +51,8 @@ export const expressionDefinitions = {
 	...filterDefinitions,
 };
 
-type VarExpression = {
-	$var: string;
-};
-
-type LiteralExpression = {
-	$literal: unknown;
-};
+type VarExpression = { $var: string };
+type LiteralExpression = { $literal: unknown };
 
 const expressionKeys = new Set([
 	...Object.keys(expressionDefinitions),
@@ -59,14 +60,7 @@ const expressionKeys = new Set([
 	"$literal",
 ]);
 
-// type Expression<Params, Return> = {
-// 	name?: string;
-// 	apply: (params: Params) => Return;
-// };
-
-type Expression = typeof expressionDefinitions;
-
-function isExpression(val: unknown) {
+function isExpression(val) {
 	return (
 		typeof val === "object" &&
 		!Array.isArray(val) &&
@@ -75,8 +69,9 @@ function isExpression(val: unknown) {
 	);
 }
 
-export function evaluate(root: unknown, vars: object = {}) {
-	const go = (val: unknown) => {
+// export function evaluate<Input, Output>(root: {[k: string]: })
+export function evaluate<T>(root: T, params: object = {}) {
+	const go = <Input>(val: Input) => {
 		if (!isExpression(val)) {
 			return Array.isArray(val)
 				? val.map(go)
@@ -93,43 +88,16 @@ export function evaluate(root: unknown, vars: object = {}) {
 			| keyof typeof expressionDefinitions
 			| "$var"
 			| "$literal";
-		const args = expression[expressionName];
 
 		// these expressions are always terminal
-		if (expressionName === "$literal") return args;
-		if (expressionName === "$var") return vars[args];
+		if (expressionName === "$literal") return expression[expressionName];
+		if (expressionName === "$var") return params[expression[expressionName]];
 
 		// with evaluated children
+		const args = expression[expressionName];
 		const evaluatedArgs = go(args);
-		return expressionDefinitions[expressionName].apply(evaluatedArgs);
+		return (expressionDefinitions[expressionName] as any).apply(evaluatedArgs);
 	};
 
 	return go(root);
 }
-
-// export function compileExpression(expression, operators, context) {
-// 	const compile = (subExpression) => {
-
-// 		const looksLikeExpression =
-// 			typeof subExpression === "object" && !Array.isArray(subExpression);
-
-// 		if (!looksLikeExpression) return () => subExpression;
-
-// 		if (!isValidExpression(subExpression, operators)) {
-// 			throw new Error(
-// 				"objects passed as expressions must contain a single, valid expression; check the operators or wrap the object in $literal",
-// 			);
-// 		}
-
-// 		const [operation, args] = Object.entries(subExpression)[0];
-// 		const operator = operators[operation];
-
-// 		return operator.compile(args, compile, context);
-// 	};
-
-// 	return compile(expression);
-// }
-
-// export function evaluateExpression(expression, operators, variables) {
-// 	return compileExpression(expression, operators)(variables);
-// }

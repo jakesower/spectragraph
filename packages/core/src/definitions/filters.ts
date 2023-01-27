@@ -1,14 +1,17 @@
 import { isEqual } from "lodash-es";
+import { Expression } from "../expressions";
 
 type Ordinal = number | string;
 
-const $eq = {
-	apply: ([left, right]: [any, any]) => isEqual(left, right),
+type FilterExpression<Input> = Expression<Input, boolean>;
+
+const $eq: FilterExpression<[any, any]> = {
+	apply: ([left, right]) => isEqual(left, right),
 	name: "equal",
 };
 
-const $ne = {
-	apply: ([left, right]: [any, any]) => !isEqual(left, right),
+const $ne: FilterExpression<[any, any]> = {
+	apply: ([left, right]) => !isEqual(left, right),
 	name: "not equal",
 };
 
