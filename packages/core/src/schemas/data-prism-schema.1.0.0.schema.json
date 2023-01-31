@@ -1,0 +1,110 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "file:///home/jake/dev/data-prism/packages/core/src/schemas/data-prism-schema.1.0.0.schema.json",
+	"title": "Data Prism Schema",
+	"description": "A metaschema for Data Prism schemas.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["resources"],
+	"properties": {
+		"$id": { "type": "string" },
+		"$comment": { "type": "string" },
+		"$schema": { "type": "string" },
+		"meta": true,
+		"version": { "type": "string" },
+		"resources": {
+			"type": "object",
+			"minProperties": 1,
+			"patternProperties": {
+				"[^.$]": {
+					"type": "object",
+					"properties": {
+						"properties": {
+							"type": "object",
+							"patternProperties": {
+								"[^.$]": { "$ref": "#/definitions/resourceProperty" }
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"definitions": {
+		"simpleTypes": {
+			"enum": ["array", "boolean", "integer", "null", "number", "object", "string"]
+		},
+		"resourceProperty": {
+			"allOf": [
+				{
+					"type": "object",
+					"properties": {
+						"title": { "type": "string" },
+						"description": { "type": "string" },
+						"$comment": { "type": "string" },
+						"deprecated": { "type": "boolean", "default": false },
+						"meta": true
+					}
+				},
+				{
+					"oneOf": [
+						{ "$ref": "#/definitions/nonRelationshipProperty" },
+						{ "$ref": "#/definitions/relationshipProperty" }
+					]
+				}
+			]
+		},
+		"propertyArray": {
+			"type": "array",
+			"items": { "$ref": "#/definitions/nonRelationshipProperty" },
+			"minItems": 1
+		},
+		"nonRelationshipProperty": {
+			"type": "object",
+			"required": ["type"],
+			"additionalProperties": false,
+			"properties": {
+				"type": { "$ref": "#/definitions/simpleTypes" },
+				"default": true,
+				"allOf": { "$ref": "#/definitions/propertyArray" },
+				"anyOf": { "$ref": "#/definitions/propertyArray" },
+				"oneOf": { "$ref": "#/definitions/propertyArray" }
+			}
+		},
+		"relationshipPropertyProperties": {
+			"type": "object",
+			"required": ["foreignType", "foreignKey", "cardinality"],
+			"additionalProperties": false,
+			"properties": {
+				"type": { "const": "relationship" },
+				"foreignType": { "type": "string" },
+				"foreignKey": { "type": "string" },
+				"cardinality": { "type": "string", "enum": ["one", "many"] },
+				"inverseType": { "type": "string" },
+				"inverseProperty": { "type": "string" }
+			}
+		},
+		"relationshipProperty": {
+			"type": "object",
+			"required": ["type"],
+			"properties": {
+				"type": { "const": "relationship" },
+				"polymorphic": { "type": "boolean" }
+			},
+			"oneOf": [
+				{
+					"required": ["polymorphic", "relationships"],
+					"additionalProperties": false,
+					"properties": {
+						"polymorphic": { "const": true },
+						"relationships": {
+							"type": "array",
+							"items": { "$ref": "#/definitions/relationshipPropertyProperties" }
+						}
+					}
+				},
+				{ "$ref": "#/definitions/relationshipPropertyProperties" }
+			]
+		}
+	}
+}
