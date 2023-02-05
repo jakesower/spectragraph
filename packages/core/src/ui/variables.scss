@@ -1,10 +1,33 @@
+@mixin section-theme($name, $next) {
+	.#{$name}-section-theme {
+		--section-color: var(--#{$name}-color);
+		--section-background-color: var(--#{$name}-background-color);
+		--section-background-color-light: var(--#{$name}-background-color-light);
+		--next-section-color: var(--#{$next}-color);
+	}
+}
+
 body {
+	--import-color: #ef5350;
 	--import-background-color: #feafaf;
 	--import-background-color-light: #ffdfdf;
 
+	--remix-color: #f9a825;
 	--remix-background-color: #fede8f;
 	--remix-background-color-light: #feeebf;
 
+	--chart-color: #ccdd31;
 	--chart-background-color: #fefe8f;
 	--chart-background-color-light: #fefebf;
+
+	--share-color: #43a047;
+	--share-background-color: #93c097;
+	--share-background-color-light: #dfffdf;
+
+	--end-color: #7e57c2;
 }
+
+@include section-theme("import", "remix");
+@include section-theme("remix", "chart");
+@include section-theme("chart", "share");
+@include section-theme("share", "end");

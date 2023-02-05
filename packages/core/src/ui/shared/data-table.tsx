@@ -13,7 +13,18 @@ export const DataTable: Component = () => {
 	const totalPages = Math.ceil(sources.csv.records.length / perPage);
 
 	return (
-		<>
+		<main>
+			<header class="controls">
+				<button type="button" class="control">
+					Filter
+				</button>
+				<button type="button" class="control">
+					Sort
+				</button>
+				<button type="button" class="right control">
+					Actions
+				</button>
+			</header>
 			<div class="data-table-wrapper">
 				<table class="data-table">
 					<thead>
@@ -36,7 +47,7 @@ export const DataTable: Component = () => {
 					</tbody>
 				</table>
 			</div>
-			<div class="controls footer">
+			<footer class="controls footer">
 				<div class="page-nav">
 					{(page() - 1) * perPage + 1} - {page() * perPage} of{" "}
 					{sources.csv.records.length}{" "}
@@ -55,7 +66,7 @@ export const DataTable: Component = () => {
 						&gt;
 					</button>
 				</div>
-			</div>
-		</>
+			</footer>
+		</main>
 	);
 };

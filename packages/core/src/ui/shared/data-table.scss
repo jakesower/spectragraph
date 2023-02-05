@@ -1,54 +1,42 @@
-section.data-table {
-	height: 100%;
+main {
 	display: flex;
 	flex-direction: column;
+	overflow: hidden;
 
-	.controls {
-		position: sticky;
-		inset-block-start: 0;
-		color: black;
+	& > * {
+		flex-shrink: 0;
+	}
+
+	& > div.data-table-wrapper {
+		flex: 1 1 auto;
+		overflow: auto;
+	}
+
+	header.controls {
 		display: flex;
-		justify-content: flex-end;
+		background-color: rgb(50 50 50);
+		color: rgb(255 255 255);
+		display: flex;
 		align-items: center;
-		width: 100%;
-
-		&.footer {
-			.page-nav {
-				padding: 0.5rem;
-			}
-		}
+		gap: 12px;
+		padding: 0 12px;
 
 		.control {
 			flex-shrink: 0;
-			padding: 0.5rem;
-			margin: 0 7px;
+			background-color: rgb(50 50 50);
+			color: rgb(255 255 255);
 
-			&.splitter {
-				flex-grow: 1;
+			&:hover {
+				background-color: rgb(90 90 90);
 			}
 
-			&.sources {
-				background-color: var(--import-background-color-light);
-				outline: none;
-				border: 1px solid black;
-				border-radius: 3px;
-			}
-
-			&.search {
-				.data-table-search {
-					padding-left: 0.5rem;
-					border-radius: 12px;
-					box-shadow: none;
-					outline: none;
-					border-color: transparent;
-					padding: 0.2rem 0.5rem;
-				}
+			&.right {
+				margin-left: auto;
 			}
 		}
 	}
 
 	.data-table-wrapper {
-		flex: 1;
 		display: flex;
 		flex-direction: column;
 		overflow: auto;
@@ -65,7 +53,6 @@ section.data-table {
 
 			thead {
 				position: sticky;
-				color: white;
 				inset-block-start: 0;
 				z-index: 2;
 				line-break: strict;
@@ -73,7 +60,7 @@ section.data-table {
 				th {
 					vertical-align: bottom;
 					white-space: nowrap;
-					background-color: #393030;
+					background-color: rgb(210 210 210);
 					overflow: hidden;
 					text-overflow: ellipsis;
 				}

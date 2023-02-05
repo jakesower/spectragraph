@@ -9,7 +9,7 @@ export const Import: Component = () => {
 
 	return (
 		<main class="import">
-			<section class="sidebar">
+			{/* <section class="sidebar">
 				<div class="sources-container">
 					<For each={Object.entries(sources)}>
 						{([sourceName, source]) => (
@@ -42,7 +42,7 @@ export const Import: Component = () => {
 						setSources({ csv: source });
 					}}
 				/>
-			</section>
+			</section> */}
 			<section class="data-table">
 				<DataTable />
 			</section>
