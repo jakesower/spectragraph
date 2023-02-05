@@ -2,6 +2,7 @@ import {
 	Accessor,
 	Component,
 	JSXElement,
+	ValidComponent,
 	children,
 	createContext,
 	createSignal,
@@ -9,11 +10,12 @@ import {
 	useContext,
 } from "solid-js";
 import "./accordion.scss";
+import { Dynamic } from "solid-js/web";
 
 const AccordionContext = createContext<[Accessor<string>, (val: string) => void]>();
 
 type AccordionItemProps = {
-	children: string | JSXElement;
+	children: JSXElement;
 	class?: string;
 	id: string;
 	label: JSXElement;
@@ -22,7 +24,8 @@ type AccordionItemProps = {
 };
 
 export const AccordionItem: Component<AccordionItemProps> = (props) => {
-	const [{ class: className, id, label, onClick }, rest] = splitProps(props, [
+	const [local, rest] = splitProps(props, [
+		"children",
 		"class",
 		"label",
 		"id",
@@ -34,27 +37,42 @@ export const AccordionItem: Component<AccordionItemProps> = (props) => {
 	const labelElement = (
 		<button
 			{...rest}
-			class={`accordion-toggle${className ? ` ${className}` : ""}`}
+			class="accordion-toggle"
+			// class={`accordion-toggle${local.class ? ` ${local.class}` : ""}`}
 			onClick={(ev) => {
-				setSelected(id);
-				if (onClick) onClick(ev);
+				setSelected(local.id);
+				if (local.onClick) local.onClick(ev);
 			}}
 		>
-			{label}
+			{local.label}
 		</button>
 	);
 
 	const child = children(() => (
-		<div class={`accordion-item${selected() === id ? " selected" : ""}`}>
+		<div class={`accordion-item${selected() === local.id ? " selected" : ""}`}>
 			{props.children}
 		</div>
+
+		// <Dynamic
+		// 	component="div"
+		// 	class={`accordion-item${selected() === id ? " selected" : ""}`}
+		// >
+		// 	hyuck
+		// </Dynamic>
+
+		// <div class={`accordion-item${selected() === id ? " selected" : ""}`}
 	));
 
 	return (
-		<>
+		<div
+			{...rest}
+			class={`accordion-item${selected() === local.id ? " selected" : ""}${
+				local.class ? ` ${local.class}` : ""
+			}`}
+		>
 			{labelElement}
-			{child}
-		</>
+			{local.children}
+		</div>
 	);
 };
 

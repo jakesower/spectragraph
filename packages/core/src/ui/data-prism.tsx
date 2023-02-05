@@ -18,16 +18,16 @@ export const DataPrism: Component = () => {
 					</header>
 					<Accordion>
 						<AccordionItem id="import" label="Import" class="import-section-theme">
-							<div class="import-section-theme">Import Body</div>
+							<div class="section-controls">Import Body</div>
 						</AccordionItem>
 						<AccordionItem id="remix" label="Remix" class="remix-section-theme">
-							<div class="remix-aside">Remix Aside</div>
+							<div class="section-controls">Remix Aside</div>
 						</AccordionItem>
 						<AccordionItem id="chart" label="Chart" class="chart-section-theme">
-							<div class="chart-aside">Chart</div>
+							<div class="section-controls">Chart</div>
 						</AccordionItem>
 						<AccordionItem id="share" label="Share" class="share-section-theme">
-							<div class="share-aside">Sharing</div>
+							<div class="section-controls">Sharing</div>
 						</AccordionItem>
 						{/* <AccordionItem label={<A href="/remix">Remix</A>}>There</AccordionItem> */}
 						{/* <h1>Annotate</h1> */}
