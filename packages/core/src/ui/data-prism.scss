@@ -53,7 +53,7 @@ header {
 			}
 		}
 
-		& > :not(header) {
+		& > .accordion {
 			display: flex;
 			flex: 1 1 auto;
 
@@ -69,8 +69,9 @@ header {
 				padding: 4px;
 			}
 
-			.accordion-item {
+			.moo {
 				border-left: 5px solid var(--section-color);
+				border-image-slice: 1;
 				border-image-source: linear-gradient(
 					to bottom,
 					var(--section-color),
@@ -93,47 +94,47 @@ header {
 			// 	);
 			// }
 
-			.remix-label {
-				border-left: 5px solid var(--remix-color);
-			}
+			// .remix-label {
+			// 	border-left: 5px solid var(--remix-color);
+			// }
 
-			.remix-aside {
-				border-left: 5px solid transparent;
-				border-image-slice: 1;
-				border-image-source: linear-gradient(
-					to bottom,
-					var(--remix-color),
-					var(--chart-color)
-				);
-			}
+			// .remix-aside {
+			// 	border-left: 5px solid transparent;
+			// 	border-image-slice: 1;
+			// 	border-image-source: linear-gradient(
+			// 		to bottom,
+			// 		var(--remix-color),
+			// 		var(--chart-color)
+			// 	);
+			// }
 
-			.chart-label {
-				border-left: 5px solid var(--chart-color);
-			}
+			// .chart-label {
+			// 	border-left: 5px solid var(--chart-color);
+			// }
 
-			.chart-aside {
-				border-left: 5px solid transparent;
-				border-image-slice: 1;
-				border-image-source: linear-gradient(
-					to bottom,
-					var(--chart-color),
-					var(--share-color)
-				);
-			}
+			// .chart-aside {
+			// 	border-left: 5px solid transparent;
+			// 	border-image-slice: 1;
+			// 	border-image-source: linear-gradient(
+			// 		to bottom,
+			// 		var(--chart-color),
+			// 		var(--share-color)
+			// 	);
+			// }
 
-			.share-label {
-				border-left: 5px solid var(--share-color);
-			}
+			// .share-label {
+			// 	border-left: 5px solid var(--share-color);
+			// }
 
-			.share-aside {
-				border-left: 5px solid transparent;
-				border-image-slice: 1;
-				border-image-source: linear-gradient(
-					to bottom,
-					var(--share-color),
-					var(--end-color)
-				);
-			}
+			// .share-aside {
+			// 	border-left: 5px solid transparent;
+			// 	border-image-slice: 1;
+			// 	border-image-source: linear-gradient(
+			// 		to bottom,
+			// 		var(--share-color),
+			// 		var(--end-color)
+			// 	);
+			// }
 		}
 
 		.sections {
