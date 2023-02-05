@@ -1,0 +1,160 @@
+body {
+	background-color: #ffffff;
+	margin: 0;
+	padding: 0;
+	font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
+		"Lucida Sans Unicode", Geneva, Verdana, sans-serif;
+}
+
+a {
+	text-decoration: none;
+	color: black;
+}
+
+.root {
+	height: 100vh;
+	width: 100vw;
+	display: flex;
+
+	aside {
+		width: 400px;
+		padding: 0.4rem;
+		box-shadow: 5px 0 20px -15px black;
+		resize: horizontal;
+	}
+	
+	main {
+		flex: 1;
+		display: flex;
+		flex-direction: row;
+		overflow: hidden;
+		box-shadow: inset 0 2px 20px -18px black;
+	}
+
+	//
+
+	main {
+		header {
+			width: 100%;
+			display: flex;
+			align-items: center;
+			border-bottom: 1px solid black;
+			gap: 0.5rem;
+			padding-right: 0.5rem;
+			background-color: #ccc;
+
+			.title-container {
+				background-color: black;
+				padding: 8px 1rem;
+				// height: 100%;
+
+				h1.title {
+					font-size: 1.4rem;
+					white-space: nowrap;
+					background: linear-gradient(
+						to right,
+						#ef5350,
+						#f9a825,
+						#ccdd31,
+						#43a047,
+						#2196f3,
+						#7e57c2
+					);
+					background-clip: text;
+					-webkit-text-fill-color: transparent;
+				}
+			}
+
+			button {
+				outline: none;
+				border: 0;
+				background-color: transparent;
+				border: 1px solid transparent;
+				border-radius: 5px;
+				padding: 2px 8px;
+
+				&:hover {
+					background-color: #eee;
+					border-color: black;
+				}
+			}
+
+			.current-source {
+				flex-shrink: 0;
+				white-space: nowrap;
+				display: flex;
+				align-items: center;
+				font-size: 1.5rem;
+				font-weight: 700;
+
+				svg {
+					display: block;
+					width: 1.5rem;
+					margin-right: 0.1rem;
+				}
+
+				// &::before {
+				// 	content: "";
+				// 	background: url('data:image/svg+xml;utf8,<svg stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12V18C5 18 5 21 12 21C19 21 19 18 19 18V12" stroke="currentColor" stroke-width="1"/><path d="M5 6V12C5 12 5 15 12 15C19 15 19 12 19 12V6" stroke="currentColor" stroke-width="1"/><path d="M12 3C19 3 19 6 19 6C19 6 19 9 12 9C5 9 5 6 5 6C5 6 5 3 12 3Z" stroke="currentColor" stroke-width="1"/></svg>');
+				// 	background-size: cover;
+				// 	display: inline-block;
+				// 	width: 24px;
+				// 	height: 24px;
+				// }
+			}
+
+			.controls {
+				display: flex;
+				align-items: center;
+				gap: 15px;
+
+				.control {
+					outline: none;
+				}
+
+				&.left {
+					flex-shrink: 0;
+				}
+
+				&.right {
+					flex-grow: 1;
+					width: 100%;
+					justify-content: flex-end;
+				}
+			}
+		}
+
+		main {
+			flex: 1;
+			display: flex;
+			flex-direction: row;
+			overflow: hidden;
+			box-shadow: inset 0 2px 20px -18px black;
+
+			section {
+				.top-spacer {
+					height: 1rem;
+					position: sticky;
+					inset-block-start: 0;
+					background-color: white;
+					z-index: 1;
+				}
+
+				overflow: hidden;
+				height: 100%;
+
+				&.sidebar {
+					width: 400px;
+					padding: 0.4rem;
+					box-shadow: 5px 0 20px -15px black;
+					resize: horizontal;
+				}
+
+				&.data-table {
+					flex: 1;
+					padding: 0 15px;
+				}
+			}
+		}
+	}
+}
