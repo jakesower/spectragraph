@@ -6,7 +6,9 @@
 		background-color: transparent;
 		display: flex;
 		flex-direction: column;
-		flex-shrink: 0;
+		min-height: 0;
+		flex: 0.00001 0 auto;
+		transition: all 200ms;
 
 		& > * {
 			min-height: 0;
@@ -31,16 +33,11 @@
 
 		&.selected {
 			flex: 1 1 auto;
+			overflow: hidden;
 
 			& > :not(.accordion-toggle) {
 				flex: 1 1 auto;
 			}
-			// flex: 0.00001 1 0;
-			overflow: hidden;
 		}
 	}
 }
-
-// min-height: 0;
-// flex: 0.00001 0 auto;
-// transition: all 200ms;
