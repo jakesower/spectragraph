@@ -59,24 +59,30 @@ header {
 
 			.accordion-toggle {
 				border: 0;
-				border-left: 3px solid;
+				// border-left: 3px solid;
 				outline: 0;
 				cursor: pointer;
-				background-color: transparent;
-				border-left: 5px solid var(--section-color);
+				// background-color: transparent;
+				// border-left: 5px solid var(--section-color);
 				background-color: var(--section-background-color);
 				font-size: 1.2rem;
 				padding: 4px;
 			}
 
-			.moo {
+			.accordion-item {
 				border-left: 5px solid var(--section-color);
 				border-image-slice: 1;
-				border-image-source: linear-gradient(
-					to bottom,
-					var(--section-color),
-					var(--next-section-color)
-				);
+
+				&.selected {
+					border-image-source: linear-gradient(
+						to bottom,
+						var(--section-color),
+						var(--next-section-color)
+					);
+				}
+
+				:not(.accordion-toggle) {
+				}
 			}
 
 			// .import-label {
