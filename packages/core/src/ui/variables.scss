@@ -21,13 +21,23 @@ body {
 	--chart-background-color-light: #fefebf;
 
 	--share-color: #43a047;
-	--share-background-color: #93c097;
+	--share-background-color: #afdeb1;
 	--share-background-color-light: #dfffdf;
 
-	--end-color: #7e57c2;
+	--annotate-color: #2196f3;
+	--annotate-background-color: #a6d5fa;
+	--annotate-background-color-light: #e4f2fe;
+
+	--learn-color: #7e57c2;
+	--learn-background-color: #cbbce7;
+	--learn-background-color-light: #f0ebf8;
+
+	--end-color: #000000;
 }
 
 @include section-theme("import", "remix");
 @include section-theme("remix", "chart");
 @include section-theme("chart", "share");
-@include section-theme("share", "end");
+@include section-theme("share", "annotate");
+@include section-theme("annotate", "learn");
+@include section-theme("learn", "end");

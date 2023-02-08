@@ -27,7 +27,13 @@ export const DataPrism: Component = () => {
 							<div class="section-controls">Chart</div>
 						</AccordionItem>
 						<AccordionItem id="share" label="Share" class="share-section-theme">
-							<div class="section-controls">Sharing</div>
+							<div class="section-controls">Share</div>
+						</AccordionItem>
+						<AccordionItem id="annotate" label="Annotate" class="annotate-section-theme">
+							<div class="section-controls">Annotate</div>
+						</AccordionItem>
+						<AccordionItem id="learn" label="Learn" class="learn-section-theme">
+							<div class="section-controls">Learnx</div>
 						</AccordionItem>
 						{/* <AccordionItem label={<A href="/remix">Remix</A>}>There</AccordionItem> */}
 						{/* <h1>Annotate</h1> */}
