@@ -62,7 +62,7 @@ main .data-table-container {
 				th {
 					vertical-align: bottom;
 					white-space: nowrap;
-					background-color: rgb(210 210 210);
+					background-color: var(--section-background-color);
 					overflow: hidden;
 					text-overflow: ellipsis;
 				}

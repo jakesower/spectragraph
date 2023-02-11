@@ -1,6 +1,6 @@
 import { parse } from "csv-parse/browser/esm";
 import { Component } from "solid-js";
-import { detectColumns, Source } from "../../data/source";
+import { detectColumns, Source } from "../../../data/source";
 
 type Props = {
 	onChange: (source: Source) => void;
