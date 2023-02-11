@@ -46,7 +46,7 @@ export const AccordionItem: Component<AccordionItemProps> = (props) => {
 			}`}
 		>
 			{labelElement}
-			{selected() && local.children}
+			{selected() === local.id && local.children}
 		</div>
 	);
 };

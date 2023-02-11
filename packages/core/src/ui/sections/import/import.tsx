@@ -1,6 +1,6 @@
 import { Component, For } from "solid-js";
-import { useSources } from "../../contexts/source-context.js";
-import { DataTable } from "../shared/data-table.js";
+import { useSources } from "../../../contexts/source-context.js";
+import { DataTable } from "../../shared/data-table.js";
 import { CsvImporter } from "./csv-importer.js";
 import "./import.scss";
 
