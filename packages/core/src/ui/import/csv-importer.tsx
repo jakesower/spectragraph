@@ -17,7 +17,6 @@ export const CsvImporter: Component<Props> = (props) => {
 
 	const readFile = (ev) => {
 		const file = (ev.target.files || [])[0];
-		// var fileName = file.name.replace(/\.csv$/, "").replace(/_/g, " ");
 
 		const r = new FileReader();
 		r.onload = function () {
@@ -34,7 +33,7 @@ export const CsvImporter: Component<Props> = (props) => {
 
 	return (
 		<div class="csv-source">
-			<input type="file" onChange={readFile} />
+			<input type="file" accept=".csv" onChange={readFile} />
 		</div>
 	);
 };

@@ -1,6 +1,7 @@
 .accordion {
 	display: flex;
 	flex-direction: column;
+	overflow: auto;
 
 	.accordion-item {
 		background-color: transparent;
@@ -16,7 +17,7 @@
 
 		& > .accordion-toggle {
 			border: 0;
-			background-color: transparent;
+			// background-color: transparent;
 			text-align: left;
 			cursor: pointer;
 			min-height: 0;
