@@ -1,7 +1,8 @@
-main {
+main .data-table-container {
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
+	height: 100vh;
 
 	& > * {
 		flex-shrink: 0;
@@ -10,6 +11,7 @@ main {
 	& > div.data-table-wrapper {
 		flex: 1 1 auto;
 		overflow: auto;
+		border-bottom: 2px solid black;
 	}
 
 	header.controls {
