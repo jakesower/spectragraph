@@ -1,0 +1,36 @@
+.tabs {
+	ul.tab-labels {
+		display: flex;
+		gap: 8px;
+		box-sizing: border-box;
+
+		div.tab-label {
+			padding: 2px 8px 0 8px;
+			border: 1px solid black;
+			border-bottom-width: 0;
+			margin-bottom: -1px;
+
+			&:not(.selected) {
+			}
+
+			&.selected {
+				font-weight: 600;
+				background-color: var(--section-background-color-light);
+				margin-bottom: -2px;
+				padding-bottom: 1px;
+				z-index: 1;
+			}
+		}
+	}
+
+	.tab-content {
+		padding: 8px;
+		border: 1px solid black;
+		// border-top-width: 0;
+		display: none;
+
+		&.selected {
+			display: block;
+		}
+	}
+}
