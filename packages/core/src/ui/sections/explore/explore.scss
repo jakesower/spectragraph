@@ -1,0 +1,28 @@
+.explore-section {
+	display: flex;
+	flex-direction: column;
+
+	section {
+		padding: 8px;
+
+		// h1 {
+		// 	padding: 8px 8px 0;
+		// }
+
+		ul.importers-list {
+			margin: 0;
+			padding: 0;
+			list-style: none;
+
+			li {
+				margin-top: 8px;
+				padding: 8px;
+
+				label {
+					display: block;
+					font-weight: 600;
+				}
+			}
+		}
+	}
+}

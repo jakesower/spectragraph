@@ -1,5 +1,5 @@
-@mixin section-theme($name, $next) {
-	.#{$name}-section-theme {
+@mixin section($name, $next) {
+	.#{$name}-section {
 		--section-color: var(--#{$name}-color);
 		--section-background-color: var(--#{$name}-background-color);
 		--section-background-color-light: var(--#{$name}-background-color-light);
@@ -8,9 +8,9 @@
 }
 
 body {
-	--import-color: #ef5350;
-	--import-background-color: #feafaf;
-	--import-background-color-light: #ffdfdf;
+	--explore-color: #ef5350;
+	--explore-background-color: #feafaf;
+	--explore-background-color-light: #ffdfdf;
 
 	--remix-color: #f9a825;
 	--remix-background-color: #fede8f;
@@ -35,9 +35,9 @@ body {
 	--end-color: #000000;
 }
 
-@include section-theme("import", "remix");
-@include section-theme("remix", "chart");
-@include section-theme("chart", "share");
-@include section-theme("share", "annotate");
-@include section-theme("annotate", "learn");
-@include section-theme("learn", "end");
+@include section("explore", "remix");
+@include section("remix", "chart");
+@include section("chart", "share");
+@include section("share", "annotate");
+@include section("annotate", "learn");
+@include section("learn", "end");

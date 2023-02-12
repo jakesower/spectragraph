@@ -35,7 +35,7 @@ export const Annotate: Component = () => {
 			<div class="subsection">
 				<h2>Source</h2>
 			</div>
-			<DataTable source={sources.csv} class="annotate-section-theme" />
+			<DataTable source={sources.csv} class="annotate-section" />
 		</>
 	);
 };
