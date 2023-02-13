@@ -16,7 +16,12 @@ export type Column = {
 };
 export type ColumnObj = { [k: string]: Column };
 export type Schema = { properties: { [k: string]: Property } };
-export type Source = { columns: ColumnObj; records: Record[]; schema?: Schema };
+export type Source = {
+	columns: ColumnObj;
+	records: Record[];
+	title: string;
+	schema?: Schema;
+};
 
 function detectColumnTypes(vals: string[]): ColumnType[] {
 	const columnTypes = Object.keys(columnTypeTests) as (keyof typeof columnTypeTests)[];
