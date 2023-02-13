@@ -1,9 +1,12 @@
 import { Component, createSignal, For, JSX, splitProps } from "solid-js";
 import { Source } from "../../data/source.js";
-import "./data-table.scss";
 import { Portal } from "solid-js/web";
+import ActionsIcon from "../../icons/settings-gear-icon.svg";
+import FilterIcon from "../../icons/filter-line-icon.svg";
+import SearchIcon from "../../icons/search-icon.svg";
+import "./data-table.scss";
 
-const perPage = 30;
+const perPage = 100;
 
 type DataTableProps = JSX.InputHTMLAttributes<HTMLDivElement> & {
 	source: Source;
@@ -13,20 +16,20 @@ export const DataTable: Component<DataTableProps> = (props) => {
 	const [page, setPage] = createSignal(1);
 
 	const totalPages = Math.ceil(local.source.records.length / perPage);
-	console.log("p", props);
 
 	return (
 		<Portal mount={document.getElementById("data-table")}>
 			<div {...rest} class={`data-table-container ${local.class}`.trim()}>
 				<header class="controls">
-					<button type="button" class="control">
-						Filter
+					<div class="title">{local.source.title ?? "CSV Data"}</div>
+					<button type="button" class="control search">
+						<SearchIcon />
 					</button>
 					<button type="button" class="control">
-						Sort
+						<FilterIcon />
 					</button>
-					<button type="button" class="right control">
-						Actions
+					<button type="button" class="control">
+						<ActionsIcon />
 					</button>
 				</header>
 				<div class="data-table-wrapper">
