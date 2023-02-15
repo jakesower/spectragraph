@@ -35,7 +35,6 @@ export const Remix: Component = () => {
 			<div class="subsection">
 				<h2>Source</h2>
 			</div>
-			<DataTable source={sources.csv} class="remix-section" />
 		</>
 	);
 };
