@@ -1,19 +1,22 @@
 import { parse } from "csv-parse/browser/esm";
-import { Component, JSX, splitProps } from "solid-js";
+import { Component, For, JSX, createSignal, splitProps } from "solid-js";
 import { detectColumns, Source } from "../../data/source";
+import { uniq } from "lodash-es";
+import "./csv-importer.scss";
+import "../standards.scss";
 
 type Props = Omit<JSX.InputHTMLAttributes<HTMLInputElement>, "onChange"> & {
-	onChange: (source: Source) => void;
+	onChange: (source: { name: string; data: Source }) => void;
 };
 
 function inferSource(csvData: { [k: string]: string }[]): Source {
-	const columns = detectColumns(csvData);
-
-	return { records: csvData, columns };
+	return { records: csvData, columns: detectColumns(csvData) };
 }
 
 export const CsvImporter: Component<Props> = (props) => {
 	const [local, rest] = splitProps(props, ["onChange"]);
+	const [csvData, setCsvData] = createSignal<Source>(null);
+	const [name, setName] = createSignal<string>("");
 
 	const readFile = (ev) => {
 		const file = (ev.target.files || [])[0];
@@ -23,7 +26,8 @@ export const CsvImporter: Component<Props> = (props) => {
 			if (this.result) {
 				parse(this.result as Buffer, { columns: true }, (err, data) => {
 					const inferredSource = inferSource(data);
-					local.onChange(inferredSource);
+					// local.onChange(inferredSource);
+					setCsvData(inferredSource);
 				});
 			}
 		};
@@ -31,16 +35,70 @@ export const CsvImporter: Component<Props> = (props) => {
 		r.readAsText(file);
 	};
 
+	const handleSubmit = () => {
+		local.onChange({
+			name: name(),
+			data: csvData(),
+		});
+	};
+
 	return (
-		<div {...rest} class={`csv-source ${rest.class}`.trim()}>
-			<div class="form-row">
-				<label for="import-csv-file-name">Source Name</label>
-				<input type="text" id="import-csv-file-name" />
-			</div>
-			<div class="form-row">
-				<label for="import-csv">CSV</label>
-				<input type="file" accept=".csv" id="import-csv" onChange={readFile} />
-			</div>
+		<div {...rest} class={`csv-importer ${rest.class ?? ""}`.trim()}>
+			<form class="standard">
+				<section class="upload-stage">
+					<div class="form-row">
+						<label for="import-csv">CSV</label>
+						<input type="file" accept=".csv" id="import-csv" onChange={readFile} />
+					</div>
+				</section>
+				{csvData() && (
+					<>
+						<section class="finalize-stage">
+							<div class="form-row">
+								<label for="import-csv-file-name">Source Name</label>
+								<input
+									type="text"
+									id="import-csv-file-name"
+									value={name()}
+									onInput={(e) => {
+										setName((e.target as any).value); // wtf does it need any
+									}}
+								/>
+							</div>
+						</section>
+
+						<section class="submit-section">
+							<button type="button" onClick={handleSubmit}>
+								Import CSV Source
+							</button>
+						</section>
+
+						<div class="preview">
+							<h2>Automatically Detected Information</h2>
+							<table class="columns standard">
+								<thead>
+									<tr>
+										<th>Column</th>
+										<th>Type</th>
+										<th class="number">Unique Values</th>
+									</tr>
+								</thead>
+								<tbody>
+									<For each={Object.entries(csvData().columns)}>
+										{([colName, colDef]) => (
+											<tr>
+												<td>{colName}</td>
+												<td>{colDef.type}</td>
+												<td class="number">{uniq(colDef.values).length}</td>
+											</tr>
+										)}
+									</For>
+								</tbody>
+							</table>
+						</div>
+					</>
+				)}
+			</form>
 		</div>
 	);
 };

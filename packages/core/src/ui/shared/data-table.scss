@@ -1,4 +1,4 @@
-main .data-table-container {
+main.data-table-container {
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
@@ -11,7 +11,6 @@ main .data-table-container {
 	& > div.data-table-wrapper {
 		flex: 1 1 auto;
 		overflow: auto;
-		border-bottom: 2px solid black;
 	}
 
 	header.controls {
@@ -50,44 +49,16 @@ main .data-table-container {
 		display: flex;
 		flex-direction: column;
 		overflow: auto;
-
-		table.data-table {
-			border-collapse: collapse;
-
-			th,
-			td {
-				padding: 0.5rem;
-				text-align: left;
-				max-width: calc((100vw - 400px) / 5);
-			}
-
-			thead {
-				position: sticky;
-				inset-block-start: 0;
-				z-index: 2;
-				line-break: strict;
-
-				th {
-					vertical-align: bottom;
-					white-space: nowrap;
-					background-color: var(--section-background-color);
-					overflow: hidden;
-					text-overflow: ellipsis;
-				}
-			}
-
-			tbody {
-				tr {
-					&:nth-child(2n) {
-						background-color: var(--section-background-color-light);
-					}
-				}
-
-				td {
-					border: 1px solid #eee;
-					overflow-wrap: break-word;
-				}
-			}
-		}
 	}
+
+	footer {
+		padding: 8px 4px;
+
+	.page-nav {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+		justify-content: flex-end;
+	}
+}
 }

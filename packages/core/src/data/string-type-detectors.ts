@@ -1,3 +1,9 @@
+/*
+	This file is used to detect data types from such things as CSVs where all of the field
+	inputs are strings. Given that everything comes in as a string, "string" is the base
+	type that everything falls into, obviating the need for a "mixed" or similar type.
+*/
+
 export type BaseType = "number" | "string" | "boolean" | "null" | "integer";
 
 export type BaseDetector = { test: (val: string) => boolean } & (
@@ -9,8 +15,8 @@ export type BaseDetector = { test: (val: string) => boolean } & (
 );
 
 export const baseTypeDetectors: BaseDetector[] = [
-	{ baseType: "integer", test: (val) => Number.isInteger(val), cast: Number },
-	{ baseType: "number", test: (val) => Number.isFinite(val), cast: Number },
+	{ baseType: "integer", test: (val) => Number.isInteger(Number(val)), cast: Number },
+	{ baseType: "number", test: (val) => Number.isFinite(Number(val)), cast: Number },
 	{
 		baseType: "boolean",
 		test: (val) => val === "true" || val === "false",
@@ -23,7 +29,7 @@ export const baseTypeDetectors: BaseDetector[] = [
 const isNumeric = (val) => !isNaN(parseFloat(val)) && isFinite(val);
 
 // type ColumnTypeTest<T> = { test: (val: string) => boolean; cast: (val: string) => T };
-export const columnTypeTests = {
+export const slotTypeTests = {
 	number: { test: isNumeric, cast: Number },
 	positive: { test: (val) => isNumeric(val) && Number(val) > 0, cast: Number },
 	"non-negative": { test: (val) => isNumeric(val) && Number(val) >= 0, cast: Number },
@@ -33,7 +39,7 @@ export const columnTypeTests = {
 	string: { test: () => true, cast: (val) => val },
 };
 
-export type ColumnType = keyof typeof columnTypeTests;
+export type SlotType = keyof typeof slotTypeTests;
 
 // obsolete?
 

@@ -7,7 +7,7 @@ import {
 	createEffect,
 	mergeProps,
 } from "solid-js";
-import "../shared.scss";
+import "../standards.scss";
 import "./tabs.scss";
 
 type TabProps = {
@@ -51,7 +51,7 @@ export const Tabs: Component<TabsProps> = (props) => {
 	});
 
 	return (
-		<div class="tabs">
+		<div class="tabs standard">
 			<ul class="tab-labels standard">
 				<For each={labels}>
 					{(label, idx) => (

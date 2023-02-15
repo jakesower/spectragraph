@@ -1,17 +1,15 @@
 import { Component, For } from "solid-js";
 import { useSources } from "../../../contexts/source-context.js";
-import { DataTable } from "../../shared/data-table.js";
-import { CsvImporter } from "../../shared/csv-importer.js";
-import "./explore.scss";
-import "../../shared.scss";
 import { ImportSource } from "../../shared/import-source.jsx";
+import "./explore.scss";
+import "../../standards.scss";
 
 export const Explore: Component = () => {
-	const [sources, setSources] = useSources();
+	const [sources] = useSources();
+	console.log(sources);
 
 	return (
 		<div class="explore-section">
-			<ImportSource />
 			<section class="sources">
 				<ul class="standard sources-container">
 					<For each={Object.entries(sources)}>
@@ -27,7 +25,7 @@ export const Explore: Component = () => {
 					</For>
 				</ul>
 			</section>
-			<DataTable source={sources.csv} class="explore-section" />
+			<ImportSource />
 		</div>
 	);
 };

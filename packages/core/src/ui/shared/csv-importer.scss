@@ -1,0 +1,29 @@
+.csv-importer {
+	section {
+		background-color: var(--section-background-color-light);
+		padding: 8px;
+		margin-bottom: 16px;
+		border-radius: 5px;
+
+		&.submit-section {
+			background-color: transparent;
+		}
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+
+	table {
+		th,
+		td {
+			text-align: left;
+		}
+	}
+
+	h2 {
+		margin: 4px 0;
+		padding: 4px 0;
+		border-top: 1px dashed black;
+	}
+}
