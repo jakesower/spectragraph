@@ -21,7 +21,7 @@ export const ImportSource: Component = () => {
 							<CsvImporter
 								id="import-csv"
 								onChange={({ name, data }) => {
-									setSources({ [name]: data });
+									setSources({ [name]: { ...data, name } });
 									setImporting(false);
 								}}
 							/>

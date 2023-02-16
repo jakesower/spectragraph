@@ -2,12 +2,24 @@
 	display: flex;
 	flex-direction: column;
 
+	ul.sources-container {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+
+		button {
+			display: block;
+			width: 100%;
+			text-align: left;
+
+			&.selected {
+				background-color: var(--section-background-color-light);
+			}
+		}
+	}
+
 	section {
 		padding: 8px;
-
-		// h1 {
-		// 	padding: 8px 8px 0;
-		// }
 
 		ul.importers-list {
 			margin: 0;

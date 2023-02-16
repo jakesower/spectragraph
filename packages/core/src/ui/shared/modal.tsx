@@ -1,4 +1,4 @@
-import { Component, JSX, splitProps } from "solid-js";
+import { Component, JSX, createEffect, splitProps } from "solid-js";
 import { Portal } from "solid-js/web";
 import "./modal.scss";
 
@@ -8,6 +8,21 @@ type ModalProps = JSX.InputHTMLAttributes<HTMLDivElement> & {
 };
 export const Modal: Component<ModalProps> = (props) => {
 	const [local, rest] = splitProps(props, ["children", "class", "onClose", "title"]);
+
+	createEffect(() => {
+		const fn = (e) => {
+			if (e.key === "Escape") {
+				e.stopPropagation();
+				props.onClose();
+			}
+		};
+
+		document.addEventListener("keyup", fn);
+
+		return () => {
+			document.removeEventListener("keyup", fn);
+		};
+	});
 
 	return (
 		<Portal>
