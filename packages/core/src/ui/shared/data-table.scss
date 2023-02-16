@@ -19,9 +19,10 @@ main.data-table-container {
 		color: rgb(255 255 255);
 		align-items: center;
 		gap: 12px;
-		padding: 0 12px;
+		padding: 8px 12px;
 
 		div.title {
+			font-size: 1.5rem;
 			margin-right: auto;
 		}
 
@@ -34,6 +35,11 @@ main.data-table-container {
 			height: 26px;
 			width: 26px;
 			padding: 2px;
+
+			label,
+			input {
+				display: inline-block;
+			}
 
 			svg {
 				fill: white;
