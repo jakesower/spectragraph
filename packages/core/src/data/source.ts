@@ -31,7 +31,7 @@ export type Schema = { properties: { [k: string]: Property } };
 export type Source = {
 	columns: ColumnObj;
 	records: Record[];
-	title?: string;
+	name: string;
 	schema?: Schema;
 };
 

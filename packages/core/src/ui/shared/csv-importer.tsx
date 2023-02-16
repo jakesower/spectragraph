@@ -5,17 +5,19 @@ import { uniq } from "lodash-es";
 import "./csv-importer.scss";
 import "../standards.scss";
 
+type SourceData = Pick<Source, "records" | "columns">;
+
 type Props = Omit<JSX.InputHTMLAttributes<HTMLInputElement>, "onChange"> & {
-	onChange: (source: { name: string; data: Source }) => void;
+	onChange: (source: { name: string; data: SourceData }) => void;
 };
 
-function inferSource(csvData: { [k: string]: string }[]): Source {
+function inferSource(csvData: { [k: string]: string }[]): SourceData {
 	return { records: csvData, columns: detectColumns(csvData) };
 }
 
 export const CsvImporter: Component<Props> = (props) => {
 	const [local, rest] = splitProps(props, ["onChange"]);
-	const [csvData, setCsvData] = createSignal<Source>(null);
+	const [csvData, setCsvData] = createSignal<SourceData>(null);
 	const [name, setName] = createSignal<string>("");
 
 	const readFile = (ev) => {

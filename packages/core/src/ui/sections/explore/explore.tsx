@@ -3,24 +3,39 @@ import { useSources } from "../../../contexts/source-context.js";
 import { ImportSource } from "../../shared/import-source.jsx";
 import "./explore.scss";
 import "../../standards.scss";
+import { useDataTable } from "../../../contexts/data-table-context.jsx";
 
 export const Explore: Component = () => {
 	const [sources] = useSources();
-	console.log(sources);
+	const [dataTableState, setDataTableState] = useDataTable();
 
 	return (
 		<div class="explore-section">
 			<section class="sources">
 				<ul class="standard sources-container">
 					<For each={Object.entries(sources)}>
-						{([sourceName, source]) => (
-							<li class="source-list-item">
-								<h2 class="source-name">{sourceName}</h2>
+						{([sourceKey, source]) => (
+							<button
+								class={`source-list-item unadorned${
+									dataTableState?.sourceKey === sourceKey ? " selected" : ""
+								}`}
+								role="listitem"
+								onClick={() => {
+									setDataTableState({ sourceKey });
+								}}
+							>
+								<h2
+									class={`source-name${
+										dataTableState?.sourceKey === sourceKey ? " selected" : ""
+									}`}
+								>
+									{sourceKey}
+								</h2>
 								<div class="column-count">
 									{Object.keys(source.records[0]).length ?? "??"} columns
 								</div>
 								<div class="row-count">{source.records.length} records</div>
-							</li>
+							</button>
 						)}
 					</For>
 				</ul>
