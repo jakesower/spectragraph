@@ -33,6 +33,14 @@ export const DataTable: Component = () => {
 					<button type="button" class="control search">
 						<SearchIcon />
 					</button>
+					<input
+						type="search"
+						class="control"
+						id="data-table-search"
+						onChange={() => {
+							console.log("change");
+						}}
+					/>
 					<button type="button" class="control">
 						<FilterIcon />
 					</button>
