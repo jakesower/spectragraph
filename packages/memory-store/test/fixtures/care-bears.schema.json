@@ -1,0 +1,59 @@
+{
+	"$schema": "file:///home/jake/dev/data-prism/packages/core/src/schemas/data-prism-schema.1.0.0.schema.json",
+	"resources": {
+		"bears": {
+			"properties": {
+				"name": { "type": "string" },
+				"yearIntroduced": { "type": "number" },
+				"belly_badge": { "type": "string" },
+				"fur_color": { "type": "string" }
+			},
+			"relationships": {
+				"home": {
+					"cardinality": "one",
+					"resource": "home",
+					"inverse": "residents"
+				},
+				"powers": {
+					"cardinality": "many",
+					"resource": "powers",
+					"inverse": "wielders"
+				},
+				"bestFriend": {
+					"cardinality": "one",
+					"resource": "bears",
+					"inverse": "bestFriend"
+				}
+			}
+		},
+		"homes": {
+			"properties": {
+				"name": { "type": "string" },
+				"location": { "type": "string" },
+				"caringMeter": { "type": "number" },
+				"isInClouds": { "type": "boolean" }
+			},
+			"relationships": {
+				"residents": {
+					"cardinality": "many",
+					"resource": "bears",
+					"inverse": "home"
+				}
+			}
+		},
+		"powers": {
+			"properties": {
+				"name": { "type": "string" },
+				"description": { "type": "string" },
+				"type": { "type": "string" }
+			},
+			"relationships": {
+				"wielders": {
+					"resource": "bears",
+					"cardinality": "many",
+					"inverse": "powers"
+				}
+			}
+		}
+	}
+}
