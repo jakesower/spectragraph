@@ -18,10 +18,6 @@ export function ensureValidQuery(schema: Schema, rootQuery: Query): void {
 		throw new Error("queries must have a `type` associated with them");
 	}
 
-	if (!rootQuery.properties) {
-		throw new Error("queries must have `properties` to query");
-	}
-
 	const go = (resType: string, subquery: Subquery) => {
 		const resDef = schema.resources[resType];
 
@@ -31,10 +27,12 @@ export function ensureValidQuery(schema: Schema, rootQuery: Query): void {
 			);
 		}
 
-		const invalidProps = difference(
-			Object.keys(subquery.properties),
-			Object.keys({ ...resDef.properties, ...resDef.relationships }),
-		);
+		if (!subquery.properties) return;
+
+		const invalidProps = difference(Object.keys(subquery.properties), [
+			"id",
+			...Object.keys({ ...resDef.properties, ...resDef.relationships }),
+		]);
 
 		if (invalidProps.length > 0) {
 			throw new Error(
@@ -59,6 +57,6 @@ export const evaluators = {
 	id: createEvaluator({}),
 };
 
-export function evaluateId(expression) {
-	return evaluators.id.evaluate(expression);
+export function evaluateId(expression, args) {
+	return evaluators.id.evaluate(expression, args);
 }

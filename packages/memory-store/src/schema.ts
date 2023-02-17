@@ -19,6 +19,7 @@ type LooseSchemaRelationship = {
 };
 
 type LooseSchemaResource = {
+	idField?: string;
 	properties: { [k: string]: LooseSchemaProperty };
 	relationships: { [k: string]: LooseSchemaRelationship };
 };
@@ -50,6 +51,7 @@ type SchemaRelationship = {
 };
 
 type SchemaResource = {
+	idField: string;
 	properties: { [k: string]: SchemaProperty };
 	relationships: { [k: string]: SchemaRelationship };
 };
@@ -64,11 +66,15 @@ export type Schema = {
 	resources: { [k: string]: SchemaResource };
 };
 
-export function compileSchema(rawSchema) {
+function ensureValidSchema(schema) {
+	// TODO
+}
+
+export function compileSchema(rawSchema: LooseSchema): Schema {
 	const resources = mapValues(rawSchema.resources, (resDef) => ({
 		idField: "id",
 		...resDef,
 	}));
 
-	return { ...rawSchema, resources };
+	return { ...rawSchema, resources } as unknown as Schema;
 }

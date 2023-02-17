@@ -48,7 +48,7 @@ export const careBearData = {
 			location: "Kingdom of Caring",
 			caringMeter: 1,
 			isInClouds: true,
-			bears: ["1", "2", "3"],
+			residents: ["1", "2", "3"],
 		},
 		2: {
 			id: "2",
@@ -56,7 +56,7 @@ export const careBearData = {
 			location: "Kingdom of Caring",
 			caringMeter: 1,
 			isInClouds: false,
-			bears: [],
+			residents: [],
 		},
 		3: {
 			id: "3",
@@ -64,7 +64,7 @@ export const careBearData = {
 			location: "Earth",
 			caringMeter: 0.5,
 			isInClouds: false,
-			bears: [],
+			residents: [],
 		},
 	},
 	powers: {
@@ -73,14 +73,14 @@ export const careBearData = {
 			name: "Care Bear Stare",
 			description: "Purges evil.",
 			type: "group power",
-			bears: ["1", "2", "3", "5"],
+			wielders: ["1", "2", "3", "5"],
 		},
 		makeWish: {
 			powerId: "makeWish",
 			name: "Make a Wish",
 			description: "Makes a wish on Twinkers",
 			type: "individual power",
-			bears: [],
+			wielders: [],
 		},
 	},
 	companions: {},

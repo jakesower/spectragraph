@@ -5,13 +5,13 @@
 			"properties": {
 				"name": { "type": "string" },
 				"yearIntroduced": { "type": "number" },
-				"belly_badge": { "type": "string" },
-				"fur_color": { "type": "string" }
+				"bellyBadge": { "type": "string" },
+				"furColor": { "type": "string" }
 			},
 			"relationships": {
 				"home": {
 					"cardinality": "one",
-					"resource": "home",
+					"resource": "homes",
 					"inverse": "residents"
 				},
 				"powers": {
@@ -42,6 +42,7 @@
 			}
 		},
 		"powers": {
+			"idField": "powerId",
 			"properties": {
 				"name": { "type": "string" },
 				"description": { "type": "string" },
