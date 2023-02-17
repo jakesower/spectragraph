@@ -18,11 +18,18 @@
 			"patternProperties": {
 				"[^.$]": {
 					"type": "object",
+					"required": ["properties"],
 					"properties": {
 						"properties": {
 							"type": "object",
 							"patternProperties": {
 								"[^.$]": { "$ref": "#/definitions/resourceProperty" }
+							}
+						},
+						"relationships": {
+							"type": "object",
+							"patternProperties": {
+								"[^.$]": { "$ref": "#/definitions/resourceRelationship" }
 							}
 						}
 					}
@@ -35,76 +42,28 @@
 			"enum": ["array", "boolean", "integer", "null", "number", "object", "string"]
 		},
 		"resourceProperty": {
-			"allOf": [
-				{
-					"type": "object",
-					"properties": {
-						"title": { "type": "string" },
-						"description": { "type": "string" },
-						"$comment": { "type": "string" },
-						"deprecated": { "type": "boolean", "default": false },
-						"meta": true
-					}
-				},
-				{
-					"oneOf": [
-						{ "$ref": "#/definitions/nonRelationshipProperty" },
-						{ "$ref": "#/definitions/relationshipProperty" }
-					]
-				}
-			]
-		},
-		"propertyArray": {
-			"type": "array",
-			"items": { "$ref": "#/definitions/nonRelationshipProperty" },
-			"minItems": 1
-		},
-		"nonRelationshipProperty": {
 			"type": "object",
 			"required": ["type"],
-			"additionalProperties": false,
 			"properties": {
 				"type": { "$ref": "#/definitions/simpleTypes" },
+				"title": { "type": "string" },
+				"description": { "type": "string" },
 				"default": true,
-				"allOf": { "$ref": "#/definitions/propertyArray" },
-				"anyOf": { "$ref": "#/definitions/propertyArray" },
-				"oneOf": { "$ref": "#/definitions/propertyArray" }
+				"$comment": { "type": "string" },
+				"deprecated": { "type": "boolean", "default": false },
+				"meta": true
 			}
 		},
-		"relationshipPropertyProperties": {
+		"resourceRelationship": {
 			"type": "object",
 			"required": ["foreignType", "foreignKey", "cardinality"],
 			"additionalProperties": false,
 			"properties": {
-				"type": { "const": "relationship" },
 				"foreignType": { "type": "string" },
 				"foreignKey": { "type": "string" },
 				"cardinality": { "type": "string", "enum": ["one", "many"] },
-				"inverseType": { "type": "string" },
 				"inverseProperty": { "type": "string" }
 			}
-		},
-		"relationshipProperty": {
-			"type": "object",
-			"required": ["type"],
-			"properties": {
-				"type": { "const": "relationship" },
-				"polymorphic": { "type": "boolean" }
-			},
-			"oneOf": [
-				{
-					"required": ["polymorphic", "relationships"],
-					"additionalProperties": false,
-					"properties": {
-						"polymorphic": { "const": true },
-						"relationships": {
-							"type": "array",
-							"items": { "$ref": "#/definitions/relationshipPropertyProperties" }
-						}
-					}
-				},
-				{ "$ref": "#/definitions/relationshipPropertyProperties" }
-			]
 		}
 	}
 }
