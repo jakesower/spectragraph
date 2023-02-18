@@ -47,60 +47,6 @@ resolved arguments to ancestor expressions.
 
 */
 
-// export const expressionDefinitions = {
-// 	...filterDefinitions,
-// };
-
-// type VarExpression = { $var: string };
-// type LiteralExpression = { $literal: unknown };
-
-// const expressionKeys = new Set([
-// 	...Object.keys(expressionDefinitions),
-// 	"$var",
-// 	"$literal",
-// ]);
-
-// function isExpression(val) {
-// 	return (
-// 		typeof val === "object" &&
-// 		!Array.isArray(val) &&
-// 		Object.keys(val).length === 1 &&
-// 		expressionKeys.has(Object.keys(val)[0])
-// 	);
-// }
-
-// export function compile<T>(expression: T, definitions: object) {
-// 	return (args) => {
-// 	const go = (expr) => {
-// 		if (!isExpression(expr)) {
-// 			return Array.isArray(expr)
-// 				? expr.map(go)
-// 				: typeof expr === "object"
-// 					? mapValues(expr, go)
-// 					: expr;
-// 		}
-
-// 		const expression = expr as
-// 			| Expression<any, any>
-// 			| VarExpression
-// 			| LiteralExpression;
-// 		const expressionName = Object.keys(expression)[0] as
-// 			| keyof typeof expressionDefinitions
-// 			| "$var"
-// 			| "$literal";
-
-// 		// these expressions are always terminal
-// 		if (expressionName === "$literal") return expression[expressionName];
-// 		if (expressionName === "$var") return args[expression[expressionName]];
-
-// 		// with evaluated children
-// 		const args = expression[expressionName];
-// 		const evaluatedArgs = go(args);
-// 	}
-// 	};
-// }
-
-// export function evaluate<Input, Output>(root: {[k: string]: })
 export function evaluate<T>(root: T, definitions, args: object = {}) {
 	const expressionKeys = new Set([...Object.keys(definitions ?? {}), "$var", "$literal"]);
 
