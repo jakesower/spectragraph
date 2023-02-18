@@ -15,8 +15,6 @@ beforeEach<LocalTestContext>((context) => {
 	context.store = store;
 });
 
-// Actual Tests
-
 it<LocalTestContext>("fetches a single resource", async (context) => {
 	const result = await context.store.get({
 		type: "bears",

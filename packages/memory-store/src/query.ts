@@ -18,7 +18,7 @@ export function ensureValidQuery(schema: Schema, rootQuery: Query): void {
 		throw new Error("queries must have a `type` associated with them");
 	}
 
-	const go = (resType: string, subquery: Subquery) => {
+	const go = (resType: string, query: Subquery) => {
 		const resDef = schema.resources[resType];
 
 		if (!resDef) {
@@ -27,9 +27,9 @@ export function ensureValidQuery(schema: Schema, rootQuery: Query): void {
 			);
 		}
 
-		if (!subquery.properties) return;
+		if (!query.properties) return;
 
-		const invalidProps = difference(Object.keys(subquery.properties), [
+		const invalidProps = difference(Object.keys(query.properties), [
 			"id",
 			...Object.keys({ ...resDef.properties, ...resDef.relationships }),
 		]);
@@ -38,12 +38,12 @@ export function ensureValidQuery(schema: Schema, rootQuery: Query): void {
 			throw new Error(
 				`Invalid prop(s) present in subquery: ${invalidProps.join(
 					", ",
-				)}. Query: ${JSON.stringify(subquery)}`,
+				)}. Query: ${JSON.stringify(query)}`,
 			);
 		}
 
 		// ensure valid subqueries
-		Object.entries(subquery.properties).filter(([propName, propArgs]) => {
+		Object.entries(query.properties).forEach(([propName, propArgs]) => {
 			if (propName in resDef.relationships) {
 				go(resDef.relationships[propName].resource, propArgs);
 			}

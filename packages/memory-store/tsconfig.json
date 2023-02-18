@@ -11,6 +11,9 @@
 		"types": ["vite/client", "vite-plugin-solid-svg/types"],
 		"noEmit": true,
 		"isolatedModules": true,
-		"resolveJsonModule": true
+		"resolveJsonModule": true,
+		"paths": {
+			"@data-prism/expressions": ["../expressions"]
+		}
 	}
 }
