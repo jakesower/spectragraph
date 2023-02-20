@@ -1,6 +1,6 @@
 import { difference } from "lodash-es";
-import { createEvaluator } from "@data-prism/expressions";
-import { Schema } from "./schema";
+import { createEvaluator } from "@data-prism/expression";
+import { Schema } from "./schema.js";
 
 export type Subquery = {
 	id?: string;

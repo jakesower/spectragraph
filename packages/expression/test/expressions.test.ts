@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createEvaluator } from "../src/expressions.js";
+import { createEvaluator } from "../src/expression.js";
 import { filterDefinitions } from "../src/definitions/filters.js";
 
 const kids = {
