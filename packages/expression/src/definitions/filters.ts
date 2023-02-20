@@ -1,5 +1,5 @@
 import { isEqual } from "lodash-es";
-import { Expression } from "../expressions";
+import { Expression } from "../expression";
 
 type Ordinal = number | string;
 

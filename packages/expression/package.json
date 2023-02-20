@@ -1,15 +1,19 @@
 {
-	"name": "@data-prism/expressions",
+	"name": "@data-prism/expression",
 	"version": "0.0.1",
 	"type": "module",
+	"main": "./src/expression.js",
+	"types": "./src/expression.d.ts",
 	"exports": {
-		".": "./src/expressions.js",
+		".": "./src/expression.js",
 		"./*": {
 			"import": "./src/*.js",
 			"require": "./dist/*.js"
 		}
 	},
+
 	"scripts": {
+		"build": "tsc -p ./tsconfig.json",
 		"test": "NODE_ENV=test vitest"
 	},
 	"keywords": [],

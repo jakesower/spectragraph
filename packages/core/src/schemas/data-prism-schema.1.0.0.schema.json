@@ -4,7 +4,6 @@
 	"title": "Data Prism Schema",
 	"description": "A metaschema for Data Prism schemas.",
 	"type": "object",
-	"additionalProperties": false,
 	"required": ["resources"],
 	"properties": {
 		"$id": { "type": "string" },
@@ -18,8 +17,10 @@
 			"patternProperties": {
 				"[^.$]": {
 					"type": "object",
-					"required": ["properties"],
 					"properties": {
+						"$ref": { "type": "string" },
+						"plural": { "type": "string" },
+						"singular": { "type": "string" },
 						"properties": {
 							"type": "object",
 							"patternProperties": {
@@ -35,6 +36,9 @@
 					}
 				}
 			}
+		},
+		"$defs": {
+			"type": "object"
 		}
 	},
 	"definitions": {
@@ -43,7 +47,6 @@
 		},
 		"resourceProperty": {
 			"type": "object",
-			"required": ["type"],
 			"properties": {
 				"type": { "$ref": "#/definitions/simpleTypes" },
 				"title": { "type": "string" },
@@ -51,19 +54,27 @@
 				"default": true,
 				"$comment": { "type": "string" },
 				"deprecated": { "type": "boolean", "default": false },
+				"oneOf": { "$ref": "#/definitions/resourcePropertyArray" },
+				"enum": { "type": "array", "minItems": 1 },
+				"const": true,
+				"$ref": { "type": "string" },
 				"meta": true
-			}
+			},
+			"oneOf": [{ "required": ["type"] }, { "required": ["$ref"] }]
 		},
 		"resourceRelationship": {
 			"type": "object",
-			"required": ["foreignType", "foreignKey", "cardinality"],
-			"additionalProperties": false,
+			"required": ["resource", "cardinality"],
 			"properties": {
-				"foreignType": { "type": "string" },
-				"foreignKey": { "type": "string" },
+				"resource": { "type": "string" },
 				"cardinality": { "type": "string", "enum": ["one", "many"] },
 				"inverseProperty": { "type": "string" }
 			}
+		},
+		"resourcePropertyArray": {
+			"type": "array",
+			"minItems": 1,
+			"items": { "$ref": "#/definitions/resourceProperty" }
 		}
 	}
 }

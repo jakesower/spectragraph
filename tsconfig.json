@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "NodeNext",
+		"moduleResolution": "node",
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"lib": ["ESNext"],
+		"isolatedModules": true,
+		"resolveJsonModule": true,
+		"declaration": true,
+		"declarationMap": true,
+		"incremental": true,
+		"paths": {
+			"@data-prism/expressions": ["./packages/expressions"],
+			"@data-prism/memory-store": ["./packages/memory-store"]
+		}
+	},
+	"references": [{ "path": "./packages/expression" }],
+	"include": ["./packages/*"]
+}
