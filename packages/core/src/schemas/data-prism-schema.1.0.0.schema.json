@@ -45,7 +45,7 @@
 		"simpleTypes": {
 			"enum": ["array", "boolean", "integer", "null", "number", "object", "string"]
 		},
-		"resourceProperty": {
+		"nestedProperty": {
 			"type": "object",
 			"properties": {
 				"type": { "$ref": "#/definitions/simpleTypes" },
@@ -59,8 +59,24 @@
 				"const": true,
 				"$ref": { "type": "string" },
 				"meta": true
-			},
-			"oneOf": [{ "required": ["type"] }, { "required": ["$ref"] }]
+			}
+		},
+		"resourceProperty": {
+			"type": "object",
+			"required": ["type"],
+			"properties": {
+				"type": { "$ref": "#/definitions/simpleTypes" },
+				"title": { "type": "string" },
+				"description": { "type": "string" },
+				"default": true,
+				"$comment": { "type": "string" },
+				"deprecated": { "type": "boolean", "default": false },
+				"oneOf": { "$ref": "#/definitions/resourcePropertyArray" },
+				"enum": { "type": "array", "minItems": 1 },
+				"const": true,
+				"$ref": { "type": "string" },
+				"meta": true
+			}
 		},
 		"resourceRelationship": {
 			"type": "object",
@@ -74,7 +90,7 @@
 		"resourcePropertyArray": {
 			"type": "array",
 			"minItems": 1,
-			"items": { "$ref": "#/definitions/resourceProperty" }
+			"items": { "$ref": "#/definitions/nestedProperty" }
 		}
 	}
 }

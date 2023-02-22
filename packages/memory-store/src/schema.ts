@@ -1,13 +1,14 @@
+/* eslint-disable no-use-before-define */
 import { mapValues } from "lodash-es";
 
 type LooseSchemaProperty = {
 	// type: "object" | "array" | "boolean" | "string" | "number" | "integer" | "null";
 	type: string;
-	title?: { type: "string" };
-	description?: { type: "string" };
+	title?: string;
+	description?: string;
 	default?: any;
-	$comment?: { type: "string" };
-	deprecated?: { type: "boolean" };
+	$comment?: string;
+	deprecated?: boolean;
 	meta?: any;
 };
 
@@ -36,11 +37,11 @@ export type LooseSchema = {
 
 type SchemaProperty = {
 	type: "object" | "array" | "boolean" | "string" | "number" | "integer" | "null";
-	title?: { type: "string" };
-	description?: { type: "string" };
+	title?: string;
+	description?: string;
 	default?: any;
-	$comment?: { type: "string" };
-	deprecated?: { type: "boolean" };
+	$comment?: string;
+	deprecated?: boolean;
 	meta?: any;
 };
 
