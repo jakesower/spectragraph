@@ -2,7 +2,6 @@
 import { mapValues } from "lodash-es";
 
 type LooseSchemaProperty = {
-	// type: "object" | "array" | "boolean" | "string" | "number" | "integer" | "null";
 	type: string;
 	title?: string;
 	description?: string;

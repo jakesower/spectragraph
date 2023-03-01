@@ -1,0 +1,15 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "node",
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"lib": ["DOM", "ES2021"],
+		"jsx": "preserve",
+		"jsxImportSource": "solid-js",
+		"types": ["vite/client", "vite-plugin-solid-svg/types"],
+		"noEmit": true,
+		"isolatedModules": true,
+	}
+}

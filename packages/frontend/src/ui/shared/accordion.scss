@@ -1,0 +1,51 @@
+.accordion {
+	display: flex;
+	flex-direction: column;
+	overflow: auto;
+
+	.accordion-item {
+		background-color: transparent;
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+		flex: 0.00001 0 auto;
+		transition: all 200ms;
+
+		& > * {
+			min-height: 0;
+		}
+
+		& > .accordion-toggle {
+			border: 0;
+			// background-color: transparent;
+			text-align: left;
+			cursor: pointer;
+			min-height: 0;
+			flex-shrink: 0;
+		}
+
+		.accordion-body {
+			overflow: auto;
+			flex: 0.00001 1 0;
+			background-color: transparent;
+			display: flex;
+			flex-direction: column;
+			transition: all 200ms;
+
+			& > * {
+				display: flex;
+				flex-direction: column;
+				flex: 0.00001 1 0;
+			}
+		}
+
+		&.selected {
+			flex: 1 1 auto;
+			overflow: hidden;
+
+			& > .accordion-body {
+				flex: 1 1 auto;
+			}
+		}
+	}
+}
