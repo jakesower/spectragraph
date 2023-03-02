@@ -1,15 +1,15 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { MemoryStore } from "../src/memory-store";
+import { beforeEach, expect, it } from "vitest";
+import { Store, createMemoryStore } from "../src/memory-store";
 import schema from "./fixtures/care-bears.schema.json" assert { type: "json" };
 import { careBearData } from "./fixtures/care-bear-data.js";
 
 type LocalTestContext = {
-	store: any;
+	store: Store;
 };
 
 // Test Setup
 beforeEach<LocalTestContext>((context) => {
-	const store = MemoryStore(schema);
+	const store = createMemoryStore(schema);
 	store.seed(careBearData);
 
 	context.store = store;
@@ -165,7 +165,7 @@ it<LocalTestContext>("fetches a single resource with many-to-many relationship",
 	expect(result).toEqual({ powers: [{ powerId: "careBearStare" }] });
 });
 
-it<LocalTestContext>("fetches multiple sub queries of various types", async (context) => {
+it<LocalTestContext>("fetches multiple subqueries of various types", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
 		id: "1",
@@ -185,7 +185,7 @@ it<LocalTestContext>("fetches multiple sub queries of various types", async (con
 	});
 });
 
-it<LocalTestContext>("handles sub queries between the same type", async (context) => {
+it<LocalTestContext>("handles subqueries between the same type", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
 		properties: {
@@ -209,7 +209,7 @@ it<LocalTestContext>("fails validation for invalid types", async (context) => {
 });
 
 it<LocalTestContext>("fails validation for invalid top level props", async (context) => {
-	expect(async () => {
+	await expect(async () => {
 		await context.store.get({ type: "bears", id: "1", properties: { koopa: {} } });
 	}).rejects.toThrowError();
 });
