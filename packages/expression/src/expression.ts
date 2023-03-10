@@ -1,8 +1,13 @@
 import { mapValues } from "lodash-es";
-import { filterDefinitions } from "./definitions/filters.js";
+import { coreDefinitions } from "./definitions/core.js";
+import { logicalDefinitions } from "./definitions/logical.js";
 
-export type Expression<Input, Output> = {
-	apply: (args: Input) => Output;
+export type Expression<Args, Input, Output> = {
+	apply: (args: Args, input: Input) => Output;
+	compile: (args: Args) => (val: Input) => Output;
+	evaluate?: (args: Args, val: Input) => Output;
+	distribute?: (property: string, args: any, distribute: (v: any) => any) => any;
+	distributeParams?: (args: any, distribute: (v: any) => any) => any;
 	name: string;
 };
 
@@ -47,20 +52,20 @@ resolved arguments to ancestor expressions.
 
 */
 
-export function evaluate<T>(root: T, definitions, args: object = {}) {
+const isExpression = (val: unknown, definitions): boolean => {
 	const expressionKeys = new Set([...Object.keys(definitions ?? {}), "$var", "$literal"]);
 
-	const isExpression = (val: unknown): boolean => {
-		return (
-			typeof val === "object" &&
-			!Array.isArray(val) &&
-			Object.keys(val).length === 1 &&
-			expressionKeys.has(Object.keys(val)[0])
-		);
-	};
+	return (
+		typeof val === "object" &&
+		!Array.isArray(val) &&
+		Object.keys(val).length === 1 &&
+		expressionKeys.has(Object.keys(val)[0])
+	);
+};
 
+export function evaluate<T>(expression: T, definitions, input) {
 	const go = <Input>(expr: Input) => {
-		if (!isExpression(expr)) {
+		if (!isExpression(expr, definitions)) {
 			return Array.isArray(expr)
 				? expr.map(go)
 				: typeof expr === "object"
@@ -70,27 +75,82 @@ export function evaluate<T>(root: T, definitions, args: object = {}) {
 
 		const [expressionName, expressionArgs] = Object.entries(expr)[0];
 
-		// these expressions are always terminal
+		// these special expressions don't use evaluated arguments
 		if (expressionName === "$literal") return expr[expressionName];
-		if (expressionName === "$var") return args[expr[expressionName]];
+		if (expressionName === "$var") return input[expr[expressionName]];
+		if (expressionName === "$pipe") {
+			return expressionArgs.reduce(
+				(acc, expr) => evaluate(expr, definitions, acc),
+				input,
+			);
+		}
 
 		// with evaluated children
 		const evaluatedArgs = go(expressionArgs);
-		return (definitions[expressionName] as any).apply(evaluatedArgs);
+		return (definitions[expressionName] as any).apply(evaluatedArgs, input);
 	};
 
-	return go(root);
+	return go(expression);
 }
 
-export function compile<T>(expression: T, definitions: object) {
-	return (args: object = {}) => {
-		evaluate(expression, definitions, args);
+function compile(expression: object, definitions: object): (val: any) => any {
+	if (!isExpression(expression, definitions)) {
+		throw new Error("only expressions can be compiled");
+	}
+
+	return (val) => evaluate(expression, definitions, val);
+}
+
+function distribute(propertyExpression: { [k: string]: any }, definitions) {
+	if (isExpression(propertyExpression, definitions)) {
+		const [exprName, exprArgs] = Object.entries(propertyExpression)[0];
+		const { distributeParams } = definitions[exprName];
+
+		return distributeParams
+			? distributeParams(exprArgs, (subExpr) => distribute(subExpr, definitions))
+			: propertyExpression;
+	}
+
+	const exprs = Object.entries(propertyExpression).map(([prop, expr]) => {
+		if (!isExpression(expr, definitions)) {
+			return { $pipe: [{ $prop: prop }, { $eq: expr }] };
+		}
+
+		const [exprName, exprArgs] = Object.entries(expr)[0];
+		const { distribute: exprDistribute } = definitions[exprName];
+
+		return exprDistribute(prop, exprArgs, (subExpr) => distribute(subExpr, definitions));
+	});
+
+	return exprs.length > 1 ? { $and: exprs } : exprs[0];
+}
+
+export function expressionContext(expressionDefinitions: object) {
+	const baseDefinitions = {
+		...coreDefinitions,
+		...logicalDefinitions,
+		...expressionDefinitions,
 	};
-}
+	const $pipe = coreDefinitions.$pipe({
+		compile: (expression) => compile(expression, { ...baseDefinitions, $pipe }),
+		evaluate: (expression, args) =>
+			evaluate(expression, { ...baseDefinitions, $pipe }, args),
+	});
 
-export function createEvaluator(definitions: object) {
+	const definitions = {
+		...baseDefinitions,
+		$pipe,
+	};
+
 	return {
-		compile: (expression) => compile(expression, definitions),
-		evaluate: (expression, args = {}) => evaluate(expression, definitions, args),
+		// compile: (expression) => compile(expression, definitions),
+		compile: (expression) => {
+			if (!isExpression(expression, definitions)) {
+				throw new Error("only expressions can be compiled");
+			}
+			return (vars = {}) => evaluate(expression, definitions, vars);
+		},
+		distribute: (propertyExpression) => distribute(propertyExpression, definitions),
+		evaluate: (expression, vars = {}) => evaluate(expression, definitions, vars),
 	};
 }
