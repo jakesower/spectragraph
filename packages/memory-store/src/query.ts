@@ -2,31 +2,34 @@ import { difference } from "lodash-es";
 import { expressionContext } from "@data-prism/expression";
 import { Schema } from "./schema.js";
 
-export type Query = {
+export type Query<S extends Schema> = {
 	first?: boolean;
 	id?: string;
 	limit?: number;
 	offset?: number;
 	order?: { property: string; direction: "asc" | "desc" }[];
 	properties?: {
-		[k: string]: Query;
+		[k: string]: Query<S>;
 	};
-	type?: string;
+	type?: keyof S["resources"] & string;
 	where?: { [k: string]: any };
 };
 
-export type SingularQuery = Query & ({ first: true } | { id: any });
+// export type SingularQuery = Query & ({ first: true } | { id: any });
 
-export type RootQuery = Query & {
-	type: string;
+export type RootQuery<S extends Schema> = Query<S> & {
+	type: keyof S["resources"];
 };
 
-export function ensureValidQuery(schema: Schema, rootQuery: RootQuery): void {
+export function ensureValidQuery<S extends Schema>(
+	schema: S,
+	rootQuery: RootQuery<S>,
+): void {
 	if (!rootQuery.type) {
 		throw new Error("queries must have a `type` associated with them");
 	}
 
-	const go = (resType: string, query: Query) => {
+	const go = (resType: string, query: Query<S>) => {
 		const resDef = schema.resources[resType];
 
 		if (!resDef) {

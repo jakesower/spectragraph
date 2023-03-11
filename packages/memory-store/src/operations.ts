@@ -5,41 +5,41 @@ import { MultiResult, Result, SingleResult } from "./result";
 import { InternalStore } from "./memory-store";
 
 type GetContext = { schema: Schema; store: InternalStore; type?: string };
-type GetOperation = (
-	query: RootQuery,
+type GetOperation<S extends Schema> = (
+	query: RootQuery<S>,
 	results: MultiResult,
 	context: GetContext,
 ) => MultiResult;
 
-export function runQuery(
-	query: RootQuery,
-	context: { schema: Schema; store: InternalStore },
+export function runQuery<S extends Schema>(
+	query: RootQuery<S>,
+	context: { schema: S; store: InternalStore },
 ): Result {
 	const { schema, store } = context;
 	const resDef = schema.resources[query.type];
 
 	// these are in order of execution
-	const operationDefinitions: { [k: string]: GetOperation } = {
-		where(query: Query, results: MultiResult): MultiResult {
+	const operationDefinitions: { [k: string]: GetOperation<S> } = {
+		where(query: Query<S>, results: MultiResult): MultiResult {
 			const filter = evaluators.where.distribute(query.where);
 			const filterFn = evaluators.where.compile(filter);
 
 			return results.filter((result) => filterFn(result));
 		},
-		order(query: Query, results: MultiResult): MultiResult {
+		order(query: Query<S>, results: MultiResult): MultiResult {
 			return orderBy(
 				results,
 				query.order?.map((o) => o.property),
 				query.order?.map((o) => o.direction),
 			);
 		},
-		limit(query: Query, results: MultiResult): MultiResult {
+		limit(query: Query<S>, results: MultiResult): MultiResult {
 			const { limit = 0, offset = 0 } = query;
 			if (limit <= 0) throw new Error("`limit` must be at least 1");
 
 			return results.slice(offset, limit + offset);
 		},
-		offset(query: Query, results: MultiResult): MultiResult {
+		offset(query: Query<S>, results: MultiResult): MultiResult {
 			if ((query.offset ?? 0) < 0) throw new Error("`offset` must be at least 0");
 			return query.limit ? results : results.slice(query.offset);
 		},
@@ -70,7 +70,7 @@ export function runQuery(
 	};
 
 	if (query.id && !store[query.type][query.id]) return null;
-	const defaultedQuery: RootQuery = { properties: { [resDef.idField]: {} }, ...query };
+	const defaultedQuery: RootQuery<S> = { properties: { [resDef.idField]: {} }, ...query };
 
 	const results = query.id
 		? [store[query.type][query.id]]

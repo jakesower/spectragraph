@@ -6,32 +6,25 @@ import { runQuery } from "./operations.js";
 
 export type InternalStore = { [k: string]: { [k: string]: any } };
 
-export type Store = {
-	compileQuery: (query: RootQuery) => (args?: object) => Promise<Result>;
-	get: (query: RootQuery, args?: object) => Promise<Result>;
+export type Store<S extends Schema> = {
+	compileQuery: (query: RootQuery<S>) => (args?: object) => Promise<Result>;
+	get: (query: RootQuery<S>, args?: object) => Promise<Result>;
 	seed: (seedData: object) => void;
 };
 
-type MemoryStoreOptions = {
-	initialData: any;
-};
-
-export function createMemoryStore<S extends Schema>(
-	schema: S,
-	options?: MemoryStoreOptions,
-): Store {
+export function createMemoryStore<S extends Schema>(schema: S): Store<S> {
 	const store: InternalStore = mapValues(schema.resources, () => ({}));
 
 	const seed = (seedData) => {
 		merge(store, seedData); // mutates
 	};
 
-	const get = (query: RootQuery, args = {}) => {
+	const get = (query: RootQuery<S>, args = {}) => {
 		ensureValidQuery(schema, query);
 		return Promise.resolve(runQuery(query, { schema, store }));
 	};
 
-	const compileQuery = (query: RootQuery) => {
+	const compileQuery = (query: RootQuery<S>) => {
 		ensureValidQuery(schema, query);
 		return (args) => get(query, args);
 	};
