@@ -4,7 +4,7 @@ import { careBearData } from "../fixtures/care-bear-data.js";
 import { careBearSchema } from "../fixtures/care-bears.schema";
 
 type LocalTestContext = {
-	store: Store;
+	store: Store<typeof careBearSchema>;
 };
 
 beforeEach<LocalTestContext>((context) => {
