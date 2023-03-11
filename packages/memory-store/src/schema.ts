@@ -12,10 +12,10 @@ type LooseSchemaProperty = {
 };
 
 type LooseSchemaRelationship = {
-	resource: string;
-	// cardinality: "one" | "many";
-	cardinality: string;
-	inverse?: string;
+	readonly resource: string;
+	// readonly cardinality: "one" | "many";
+	readonly cardinality: string;
+	readonly inverse?: string;
 };
 
 type LooseSchemaResource = {
