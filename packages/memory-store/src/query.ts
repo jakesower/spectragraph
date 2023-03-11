@@ -1,5 +1,5 @@
 import { difference } from "lodash-es";
-import { createEvaluator } from "@data-prism/expression";
+import { expressionContext } from "@data-prism/expression";
 import { Schema } from "./schema.js";
 
 export type Query = {
@@ -11,6 +11,7 @@ export type Query = {
 	properties?: {
 		[k: string]: Query;
 	};
+	type?: string;
 	where?: { [k: string]: any };
 };
 
@@ -41,7 +42,7 @@ export function ensureValidQuery(schema: Schema, rootQuery: RootQuery): void {
 		if (!query.properties) return;
 
 		const invalidProps = difference(Object.keys(query.properties), [
-			"id",
+			resDef.idField,
 			...Object.keys({ ...resDef.properties, ...resDef.relationships }),
 		]);
 
@@ -65,7 +66,8 @@ export function ensureValidQuery(schema: Schema, rootQuery: RootQuery): void {
 }
 
 export const evaluators = {
-	id: createEvaluator({}),
+	id: expressionContext({}),
+	where: expressionContext({}),
 };
 
 export function evaluateId(expression, args) {

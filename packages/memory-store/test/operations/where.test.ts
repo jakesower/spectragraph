@@ -17,25 +17,36 @@ beforeEach<LocalTestContext>((context) => {
 it<LocalTestContext>("filters on a property equality constraint", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
+		properties: { id: {}, name: {} },
+		where: { name: "Cheer Bear" },
+	});
+
+	expect(result).toEqual([{ id: "2", name: "Cheer Bear" }]);
+});
+
+it<LocalTestContext>("filters on a property that is not returned from properties", async (context) => {
+	const result = await context.store.get({
+		type: "bears",
+		properties: { id: {} },
 		where: { name: "Cheer Bear" },
 	});
 
 	expect(result).toEqual([{ id: "2" }]);
 });
 
-it.skip<LocalTestContext>("filters on multiple property equality where", async (context) => {
+it<LocalTestContext>("filters on multiple property equality where", async (context) => {
 	const result = await context.store.get({
 		type: "homes",
 		where: {
-			caring_meter: 1,
-			is_in_clouds: false,
+			caringMeter: 1,
+			isInClouds: false,
 		},
 	});
 
 	expect(result).toEqual([{ id: "2" }]);
 });
 
-it.skip<LocalTestContext>("filters using $eq operator", async (context) => {
+it<LocalTestContext>("filters using $eq operator", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
 		where: {
@@ -46,7 +57,7 @@ it.skip<LocalTestContext>("filters using $eq operator", async (context) => {
 	expect(result).toEqual([{ id: "5" }]);
 });
 
-it.skip<LocalTestContext>("filters using $gt operator", async (context) => {
+it<LocalTestContext>("filters using $gt operator", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
 		where: {
@@ -57,7 +68,7 @@ it.skip<LocalTestContext>("filters using $gt operator", async (context) => {
 	expect(result).toEqual([{ id: "5" }]);
 });
 
-it.skip<LocalTestContext>("filters using $lt operator", async (context) => {
+it<LocalTestContext>("filters using $lt operator", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
 		where: {
@@ -68,7 +79,7 @@ it.skip<LocalTestContext>("filters using $lt operator", async (context) => {
 	expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
 });
 
-it.skip<LocalTestContext>("filters using $lte operator", async (context) => {
+it<LocalTestContext>("filters using $lte operator", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
 		where: {
@@ -79,7 +90,7 @@ it.skip<LocalTestContext>("filters using $lte operator", async (context) => {
 	expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
 });
 
-it.skip<LocalTestContext>("filters using $gte operator", async (context) => {
+it<LocalTestContext>("filters using $gte operator", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
 		where: {
@@ -90,7 +101,7 @@ it.skip<LocalTestContext>("filters using $gte operator", async (context) => {
 	expect(result).toEqual([{ id: "5" }]);
 });
 
-it.skip<LocalTestContext>("filters using $in 1", async (context) => {
+it<LocalTestContext>("filters using $in 1", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
 		where: {
@@ -101,7 +112,7 @@ it.skip<LocalTestContext>("filters using $in 1", async (context) => {
 	expect(result).toEqual([{ id: "5" }]);
 });
 
-it.skip<LocalTestContext>("filters using $in 2", async (context) => {
+it<LocalTestContext>("filters using $in 2", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
 		where: {
@@ -112,7 +123,7 @@ it.skip<LocalTestContext>("filters using $in 2", async (context) => {
 	expect(result).toEqual([]);
 });
 
-it.skip<LocalTestContext>("filters using $ne operator", async (context) => {
+it<LocalTestContext>("filters using $ne operator", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
 		where: {
@@ -123,12 +134,13 @@ it.skip<LocalTestContext>("filters using $ne operator", async (context) => {
 	expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
 });
 
-it.skip<LocalTestContext>("filters related resources", async (context) => {
+it<LocalTestContext>("filters related resources", async (context) => {
 	const result = await context.store.get({
 		type: "powers",
 		id: "careBearStare",
-		relationships: {
-			bears: {
+		properties: {
+			powerId: {},
+			wielders: {
 				where: {
 					yearIntroduced: { $gt: 2000 },
 				},
@@ -136,5 +148,5 @@ it.skip<LocalTestContext>("filters related resources", async (context) => {
 		},
 	});
 
-	expect(result).toEqual({ id: "careBearStare", bears: [{ id: "5" }] });
+	expect(result).toEqual({ powerId: "careBearStare", wielders: [{ id: "5" }] });
 });

@@ -2,6 +2,7 @@ import { beforeEach, expect, it } from "vitest";
 import { Store, createMemoryStore } from "../src/memory-store";
 import schema from "./fixtures/care-bears.schema.json" assert { type: "json" };
 import { careBearData } from "./fixtures/care-bear-data.js";
+import { LooseSchema } from "../src/schema";
 
 type LocalTestContext = {
 	store: Store;
@@ -9,7 +10,8 @@ type LocalTestContext = {
 
 // Test Setup
 beforeEach<LocalTestContext>((context) => {
-	const store = createMemoryStore(schema);
+	typeof schema;
+	const store = createMemoryStore(schema as LooseSchema);
 	store.seed(careBearData);
 
 	context.store = store;
