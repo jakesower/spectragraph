@@ -1,7 +1,8 @@
 {
-	"$schema": "file:///home/jake/dev/data-prism/packages/core/src/schemas/data-prism-schema.1.0.0.schema.json",
+	"$schema": "file:///home/jake/dev/data-prism/packages/frontend/src/schemas/data-prism-schema.1.0.0.schema.json",
 	"resources": {
 		"bears": {
+			"idField": "id",
 			"properties": {
 				"name": { "type": "string" },
 				"yearIntroduced": { "type": "number" },
@@ -27,6 +28,7 @@
 			}
 		},
 		"homes": {
+			"idField": "id",
 			"properties": {
 				"name": { "type": "string" },
 				"location": { "type": "string" },

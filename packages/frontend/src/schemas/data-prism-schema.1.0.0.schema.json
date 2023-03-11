@@ -1,6 +1,6 @@
 {
 	"$schema": "http://json-schema.org/draft-07/schema#",
-	"$id": "file:///home/jake/dev/data-prism/packages/core/src/schemas/data-prism-schema.1.0.0.schema.json",
+	"$id": "file:///home/jake/dev/data-prism/packages/frontend/src/schemas/data-prism-schema.1.0.0.schema.json",
 	"title": "Data Prism Schema",
 	"description": "A metaschema for Data Prism schemas.",
 	"type": "object",
