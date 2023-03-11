@@ -1,6 +1,7 @@
 import { mapValues } from "lodash-es";
 import { coreDefinitions } from "./definitions/core.js";
 import { logicalDefinitions } from "./definitions/logical.js";
+import { comparativeDefinitions } from "./definitions/comparative.js";
 
 export type Expression<Args, Input, Output> = {
 	apply: (args: Args, input: Input) => Output;
@@ -128,6 +129,7 @@ function distribute(propertyExpression: { [k: string]: any }, definitions) {
 export function expressionContext(expressionDefinitions: object) {
 	const baseDefinitions = {
 		...coreDefinitions,
+		...comparativeDefinitions,
 		...logicalDefinitions,
 		...expressionDefinitions,
 	};
