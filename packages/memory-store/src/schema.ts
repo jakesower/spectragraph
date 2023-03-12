@@ -51,7 +51,7 @@ type SchemaRelationship = {
 };
 
 type SchemaResource = {
-	idField: string;
+	idField?: string;
 	properties: { [k: string]: SchemaProperty };
 	relationships: { [k: string]: SchemaRelationship };
 };
@@ -66,15 +66,25 @@ export type Schema = {
 	resources: { [k: string]: SchemaResource };
 };
 
+type Concrete<Type> = {
+	[Property in keyof Type]-?: Type[Property];
+};
+
+export type CompiledSchema<S extends Schema> = S & {
+	resources: {
+		[ResType in keyof S["resources"]]: Concrete<S["resources"][ResType]>;
+	};
+};
+
 function ensureValidSchema(schema) {
 	// TODO
 }
 
-export function compileSchema(rawSchema: LooseSchema): Schema {
-	const resources = mapValues(rawSchema.resources, (resDef) => ({
-		idField: "id",
-		...resDef,
-	}));
+// export function compileSchema<S extends Schema>(rawSchema: S): CompiledSchema<S> {
+// 	const resources = mapValues(rawSchema.resources, (resDef) => ({
+// 		idField: "id",
+// 		...resDef,
+// 	}));
 
-	return { ...rawSchema, resources } as unknown as Schema;
-}
+// 	return { ...rawSchema, resources };
+// }
