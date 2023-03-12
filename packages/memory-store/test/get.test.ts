@@ -3,10 +3,8 @@ import { Store, createMemoryStore } from "../src/memory-store";
 import { careBearData } from "./fixtures/care-bear-data.js";
 import { careBearSchema } from "./fixtures/care-bears.schema";
 
-type CBSchema = typeof careBearSchema;
-
 type LocalTestContext = {
-	store: Store<CBSchema>;
+	store: Store<typeof careBearSchema>;
 };
 
 // Test Setup
