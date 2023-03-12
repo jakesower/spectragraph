@@ -1,5 +1,5 @@
 import { mapValues, merge } from "lodash-es";
-import { RootQuery, ensureValidQuery } from "./query.js";
+import { QueryOfType, RootQuery, ensureValidQuery } from "./query.js";
 import { Schema } from "./schema.js";
 import { Result } from "./result.js";
 import { runQuery } from "./operations.js";
