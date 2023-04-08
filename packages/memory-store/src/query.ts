@@ -2,10 +2,6 @@ import { difference } from "lodash-es";
 import { expressionContext } from "@data-prism/expression";
 import { Schema } from "./schema.js";
 
-// export type QueryProperty<S extends Schema, ResType extends keyof S["resources"]> = {
-// 	[K in keyof S["resources"][ResType]["properties"]]: S["resources"][ResType]["properties"][K] extends { type: "string" };
-// };
-
 type Query<S extends Schema> = {
 	first?: boolean;
 	id?: string;
@@ -33,8 +29,6 @@ export type QueryOfType<S extends Schema, ResType extends keyof S["resources"]> 
 	type: ResType;
 	where?: { [k: string]: any };
 };
-
-// export type SingularQuery = Query & ({ first: true } | { id: any });
 
 export type RootQuery<S extends Schema> = Query<S> & {
 	type: keyof S["resources"] & string;
