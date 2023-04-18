@@ -8,6 +8,11 @@ const $echo = {
 	apply: (args) => args,
 };
 
+const $input = {
+	name: "input",
+	apply: (_, input) => input,
+};
+
 const $get = {
 	name: "get",
 	apply: (args, val) => get(val, args),
@@ -36,6 +41,7 @@ const $var = {
 export const coreDefinitions = {
 	$echo,
 	$get,
+	$input,
 	$literal,
 	$pipe,
 	$prop,
