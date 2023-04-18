@@ -6,12 +6,14 @@ import { comparativeDefinitions } from "./definitions/comparative.js";
 export type Expression<Args, Input, Output> = {
 	apply: (args: Args, input: Input) => Output;
 	distribute?: (args: any, distribute: (v: any) => any) => any;
-	name: string;
+	name?: string;
 };
 
 export type FunctionExpression<Args, Input, Output> = (
 	evaluate: (...args: any) => any,
 ) => Expression<Args, Input, Output>;
+
+const CONTROLS_EVALUATION = Symbol("contols evaluation");
 
 export function isExpression(val: unknown, definitions): boolean {
 	const expressionKeys = new Set([...Object.keys(definitions ?? {}), "$var", "$literal"]);
@@ -46,18 +48,27 @@ export function createExpressionEngine(expressionDefinitions: object) {
 				return expressionArgs.reduce((acc, expr) => evaluate(expr, acc), input);
 			}
 
+			// some operations need to control the flow of evaluation
+			const expressionDefinition = definitions[expressionName] as any;
+			if (expressionDefinition[CONTROLS_EVALUATION]) {
+				return expressionDefinition.apply(expressionArgs, input);
+			}
+
 			// with evaluated children
 			const evaluatedArgs = go(expressionArgs);
-			return (definitions[expressionName] as any).apply(evaluatedArgs, input);
+			return expressionDefinition.apply(evaluatedArgs, input);
 		};
 
 		return go(expression);
 	}
 
 	Object.keys(definitions).forEach((defKey) => {
-		if (typeof definitions[defKey] === "function") {
+		const controlsEvaluation = typeof definitions[defKey] === "function";
+		if (controlsEvaluation) {
 			definitions[defKey] = definitions[defKey](evaluate);
 		}
+
+		definitions[defKey][CONTROLS_EVALUATION] = controlsEvaluation;
 	});
 
 	return {
@@ -66,14 +77,14 @@ export function createExpressionEngine(expressionDefinitions: object) {
 				throw new Error("only expressions can be compiled");
 			}
 
-			return (vars = {}) => evaluate(expression, vars);
+			return (input?: any) => evaluate(expression, input);
 		},
-		evaluate(expression, vars = {}) {
+		evaluate(expression, input?: any) {
 			if (!isExpression(expression, definitions)) {
 				throw new Error("only expressions can be compiled");
 			}
 
-			return evaluate(expression, vars);
+			return evaluate(expression, input);
 		},
 	};
 }
