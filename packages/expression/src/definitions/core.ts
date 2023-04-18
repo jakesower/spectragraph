@@ -6,43 +6,31 @@ import { get } from "lodash-es";
 const $echo = {
 	name: "echo",
 	apply: (args) => args,
-	compile: () => (val) => val,
-	evaluate: (args, val) => val,
 };
 
 const $get = {
 	name: "get",
 	apply: (args, val) => get(val, args),
-	compile: (args) => (val) => get(val, args),
-	evaluate: (args, val) => get(val, args),
 };
 
 const $literal = {
 	name: "literal",
 	apply: (args) => args,
-	compile: (args) => () => args,
-	evaluate: (args) => args,
 };
 
-const $pipe = (context) => ({
+const $pipe = (evaluate) => ({
 	name: "pipe",
-	apply: (args, val) => args.reduce((acc, expr) => context.evaluate(expr, acc), val),
-	compile: (args) => (val) => args.reduce((acc, arg) => context.compile(arg)(acc), val),
-	evaluate: (args, val) => args.reduce((acc, arg) => context.compile(arg)(acc), val),
+	apply: (args, val) => args.reduce((acc, expr) => evaluate(expr, acc), val),
 });
 
 const $prop = {
 	name: "prop",
 	apply: (args, val) => val[args],
-	compile: (args) => (val) => val[args],
-	evaluate: (args, val) => val[args],
 };
 
 const $var = {
 	name: "var",
 	apply: (args, val) => val[args],
-	compile: (param, vars) => vars[param],
-	evaluate: (args, val) => val[args],
 };
 
 export const coreDefinitions = {

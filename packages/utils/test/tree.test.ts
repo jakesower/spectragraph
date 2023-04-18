@@ -25,7 +25,7 @@ describe("tabularize", () => {
 		expect(tabularize(schema, query, tree)).toEqual([{ id: "1", "home.id": "1" }]);
 	});
 
-	it("can navigate a single to-many relationship", () => {
+	it("can navigate a single to-many relationship from a single resource", () => {
 		const query = {
 			type: "bears",
 			id: "1",
@@ -39,6 +39,30 @@ describe("tabularize", () => {
 		expect(tabularize(schema, query, tree)).toEqual([
 			{ id: "1", "powers.powerId": "careBearStare" },
 			{ id: "1", "powers.powerId": "makeWish" },
+		]);
+	});
+
+	it("can navigate a single to-many relationship from multiple resources", () => {
+		const query = {
+			type: "bears",
+			properties: { id: {}, powers: { properties: { powerId: {} } } },
+		};
+		const tree = [
+			{
+				id: "1",
+				powers: [{ powerId: "careBearStare" }, { powerId: "makeWish" }],
+			},
+			{
+				id: "2",
+				powers: [{ powerId: "careBearStare" }, { powerId: "makeWish" }],
+			},
+		];
+
+		expect(tabularize(schema, query, tree)).toEqual([
+			{ id: "1", "powers.powerId": "careBearStare" },
+			{ id: "1", "powers.powerId": "makeWish" },
+			{ id: "2", "powers.powerId": "careBearStare" },
+			{ id: "2", "powers.powerId": "makeWish" },
 		]);
 	});
 });

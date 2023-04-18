@@ -1,10 +1,9 @@
-import { mapKeys, mapValues, pick } from "lodash-es";
+import { pick } from "lodash-es";
 
 function walk(schema, rootQuery, rootTree) {
 	const output = [];
 
 	const go = (query, tree, type, path, ancestors) => {
-		console.log("go", query, tree, type, path, ancestors);
 		const resDef = schema.resources[type];
 
 		const propProps = pick(query.properties, Object.keys(resDef.properties));
@@ -45,5 +44,7 @@ function walk(schema, rootQuery, rootTree) {
 }
 
 export function tabularize(schema, query, tree) {
-	return walk(schema, query, tree);
+	return Array.isArray(tree)
+		? tree.flatMap((t) => walk(schema, query, t))
+		: walk(schema, query, tree);
 }
