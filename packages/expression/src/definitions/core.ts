@@ -15,7 +15,7 @@ const $input = {
 
 const $get = {
 	name: "get",
-	apply: (args, val) => get(val, args),
+	apply: (args, input) => get(input, args),
 };
 
 const $literal = {
@@ -25,17 +25,17 @@ const $literal = {
 
 const $pipe = (evaluate) => ({
 	name: "pipe",
-	apply: (args, val) => args.reduce((acc, expr) => evaluate(expr, acc), val),
+	apply: (args, input) => args.reduce((acc, expr) => evaluate(expr, acc), input),
 });
 
 const $prop = {
 	name: "prop",
-	apply: (args, val) => val[args],
+	apply: (args, input) => input[args],
 };
 
 const $var = {
 	name: "var",
-	apply: (args, val) => val[args],
+	apply: (args, input) => input[args],
 };
 
 export const coreDefinitions = {

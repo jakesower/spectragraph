@@ -1,5 +1,5 @@
 import { difference } from "lodash-es";
-import { expressionContext } from "@data-prism/expression";
+import { createExpressionEngine } from "@data-prism/expression";
 import { Schema } from "./schema.js";
 
 type Query<S extends Schema> = {
@@ -82,8 +82,8 @@ export function ensureValidQuery<S extends Schema>(
 }
 
 export const evaluators = {
-	id: expressionContext({}),
-	where: expressionContext({}),
+	id: createExpressionEngine({}),
+	where: createExpressionEngine({}),
 };
 
 export function evaluateId(expression, args) {

@@ -2,6 +2,7 @@ import { mapValues } from "lodash-es";
 import { coreDefinitions } from "./definitions/core.js";
 import { logicalDefinitions } from "./definitions/logical.js";
 import { comparativeDefinitions } from "./definitions/comparative.js";
+import { distribute } from "./distribute.js";
 
 export type Expression<Args, Input, Output> = {
 	apply: (args: Args, input: Input) => Output;
@@ -27,26 +28,28 @@ export function isExpression(val: unknown, definitions): boolean {
 }
 
 export function createExpressionEngine(expressionDefinitions: object) {
-	const definitions = { ...coreDefinitions, ...expressionDefinitions };
+	const definitions = {
+		...coreDefinitions,
+		...logicalDefinitions,
+		...comparativeDefinitions,
+		...expressionDefinitions,
+	};
 
-	function evaluate<T>(expression: T, input) {
-		const go = <Input>(expr: Input) => {
-			if (!isExpression(expr, definitions)) {
-				return Array.isArray(expr)
-					? expr.map(go)
-					: typeof expr === "object"
-						? mapValues(expr, go)
-						: expr;
+	function evaluate<T>(rootExpression: T, input) {
+		const go = <Input>(expression: Input) => {
+			if (!isExpression(expression, definitions)) {
+				return Array.isArray(expression)
+					? expression.map(go)
+					: typeof expression === "object"
+						? mapValues(expression, go)
+						: expression;
 			}
 
-			const [expressionName, expressionArgs] = Object.entries(expr)[0];
+			const [expressionName, expressionArgs] = Object.entries(expression)[0];
 
 			// these special expressions don't use evaluated arguments
-			if (expressionName === "$literal") return expr[expressionName];
-			if (expressionName === "$var") return input[expr[expressionName]];
-			if (expressionName === "$pipe") {
-				return expressionArgs.reduce((acc, expr) => evaluate(expr, acc), input);
-			}
+			if (expressionName === "$literal") return expression[expressionName];
+			if (expressionName === "$var") return input[expression[expressionName]];
 
 			// some operations need to control the flow of evaluation
 			const expressionDefinition = definitions[expressionName] as any;
@@ -59,7 +62,7 @@ export function createExpressionEngine(expressionDefinitions: object) {
 			return expressionDefinition.apply(evaluatedArgs, input);
 		};
 
-		return go(expression);
+		return go(rootExpression);
 	}
 
 	Object.keys(definitions).forEach((defKey) => {
@@ -78,6 +81,9 @@ export function createExpressionEngine(expressionDefinitions: object) {
 			}
 
 			return (input?: any) => evaluate(expression, input);
+		},
+		distribute(expression) {
+			return distribute(expression, definitions);
 		},
 		evaluate(expression, input?: any) {
 			if (!isExpression(expression, definitions)) {

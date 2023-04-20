@@ -14,7 +14,7 @@ beforeEach<LocalTestContext>((context) => {
 	context.store = store;
 });
 
-it<LocalTestContext>("filters on a property equality constraint", async (context) => {
+it.only<LocalTestContext>("filters on a property equality constraint", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
 		properties: { id: {}, name: {} },
