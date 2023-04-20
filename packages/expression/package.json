@@ -2,10 +2,10 @@
 	"name": "@data-prism/expression",
 	"version": "0.0.1",
 	"type": "module",
-	"main": "./src/expression.js",
-	"types": "./src/expression.d.ts",
+	"main": "./dist/src/expression.js",
+	"types": "./dist/src/expression.d.ts",
 	"exports": {
-		".": "./src/expression.js",
+		".": "./dist/src/expression.js",
 		"./*": {
 			"import": "./src/*.js",
 			"require": "./dist/*.js"

@@ -1,8 +1,8 @@
 import { mapValues, orderBy } from "lodash-es";
-import { QueryOfType, RootQuery, evaluators } from "./query";
-import { Schema } from "./schema";
-import { MultiResult, Result } from "./result";
-import { InternalStore } from "./memory-store";
+import { QueryOfType, RootQuery, evaluators } from "./query.js";
+import { Schema } from "./schema.js";
+import { MultiResult, Result } from "./result.js";
+import { InternalStore } from "./memory-store.js";
 
 type GetOperation = (results: MultiResult) => MultiResult;
 
@@ -18,7 +18,7 @@ export function runQuery<S extends Schema, ResType extends keyof S["resources"] 
 	// these are in order of execution
 	const operationDefinitions: { [k: string]: GetOperation } = {
 		where(results: MultiResult): MultiResult {
-			const filter = evaluators.where.distribute(query.where);
+			const filter = (evaluators.where as any).distribute(query.where);
 			const filterFn = evaluators.where.compile(filter);
 
 			return results.filter((result) => filterFn(result));
