@@ -2,10 +2,10 @@
 	"name": "@data-prism/memory-store",
 	"version": "0.0.1",
 	"type": "module",
-	"main": "./dist/memory-store.js",
-	"types": "./dist/memory-store.d.ts",
+	"main": "./dist/src/memory-store.js",
+	"types": "./dist/src/memory-store.d.ts",
 	"exports": {
-		".": "./memory-store.js"
+		".": "./dist/src/memory-store.js"
 	},
 	"scripts": {
 		"build": "tsc -p ./tsconfig.json",

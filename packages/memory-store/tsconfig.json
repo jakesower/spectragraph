@@ -2,9 +2,11 @@
 	"extends": "../../tsconfig.json",
 	"compilerOptions": {
 		"outDir": "./dist",
-		"rootDir": "./src",
-		"composite": true
+		"composite": true,
+		"target": "ES2015",
+		"module": "ES2020",
+		"esModuleInterop": true
 	},
 	"references": [{ "path": "../expression" }],
-	"include": ["src/**/*"]
+	"include": ["./src"]
 }
