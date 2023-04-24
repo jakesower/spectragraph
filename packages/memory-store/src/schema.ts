@@ -80,6 +80,19 @@ function ensureValidSchema(schema) {
 	// TODO
 }
 
+export function compileSchema(schema) {
+	ensureValidSchema(schema);
+
+	return {
+		...schema,
+		resources: mapValues(schema.resources, (resDef) => ({
+			properties: {},
+			relationships: {},
+			...resDef,
+		})),
+	};
+}
+
 // export function compileSchema<S extends Schema>(rawSchema: S): CompiledSchema<S> {
 // 	const resources = mapValues(rawSchema.resources, (resDef) => ({
 // 		idField: "id",
