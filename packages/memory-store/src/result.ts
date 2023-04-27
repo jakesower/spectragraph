@@ -1,4 +1,3 @@
-export type SingleResult = { [k: string]: any };
+export type SingleResult = { [k: string]: any } | null;
 export type MultiResult = SingleResult[];
-export type Result = SingleResult | MultiResult | null;
-
+export type Result<Q> = Q extends { id: any } ? SingleResult : MultiResult;
