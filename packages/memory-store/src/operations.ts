@@ -1,15 +1,16 @@
 import { mapValues, orderBy } from "lodash-es";
-import { QueryOfType, RootQuery, evaluators } from "./query.js";
+import { QueryOfType, evaluators } from "./query.js";
 import { Schema } from "./schema.js";
 import { MultiResult, Result } from "./result.js";
 import { InternalStore } from "./memory-store.js";
 
 type GetOperation = (results: MultiResult) => MultiResult;
 
-export function runQuery<S extends Schema, ResType extends keyof S["resources"] & string>(
-	query: QueryOfType<S, ResType>,
-	context: { schema: S; store: InternalStore },
-): Result {
+export function runQuery<
+	S extends Schema,
+	ResType extends keyof S["resources"] & string,
+	Q extends QueryOfType<S, ResType>,
+>(query: Q, context: { schema: S; store: InternalStore }): Result<Q> {
 	const { schema, store } = context;
 	const resDef = schema.resources[query.type];
 

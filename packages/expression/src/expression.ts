@@ -3,6 +3,8 @@ import { coreDefinitions } from "./definitions/core.js";
 import { logicalDefinitions } from "./definitions/logical.js";
 import { comparativeDefinitions } from "./definitions/comparative.js";
 import { distribute } from "./distribute.js";
+import { mathDefinitions } from "./definitions/math.js";
+import { iterativeDefinitions } from "./definitions/iterative.js";
 
 export type Expression<Args, Input, Output> = {
 	apply: (args: Args, input: Input) => Output;
@@ -32,6 +34,8 @@ export function createExpressionEngine(expressionDefinitions: object) {
 		...coreDefinitions,
 		...logicalDefinitions,
 		...comparativeDefinitions,
+		...mathDefinitions,
+		...iterativeDefinitions,
 		...expressionDefinitions,
 	};
 
@@ -91,6 +95,9 @@ export function createExpressionEngine(expressionDefinitions: object) {
 			}
 
 			return evaluate(expression, input);
+		},
+		isExpression(expression) {
+			return isExpression(expression, definitions);
 		},
 	};
 }

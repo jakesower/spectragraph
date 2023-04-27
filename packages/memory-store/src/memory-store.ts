@@ -13,8 +13,10 @@ type GetQueryOfType<S extends Schema> = RootQuery<S> extends { type: infer ResTy
 	: never;
 
 export type Store<S extends Schema> = {
-	compileQuery: (query: RootQuery<S>) => (args?: object) => Promise<Result>;
-	get: (query: GetQueryOfType<S>, args?: object) => Promise<Result>;
+	compileQuery: <Q extends RootQuery<S>>(
+		query: RootQuery<S>,
+	) => (args?: object) => Promise<Result<Q>>;
+	get: <Q extends GetQueryOfType<S>>(query: Q, args?: object) => Promise<Result<Q>>;
 	seed: (seedData: object) => void;
 };
 
@@ -33,8 +35,8 @@ export function createMemoryStore<S extends Schema>(schema: S): Store<S> {
 
 	const compileQuery = (query: RootQuery<S>) => {
 		ensureValidQuery(compiledSchema, query);
-		return (args) =>
-			Promise.resolve(runQuery(query, { schema: compiledSchema, store }));
+		return (args = {}) =>
+			Promise.resolve(runQuery({ ...query, ...args }, { schema: compiledSchema, store }));
 	};
 
 	return { compileQuery, get, seed };
