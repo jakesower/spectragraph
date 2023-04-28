@@ -1,4 +1,4 @@
-import { get, mapValues } from "lodash-es";
+import { mapValues } from "lodash-es";
 import { MultiResult } from "./result";
 import { createExpressionEngine } from "@data-prism/expression";
 
