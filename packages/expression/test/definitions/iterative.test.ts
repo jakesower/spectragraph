@@ -39,3 +39,7 @@ describe("$map", () => {
 		).toEqual([4, 5, 6]);
 	});
 });
+
+it("$filter", () => {
+	expect(evaluate({ $filter: [[1, 2, 3], { $eq: 2 }] })).toEqual([2]);
+});

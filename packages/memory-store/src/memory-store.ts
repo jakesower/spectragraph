@@ -3,6 +3,7 @@ import { QueryOfType, RootQuery, ensureValidQuery } from "./query.js";
 import { Schema, compileSchema } from "./schema.js";
 import { Result } from "./result.js";
 import { runQuery } from "./operations.js";
+import { project } from "./project.js";
 
 export type InternalStore = { [k: string]: { [k: string]: any } };
 
@@ -17,6 +18,11 @@ export type Store<S extends Schema> = {
 		query: RootQuery<S>,
 	) => (args?: object) => Promise<Result<Q>>;
 	get: <Q extends GetQueryOfType<S>>(query: Q, args?: object) => Promise<Result<Q>>;
+	getProjection: (
+		query: GetQueryOfType<S>,
+		projection: object,
+		args?: object,
+	) => Promise<{ [k: string]: any }[]>;
 	seed: (seedData: object) => void;
 };
 
@@ -33,11 +39,18 @@ export function createMemoryStore<S extends Schema>(schema: S): Store<S> {
 		return Promise.resolve(runQuery(query, { schema: compiledSchema, store }));
 	};
 
+	const getProjection = (query: RootQuery<S>, projection: object, args = {}) => {
+		ensureValidQuery(compiledSchema, query);
+
+		const results = runQuery(query, { schema: compiledSchema, store });
+		return Promise.resolve(project(results, projection));
+	};
+
 	const compileQuery = (query: RootQuery<S>) => {
 		ensureValidQuery(compiledSchema, query);
 		return (args = {}) =>
 			Promise.resolve(runQuery({ ...query, ...args }, { schema: compiledSchema, store }));
 	};
 
-	return { compileQuery, get, seed };
+	return { compileQuery, get, getProjection, seed };
 }
