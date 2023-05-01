@@ -1,6 +1,6 @@
 import { mapValues } from "lodash-es";
 import { MultiResult } from "./result";
-import { createExpressionEngine } from "@data-prism/expression";
+import { createExpressionEngine, isExpression } from "@data-prism/expression";
 
 export type Projection = {
 	[k: string]: any;
@@ -32,6 +32,51 @@ function distributeStrings(expression) {
 	if (terminalExpressions.includes(expressionName)) return expression;
 
 	return { [expressionName]: distributeStrings(expressionArgs) };
+}
+
+export function projectionQueryProperties(projection: Projection) {
+	const { isExpression } = createExpressionEngine({});
+	const terminalExpressions = ["$literal", "$var"];
+
+	const go = (val) => {
+		if (isExpression(val)) {
+			const [exprName, exprVal] = Object.entries(val)[0];
+			if (terminalExpressions.includes(exprName)) {
+				return [];
+			}
+
+			return go(exprVal);
+		}
+
+		if (Array.isArray(val)) {
+			return val.map(go);
+		}
+
+		if (typeof val === "object") {
+			return Object.values(val).map(go);
+		}
+
+		return [val.split(".").filter((v) => v !== "$")];
+	};
+
+	// mutates!
+	const makePath = (obj, path) => {
+		const [head, ...tail] = path;
+
+		if (tail.length === 0) {
+			obj[head] = true;
+			return;
+		}
+
+		if (!obj[head]) obj[head] = { properties: {} };
+		makePath(obj[head].properties, tail);
+	};
+
+	const propertyPaths = Object.values(projection).flatMap(go);
+	const query = {};
+	propertyPaths.forEach((path) => makePath(query, path));
+
+	return query;
 }
 
 export function project(results: MultiResult, projection: Projection) {

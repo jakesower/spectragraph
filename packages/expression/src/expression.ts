@@ -10,6 +10,7 @@ export type Expression<Args, Input, Output> = {
 	apply: (args: Args, input: Input) => Output;
 	distribute?: (args: any, distribute: (v: any) => any) => any;
 	name?: string;
+	schema: object;
 };
 
 export type FunctionExpression<Args, Input, Output> = (

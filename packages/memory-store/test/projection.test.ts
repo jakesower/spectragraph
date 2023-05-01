@@ -1,6 +1,10 @@
 import { beforeEach, expect, it, describe } from "vitest";
 import { Store, createMemoryStore } from "../src/memory-store";
-import { project } from "../src/project.js";
+import {
+	project,
+	projectionQuery,
+	projectionQueryProperties,
+} from "../src/projection.js";
 import { careBearData } from "./fixtures/care-bear-data.js";
 import { careBearSchema } from "./fixtures/care-bears.schema";
 
@@ -215,5 +219,88 @@ describe("dot notation", () => {
 			{ name: "Forest of Feelings", wieldersCount: 0 },
 			{ name: "Earth", wieldersCount: 0 },
 		]);
+	});
+});
+
+describe("projectionQueryProperties", () => {
+	it("creates reflective query props", () => {
+		const projection = {
+			name: "name",
+		};
+
+		const qProps = projectionQueryProperties(projection);
+
+		expect(qProps).toEqual({ name: true });
+	});
+
+	it("ignores renamed query props", () => {
+		const projection = {
+			nombre: "name",
+		};
+
+		const qProps = projectionQueryProperties(projection);
+
+		expect(qProps).toEqual({ name: true });
+	});
+
+	it("handles literals", () => {
+		const projection = {
+			beep: { $literal: "boop" },
+		};
+
+		const qProps = projectionQueryProperties(projection);
+
+		expect(qProps).toEqual({});
+	});
+
+	it("handles refs", () => {
+		const projection = {
+			name: "name",
+			powerCount: { $count: "powers" },
+		};
+
+		const qProps = projectionQueryProperties(projection);
+
+		expect(qProps).toEqual({ name: true, powers: true });
+	});
+
+	it("handles nested props", () => {
+		const projection = {
+			name: "name",
+			homeName: "home.name",
+		};
+
+		const qProps = projectionQueryProperties(projection);
+
+		expect(qProps).toEqual({ name: true, home: { properties: { name: true } } });
+	});
+
+	it("handles $ nesting", () => {
+		const projection = {
+			name: "name",
+			residentPowerCount: { $count: "residents.$.powers" },
+		};
+
+		const qProps = projectionQueryProperties(projection);
+
+		expect(qProps).toEqual({
+			name: true,
+			residents: { properties: { powers: true } },
+		});
+	});
+
+	it("multiple levels of nesting", () => {
+		const projection = {
+			name: "name",
+			homeName: "home.name",
+			neighborhoodName: "home.neighborhood.name",
+		};
+
+		const qProps = projectionQueryProperties(projection);
+
+		expect(qProps).toEqual({
+			name: true,
+			home: { properties: { name: true, neighborhood: { properties: { name: true } } } },
+		});
 	});
 });
