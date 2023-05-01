@@ -3,7 +3,7 @@ import { QueryOfType, RootQuery, ensureValidQuery } from "./query.js";
 import { Schema, compileSchema } from "./schema.js";
 import { Result } from "./result.js";
 import { runQuery } from "./operations.js";
-import { project } from "./project.js";
+import { project } from "./projection.js";
 
 export type InternalStore = { [k: string]: { [k: string]: any } };
 
