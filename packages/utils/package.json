@@ -5,11 +5,7 @@
 	"main": "./src/utils.js",
 	"types": "./src/utils.d.ts",
 	"exports": {
-		".": "./src/utils.js",
-		"./*": {
-			"import": "./src/*.js",
-			"require": "./dist/*.js"
-		}
+		".": "./src/utils.ts"
 	},
 	"scripts": {
 		"build": "tsc -p ./tsconfig.json",

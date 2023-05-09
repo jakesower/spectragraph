@@ -83,7 +83,7 @@ export const careBearData = {
 			wielders: [],
 		},
 	},
-	companions: {},
+	// companions: {},
 };
 
 export const grumpyBear = {
