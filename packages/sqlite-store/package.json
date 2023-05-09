@@ -1,0 +1,35 @@
+{
+	"name": "@data-prism/memory-store",
+	"version": "0.0.1",
+	"type": "module",
+	"main": "./dist/src/memory-store.js",
+	"types": "./dist/src/memory-store.d.ts",
+	"exports": {
+		".": "./dist/src/memory-store.js"
+	},
+	"scripts": {
+		"build": "tsc -p ./tsconfig.json",
+		"test": "NODE_ENV=test vitest"
+	},
+	"keywords": [],
+	"author": "Jake Sower",
+	"devDependencies": {
+		"@typescript-eslint/eslint-plugin": "^5.57.1",
+		"@typescript-eslint/parser": "^5.57.1",
+		"eslint": "^8.38.0",
+		"eslint-config-prettier": "^8.8.0",
+		"eslint-config-standard": "^17.0.0",
+		"prettier": "^2.8.7",
+		"typescript": "^5.0.4",
+		"typescript-eslint": "^0.0.1-alpha.0",
+		"vitest": "^0.29.8"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"private": false,
+	"dependencies": {
+		"@data-prism/expression": "^0.0.1",
+		"lodash-es": "^4.17.21"
+	}
+}
