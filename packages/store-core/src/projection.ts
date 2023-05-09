@@ -1,6 +1,6 @@
 import { mapValues } from "lodash-es";
-import { MultiResult } from "./result";
-import { createExpressionEngine, isExpression } from "@data-prism/expression";
+import { MultiResult } from "./result.js";
+import { createExpressionEngine } from "@data-prism/expression";
 
 export type Projection = {
 	[k: string]: any;

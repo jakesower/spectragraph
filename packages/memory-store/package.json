@@ -30,6 +30,7 @@
 	"private": false,
 	"dependencies": {
 		"@data-prism/expression": "^0.0.1",
+		"@data-prism/store-core": "*",
 		"lodash-es": "^4.17.21"
 	}
 }

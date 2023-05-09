@@ -1,11 +1,11 @@
 {
-	"name": "@data-prism/sqlite-store",
+	"name": "@data-prism/store-core",
 	"version": "0.0.1",
 	"type": "module",
-	"main": "./dist/src/memory-store.js",
-	"types": "./dist/src/memory-store.d.ts",
+	"main": "./src/memory-store.js",
+	"types": "./src/memory-store.d.ts",
 	"exports": {
-		".": "./dist/src/memory-store.js"
+		"./*": "./src/*.js"
 	},
 	"scripts": {
 		"build": "tsc -p ./tsconfig.json",
@@ -29,8 +29,6 @@
 	},
 	"private": false,
 	"dependencies": {
-		"@data-prism/expression": "^0.0.1",
-		"better-sqlite3": "^7.6.2",
 		"lodash-es": "^4.17.21"
 	}
 }

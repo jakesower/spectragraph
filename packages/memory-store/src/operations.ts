@@ -1,7 +1,7 @@
 import { mapValues, orderBy } from "lodash-es";
-import { QueryOfType, evaluators } from "./query.js";
-import { Schema } from "./schema.js";
-import { MultiResult, Result } from "./result.js";
+import { QueryOfType, evaluators } from "@data-prism/store-core/query";
+import { Schema } from "@data-prism/store-core/schema";
+import { MultiResult, Result } from "../../store-core/src/result.js";
 import { InternalStore } from "./memory-store.js";
 
 type GetOperation = (results: MultiResult) => MultiResult;
