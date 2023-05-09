@@ -1,32 +1,11 @@
-import { beforeEach, expect, it, describe } from "vitest";
-import { Store, createMemoryStore } from "../src/memory-store";
-import {
-	project,
-	projectionQuery,
-	projectionQueryProperties,
-} from "../src/projection.js";
+import { expect, it, describe } from "vitest";
+import { project, projectionQueryProperties } from "../src/projection.js";
 import { careBearData } from "./fixtures/care-bear-data.js";
-import { careBearSchema } from "./fixtures/care-bears.schema";
 
-type LocalTestContext = {
-	store: Store<typeof careBearSchema>;
-};
+const deref = (type, id) => careBearData[type][id];
 
-// Test Setup
-beforeEach<LocalTestContext>((context) => {
-	const store = createMemoryStore(careBearSchema);
-	store.seed(careBearData);
-
-	context.store = store;
-});
-
-it<LocalTestContext>("projects a field onto itself", async (context) => {
-	const results = await context.store.get({
-		type: "bears",
-		properties: {
-			name: {},
-		},
-	});
+it("projects a field onto itself", async (context) => {
+	const results = Object.values(careBearData.bears);
 
 	const projection = {
 		name: "name",
@@ -42,13 +21,8 @@ it<LocalTestContext>("projects a field onto itself", async (context) => {
 	]);
 });
 
-it<LocalTestContext>("projects a field to a different name", async (context) => {
-	const results = await context.store.get({
-		type: "bears",
-		properties: {
-			name: {},
-		},
-	});
+it("projects a field to a different name", async (context) => {
+	const results = Object.values(careBearData.bears);
 
 	const projection = {
 		nombre: "name",
@@ -64,13 +38,8 @@ it<LocalTestContext>("projects a field to a different name", async (context) => 
 	]);
 });
 
-it<LocalTestContext>("projects a field to a literal expression", async (context) => {
-	const results = await context.store.get({
-		type: "bears",
-		properties: {
-			name: {},
-		},
-	});
+it("projects a field to a literal expression", async (context) => {
+	const results = Object.values(careBearData.bears);
 
 	const projection = {
 		beep: { $literal: "boop" },
@@ -86,14 +55,13 @@ it<LocalTestContext>("projects a field to a literal expression", async (context)
 	]);
 });
 
-it<LocalTestContext>("applies expressions over a nested resource", async (context) => {
-	const results = await context.store.get({
-		type: "bears",
-		properties: {
-			name: {},
-			powers: {},
-		},
-	});
+it("applies expressions over a nested resource", async (context) => {
+	const results = Object.values(
+		Object.values(careBearData.bears).map((bear) => ({
+			...bear,
+			powers: bear.powers.map((id) => deref("powers", id)),
+		})),
+	) as any;
 
 	const projection = {
 		name: "name",
@@ -111,18 +79,13 @@ it<LocalTestContext>("applies expressions over a nested resource", async (contex
 });
 
 describe("dot notation", () => {
-	it<LocalTestContext>("projects over a nested resource", async (context) => {
-		const results = await context.store.get({
-			type: "bears",
-			properties: {
-				name: {},
-				home: {
-					properties: {
-						name: "home",
-					},
-				},
-			},
-		});
+	it("projects over a nested resource", async (context) => {
+		const results = Object.values(
+			Object.values(careBearData.bears).map((bear) => ({
+				...bear,
+				home: deref("homes", bear.home),
+			})),
+		) as any;
 
 		const projection = {
 			name: "name",
@@ -139,14 +102,13 @@ describe("dot notation", () => {
 		]);
 	});
 
-	it<LocalTestContext>("applies expressions over a nested resource", async (context) => {
-		const results = await context.store.get({
-			type: "bears",
-			properties: {
-				name: {},
-				powers: {},
-			},
-		});
+	it("applies expressions over a nested resource", async (context) => {
+		const results = Object.values(
+			Object.values(careBearData.bears).map((bear) => ({
+				...bear,
+				powers: bear.powers.map((id) => deref("powers", id)),
+			})),
+		) as any;
 
 		const projection = {
 			name: "name",
@@ -163,18 +125,19 @@ describe("dot notation", () => {
 		]);
 	});
 
-	it<LocalTestContext>("applies expressions over an aggregated resource", async (context) => {
-		const results = await context.store.get({
-			type: "homes",
-			properties: {
-				name: {},
-				residents: {
-					properties: {
-						powers: {},
-					},
-				},
-			},
-		});
+	it("applies expressions over an aggregated resource", async (context) => {
+		const results = Object.values(
+			Object.values(careBearData.homes).map((home) => ({
+				...home,
+				powers: home.residents.map((id) => {
+					const bear = deref("bears", id);
+					return {
+						...bear,
+						powers: bear.powers.map((id) => deref("powers", id)),
+					};
+				}),
+			})),
+		) as any;
 
 		const projection = {
 			name: "name",
@@ -190,22 +153,25 @@ describe("dot notation", () => {
 		]);
 	});
 
-	it<LocalTestContext>("applies expressions over a deeply nested aggregated resource", async (context) => {
-		const results = await context.store.get({
-			type: "homes",
-			properties: {
-				name: {},
-				residents: {
-					properties: {
-						powers: {
-							properties: {
-								wielders: {},
-							},
-						},
-					},
-				},
-			},
-		});
+	it("applies expressions over a deeply nested aggregated resource", async (context) => {
+		const results = Object.values(
+			Object.values(careBearData.homes).map((home) => ({
+				...home,
+				residents: home.residents.map((id) => {
+					const bear = deref("bears", id);
+					return {
+						...bear,
+						powers: bear.powers.map((id) => {
+							const power = deref("powers", id);
+							return {
+								...power,
+								wielders: power.wielders.map((id) => deref("bears", id)),
+							};
+						}),
+					};
+				}),
+			})),
+		) as any;
 
 		const projection = {
 			name: "name",

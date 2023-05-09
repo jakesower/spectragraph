@@ -8,5 +8,5 @@
 		"esModuleInterop": true
 	},
 	"references": [{ "path": "../expression" }],
-	"include": ["./src"]
+	"include": ["./src", "../store-core/src/schema.ts", "../store-core/src/projection.ts", "../store-core/src/result.ts"]
 }
