@@ -1,7 +1,6 @@
-import { beforeEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 import Database from "better-sqlite3";
 import { createTables, seed } from "../src/seed.js";
-import { Store } from "@data-prism/store-core/store";
 import { createSQLiteStore } from "../src/sqlite-store.js";
 import { careBearData } from "./fixtures/care-bear-data.js";
 import { careBearSchema } from "./fixtures/care-bears.schema.js";
@@ -10,14 +9,14 @@ import { careBearsConfig } from "./fixtures/care-bears-config.js";
 const db = Database(":memory:");
 createTables(db, careBearSchema, careBearsConfig);
 seed(db, careBearSchema, careBearsConfig, careBearData);
-const store = createSQLiteStore(careBearSchema, db);
+const store = createSQLiteStore(careBearSchema, db, careBearsConfig);
 
-it.only("fetches a single resource", async () => {
+it("fetches a single resource", async () => {
 	const result = await store.get({
 		type: "bears",
 		id: "1",
 		properties: {
-			name: {},
+			name: "name",
 		},
 	});
 
@@ -29,8 +28,8 @@ it("fetches a single resource with its id", async () => {
 		type: "bears",
 		id: "1",
 		properties: {
-			id: {},
-			name: {},
+			id: "id",
+			name: "name",
 		},
 	});
 
@@ -83,12 +82,12 @@ it("fetches null for a nonexistent resource", async () => {
 	expect(result).toEqual(null);
 });
 
-it("fetches a single resource with a many-to-one relationship", async () => {
+it.only("fetches a single resource with a many-to-one relationship", async () => {
 	const q = {
 		type: "bears",
 		id: "1",
 		properties: {
-			home: {},
+			home: { properties: { id: "id" } },
 		},
 	} as const;
 

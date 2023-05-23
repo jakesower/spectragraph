@@ -1,10 +1,11 @@
 import { mapValues, orderBy } from "lodash-es";
-import { QueryOfType, evaluators } from "@data-prism/store-core/query";
-import { Schema } from "@data-prism/store-core/schema";
-import { MultiResult, Result } from "../../store-core/src/result.js";
+import { QueryOfType, Schema, MultiResult, Result } from "@data-prism/store-core";
+import { createExpressionEngine } from "@data-prism/expression";
 import { InternalStore } from "./memory-store.js";
 
 type GetOperation = (results: MultiResult) => MultiResult;
+
+const evaluator = createExpressionEngine({});
 
 export function runQuery<
 	S extends Schema,
@@ -19,8 +20,8 @@ export function runQuery<
 	// these are in order of execution
 	const operationDefinitions: { [k: string]: GetOperation } = {
 		where(results: MultiResult): MultiResult {
-			const filter = (evaluators.where as any).distribute(query.where);
-			const filterFn = evaluators.where.compile(filter);
+			const filter = evaluator.distribute(query.where);
+			const filterFn = evaluator.compile(filter);
 
 			return results.filter((result) => filterFn(result));
 		},
@@ -77,5 +78,5 @@ export function runQuery<
 		results,
 	);
 
-	return query.first || query.id ? processed[0] : processed;
+	return query.id ? processed[0] : processed;
 }

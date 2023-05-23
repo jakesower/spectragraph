@@ -2,8 +2,7 @@ import { difference } from "lodash-es";
 import { createExpressionEngine } from "@data-prism/expression";
 import { Schema } from "./schema.js";
 
-type Query<S extends Schema> = {
-	first?: boolean;
+export type Query<S extends Schema> = {
 	id?: string;
 	limit?: number;
 	offset?: number;
@@ -15,19 +14,16 @@ type Query<S extends Schema> = {
 	where?: { [k: string]: any };
 };
 
-export type QueryOfType<S extends Schema, ResType extends keyof S["resources"]> = {
-	first?: boolean;
-	id?: string;
-	limit?: number;
-	offset?: number;
-	order?: { property: string; direction: "asc" | "desc" }[];
+export type QueryOfType<
+	S extends Schema,
+	ResType extends keyof S["resources"],
+> = Query<S> & {
 	properties?:
 		| {
 				[K in keyof S["resources"][ResType]["properties"]]?: any;
 		  }
 		| { [k: string]: any };
 	type: ResType;
-	where?: { [k: string]: any };
 };
 
 export type RootQuery<S extends Schema> = Query<S> & {
@@ -49,10 +45,6 @@ export function ensureValidQuery<S extends Schema>(
 			throw new Error(
 				`${resType} is not a valid resource type and was supplied in the query`,
 			);
-		}
-
-		if (query.id && query.first) {
-			throw new Error("queries may not have both an `id` and use `first`");
 		}
 
 		if (!query.properties) return;

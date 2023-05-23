@@ -1,8 +1,13 @@
 import { mapValues, merge } from "lodash-es";
-import { QueryOfType, RootQuery, ensureValidQuery } from "@data-prism/store-core/query";
-import { Schema, compileSchema } from "@data-prism/store-core/schema";
-import { Result } from "@data-prism/store-core/result";
-import { project } from "@data-prism/store-core/projection";
+import {
+	compileSchema,
+	ensureValidQuery,
+	project,
+	QueryOfType,
+	RootQuery,
+	Schema,
+	Result,
+} from "@data-prism/store-core";
 import { runQuery } from "./operations.js";
 
 export type InternalStore = { [k: string]: { [k: string]: any } };

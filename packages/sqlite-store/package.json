@@ -30,6 +30,7 @@
 	"private": false,
 	"dependencies": {
 		"@data-prism/expression": "^0.0.1",
+		"@data-prism/store-core": "*",
 		"@data-prism/utils": "*",
 		"better-sqlite3": "^7.6.2",
 		"lodash-es": "^4.17.21"

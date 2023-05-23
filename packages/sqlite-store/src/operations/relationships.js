@@ -1,4 +1,4 @@
-import { get, last } from "lodash-es";
+import { get, last, uniq } from "lodash-es";
 
 function makeRelBuilders(schema) {
 	return {
@@ -28,12 +28,17 @@ function makeRelBuilders(schema) {
 			},
 		},
 		many: {
-			one({ outgoingResDef, outgoingQueryTableName, relName, incomingTableName }) {
-				const outgoingRelDef = outgoingResDef.properties[relName];
-				const outgoingJoinColumn = outgoingRelDef.store.join.localColumn;
+			one(props) {
+				const {
+					outgoingConfig,
+					outgoingQueryTableName,
+					relName,
+					incomingConfig,
+					incomingTableName,
+				} = props;
 
-				const incomingResDef = schema.resources[outgoingRelDef.relatedType];
-				const incomingTable = incomingResDef.store.table;
+				const outgoingJoinColumn = outgoingConfig.joins[relName].localColumn;
+				const incomingTable = incomingConfig.table;
 
 				return [
 					`LEFT JOIN ${incomingTable} AS ${incomingTableName} ON ${outgoingQueryTableName}.${outgoingJoinColumn} = ${incomingTableName}.id`,
@@ -84,48 +89,43 @@ function makeRelBuilders(schema) {
 	};
 }
 
-export const preQueryRelationships = (query, queryPath, context) => {
-	const { rootQuery, schema } = context;
+export const preQueryRelationships = (context) => {
+	const { config, query, queryPath, rootQuery, schema } = context;
+	const { parentQuery } = query;
+	const rootTable = config.resources[rootQuery.type].table;
+
+	if (queryPath.length === 0) return {};
 
 	const parentPath = queryPath.slice(0, -1);
-	const tablePath = [schema.resources[rootQuery.type].store.table, ...queryPath];
-	const parentTablePath = [schema.resources[rootQuery.type].store.table, ...parentPath];
+	const tablePath = [rootTable, ...queryPath];
+	const parentTablePath = [rootTable, ...parentPath];
 	const relName = last(queryPath);
-
-	const incomingQueryTableName = tablePath.join("$");
-
-	const select = ["id", ...query.properties].map(
-		(col) => `${incomingQueryTableName}.${col}`,
-	);
-
-	if (queryPath.length === 0) return { select };
 
 	const relBuilders = makeRelBuilders(schema);
 	const outgoingQueryTableName = parentTablePath.join("$");
 
-	const parentQuery = get(
-		rootQuery,
-		parentPath.flatMap((segment) => ["relationships", segment]),
-	);
-
+	const outgoingConfig = config.resources[parentQuery.type];
 	const outgoingResDef = schema.resources[parentQuery.type];
-	const outgoingRelDef = outgoingResDef.properties[relName];
+	const outgoingRelDef = outgoingResDef.relationships[relName];
 
-	const incomingResDef = schema.resources[outgoingRelDef.relatedType];
-	const incomingRelDef = incomingResDef.properties[outgoingRelDef.inverse];
+	const incomingConfig = config.resources[outgoingRelDef.resource];
+	const incomingResDef = schema.resources[outgoingRelDef.resource];
+	const incomingRelDef = incomingResDef.relationships[outgoingRelDef.inverse];
 	const incomingTableName = tablePath.join("$");
 
 	const outgoingResCardinality = outgoingRelDef.cardinality;
 	const incomingResCardinality = incomingRelDef?.cardinality ?? "none";
 
 	const builderArgs = {
+		outgoingConfig,
 		outgoingResDef,
 		outgoingQueryTableName,
 		relName,
+		incomingConfig,
 		incomingTableName,
 	};
 
 	const join = relBuilders[incomingResCardinality][outgoingResCardinality](builderArgs);
 
-	return { select, join };
+	return { join };
 };
