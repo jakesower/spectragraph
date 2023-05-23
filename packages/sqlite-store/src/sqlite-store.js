@@ -1,18 +1,17 @@
-import { get as getQuery } from "./helpers/get.js";
+import { get as getQuery } from "./get.js";
 
-export function createSQLiteStore(schema, db, userConfig = {}) {
+export function createSQLiteStore(schema, db, config = {}) {
 	const fullStoreConfig = {
-		...userConfig,
+		...config,
 	};
 
 	return {
-		get: async (query) => {
-			return getQuery(query, {
+		get: async (query) =>
+			getQuery(query, {
 				config: fullStoreConfig,
 				db,
 				schema,
 				query,
-			});
-		},
+			}),
 	};
 }

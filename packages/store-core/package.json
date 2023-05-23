@@ -2,10 +2,11 @@
 	"name": "@data-prism/store-core",
 	"version": "0.0.1",
 	"type": "module",
-	"main": "./src/memory-store.js",
-	"types": "./src/memory-store.d.ts",
+	"main": "./dist/store-core.js",
+	"types": "./dist/store-core.d.ts",
 	"exports": {
-		"./*": "./src/*.js"
+		".": "./dist/store-core.js",
+		"./*": "./src/*.ts"
 	},
 	"scripts": {
 		"build": "tsc -p ./tsconfig.json",
@@ -29,6 +30,7 @@
 	},
 	"private": false,
 	"dependencies": {
+		"@data-prism/expression": "^0.0.1",
 		"lodash-es": "^4.17.21"
 	}
 }

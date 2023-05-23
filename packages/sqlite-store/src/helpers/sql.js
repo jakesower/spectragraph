@@ -62,6 +62,7 @@ export function buildSql(queryClauses) {
 }
 
 export function composeClauses(queryModifiers) {
+	console.log(queryModifiers)
 	return queryModifiers.reduce(
 		(acc, condObj) => ({
 			...acc,

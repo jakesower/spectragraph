@@ -1,13 +1,18 @@
 import { compileExpression, isExpression } from "@data-prism/expression";
 import { applyOrMap, pipeThru } from "@data-prism/utils";
 import { preQueryRelationships } from "./relationships.js";
+import { flattenQuery } from "../helpers/query-helpers.ts";
+import { uniq } from "lodash-es";
 
-const hasToManyRelationship = (schema, query) =>
-	flattenSubQueries(query).some((subquery) =>
-		Object.keys(subquery.relationships).some(
+const hasToManyRelationship = (schema, query) => {
+	const flatQueries = flattenQuery(schema, query);
+
+	return flatQueries.some((flatQuery) =>
+		Object.keys(flatQuery.relationships).some(
 			(relKey) => schema.resources[query.type].properties[relKey].cardinality === "many",
 		),
 	);
+};
 
 const operations = {
 	id: {
@@ -22,21 +27,20 @@ const operations = {
 				return resources[0] ?? null;
 			},
 		},
-		incompatibeWith: ["first"],
 	},
-	constraints: {
+	where: {
 		preQuery: {
-			apply: (constraints, context) => {
+			apply: (where, context) => {
 				const { config } = context;
 				const { expressionDefinitions } = config;
 
 				// an expression has been passed as the constraint value
-				if (isExpression(constraints, expressionDefinitions)) {
-					return compileExpression(constraints, expressionDefinitions, context)();
+				if (isExpression(where, expressionDefinitions)) {
+					return compileExpression(where, expressionDefinitions, context)();
 				}
 
 				// an object of properties has been passed in
-				const propExprs = Object.entries(constraints).map(([propKey, propValOrExpr]) => {
+				const propExprs = Object.entries(where).map(([propKey, propValOrExpr]) => {
 					if (isExpression(propValOrExpr, expressionDefinitions)) {
 						const [operation, args] = Object.entries(propValOrExpr)[0];
 						return { [operation]: [{ $prop: propKey }, args] };
@@ -87,10 +91,17 @@ const operations = {
 	relationships: {
 		preQuery: {
 			apply: (_, context) =>
-				preQueryRelationships(context.query, context.queryPath, context),
+				preQueryRelationships(context),
 			// flatMapQuery(context.query, (subquery, queryPath) =>
 			//   preQueryRelationships(subquery, queryPath, context),
 			// ),
+		},
+	},
+	properties: {
+		preQuery: {
+			apply: (properties, { table }) => ({
+				select: uniq(["id", ...properties]).map((col) => `${table}.${col}`),
+			}),
 		},
 	},
 };
@@ -105,52 +116,35 @@ const applyOverPaths = (resources, path, fn) => {
 	}));
 };
 
-// TODO: tsort operations
-const gatherPreOperations = (query, context) =>
-	flatMapQuery(query, (subquery, queryPath) =>
-		Object.entries(subquery)
-			.flatMap(([operationKey, operationArg]) => {
-				const operation = operations[operationKey]?.preQuery?.apply;
+// helpful: split query up into props, refs, and subqueries
 
-				if (!operation) return null;
+const gatherPreOperations = (query, context) => {
+	const { schema } = context;
+	const flatQueries = flattenQuery(schema, query);
+	const queryParts = flatQueries.flatMap((flatQuery) =>
+		Object.entries(flatQuery).flatMap(([operationKey, operationArg]) => {
+			const operation = operations[operationKey]?.preQuery?.apply;
 
-				const argContext = {
-					...context,
-					query: subquery,
-					queryPath,
-					queryTable: [query.type, ...queryPath].join("$"),
-					rootQuery: query,
-				};
+			if (!operation) return [];
 
-				return operation(operationArg, argContext);
-			})
-			.filter(Boolean),
+			const argContext = {
+				...context,
+				query: flatQuery,
+				queryPath: flatQuery.path,
+				table: [query.type, ...flatQuery.path].join("$"),
+				rootQuery: query,
+			};
+
+			return operation(operationArg, argContext);
+		}),
 	);
 
-const gatherPostOperationFunctions = (query, context) =>
-	flatMapQuery(query, (subquery, queryPath) =>
-		Object.entries(subquery)
-			.map(([operationKey, operationArg]) => {
-				const operation = operations[operationKey]?.postQuery?.apply;
-
-				if (!operation) return null;
-
-				const argContext = { ...context, query: subquery, queryPath };
-				return (resources) =>
-					applyOverPaths(resources, queryPath, (resource) =>
-						operation(operationArg, resource, argContext),
-					);
-			})
-			.filter(Boolean),
-	);
+	return queryParts;
+};
 
 export async function runQuery(query, context, run) {
 	const queryModifierPromises = gatherPreOperations(query, context);
 	const queryModifiers = await Promise.all(queryModifierPromises);
 
-	const resources = await run(queryModifiers);
-
-	const postOps = gatherPostOperationFunctions(query, context);
-
-	return pipeThru(resources, postOps);
+	return run(queryModifiers);
 }
