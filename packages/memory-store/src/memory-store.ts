@@ -29,6 +29,7 @@ export type Store<S extends Schema> = {
 		args?: object,
 	) => Promise<{ [k: string]: any }[]>;
 	seed: (seedData: object) => void;
+	setState: (data: object) => void;
 };
 
 export function createMemoryStore<S extends Schema>(schema: S): Store<S> {
@@ -37,6 +38,12 @@ export function createMemoryStore<S extends Schema>(schema: S): Store<S> {
 
 	const seed = (seedData) => {
 		merge(store, seedData); // mutates
+	};
+
+	const setState = (data) => {
+		Object.keys(schema.resources).forEach((k) => {
+			store[k] = data[k] ?? {};
+		});
 	};
 
 	const get = (query: RootQuery<S>, args = {}) => {
@@ -57,5 +64,5 @@ export function createMemoryStore<S extends Schema>(schema: S): Store<S> {
 			Promise.resolve(runQuery({ ...query, ...args }, { schema: compiledSchema, store }));
 	};
 
-	return { compileQuery, get, getProjection, seed };
+	return { compileQuery, get, getProjection, seed, setState };
 }
