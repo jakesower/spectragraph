@@ -1,10 +1,8 @@
-import { Expression } from "../expression";
-
-const $count: Expression<any, any, number> = {
+const $count = {
 	apply: (evaluatedArgs) => evaluatedArgs.length,
 };
 
-const $sum: Expression<any, any, number> = {
+const $sum = {
 	apply: (evaluatedArgs) => evaluatedArgs.reduce((sum, v) => sum + v, 0),
 };
 
