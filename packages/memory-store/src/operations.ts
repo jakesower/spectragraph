@@ -1,5 +1,5 @@
 import { mapValues, orderBy } from "lodash-es";
-import { QueryOfType, Schema, MultiResult, Result } from "@data-prism/store-core";
+import { Schema, MultiResult, Result, RootQuery } from "@data-prism/store-core";
 import { createExpressionEngine } from "@data-prism/expression";
 import { InternalStore } from "./memory-store.js";
 
@@ -9,8 +9,7 @@ const evaluator = createExpressionEngine({});
 
 export function runQuery<
 	S extends Schema,
-	ResType extends keyof S["resources"] & string,
-	Q extends QueryOfType<S, ResType>,
+	Q extends RootQuery<S>,
 >(query: Q, context: { schema: S; store: InternalStore }): Result<Q> {
 	const { schema, store } = context;
 	const resDef = schema.resources[query.type];
