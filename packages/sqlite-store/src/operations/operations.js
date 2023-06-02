@@ -1,4 +1,4 @@
-import { compileExpression, isExpression } from "@data-prism/expression";
+import { compileExpression, isExpression } from "@data-prism/expressions";
 import { applyOrMap, pipeThru } from "@data-prism/utils";
 import { preQueryRelationships } from "./relationships.js";
 import { flattenQuery } from "../helpers/query-helpers.ts";

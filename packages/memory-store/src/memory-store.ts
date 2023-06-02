@@ -51,6 +51,7 @@ export function createMemoryStore<S extends Schema>(schema: S): Store<S> {
 
 	const get = (query: RootQuery<S>, args = {}) => {
 		ensureValidQuery(compiledSchema, { ...query, ...args });
+
 		return Promise.resolve(
 			runQuery({ ...query, ...args }, { schema: compiledSchema, store }),
 		);

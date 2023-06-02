@@ -1,20 +1,24 @@
 {
-	"name": "@data-prism/store-core",
+	"name": "@data-prism/expressions",
 	"version": "0.0.3",
 	"type": "module",
-	"main": "./dist/store-core.js",
-	"types": "./dist/store-core.d.ts",
+	"main": "./dist/src/expressions.js",
+	"types": "./dist/src/expressions.d.ts",
 	"exports": {
-		".": "./dist/store-core.js",
-		"./*": "./src/*.ts"
+		".": "./dist/src/expressions.js",
+		"./*": {
+			"import": "./src/*.js",
+			"require": "./dist/*.js"
+		}
 	},
 	"scripts": {
-		"build": "tsc -p ./tsconfig.json",
+		"build": "NODE_OPTIONS='--max-old-space-size=8192' tsc -p ./tsconfig.json",
 		"test": "NODE_ENV=test vitest"
 	},
 	"keywords": [],
 	"author": "Jake Sower",
 	"devDependencies": {
+		"@types/lodash-es": "^4.17.7",
 		"@typescript-eslint/eslint-plugin": "^5.59.8",
 		"@typescript-eslint/parser": "^5.59.8",
 		"eslint": "^8.41.0",
@@ -30,7 +34,6 @@
 	},
 	"private": false,
 	"dependencies": {
-		"@data-prism/expressions": "^0.0.3",
 		"lodash-es": "^4.17.21"
 	}
 }

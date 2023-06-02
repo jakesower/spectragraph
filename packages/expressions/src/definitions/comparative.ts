@@ -1,5 +1,5 @@
 import { isEqual } from "lodash-es";
-import { Expression } from "../expression";
+import { Expression } from "../expressions";
 
 type FilterExpression<T> = Expression<T, T, boolean>;
 
