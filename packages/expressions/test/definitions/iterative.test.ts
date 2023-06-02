@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createExpressionEngine } from "../../src/expression.js";
+import { createExpressionEngine } from "../../src/expressions.js";
 import { iterativeDefinitions } from "../../src/definitions/iterative.js";
 import { mathDefinitions } from "../../src/definitions/math.js";
 

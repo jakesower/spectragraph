@@ -1,4 +1,4 @@
-import { FunctionExpression } from "../expression";
+import { FunctionExpression } from "../expressions";
 
 const $filter = (evaluate) => ({
 	apply: ([items, subexpr], input) =>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createExpressionEngine } from "../src/expression.js";
+import { createExpressionEngine } from "../src/expressions.js";
 import { comparativeDefinitions } from "../src/definitions/comparative.js";
 
 const kids = {

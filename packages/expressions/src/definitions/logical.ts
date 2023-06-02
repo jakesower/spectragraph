@@ -1,4 +1,4 @@
-import { Expression } from "../expression";
+import { Expression } from "../expressions";
 
 const $and: Expression<any, any, boolean> = {
 	name: "and",
