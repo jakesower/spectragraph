@@ -1,5 +1,5 @@
 import { difference } from "lodash-es";
-import { createExpressionEngine } from "@data-prism/expression";
+import { createExpressionEngine } from "@data-prism/expressions";
 import { Schema } from "./schema.js";
 
 export type Query<S extends Schema> = {
@@ -8,7 +8,7 @@ export type Query<S extends Schema> = {
 	offset?: number;
 	order?: { property: string; direction: "asc" | "desc" }[];
 	properties?: {
-		[k: string]: object;
+		[k: string]: string | object;
 	};
 	type?: keyof S["resources"] & string;
 	where?: { [k: string]: any };
@@ -49,14 +49,32 @@ export function ensureValidQuery<S extends Schema>(
 
 		if (!query.properties) return;
 
-		const invalidProps = difference(Object.keys(query.properties), [
+		const shallowPropValues = Object.values(query.properties).filter(
+			(p) => typeof p === "string",
+		);
+		const invalidShallowProps = difference(shallowPropValues, [
 			resDef.idField,
 			...Object.keys({ ...resDef.properties, ...resDef.relationships }),
 		]);
 
-		if (invalidProps.length > 0) {
+		if (invalidShallowProps.length > 0) {
 			throw new Error(
-				`Invalid prop(s) present in subquery: ${invalidProps.join(
+				`Invalid prop(s) present in subquery: ${invalidShallowProps.join(
+					", ",
+				)}. Query: ${JSON.stringify(query)}`,
+			);
+		}
+
+		const relationshipPropKeys = Object.keys(query.properties).filter(
+			(k) => typeof query.properties[k] === "object",
+		);
+		const invalidRelationshipProps = difference(
+			relationshipPropKeys,
+			Object.keys(resDef.relationships),
+		);
+		if (invalidRelationshipProps.length > 0) {
+			throw new Error(
+				`Invalid relationship(s) present in subquery: ${invalidRelationshipProps.join(
 					", ",
 				)}. Query: ${JSON.stringify(query)}`,
 			);
@@ -65,7 +83,7 @@ export function ensureValidQuery<S extends Schema>(
 		// ensure valid subqueries
 		Object.entries(query.properties).forEach(([propName, propArgs]) => {
 			if (propName in resDef.relationships) {
-				go(resDef.relationships[propName].resource, propArgs);
+				go(resDef.relationships[propName].resource, propArgs as object);
 			}
 		});
 	};

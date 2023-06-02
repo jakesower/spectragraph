@@ -20,7 +20,7 @@ it<LocalTestContext>("fetches a single resource", async (context) => {
 		type: "bears",
 		id: "1",
 		properties: {
-			name: {},
+			name: "name",
 		},
 	});
 
@@ -32,8 +32,8 @@ it<LocalTestContext>("fetches a single resource with its id", async (context) =>
 		type: "bears",
 		id: "1",
 		properties: {
-			id: {},
-			name: {},
+			id: "id",
+			name: "name",
 		},
 	});
 
@@ -46,7 +46,7 @@ it<LocalTestContext>("fetches a single resource with its id implicitly", async (
 		id: "1",
 	});
 
-	expect(result).toEqual({ id: "1" });
+	expect(result).toEqual({ type: "bears", id: "1" });
 });
 
 it<LocalTestContext>("fetches a single resource without its id", async (context) => {
@@ -54,22 +54,34 @@ it<LocalTestContext>("fetches a single resource without its id", async (context)
 		type: "bears",
 		id: "1",
 		properties: {
-			name: {},
+			name: "name",
 		},
 	});
 
 	expect(result).toEqual({ name: "Tenderheart Bear" });
 });
 
+it<LocalTestContext>("fetches a single resource and maps property names", async (context) => {
+	const result = await context.store.get({
+		type: "bears",
+		id: "1",
+		properties: {
+			nombre: "name",
+		},
+	});
+
+	expect(result).toEqual({ nombre: "Tenderheart Bear" });
+});
+
 it<LocalTestContext>("fetches multiple resources", async (context) => {
 	const result = await context.store.get({ type: "bears" });
-	const expected = ["1", "2", "3", "5"].map((id) => ({ id }));
+	const expected = ["1", "2", "3", "5"].map((id) => ({ type: "bears", id }));
 
 	expect(result).toEqual(expected);
 });
 
 it<LocalTestContext>("fetches a property from multiple resources", async (context) => {
-	const result = await context.store.get({ type: "bears", properties: { name: {} } });
+	const result = await context.store.get({ type: "bears", properties: { name: "name" } });
 	const expected = [
 		"Tenderheart Bear",
 		"Cheer Bear",
@@ -98,7 +110,7 @@ it<LocalTestContext>("fetches a single resource with a many-to-one relationship"
 	const result = await context.store.get(q);
 
 	expect(result).toEqual({
-		home: { id: "1" },
+		home: { type: "homes", id: "1" },
 	});
 });
 
@@ -112,7 +124,11 @@ it<LocalTestContext>("a single resource with a one-to-many relationship", async 
 	const result = await context.store.get(q);
 
 	expect(result).toEqual({
-		residents: [{ id: "1" }, { id: "2" }, { id: "3" }],
+		residents: [
+			{ type: "bears", id: "1" },
+			{ type: "bears", id: "2" },
+			{ type: "bears", id: "3" },
+		],
 	});
 });
 
@@ -120,7 +136,7 @@ it<LocalTestContext>("fetches a single resource with a subset of props", async (
 	const result = await context.store.get({
 		type: "bears",
 		id: "1",
-		properties: { id: {}, name: {}, furColor: {} },
+		properties: { id: "id", name: "name", furColor: "furColor" },
 	});
 
 	expect(result).toEqual({ id: "1", name: "Tenderheart Bear", furColor: "tan" });
@@ -130,7 +146,7 @@ it<LocalTestContext>("fetches a single resource with a subset of props on a rela
 	const q = {
 		type: "bears",
 		id: "1",
-		properties: { home: { properties: { caringMeter: {} } } },
+		properties: { home: { properties: { caringMeter: "caringMeter" } } },
 	} as const;
 
 	const result = await context.store.get(q);
@@ -142,17 +158,23 @@ it<LocalTestContext>("uses explicitly set id fields", async (context) => {
 	const result = await context.store.get({
 		type: "powers",
 		id: "careBearStare",
+		properties: {
+			powerId: "powerId",
+		},
 	});
 
 	expect(result).toEqual({ powerId: "careBearStare" });
 });
 
-it<LocalTestContext>("always returns explicitly set id fields", async (context) => {
+it<LocalTestContext>("returns refs when properties are not specified", async (context) => {
 	const result = await context.store.get({
 		type: "powers",
 	});
 
-	expect(result).toEqual([{ powerId: "careBearStare" }, { powerId: "makeWish" }]);
+	expect(result).toEqual([
+		{ type: "powers", id: "careBearStare" },
+		{ type: "powers", id: "makeWish" },
+	]);
 });
 
 it<LocalTestContext>("fetches a single resource with many-to-many relationship", async (context) => {
@@ -162,7 +184,7 @@ it<LocalTestContext>("fetches a single resource with many-to-many relationship",
 		properties: { powers: {} },
 	});
 
-	expect(result).toEqual({ powers: [{ powerId: "careBearStare" }] });
+	expect(result).toEqual({ powers: [{ type: "powers", id: "careBearStare" }] });
 });
 
 it<LocalTestContext>("fetches multiple subqueries of various types", async (context) => {
@@ -180,8 +202,14 @@ it<LocalTestContext>("fetches multiple subqueries of various types", async (cont
 	});
 
 	expect(result).toEqual({
-		home: { residents: [{ id: "1" }, { id: "2" }, { id: "3" }] },
-		powers: [{ powerId: "careBearStare" }],
+		home: {
+			residents: [
+				{ type: "bears", id: "1" },
+				{ type: "bears", id: "2" },
+				{ type: "bears", id: "3" },
+			],
+		},
+		powers: [{ type: "powers", id: "careBearStare" }],
 	});
 });
 
@@ -189,27 +217,44 @@ it<LocalTestContext>("handles subqueries between the same type", async (context)
 	const result = await context.store.get({
 		type: "bears",
 		properties: {
-			id: {},
-			bestFriend: {},
+			id: "id",
+			bestFriend: "bestFriend",
 		},
 	});
 
 	expect(result).toEqual([
 		{ id: "1", bestFriend: null },
-		{ id: "2", bestFriend: { id: "3" } },
-		{ id: "3", bestFriend: { id: "2" } },
+		{ id: "2", bestFriend: { type: "bears", id: "3" } },
+		{ id: "3", bestFriend: { type: "bears", id: "2" } },
 		{ id: "5", bestFriend: null },
 	]);
 });
 
-// it<LocalTestContext>("fails validation for invalid types", async (context) => {
-// 	expect(async () => {
-// 		await context.store.get({ type: "bearz", id: "1" });
-// 	}).rejects.toThrowError();
-// });
+it<LocalTestContext>("fails validation for invalid types", async (context) => {
+	expect(async () => {
+		await context.store.get({ type: "bearz", id: "1" });
+	}).rejects.toThrowError();
+});
 
 it<LocalTestContext>("fails validation for invalid top level props", async (context) => {
 	await expect(async () => {
 		await context.store.get({ type: "bears", id: "1", properties: { koopa: {} } });
 	}).rejects.toThrowError();
+});
+
+it<LocalTestContext>("fetches nested fields with dot notation", async (context) => {
+	const result = await context.store.get({
+		type: "bears",
+		properties: {
+			name: "name",
+			residence: "home.name",
+		},
+	});
+
+	expect(result).toEqual([
+		{ name: "Tenderheart Bear", residence: "Care-a-Lot" },
+		{ name: "Cheer Bear", residence: "Care-a-Lot" },
+		{ name: "Wish Bear", residence: "Care-a-Lot" },
+		{ name: "Smart Heart Bear", residence: "Care-a-Lot" },
+	]);
 });

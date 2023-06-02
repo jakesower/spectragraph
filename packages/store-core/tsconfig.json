@@ -8,7 +8,7 @@
 	},
 	"references": [
 		{
-			"path": "../expression"
+			"path": "../expressions"
 		},
 	],
 	"include": [
