@@ -1,4 +1,4 @@
-import { isExpression } from "./expression.js";
+import { isExpression } from "./expressions.js";
 
 export const distribute = (propertyExpression: { [k: string]: any }, definitions) => {
 	if (isExpression(propertyExpression, definitions)) {
