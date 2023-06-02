@@ -1,6 +1,6 @@
 {
 	"name": "@data-prism/store-core",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"type": "module",
 	"main": "./dist/store-core.js",
 	"types": "./dist/store-core.d.ts",
@@ -30,7 +30,7 @@
 	},
 	"private": false,
 	"dependencies": {
-		"@data-prism/expression": "^0.0.1",
+		"@data-prism/expressions": "^0.0.2",
 		"lodash-es": "^4.17.21"
 	}
 }

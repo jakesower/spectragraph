@@ -1,5 +1,5 @@
 {
-	"name": "@data-prism/expression",
+	"name": "@data-prism/expressions",
 	"version": "0.0.2",
 	"type": "module",
 	"main": "./dist/src/expression.js",

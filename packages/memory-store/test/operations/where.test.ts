@@ -14,10 +14,10 @@ beforeEach<LocalTestContext>((context) => {
 	context.store = store;
 });
 
-it.only<LocalTestContext>("filters on a property equality constraint", async (context) => {
+it<LocalTestContext>("filters on a property equality constraint", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: { id: {}, name: {} },
+		properties: { id: "id", name: "name" },
 		where: { name: "Cheer Bear" },
 	});
 
@@ -27,7 +27,7 @@ it.only<LocalTestContext>("filters on a property equality constraint", async (co
 it<LocalTestContext>("filters on a property that is not returned from properties", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: { id: {} },
+		properties: { id: "id" },
 		where: { name: "Cheer Bear" },
 	});
 
@@ -43,7 +43,7 @@ it<LocalTestContext>("filters on multiple property equality where", async (conte
 		},
 	});
 
-	expect(result).toEqual([{ id: "2" }]);
+	expect(result).toEqual([{ type: "homes", id: "2" }]);
 });
 
 it<LocalTestContext>("filters using $eq operator", async (context) => {
@@ -54,7 +54,7 @@ it<LocalTestContext>("filters using $eq operator", async (context) => {
 		},
 	});
 
-	expect(result).toEqual([{ id: "5" }]);
+	expect(result).toEqual([{ type: "bears", id: "5" }]);
 });
 
 it<LocalTestContext>("filters using $gt operator", async (context) => {
@@ -65,7 +65,7 @@ it<LocalTestContext>("filters using $gt operator", async (context) => {
 		},
 	});
 
-	expect(result).toEqual([{ id: "5" }]);
+	expect(result).toEqual([{ type: "bears", id: "5" }]);
 });
 
 it<LocalTestContext>("filters using $lt operator", async (context) => {
@@ -76,7 +76,11 @@ it<LocalTestContext>("filters using $lt operator", async (context) => {
 		},
 	});
 
-	expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
+	expect(result).toEqual([
+		{ type: "bears", id: "1" },
+		{ type: "bears", id: "2" },
+		{ type: "bears", id: "3" },
+	]);
 });
 
 it<LocalTestContext>("filters using $lte operator", async (context) => {
@@ -87,7 +91,11 @@ it<LocalTestContext>("filters using $lte operator", async (context) => {
 		},
 	});
 
-	expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
+	expect(result).toEqual([
+		{ type: "bears", id: "1" },
+		{ type: "bears", id: "2" },
+		{ type: "bears", id: "3" },
+	]);
 });
 
 it<LocalTestContext>("filters using $gte operator", async (context) => {
@@ -98,7 +106,7 @@ it<LocalTestContext>("filters using $gte operator", async (context) => {
 		},
 	});
 
-	expect(result).toEqual([{ id: "5" }]);
+	expect(result).toEqual([{ type: "bears", id: "5" }]);
 });
 
 it<LocalTestContext>("filters using $in 1", async (context) => {
@@ -109,7 +117,7 @@ it<LocalTestContext>("filters using $in 1", async (context) => {
 		},
 	});
 
-	expect(result).toEqual([{ id: "5" }]);
+	expect(result).toEqual([{ type: "bears", id: "5" }]);
 });
 
 it<LocalTestContext>("filters using $in 2", async (context) => {
@@ -131,7 +139,11 @@ it<LocalTestContext>("filters using $ne operator", async (context) => {
 		},
 	});
 
-	expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
+	expect(result).toEqual([
+		{ type: "bears", id: "1" },
+		{ type: "bears", id: "2" },
+		{ type: "bears", id: "3" },
+	]);
 });
 
 it<LocalTestContext>("filters related resources", async (context) => {
@@ -139,7 +151,7 @@ it<LocalTestContext>("filters related resources", async (context) => {
 		type: "powers",
 		id: "careBearStare",
 		properties: {
-			powerId: {},
+			powerId: "powerId",
 			wielders: {
 				where: {
 					yearIntroduced: { $gt: 2000 },
@@ -148,5 +160,8 @@ it<LocalTestContext>("filters related resources", async (context) => {
 		},
 	});
 
-	expect(result).toEqual({ powerId: "careBearStare", wielders: [{ id: "5" }] });
+	expect(result).toEqual({
+		powerId: "careBearStare",
+		wielders: [{ type: "bears", id: "5" }],
+	});
 });

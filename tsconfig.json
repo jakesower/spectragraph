@@ -31,7 +31,7 @@
 	},
 	"references": [
 		{
-			"path": "./packages/expression"
+			"path": "./packages/expressions"
 		},
 		{
 			"path": "./packages/store-core"

@@ -29,7 +29,7 @@
 	},
 	"private": false,
 	"dependencies": {
-		"@data-prism/expression": "^0.0.1",
+		"@data-prism/expressions": "^0.0.2",
 		"@data-prism/store-core": "*",
 		"@data-prism/utils": "*",
 		"better-sqlite3": "^7.6.2",
