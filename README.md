@@ -120,6 +120,8 @@ For example:
 }
 ```
 
+## Upcoming Features
+
 Many arguments can make use of expressions, which are described later.
 
 Queries also have the ability project and do limited aggregation.
@@ -131,7 +133,8 @@ Queries also have the ability project and do limited aggregation.
     "name": "name",
     "trip_count": { "$count": "trips" },
     "mean_cost": { "$mean": "trips.$.cost" },
-    "owner": "company.name"
+    "owner": "company.name",
+    "company": "company"
   }
 }
 ```
@@ -144,12 +147,13 @@ Produces:
     "name": "Orient Express",
     "trip_count": 50,
     "mean_cost": 193.33,
-    "owner": "Compagnie Internationale des Wagons-Lits"
+    "owner": "Compagnie Internationale des Wagons-Lits",
+    "company": { "type": "companies", "id": "123" }
   }
 ]
 ```
 
-This example shows the use of a couple of aggregating expressions (`$count` and `$mean`) as well as the use of dot notation for a nested fields (`trips.$.cost` and `company.name`). Paired with a schema and proper expression evaluators, these can make for expressive queries. Aggregating expressions are about as extensive as those implemented by SQL databases. More complex manipulations should be done programatically.
+This example shows the use of a couple of aggregating expressions (`$count` and `$mean`) as well as the use of dot notation for nested fields (`trips.$.cost` and `company.name`). Paired with a schema and proper expression evaluators, these can make for expressive queries. Aggregating expressions are about as extensive as those implemented by SQL databases. More complex manipulations should be done programatically.
 
 Note that queries are implemented as JSON objects, rather than strings. This makes them far easier to compose, pick apart, and otherwise manipulate than string-based query languages such as SQL and GraphQL.
 

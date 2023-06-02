@@ -1,6 +1,6 @@
 import { mapValues } from "lodash-es";
 import { MultiResult } from "./result.js";
-import { createExpressionEngine } from "@data-prism/expression";
+import { createExpressionEngine } from "@data-prism/expressions";
 
 export type Projection = {
 	[k: string]: any;
@@ -64,7 +64,7 @@ export function projectionQueryProperties(projection: Projection) {
 		const [head, ...tail] = path;
 
 		if (tail.length === 0) {
-			obj[head] = true;
+			obj[head] = head;
 			return;
 		}
 

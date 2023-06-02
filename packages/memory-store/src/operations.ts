@@ -1,16 +1,16 @@
 import { mapValues, orderBy } from "lodash-es";
 import { Schema, MultiResult, Result, RootQuery } from "@data-prism/store-core";
-import { createExpressionEngine } from "@data-prism/expression";
+import { createExpressionEngine } from "@data-prism/expressions";
 import { InternalStore } from "./memory-store.js";
 
 type GetOperation = (results: MultiResult) => MultiResult;
 
 const evaluator = createExpressionEngine({});
 
-export function runQuery<
-	S extends Schema,
-	Q extends RootQuery<S>,
->(query: Q, context: { schema: S; store: InternalStore }): Result<Q> {
+export function runQuery<S extends Schema, Q extends RootQuery<S>>(
+	query: Q,
+	context: { schema: S; store: InternalStore },
+): Result<Q> {
 	const { schema, store } = context;
 	const resDef = schema.resources[query.type];
 
@@ -45,11 +45,36 @@ export function runQuery<
 			return [results[0]];
 		},
 		properties(results) {
-			const properties = query.properties ?? { [resDef.idField ?? "id"]: {} };
+			if (!query.properties) {
+				return results.map((result) => ({
+					type: query.type,
+					id: result[resDef.idField ?? "id"],
+				}));
+			}
+
+			const { properties } = query;
 			return results.map((result) =>
 				mapValues(properties, (propQuery, propName) => {
-					if (!(propName in resDef.relationships)) return result[propName];
+					// possibilities: (1) property (2) nested property (3) subquery (4) ref (5) expression
+					if (typeof propQuery === "string") {
+						// relationship name -- return ref
+						if (propQuery in resDef.relationships) {
+							const relDef = resDef.relationships[propName];
+							return result[propQuery] === null
+								? null
+								: { type: relDef.resource, id: result[propQuery] };
+						}
 
+						// nested property
+						if (propQuery.split(".").length > 1) {
+							return "TODO";
+						}
+
+						// shallow property
+						return result[propQuery];
+					}
+
+					// subquery
 					const relDef = resDef.relationships[propName];
 					return relDef.cardinality === "one"
 						? result[propName]
