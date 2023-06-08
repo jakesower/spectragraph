@@ -1,5 +1,6 @@
 import { mapValues, orderBy } from "lodash-es";
 import { Schema, MultiResult, Result, RootQuery } from "@data-prism/store-core";
+import { applyOrMap } from "@data-prism/utils";
 import { createExpressionEngine } from "@data-prism/expressions";
 import { InternalStore } from "./memory-store.js";
 
@@ -15,6 +16,19 @@ export function runQuery<S extends Schema, Q extends RootQuery<S>>(
 	const resDef = schema.resources[query.type];
 
 	if (query.id && !store[query.type][query.id]) return null;
+
+	const getPropertyPath = (path, resType, result) => {
+		const [head, ...tail] = path;
+
+		if (tail.length === 0) return result[head];
+
+		const relResDef = schema.resources[resType].relationships[head];
+		const relResType = relResDef.resource;
+
+		return applyOrMap(result[head], (relResId) =>
+			getPropertyPath(tail, relResType, store[relResType][relResId]),
+		);
+	};
 
 	// these are in order of execution
 	const operationDefinitions: { [k: string]: GetOperation } = {
@@ -65,13 +79,8 @@ export function runQuery<S extends Schema, Q extends RootQuery<S>>(
 								: { type: relDef.resource, id: result[propQuery] };
 						}
 
-						// nested property
-						if (propQuery.split(".").length > 1) {
-							return "TODO";
-						}
-
-						// shallow property
-						return result[propQuery];
+						// nested / shallow property
+						return getPropertyPath(propQuery.split("."), query.type, result);
 					}
 
 					// subquery

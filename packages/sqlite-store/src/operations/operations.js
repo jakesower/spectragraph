@@ -1,5 +1,5 @@
 import { compileExpression, isExpression } from "@data-prism/expressions";
-import { applyOrMap, pipeThru } from "@data-prism/utils";
+import { applyOrMap } from "@data-prism/utils";
 import { preQueryRelationships } from "./relationships.js";
 import { flattenQuery } from "../helpers/query-helpers.ts";
 import { uniq } from "lodash-es";
