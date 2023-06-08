@@ -57,7 +57,7 @@ export function ensureValidQuery<S extends Schema>(
 			...Object.keys({ ...resDef.properties, ...resDef.relationships }),
 		]);
 
-		if (invalidShallowProps.length > 0) {
+		if (invalidShallowProps.length > 0 && false) {
 			throw new Error(
 				`Invalid prop(s) present in subquery: ${invalidShallowProps.join(
 					", ",

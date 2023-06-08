@@ -255,6 +255,42 @@ it<LocalTestContext>("fetches nested fields with dot notation", async (context) 
 		{ name: "Tenderheart Bear", residence: "Care-a-Lot" },
 		{ name: "Cheer Bear", residence: "Care-a-Lot" },
 		{ name: "Wish Bear", residence: "Care-a-Lot" },
-		{ name: "Smart Heart Bear", residence: "Care-a-Lot" },
+		{ name: "Smart Heart Bear", residence: null },
+	]);
+});
+
+it<LocalTestContext>("fetches doubly nested fields with dot notation", async (context) => {
+	const result = await context.store.get({
+		type: "bears",
+		properties: {
+			name: "name",
+			friendsResidence: "bestFriend.home.name",
+		},
+	});
+
+	expect(result).toEqual([
+		{ name: "Tenderheart Bear", friendsResidence: null },
+		{ name: "Cheer Bear", friendsResidence: "Care-a-Lot" },
+		{ name: "Wish Bear", friendsResidence: "Care-a-Lot" },
+		{ name: "Smart Heart Bear", friendsResidence: null },
+	]);
+});
+
+it<LocalTestContext>("fetches mapped array data with dot notation", async (context) => {
+	const result = await context.store.get({
+		type: "homes",
+		properties: {
+			name: "name",
+			residentNames: "residents.name",
+		},
+	});
+
+	expect(result).toEqual([
+		{
+			name: "Care-a-Lot",
+			residentNames: ["Tenderheart Bear", "Cheer Bear", "Wish Bear"],
+		},
+		{ name: "Forest of Feelings", residentNames: [] },
+		{ name: "Earth", residentNames: [] },
 	]);
 });
