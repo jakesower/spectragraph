@@ -5,11 +5,13 @@ Data Prism is a library for dealing with structured graphs. These can be databas
 - The data can be described by a schema of resources
 - Resources have properties as well as relationships to other resources
 
+Data Prism is highly aligned with its data structures. Data flow from queries, which in turn depend on schemas. Having an understanding of these concepts is critical to using the libraries well.
+
 ## Components
 
 ### Store
 
-A store is a repository of data that follows a schema that is provided to it.
+A store is a repository of data that follows a schema that is provided to it. Stores include SQL databases, graph databases, APIs, among other data structuring systems.
 
 ### Schema
 
@@ -63,7 +65,7 @@ A schema of schemas can be found in [./schemas](./schemas) and examples can be f
 
 ### Query
 
-Queries are the most written type within a typical Data Prism application. Store accept queries and produce results based on the contents of the store. The various store types handle queries differently (they may walk a memory tree, produce SQL, hit an API, or other such things). However, the structure of a query and its results are uniform across the different store types. Custom stores need to abide by the same rules.
+Queries are the most written type within a typical Data Prism application. Stores accept queries and produce results based on the contents of the store. The various store types handle queries differently (they may walk a memory tree, produce SQL, hit an API, or other such things). However, the structure of a query and its results are uniform across the different store types. Custom stores need to abide by the same rules.
 
 Example queries:
 
@@ -155,8 +157,8 @@ Produces:
 
 This example shows the use of a couple of aggregating expressions (`$count` and `$mean`) as well as the use of dot notation for nested fields (`trips.$.cost` and `company.name`). Paired with a schema and proper expression evaluators, these can make for expressive queries. Aggregating expressions are about as extensive as those implemented by SQL databases. More complex manipulations should be done programatically.
 
-Note that queries are implemented as JSON objects, rather than strings. This makes them far easier to compose, pick apart, and otherwise manipulate than string-based query languages such as SQL and GraphQL.
+Note that queries are implemented as JSON objects, rather than strings. This makes them easier to compose, pick apart, and otherwise manipulate than string-based query languages such as SQL and GraphQL.
 
 ## Current Project Status
 
-As of May 2023, a `Memory Store` is fully implemented with a `SQL Store` and `API Store` in progress.
+As of July 2023, a `Memory Store` is fully implemented with a `SQL Store` and `API Store` in progress.
