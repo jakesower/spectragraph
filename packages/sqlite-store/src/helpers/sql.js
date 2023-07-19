@@ -1,7 +1,7 @@
-import { mapValues } from "lodash-es";
+import { mapValues, uniq } from "lodash-es";
 
 const defaultClause = {
-	compose: (acc, item) => [...(acc ?? []), ...(item ?? [])],
+	compose: (acc, item) => uniq([...(acc ?? []), ...(item ?? [])]),
 	initVal: [],
 };
 
@@ -12,9 +12,9 @@ const SQL_CLAUSE_CONFIG = {
 	},
 	from: {
 		...defaultClause,
-		compose: (_, item) => item,
-		initVal: null,
-		toSql: (val) => `FROM ${val}`,
+		compose: (acc, item) => [...acc, item],
+		initVal: [],
+		toSql: (val) => `FROM ${uniq(val).join(", ")}`,
 	},
 	join: {
 		...defaultClause,
@@ -62,7 +62,6 @@ export function buildSql(queryClauses) {
 }
 
 export function composeClauses(queryModifiers) {
-	console.log(queryModifiers)
 	return queryModifiers.reduce(
 		(acc, condObj) => ({
 			...acc,

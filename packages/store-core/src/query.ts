@@ -30,6 +30,9 @@ export type RootQuery<S extends Schema> = Query<S> & {
 	type: keyof S["resources"] & string;
 };
 
+export type MultiRootQuery<S extends Schema> = RootQuery<S> & { id: never };
+export type SingleRootQuery<S extends Schema> = RootQuery<S> & { id: string | number };
+
 export function ensureValidQuery<S extends Schema>(
 	schema: S,
 	rootQuery: RootQuery<S>,

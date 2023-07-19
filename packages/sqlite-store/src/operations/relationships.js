@@ -90,8 +90,8 @@ function makeRelBuilders(schema) {
 }
 
 export const preQueryRelationships = (context) => {
-	const { config, query, queryPath, rootQuery, schema } = context;
-	const { parentQuery } = query;
+	const { config, flatQuery, queryPath, rootQuery, schema } = context;
+	const { parentQuery } = flatQuery;
 	const rootTable = config.resources[rootQuery.type].table;
 
 	if (queryPath.length === 0) return {};
@@ -100,6 +100,7 @@ export const preQueryRelationships = (context) => {
 	const tablePath = [rootTable, ...queryPath];
 	const parentTablePath = [rootTable, ...parentPath];
 	const relName = last(queryPath);
+	console.log(context)
 
 	const relBuilders = makeRelBuilders(schema);
 	const outgoingQueryTableName = parentTablePath.join("$");

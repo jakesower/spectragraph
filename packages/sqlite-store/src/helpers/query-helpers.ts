@@ -12,8 +12,8 @@ export function flattenQuery<S extends Schema>(
 	schema: S,
 	rootQuery: RootQuery<S>,
 ): QueryBreakdown<S> {
-	const go = (query, resourceType, path, parentQuery = null) => {
-		const resDef = schema.resources[resourceType];
+	const go = (query, type, path, parentQuery = null, parentRelationship = null) => {
+		const resDef = schema.resources[type];
 		const [properties, relationshipKeys] = partition(
 			Object.keys(query.properties ?? {}),
 			(propName) => propName in resDef.properties || propName === "id",
@@ -21,10 +21,12 @@ export function flattenQuery<S extends Schema>(
 
 		const level = {
 			parentQuery,
+			parentRelationship,
 			path,
 			properties,
+			query,
 			relationships: pick(query.properties, relationshipKeys),
-			resourceType,
+			type,
 		};
 
 		return [
@@ -33,7 +35,7 @@ export function flattenQuery<S extends Schema>(
 				const relDef = resDef.relationships[relKey];
 				const subquery = query.properties[relKey];
 
-				return go(subquery, relDef.resource, [...path, relKey], query);
+				return go(subquery, relDef.resource, [...path, relKey], query, relKey);
 			}),
 		];
 	};
