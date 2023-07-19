@@ -42,7 +42,7 @@ it("fetches a single resource with its id implicitly", async () => {
 		id: "1",
 	});
 
-	expect(result).toEqual({ id: "1" });
+	expect(result).toEqual({ type: "bears", id: "1" });
 });
 
 it("fetches a single resource without its id", async () => {
@@ -50,7 +50,7 @@ it("fetches a single resource without its id", async () => {
 		type: "bears",
 		id: "1",
 		properties: {
-			name: {},
+			name: "name",
 		},
 	});
 
@@ -59,13 +59,13 @@ it("fetches a single resource without its id", async () => {
 
 it("fetches multiple resources", async () => {
 	const result = await store.get({ type: "bears" });
-	const expected = ["1", "2", "3", "5"].map((id) => ({ id }));
+	const expected = ["1", "2", "3", "5"].map((id) => ({ type: "bears", id }));
 
 	expect(result).toEqual(expected);
 });
 
 it("fetches a property from multiple resources", async () => {
-	const result = await store.get({ type: "bears", properties: { name: {} } });
+	const result = await store.get({ type: "bears", properties: { name: "name" } });
 	const expected = [
 		"Tenderheart Bear",
 		"Cheer Bear",
@@ -82,7 +82,7 @@ it("fetches null for a nonexistent resource", async () => {
 	expect(result).toEqual(null);
 });
 
-it.only("fetches a single resource with a many-to-one relationship", async () => {
+it("fetches a single resource with a many-to-one relationship", async () => {
 	const q = {
 		type: "bears",
 		id: "1",
@@ -98,7 +98,7 @@ it.only("fetches a single resource with a many-to-one relationship", async () =>
 	});
 });
 
-it("a single resource with a one-to-many relationship", async () => {
+it.skip("a single resource with a one-to-many relationship", async () => {
 	const q = {
 		type: "homes",
 		id: "1",
@@ -112,7 +112,7 @@ it("a single resource with a one-to-many relationship", async () => {
 	});
 });
 
-it("fetches a single resource with a subset of props", async () => {
+it.skip("fetches a single resource with a subset of props", async () => {
 	const result = await store.get({
 		type: "bears",
 		id: "1",
@@ -122,7 +122,7 @@ it("fetches a single resource with a subset of props", async () => {
 	expect(result).toEqual({ id: "1", name: "Tenderheart Bear", furColor: "tan" });
 });
 
-it("fetches a single resource with a subset of props on a relationship", async () => {
+it.skip("fetches a single resource with a subset of props on a relationship", async () => {
 	const q = {
 		type: "bears",
 		id: "1",
@@ -134,7 +134,7 @@ it("fetches a single resource with a subset of props on a relationship", async (
 	expect(result).toEqual({ home: { caringMeter: 1 } });
 });
 
-it("uses explicitly set id fields", async () => {
+it.skip("uses explicitly set id fields", async () => {
 	const result = await store.get({
 		type: "powers",
 		id: "careBearStare",
@@ -143,7 +143,7 @@ it("uses explicitly set id fields", async () => {
 	expect(result).toEqual({ powerId: "careBearStare" });
 });
 
-it("always returns explicitly set id fields", async () => {
+it.skip("always returns explicitly set id fields", async () => {
 	const result = await store.get({
 		type: "powers",
 	});
@@ -151,7 +151,7 @@ it("always returns explicitly set id fields", async () => {
 	expect(result).toEqual([{ powerId: "careBearStare" }, { powerId: "makeWish" }]);
 });
 
-it("fetches a single resource with many-to-many relationship", async () => {
+it.skip("fetches a single resource with many-to-many relationship", async () => {
 	const result = await store.get({
 		type: "bears",
 		id: "1",
@@ -161,7 +161,7 @@ it("fetches a single resource with many-to-many relationship", async () => {
 	expect(result).toEqual({ powers: [{ powerId: "careBearStare" }] });
 });
 
-it("fetches multiple subqueries of various types", async () => {
+it.skip("fetches multiple subqueries of various types", async () => {
 	const result = await store.get({
 		type: "bears",
 		id: "1",
@@ -181,7 +181,7 @@ it("fetches multiple subqueries of various types", async () => {
 	});
 });
 
-it("handles subqueries between the same type", async () => {
+it.skip("handles subqueries between the same type", async () => {
 	const result = await store.get({
 		type: "bears",
 		properties: {
@@ -198,13 +198,13 @@ it("handles subqueries between the same type", async () => {
 	]);
 });
 
-// it("fails validation for invalid types", async () => {
+// it.skip("fails validation for invalid types", async () => {
 // 	expect(async () => {
 // 		await store.get({ type: "bearz", id: "1" });
 // 	}).rejects.toThrowError();
 // });
 
-it("fails validation for invalid top level props", async () => {
+it.skip("fails validation for invalid top level props", async () => {
 	await expect(async () => {
 		await store.get({ type: "bears", id: "1", properties: { koopa: {} } });
 	}).rejects.toThrowError();

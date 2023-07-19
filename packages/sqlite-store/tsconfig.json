@@ -9,7 +9,7 @@
 	},
 	"references": [
 		{
-			"path": "../expression"
+			"path": "../expressions"
 		},
 		{
 			"path": "../store-core"
