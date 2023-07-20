@@ -5,7 +5,11 @@ export const careBearsConfig = {
 			joins: {
 				bestFriend: { localColumn: "best_friend_id" },
 				home: { localColumn: "home_id" },
-				powers: { joinTable: "bears_powers", joinColumn: "bear_id" },
+				powers: {
+					joinTable: "bears_powers",
+					localJoinColumn: "bear_id",
+					foreignJoinColumn: "power_id",
+				},
 			},
 		},
 		homes: {
@@ -16,8 +20,13 @@ export const careBearsConfig = {
 		},
 		powers: {
 			table: "powers",
+			idProperty: "powerId",
 			joins: {
-				wielders: { joinTable: "bears_powers", joinColumn: "power_id" },
+				wielders: {
+					joinTable: "bears_powers",
+					localJoinColumn: "power_id",
+					foreignJoinColumn: "bear_id",
+				},
 			},
 		},
 	},

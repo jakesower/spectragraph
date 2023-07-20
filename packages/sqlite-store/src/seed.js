@@ -11,9 +11,9 @@ const defaultColumnTypes = {
 export function createTables(db, schema, config) {
 	Object.entries(schema.resources).forEach(([resType, resDef]) => {
 		const resConfig = config.resources[resType];
-		const tableName = resConfig.table;
+		const { idProperty = "id", table } = resConfig;
 
-		const idCol = { name: resDef.idColumn ?? "id", type: "VARCHAR" };
+		const idCol = { name: idProperty, type: "VARCHAR" };
 		const propCols = Object.entries(resDef.properties).map(([propName, propDef]) => ({
 			name: propName,
 			type: defaultColumnTypes[propDef.type],
@@ -24,7 +24,7 @@ export function createTables(db, schema, config) {
 
 		const allCols = [idCol, ...propCols, ...joinCols];
 
-		const sql = `CREATE TABLE ${tableName} (${allCols
+		const sql = `CREATE TABLE ${table} (${allCols
 			.map((col) => `${col.name} ${col.type}`)
 			.join(", ")})`;
 
@@ -36,13 +36,14 @@ export function createTables(db, schema, config) {
 	);
 	const joinTables = groupBy(Object.values(joinTableConfigs), (jtc) => jtc.joinTable);
 	Object.entries(joinTables).forEach(([joinTable, jt]) => {
-		const joinCols = jt.map((j) => j.joinColumn);
+		const joinCols = jt.map((j) => j.localJoinColumn);
 		joinCols.sort();
 
 		const sql = `CREATE TABLE ${joinTable} (${joinCols
 			.map((jc) => `${jc} VARCHAR`)
 			.join(", ")})`;
 
+		console.log(sql);
 		db.exec(sql);
 	});
 }
@@ -51,7 +52,7 @@ export function seed(db, schema, config, seedData) {
 	const tableConfigs = mapValues(schema.resources, (resDef, resType) => {
 		const resConfig = config.resources[resType];
 
-		const id = (res) => res[resDef.idField ?? "id"];
+		const id = (res) => res[resConfig.idProperty ?? "id"];
 		const props = Object.entries(resDef.properties).map(([propName, propDef]) =>
 			propDef.type === "boolean"
 				? (res) => boolToNum(res[propName])
@@ -86,18 +87,13 @@ export function seed(db, schema, config, seedData) {
 		([resType, resConfig]) =>
 			Object.entries(resConfig.joins)
 				.filter(([_, resJoinConfig]) => resJoinConfig.joinTable)
-				.map(([relName, join]) => {
-					const relDef = schema.resources[resType].relationships[relName];
-					const inverse = config.resources[relDef.resource].joins[relDef.inverse];
-
-					return {
-						table: join.joinTable,
-						resourceType: resType,
-						property: relName,
-						localColumn: join.joinColumn,
-						foreignColumn: inverse.joinColumn,
-					};
-				}),
+				.map(([relName, join]) => ({
+					table: join.joinTable,
+					resourceType: resType,
+					property: relName,
+					localColumn: join.localJoinColumn,
+					foreignColumn: join.foreignJoinColumn,
+				})),
 	);
 	const joinTableConfigs = uniqBy(allJoinTableConfigs, (j) => j.table);
 

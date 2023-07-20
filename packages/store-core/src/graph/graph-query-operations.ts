@@ -93,7 +93,7 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 								context,
 							  )
 							: null
-						: result[propName]
+						: [...result[propName]]
 							.map((id) =>
 								runTreeQuery({ ...propQuery, id, type: relDef.resource }, context),
 							)
