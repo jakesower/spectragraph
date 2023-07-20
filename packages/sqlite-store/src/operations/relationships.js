@@ -3,86 +3,101 @@ import { get, last, uniq } from "lodash-es";
 function makeRelBuilders(schema) {
 	return {
 		one: {
-			one({ outgoingResDef, outgoingQueryTableName, relName, incomingTableName }) {
-				const outgoingRelDef = outgoingResDef.properties[relName];
-				const outgoingJoinColumn = outgoingRelDef.store.join.localColumn;
+			one(props) {
+				const {
+					foreignConfig,
+					foreignTableAlias,
+					localConfig,
+					localQueryTableName,
+					relName,
+				} = props;
 
-				const incomingResDef = schema.resources[outgoingRelDef.relatedType];
-				const incomingTable = incomingResDef.store.table;
+				const { localColumn } = localConfig.joins[relName];
+				const foreignTable = foreignConfig.table;
 
 				return [
-					`LEFT JOIN ${incomingTable} AS ${incomingTableName} ON ${outgoingQueryTableName}.${outgoingJoinColumn} = ${incomingTableName}.id`,
+					`LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${localQueryTableName}.${localColumn} = ${foreignTableAlias}.id`,
 				];
 			},
-			many({ outgoingResDef, outgoingQueryTableName, relName, incomingTableName }) {
-				const outgoingRelDef = outgoingResDef.properties[relName];
+			many(props) {
+				const {
+					foreignConfig,
+					localConfig,
+					localQueryTableName,
+					relName,
+					foreignTableAlias,
+				} = props;
 
-				const incomingResDef = schema.resources[outgoingRelDef.relatedType];
-				const incomingTable = incomingResDef.store.table;
-				const incomingRelDef = incomingResDef.properties[outgoingRelDef.inverse];
-				const incomingJoinColumn = incomingRelDef.store.join.localColumn;
+				const foreignTable = foreignConfig.table;
+				const foreignJoinColumn = localConfig.joins[relName].foreignColumn;
 
 				return [
-					`LEFT JOIN ${incomingTable} AS ${incomingTableName} ON ${outgoingQueryTableName}.id = ${incomingTableName}.${incomingJoinColumn}`,
+					`LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${localQueryTableName}.id = ${foreignTableAlias}.${foreignJoinColumn}`,
 				];
 			},
 		},
 		many: {
 			one(props) {
 				const {
-					outgoingConfig,
-					outgoingQueryTableName,
+					localConfig,
+					localQueryTableName,
 					relName,
-					incomingConfig,
-					incomingTableName,
+					foreignConfig,
+					foreignTableAlias,
 				} = props;
 
-				const outgoingJoinColumn = outgoingConfig.joins[relName].localColumn;
-				const incomingTable = incomingConfig.table;
+				const localJoinColumn = localConfig.joins[relName].localColumn;
+				const foreignTable = foreignConfig.table;
 
 				return [
-					`LEFT JOIN ${incomingTable} AS ${incomingTableName} ON ${outgoingQueryTableName}.${outgoingJoinColumn} = ${incomingTableName}.id`,
+					`LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${localQueryTableName}.${localJoinColumn} = ${foreignTableAlias}.id`,
 				];
 			},
-			many({ outgoingResDef, outgoingQueryTableName, relName, incomingTableName }) {
-				const outgoingRelDef = outgoingResDef.properties[relName];
-				const outgoingJoinColumn = outgoingRelDef.store.join.joinColumn;
+			many(props) {
+				const {
+					foreignConfig,
+					localConfig,
+					localQueryTableName,
+					relName,
+					foreignTableAlias,
+				} = props;
 
-				const incomingResDef = schema.resources[outgoingRelDef.relatedType];
-				const incomingTable = incomingResDef.store.table;
-				const incomingRelDef = incomingResDef.properties[outgoingRelDef.inverse];
-				const incomingJoinColumn = incomingRelDef.store.join.joinColumn;
+				const localIdCol = localConfig.idProperty ?? "id";
 
-				const { joinTable } = outgoingRelDef.store.join;
-				const joinTableName = `${outgoingQueryTableName}$$${relName}`;
+				const foreignTable = foreignConfig.table;
+				const foreignIdCol = foreignConfig.idProperty ?? "id";
+
+				const joinTableName = `${localQueryTableName}$$${relName}`;
+				const { joinTable, localJoinColumn, foreignJoinColumn } =
+					localConfig.joins[relName];
 
 				return [
-					`LEFT JOIN ${joinTable} AS ${joinTableName} ON ${outgoingQueryTableName}.id = ${joinTableName}.${outgoingJoinColumn}`,
-					`LEFT JOIN ${incomingTable} AS ${incomingTableName} ON ${incomingTableName}.id = ${joinTableName}.${incomingJoinColumn}`,
+					`LEFT JOIN ${joinTable} AS ${joinTableName} ON ${localQueryTableName}.${localIdCol} = ${joinTableName}.${localJoinColumn}`,
+					`LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${foreignTableAlias}.${foreignIdCol} = ${joinTableName}.${foreignJoinColumn}`,
 				];
 			},
 		},
 		none: {
-			// one({ outgoingResDef, outgoingTableName, relName, path }) {
+			// one({ localResDef, localTableAlias, relName, path }) {
 			//   // TODO
 			// },
-			many({ outgoingResDef, outgoingQueryTableName, relName, incomingTableName }) {
-				const outgoingRelDef = outgoingResDef.properties[relName];
-				const outgoingJoinColumn = outgoingRelDef.store.join.joinColumn;
+			many({ localResDef, localQueryTableName, relName, foreignTableAlias }) {
+				const localRelDef = localResDef.properties[relName];
+				const localJoinColumn = localRelDef.store.join.joinColumn;
 
-				const incomingResDef = schema.resources[outgoingRelDef.relatedType];
-				const incomingTable = incomingResDef.store.table;
-				const incomingRelDef = incomingResDef?.properties?.[outgoingRelDef.inverse];
-				const incomingJoinColumn = incomingRelDef
-					? incomingRelDef.store.join.joinColumn
-					: outgoingRelDef.store.join.foreignJoinColumn;
+				const foreignResDef = schema.resources[localRelDef.relatedType];
+				const foreignTable = foreignResDef.store.table;
+				const foreignRelDef = foreignResDef?.properties?.[localRelDef.inverse];
+				const foreignJoinColumn = foreignRelDef
+					? foreignRelDef.store.join.joinColumn
+					: localRelDef.store.join.foreignJoinColumn;
 
-				const { joinTable } = outgoingRelDef.store.join;
-				const joinTableName = `${outgoingQueryTableName}$$${relName}`;
+				const { joinTable } = localRelDef.store.join;
+				const joinTableName = `${localQueryTableName}$$${relName}`;
 
 				return [
-					`LEFT JOIN ${joinTable} AS ${joinTableName} ON ${outgoingQueryTableName}.id = ${joinTableName}.${outgoingJoinColumn}`,
-					`LEFT JOIN ${incomingTable} AS ${incomingTableName} ON ${incomingTableName}.id = ${joinTableName}.${incomingJoinColumn}`,
+					`LEFT JOIN ${joinTable} AS ${joinTableName} ON ${localQueryTableName}.id = ${joinTableName}.${localJoinColumn}`,
+					`LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${foreignTableAlias}.id = ${joinTableName}.${foreignJoinColumn}`,
 				];
 			},
 		},
@@ -91,7 +106,7 @@ function makeRelBuilders(schema) {
 
 export const preQueryRelationships = (context) => {
 	const { config, flatQuery, queryPath, rootQuery, schema } = context;
-	const { parentQuery } = flatQuery;
+	const { parent } = flatQuery;
 	const rootTable = config.resources[rootQuery.type].table;
 
 	if (queryPath.length === 0) return {};
@@ -100,33 +115,33 @@ export const preQueryRelationships = (context) => {
 	const tablePath = [rootTable, ...queryPath];
 	const parentTablePath = [rootTable, ...parentPath];
 	const relName = last(queryPath);
-	console.log(context)
 
 	const relBuilders = makeRelBuilders(schema);
-	const outgoingQueryTableName = parentTablePath.join("$");
+	const localQueryTableName = parentTablePath.join("$");
 
-	const outgoingConfig = config.resources[parentQuery.type];
-	const outgoingResDef = schema.resources[parentQuery.type];
-	const outgoingRelDef = outgoingResDef.relationships[relName];
+	const localConfig = config.resources[parent.type];
+	const localResDef = schema.resources[parent.type];
+	const localRelDef = localResDef.relationships[relName];
 
-	const incomingConfig = config.resources[outgoingRelDef.resource];
-	const incomingResDef = schema.resources[outgoingRelDef.resource];
-	const incomingRelDef = incomingResDef.relationships[outgoingRelDef.inverse];
-	const incomingTableName = tablePath.join("$");
+	const foreignConfig = config.resources[localRelDef.resource];
+	const foreignResDef = schema.resources[localRelDef.resource];
+	const foreignRelDef = foreignResDef.relationships[localRelDef.inverse];
+	const foreignTableAlias = tablePath.join("$");
 
-	const outgoingResCardinality = outgoingRelDef.cardinality;
-	const incomingResCardinality = incomingRelDef?.cardinality ?? "none";
+	const localResCardinality = localRelDef.cardinality;
+	const foreignResCardinality = foreignRelDef?.cardinality ?? "none";
 
 	const builderArgs = {
-		outgoingConfig,
-		outgoingResDef,
-		outgoingQueryTableName,
+		localConfig,
+		localRelDef,
+		localResDef,
+		localQueryTableName,
 		relName,
-		incomingConfig,
-		incomingTableName,
+		foreignConfig,
+		foreignTableAlias,
 	};
 
-	const join = relBuilders[incomingResCardinality][outgoingResCardinality](builderArgs);
+	const join = relBuilders[foreignResCardinality][localResCardinality](builderArgs);
 
 	return { join };
 };

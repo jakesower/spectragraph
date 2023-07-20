@@ -18,9 +18,8 @@ const operations = {
 	id: {
 		preQuery: {
 			apply: (id, { config, query }) => {
-				console.log(config.resources, query.type);
-				const { table } = config.resources[query.type];
-				return { where: [`${table}.id = ?`], vars: [id] };
+				const { table, idProperty = "id" } = config.resources[query.type];
+				return { where: [`${table}.${idProperty} = ?`], vars: [id] };
 			},
 		},
 		postQuery: {
@@ -89,18 +88,12 @@ const operations = {
 			},
 		},
 	},
-	relationships: {
-		preQuery: {
-			apply: (_, context) => preQueryRelationships(context),
-			// flatMapQuery(context.query, (subquery, queryPath) =>
-			//   preQueryRelationships(subquery, queryPath, context),
-			// ),
-		},
-	},
 	properties: {
 		preQuery: {
 			apply: (properties, context) => {
-				const { table } = context;
+				const { config, flatQuery, table } = context;
+				const { type } = flatQuery;
+				const { idProperty = "id" } = config.resources[type];
 
 				const propertyProps = Object.values(properties).filter(
 					(p) => typeof p === "string",
@@ -109,7 +102,7 @@ const operations = {
 				const relationshipsModifiers = preQueryRelationships(context);
 
 				return {
-					select: uniq(["id", ...propertyProps]).map((col) => `${table}.${col}`),
+					select: uniq([idProperty, ...propertyProps]).map((col) => `${table}.${col}`),
 					...relationshipsModifiers,
 				};
 			},
@@ -131,29 +124,36 @@ const applyOverPaths = (resources, path, fn) => {
 
 const gatherPreOperations = (query, context) => {
 	const { config, schema } = context;
+
 	const flatQueries = flattenQuery(schema, query);
 	const queryParts = flatQueries.flatMap((flatQuery) => {
 		const table = [query.type, ...flatQuery.path].join("$");
+		const argContext = {
+			...context,
+			flatQuery,
+			query: flatQuery.query,
+			queryPath: flatQuery.path,
+			table: [query.type, ...flatQuery.path].join("$"),
+			rootQuery: query,
+		};
+
+		const partConfig = config.resources[flatQuery.type];
+		const { idProperty = "id" } = partConfig;
+
 		const operationParts = Object.entries(flatQuery.query).flatMap(
 			([operationKey, operationArg]) => {
 				const operation = operations[operationKey]?.preQuery?.apply;
 
 				if (!operation) return [];
 
-				const argContext = {
-					...context,
-					flatQuery,
-					query: flatQuery.query,
-					queryPath: flatQuery.path,
-					table: [query.type, ...flatQuery.path].join("$"),
-					rootQuery: query,
-				};
-
 				return operation(operationArg, argContext);
 			},
 		);
 
-		return [{ select: [`${table}.id`] }, ...operationParts];
+		const refPart =
+			flatQuery.ref && flatQuery.parentQuery ? [preQueryRelationships(argContext)] : [];
+
+		return [{ select: [`${table}.${idProperty}`] }, ...operationParts, ...refPart];
 	});
 
 	return queryParts;

@@ -98,11 +98,11 @@ it("fetches a single resource with a many-to-one relationship", async () => {
 	});
 });
 
-it.skip("a single resource with a one-to-many relationship", async () => {
+it("fetches a single resource with a one-to-many relationship", async () => {
 	const q = {
 		type: "homes",
 		id: "1",
-		properties: { residents: {} },
+		properties: { residents: { properties: { id: "id" } } },
 	} as const;
 
 	const result = await store.get(q);
@@ -112,21 +112,49 @@ it.skip("a single resource with a one-to-many relationship", async () => {
 	});
 });
 
-it.skip("fetches a single resource with a subset of props", async () => {
+it("fetches a single resource with a one-to-many relationship and an implicit ref property", async () => {
+	const q = {
+		type: "homes",
+		id: "1",
+		properties: { residents: {} },
+	} as const;
+
+	const result = await store.get(q);
+
+	expect(result).toEqual({
+		residents: [
+			{ type: "bears", id: "1" },
+			{ type: "bears", id: "2" },
+			{ type: "bears", id: "3" },
+		],
+	});
+});
+
+it("fetches a single resource with a subset of props", async () => {
 	const result = await store.get({
 		type: "bears",
 		id: "1",
-		properties: { id: {}, name: {}, furColor: {} },
+		properties: { id: "id", name: "name", furColor: "furColor" },
 	});
 
 	expect(result).toEqual({ id: "1", name: "Tenderheart Bear", furColor: "tan" });
 });
 
-it.skip("fetches a single resource with a subset of props on a relationship", async () => {
+it("fetches a single resource with a renamed prop", async () => {
+	const result = await store.get({
+		type: "bears",
+		id: "1",
+		properties: { id: "id", color: "furColor" },
+	});
+
+	expect(result).toEqual({ id: "1", color: "tan" });
+});
+
+it("fetches a single resource with a subset of props on a relationship", async () => {
 	const q = {
 		type: "bears",
 		id: "1",
-		properties: { home: { properties: { caringMeter: {} } } },
+		properties: { home: { properties: { caringMeter: "caringMeter" } } },
 	} as const;
 
 	const result = await store.get(q);
@@ -134,34 +162,37 @@ it.skip("fetches a single resource with a subset of props on a relationship", as
 	expect(result).toEqual({ home: { caringMeter: 1 } });
 });
 
-it.skip("uses explicitly set id fields", async () => {
+it("uses explicitly set id fields", async () => {
 	const result = await store.get({
 		type: "powers",
 		id: "careBearStare",
 	});
 
-	expect(result).toEqual({ powerId: "careBearStare" });
+	expect(result).toEqual({ type: "powers", id: "careBearStare" });
 });
 
-it.skip("always returns explicitly set id fields", async () => {
+it("always returns explicitly set id fields", async () => {
 	const result = await store.get({
 		type: "powers",
 	});
 
-	expect(result).toEqual([{ powerId: "careBearStare" }, { powerId: "makeWish" }]);
+	expect(result).toEqual([
+		{ type: "powers", id: "careBearStare" },
+		{ type: "powers", id: "makeWish" },
+	]);
 });
 
-it.skip("fetches a single resource with many-to-many relationship", async () => {
+it("fetches a single resource with many-to-many relationship", async () => {
 	const result = await store.get({
 		type: "bears",
 		id: "1",
 		properties: { powers: {} },
 	});
 
-	expect(result).toEqual({ powers: [{ powerId: "careBearStare" }] });
+	expect(result).toEqual({ powers: [{ type: "powers", id: "careBearStare" }] });
 });
 
-it.skip("fetches multiple subqueries of various types", async () => {
+it("fetches multiple subqueries of various types", async () => {
 	const result = await store.get({
 		type: "bears",
 		id: "1",
@@ -176,27 +207,37 @@ it.skip("fetches multiple subqueries of various types", async () => {
 	});
 
 	expect(result).toEqual({
-		home: { residents: [{ id: "1" }, { id: "2" }, { id: "3" }] },
-		powers: [{ powerId: "careBearStare" }],
+		home: {
+			residents: [
+				{ type: "bears", id: "1" },
+				{ type: "bears", id: "2" },
+				{ type: "bears", id: "3" },
+			],
+		},
+		powers: [{ type: "powers", id: "careBearStare" }],
 	});
 });
 
-it.skip("handles subqueries between the same type", async () => {
+it("handles subqueries between the same type", async () => {
 	const result = await store.get({
 		type: "bears",
 		properties: {
-			id: {},
+			id: "id",
 			bestFriend: {},
 		},
 	});
 
 	expect(result).toEqual([
 		{ id: "1", bestFriend: null },
-		{ id: "2", bestFriend: { id: "3" } },
-		{ id: "3", bestFriend: { id: "2" } },
+		{ id: "2", bestFriend: { type: "bears", id: "3" } },
+		{ id: "3", bestFriend: { type: "bears", id: "2" } },
 		{ id: "5", bestFriend: null },
 	]);
 });
+
+it.todo(
+	"merges properties when resource has different properties from different parts of the query tree",
+);
 
 // it.skip("fails validation for invalid types", async () => {
 // 	expect(async () => {

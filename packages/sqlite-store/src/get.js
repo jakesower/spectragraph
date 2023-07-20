@@ -33,20 +33,24 @@ export function get(query, context) {
 		const statement = db.prepare(sql).raw();
 		const allResults = statement.all(vars) ?? null;
 
-		console.log(composedModifiers);
+		// console.log(composedModifiers);
+		console.log('results', allResults)
 
 		const dataGraph = mapValues(schema.resources, () => ({}));
 		const flatQuery = flattenQuery(schema, query);
 
 		const buildExtractor = () => {
 			const extractors = flatQuery.flatMap((queryPart) => {
-				const { parentQuery, parentRelationship, properties, type } = queryPart;
-				const parentType = parentQuery?.type;
+				const { parent, parentQuery, parentRelationship, properties, type } = queryPart;
+				const queryPartConfig = config.resources[type];
+				const { idProperty = "id" } = queryPartConfig;
+
+				const parentType = parent?.type;
 				const parentRelDef =
 					parentQuery && schema.resources[parentType].relationships[parentRelationship];
 
 				const pathStr = queryPart.path.length > 0 ? `$${queryPart.path.join("$")}` : "";
-				const idPath = `${rootTable}${pathStr}.id`;
+				const idPath = `${rootTable}${pathStr}.${idProperty}`;
 				const idIdx = selectPropertyMap[idPath];
 
 				return (result) => {
@@ -65,20 +69,25 @@ export function get(query, context) {
 						if (parentRelDef.cardinality === "one") {
 							parent[parentRelationship] = id ?? null;
 						} else {
-							parent[parentRelationship] = parent[parentRelationship] ?? [];
-							parent[parentRelationship].push(id);
+							parent[parentRelationship] = parent[parentRelationship] ?? new Set();
+							parent[parentRelationship].add(id);
 						}
 					}
 
 					if (!id) return;
-					dataGraph[type][id] = dataGraph[type][id] ?? { id };
+					dataGraph[type][id] = dataGraph[type][id] ?? { [idProperty]: id };
 
-					properties.forEach((prop) => {
-						const fullPropPath = `${rootTable}${pathStr}.${prop}`;
-						const resultIdx = selectPropertyMap[fullPropPath];
+					if (properties.length > 0) {
+						properties.forEach((prop) => {
+							const fullPropPath = `${rootTable}${pathStr}.${prop}`;
+							const resultIdx = selectPropertyMap[fullPropPath];
 
-						dataGraph[type][id][prop] = result[resultIdx];
-					});
+							dataGraph[type][id][prop] = result[resultIdx];
+						});
+					} else {
+						dataGraph[type][id].id = id;
+						dataGraph[type][id].type = type;
+					}
 				};
 			});
 
@@ -87,7 +96,9 @@ export function get(query, context) {
 
 		const extractor = buildExtractor();
 		allResults.forEach((row) => extractor(row));
-		console.log(dataGraph);
+		console.log('dg', dataGraph);
+		console.log('dg bears', dataGraph.bears)
+		console.log('fin', createGraph(schema, dataGraph).getTrees(query))
 
 		return createGraph(schema, dataGraph).getTrees(query);
 
