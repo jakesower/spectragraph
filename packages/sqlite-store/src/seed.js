@@ -43,7 +43,6 @@ export function createTables(db, schema, config) {
 			.map((jc) => `${jc} VARCHAR`)
 			.join(", ")})`;
 
-		console.log(sql);
 		db.exec(sql);
 	});
 }
