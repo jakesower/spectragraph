@@ -1,12 +1,12 @@
 import { mapValues, orderBy } from "lodash-es";
 import { Schema, MultiResult, Result, RootQuery } from "@data-prism/store-core";
 import { applyOrMap } from "@data-prism/utils";
-import { createExpressionEngine } from "@data-prism/expressions";
+import { createDefaultExpressionEngine } from "@data-prism/expressions";
 import { InternalStore } from "./memory-store.js";
 
 type GetOperation = (results: MultiResult) => MultiResult;
 
-const evaluator = createExpressionEngine({});
+const evaluator = createDefaultExpressionEngine({});
 
 export function runQuery<S extends Schema, Q extends RootQuery<S>>(
 	query: Q,

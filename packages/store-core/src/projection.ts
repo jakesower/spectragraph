@@ -1,13 +1,13 @@
 import { mapValues } from "lodash-es";
 import { MultiResult } from "./result.js";
-import { createExpressionEngine } from "@data-prism/expressions";
+import { createDefaultExpressionEngine } from "@data-prism/expressions";
 
 export type Projection = {
 	[k: string]: any;
 };
 
 function distributeStrings(expression) {
-	const { isExpression } = createExpressionEngine({});
+	const { isExpression } = createDefaultExpressionEngine({});
 
 	if (typeof expression === "string") {
 		const [iteratee, ...rest] = expression.split(".$.");
@@ -35,7 +35,7 @@ function distributeStrings(expression) {
 }
 
 export function projectionQueryProperties(projection: Projection) {
-	const { isExpression } = createExpressionEngine({});
+	const { isExpression } = createDefaultExpressionEngine({});
 	const terminalExpressions = ["$literal", "$var"];
 
 	const go = (val) => {
@@ -80,7 +80,7 @@ export function projectionQueryProperties(projection: Projection) {
 }
 
 export function project(results: MultiResult, projection: Projection) {
-	const { evaluate } = createExpressionEngine({});
+	const { evaluate } = createDefaultExpressionEngine({});
 
 	const projFns = mapValues(projection, (projProp) => {
 		const expr = distributeStrings(projProp);

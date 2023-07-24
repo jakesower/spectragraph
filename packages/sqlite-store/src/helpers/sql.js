@@ -1,4 +1,6 @@
+import { createExpressionEngine } from "@data-prism/expressions";
 import { mapValues, uniq } from "lodash-es";
+import { varsExpressionEngine, whereExpressionEngine } from "./sql-expressions.js";
 
 const defaultClause = {
 	compose: (acc, item) => uniq([...(acc ?? []), ...(item ?? [])]),
@@ -22,7 +24,8 @@ const SQL_CLAUSE_CONFIG = {
 	},
 	where: {
 		...defaultClause,
-		toSql: (val) => (val.length > 0 ? `WHERE ${val.join("\nAND ")}` : ""),
+		toSql: (val) =>
+			val.length > 0 ? `WHERE ${whereExpressionEngine.evaluate({ $and: val })}` : "",
 	},
 	vars: {
 		...defaultClause,

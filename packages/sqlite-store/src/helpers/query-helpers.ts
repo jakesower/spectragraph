@@ -34,7 +34,6 @@ export function flattenQuery<S extends Schema>(
 			relationships: pick(query.properties, relationshipKeys),
 			type,
 		};
-		console.log("level", level);
 
 		return [
 			level,

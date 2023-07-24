@@ -4,6 +4,7 @@ import { runQuery } from "./operations/operations.js";
 import { flattenQuery } from "./helpers/query-helpers.ts";
 import { castValToDb } from "./helpers/sql.js";
 import { createGraph } from "@data-prism/store-core";
+import { varsExpressionEngine } from "./helpers/sql-expressions.js";
 
 export function get(query, context) {
 	const { schema, db, config, rootClauses = [] } = context;
@@ -27,14 +28,17 @@ export function get(query, context) {
 		});
 
 		const sql = buildSql(composedModifiers);
-		const vars = composedModifiers.vars.map(castValToDb);
+		const vars = varsExpressionEngine
+			.evaluate({ $and: composedModifiers.vars })
+			.map(castValToDb);
+
 		console.log("qm", queryModifiers);
 		console.log(sql, vars);
 		const statement = db.prepare(sql).raw();
 		const allResults = statement.all(vars) ?? null;
 
 		// console.log(composedModifiers);
-		console.log('results', allResults)
+		console.log("results", allResults);
 
 		const dataGraph = mapValues(schema.resources, () => ({}));
 		const flatQuery = flattenQuery(schema, query);
@@ -61,9 +65,15 @@ export function get(query, context) {
 							queryPart.path.length > 1
 								? `$${queryPart.path.slice(0, -1).join("$")}`
 								: "";
-						const parentIdPath = `${rootTable}${parentPathStr}.id`;
+						const parentIdProperty = config.resources[parentType].idProperty ?? "id";
+						const parentIdPath = `${rootTable}${parentPathStr}.${parentIdProperty}`;
 						const parentIdIdx = selectPropertyMap[parentIdPath];
 						const parentId = result[parentIdIdx];
+
+						console.log("pid", parentIdPath);
+						if (!dataGraph[parentType][parentId]) {
+							dataGraph[parentType][parentId] = { [idProperty]: parentId, id: parentId };
+						}
 						const parent = dataGraph[parentType][parentId];
 
 						if (parentRelDef.cardinality === "one") {
@@ -71,6 +81,7 @@ export function get(query, context) {
 						} else {
 							parent[parentRelationship] = parent[parentRelationship] ?? new Set();
 							parent[parentRelationship].add(id);
+							console.log("p", parent);
 						}
 					}
 
@@ -96,14 +107,12 @@ export function get(query, context) {
 
 		const extractor = buildExtractor();
 		allResults.forEach((row) => extractor(row));
-		console.log('dg', dataGraph);
-		console.log('dg bears', dataGraph.bears)
-		console.log('fin', createGraph(schema, dataGraph).getTrees(query))
+		console.log("dg", dataGraph);
+		// console.log('dg bears', dataGraph.bears)
+		// console.log('fin', createGraph(schema, dataGraph).getTrees(query))
 
-		return createGraph(schema, dataGraph).getTrees(query);
-
-		// The result graph must be transformed into trees!
-
-		return graph;
+		return createGraph(schema, dataGraph, {
+			omittedOperations: ["limit", "offset", "where"],
+		}).getTrees(query);
 	});
 }

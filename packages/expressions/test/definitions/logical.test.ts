@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createExpressionEngine } from "../../src/expressions.js";
+import { createDefaultExpressionEngine } from "../../src/expressions.js";
 import { comparativeDefinitions } from "../../src/definitions/comparative.js";
 
 const kids = {
@@ -8,7 +8,7 @@ const kids = {
 	zoe: { name: "Zoe", age: 6 },
 };
 
-const { compile } = createExpressionEngine(comparativeDefinitions);
+const { compile } = createDefaultExpressionEngine(comparativeDefinitions);
 
 describe("the $eq expression", () => {
 	it("is determined deeply", async (t) => {

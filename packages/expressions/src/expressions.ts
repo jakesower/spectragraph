@@ -30,16 +30,7 @@ export function isExpression(val: unknown, definitions): boolean {
 	);
 }
 
-export function createExpressionEngine(expressionDefinitions: object) {
-	const definitions = {
-		...coreDefinitions,
-		...logicalDefinitions,
-		...comparativeDefinitions,
-		...mathDefinitions,
-		...iterativeDefinitions,
-		...expressionDefinitions,
-	};
-
+export function createExpressionEngine(definitions) {
 	function evaluate<T>(rootExpression: T, input) {
 		const go = <Input>(expression: Input) => {
 			if (!isExpression(expression, definitions)) {
@@ -101,4 +92,14 @@ export function createExpressionEngine(expressionDefinitions: object) {
 			return isExpression(expression, definitions);
 		},
 	};
+}
+
+export function createDefaultExpressionEngine() {
+	return createExpressionEngine({
+		...coreDefinitions,
+		...logicalDefinitions,
+		...comparativeDefinitions,
+		...mathDefinitions,
+		...iterativeDefinitions,
+	});
 }
