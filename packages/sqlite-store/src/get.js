@@ -32,13 +32,8 @@ export function get(query, context) {
 			.evaluate({ $and: composedModifiers.vars })
 			.map(castValToDb);
 
-		console.log("qm", queryModifiers);
-		console.log(sql, vars);
 		const statement = db.prepare(sql).raw();
 		const allResults = statement.all(vars) ?? null;
-
-		// console.log(composedModifiers);
-		console.log("results", allResults);
 
 		const dataGraph = mapValues(schema.resources, () => ({}));
 		const flatQuery = flattenQuery(schema, query);
@@ -70,7 +65,6 @@ export function get(query, context) {
 						const parentIdIdx = selectPropertyMap[parentIdPath];
 						const parentId = result[parentIdIdx];
 
-						console.log("pid", parentIdPath);
 						if (!dataGraph[parentType][parentId]) {
 							dataGraph[parentType][parentId] = { [idProperty]: parentId, id: parentId };
 						}
@@ -81,7 +75,6 @@ export function get(query, context) {
 						} else {
 							parent[parentRelationship] = parent[parentRelationship] ?? new Set();
 							parent[parentRelationship].add(id);
-							console.log("p", parent);
 						}
 					}
 
@@ -107,9 +100,6 @@ export function get(query, context) {
 
 		const extractor = buildExtractor();
 		allResults.forEach((row) => extractor(row));
-		console.log("dg", dataGraph);
-		// console.log('dg bears', dataGraph.bears)
-		// console.log('fin', createGraph(schema, dataGraph).getTrees(query))
 
 		return createGraph(schema, dataGraph, {
 			omittedOperations: ["limit", "offset", "where"],
