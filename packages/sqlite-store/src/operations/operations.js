@@ -1,8 +1,11 @@
-import { compileExpression, isExpression } from "@data-prism/expressions";
 import { applyOrMap } from "@data-prism/utils";
 import { preQueryRelationships } from "./relationships.js";
 import { flattenQuery } from "../helpers/query-helpers.ts";
 import { uniq } from "lodash-es";
+import {
+	varsExpressionEngine,
+	whereExpressionEngine,
+} from "../helpers/sql-expressions.js";
 
 const hasToManyRelationship = (schema, query) => {
 	const flatQueries = flattenQuery(schema, query);
@@ -31,56 +34,66 @@ const operations = {
 	where: {
 		preQuery: {
 			apply: (where, context) => {
-				const { config } = context;
-				const { expressionDefinitions } = config;
-
-				// an expression has been passed as the constraint value
-				if (isExpression(where, expressionDefinitions)) {
-					return compileExpression(where, expressionDefinitions, context)();
-				}
+				const { table } = context;
+				// // an expression has been passed as the constraint value
+				// if (isExpression(where, expressionDefinitions)) {
+				// 	return compileExpression(where, expressionDefinitions, context)();
+				// }
 
 				// an object of properties has been passed in
 				const propExprs = Object.entries(where).map(([propKey, propValOrExpr]) => {
-					if (isExpression(propValOrExpr, expressionDefinitions)) {
+					if (whereExpressionEngine.isExpression(propValOrExpr)) {
 						const [operation, args] = Object.entries(propValOrExpr)[0];
-						return { [operation]: [{ $prop: propKey }, args] };
+						return { [operation]: [`${table}.${propKey}`, args] };
 					}
 
-					return { $eq: [{ $prop: propKey }, propValOrExpr] };
+					return { $eq: [`${table}.${propKey}`, propValOrExpr] };
 				});
 
-				const objectExpression = { $and: propExprs };
-				return compileExpression(objectExpression, expressionDefinitions, context)();
+				const expr = { $and: propExprs };
+
+				return { where: [expr], vars: [expr] };
+
+				// console.log("exxx", expr[0].$and);
+				// console.log(
+				// 	"dist",
+				// 	JSON.stringify(whereExpressionEngine.distribute(expr), null, 2),
+				// );
+				// console.log('eval', varsExpressionEngine.evaluate(varsExpressionEngine.distribute(expr[0])))
+				return {
+					where: [whereExpressionEngine.distribute(expr)],
+					vars: [varsExpressionEngine.distribute(expr)],
+				};
 			},
 		},
 	},
 	order: {
 		preQuery: {
-			apply: (order, { queryTable }) => [
-				{ orderBy: order.map((o) => ({ ...o, table: queryTable })) },
+			apply: (order, context) => [
+				{ orderBy: order.map((o) => ({ ...o, table: context.table })) },
 			],
 		},
 	},
 	limit: {
 		preQuery: {
-			apply: (limit, { query, queryPath, schema }) =>
-				queryPath.length > 0 || hasToManyRelationship(schema, query)
-					? []
-					: [{ limit, offset: query.offset ?? 0 }],
-		},
-		postQuery: {
-			apply: (limit, resources, { query, queryPath, schema }) => {
-				const { offset = 0 } = query;
+			apply: (limit, { query, queryPath, schema }) => {
+				if (limit < 0) {
+					throw new Error("`offset` must be at least 0");
+				}
 
 				return queryPath.length > 0 || hasToManyRelationship(schema, query)
-					? resources.slice(offset, limit + offset)
-					: resources;
+					? []
+					: [{ limit, offset: query.offset ?? 0 }];
 			},
 		},
 	},
 	offset: {
 		preQuery: {
 			apply: (offset, { query }) => {
+				if (offset < 0) {
+					throw new Error("`offset` must be at least 0");
+				}
+
 				if (!query.limit) {
 					return [{ limit: -1, offset }];
 				}

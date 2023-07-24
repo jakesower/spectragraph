@@ -1,19 +1,24 @@
-import { mapValues, orderBy } from "lodash-es";
+import { mapValues, omit, orderBy } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
-import { createExpressionEngine } from "@data-prism/expressions";
+import { createDefaultExpressionEngine } from "@data-prism/expressions";
 import { MultiResult, Result } from "../result.js";
 import { Schema } from "../schema.js";
 import { RootQuery } from "../query.js";
+import { GraphConfig } from "./graph.js";
 
 type GetOperation = (results: MultiResult) => MultiResult;
 
-const evaluator = createExpressionEngine({});
+const evaluator = createDefaultExpressionEngine({});
 
 export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 	query: Q,
-	context: { schema: S; data: { [k: string]: { [k: string]: any } } },
+	context: {
+		schema: S;
+		data: { [k: string]: { [k: string]: any } };
+		config: GraphConfig;
+	},
 ): Result<Q> {
-	const { schema, data } = context;
+	const { schema, data, config } = context;
 	const resDef = schema.resources[query.type];
 
 	if (query.id && !data[query.type][query.id]) return null;
@@ -103,11 +108,13 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 		},
 	};
 
+	const usedOperationDefinitions = omit(operationDefinitions, config.omittedOperations);
+
 	const results = query.id
 		? [data[query.type][query.id]]
 		: Object.values(data[query.type]);
 
-	const processed = Object.entries(operationDefinitions).reduce(
+	const processed = Object.entries(usedOperationDefinitions).reduce(
 		(acc, [opName, fn]) => (opName in query || opName === "properties" ? fn(acc) : acc),
 		results,
 	);

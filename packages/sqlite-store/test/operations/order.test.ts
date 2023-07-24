@@ -1,23 +1,20 @@
-import { beforeEach, expect, it } from "vitest";
-import { Store, createMemoryStore } from "../../src/memory-store";
+import { expect, it } from "vitest";
+import Database from "better-sqlite3";
+import { createTables, seed } from "../../src/seed.js";
+import { createSQLiteStore } from "../../src/sqlite-store.js";
 import { careBearData } from "../fixtures/care-bear-data.js";
-import { careBearSchema } from "../fixtures/care-bears.schema";
+import { careBearSchema } from "../fixtures/care-bears.schema.js";
+import { careBearsConfig } from "../fixtures/care-bears-config.js";
 
-type LocalTestContext = {
-	store: Store<typeof careBearSchema>;
-};
+const db = Database(":memory:");
+createTables(db, careBearSchema, careBearsConfig);
+seed(db, careBearSchema, careBearsConfig, careBearData);
+const store = createSQLiteStore(careBearSchema, db, careBearsConfig);
 
-beforeEach<LocalTestContext>((context) => {
-	const store = createMemoryStore(careBearSchema);
-	store.seed(careBearData);
-
-	context.store = store;
-});
-
-it<LocalTestContext>("sorts on a numeric field", async (context) => {
-	const result = await context.store.get({
+it("sorts on a numeric field", async () => {
+	const result = await store.get({
 		type: "bears",
-		properties: { name: {}, yearIntroduced: {} },
+		properties: { name: "name", yearIntroduced: "yearIntroduced" },
 		order: [{ property: "yearIntroduced", direction: "desc" }],
 	});
 
@@ -29,10 +26,10 @@ it<LocalTestContext>("sorts on a numeric field", async (context) => {
 	]);
 });
 
-it<LocalTestContext>("sorts on a string field", async (context) => {
-	const result = await context.store.get({
+it("sorts on a string field", async () => {
+	const result = await store.get({
 		type: "bears",
-		properties: { name: {}, yearIntroduced: {} },
+		properties: { name: "name", yearIntroduced: "yearIntroduced" },
 		order: [{ property: "name", direction: "asc" }],
 	});
 
@@ -44,10 +41,10 @@ it<LocalTestContext>("sorts on a string field", async (context) => {
 	]);
 });
 
-it<LocalTestContext>("sorts on a numerical and a string field", async (context) => {
-	const result = await context.store.get({
+it("sorts on a numerical and a string field", async () => {
+	const result = await store.get({
 		type: "bears",
-		properties: { name: {}, yearIntroduced: {} },
+		properties: { name: "name", yearIntroduced: "yearIntroduced" },
 		order: [
 			{ property: "yearIntroduced", direction: "desc" },
 			{ property: "name", direction: "asc" },

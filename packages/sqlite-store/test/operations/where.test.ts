@@ -1,41 +1,38 @@
-import { beforeEach, expect, it } from "vitest";
-import { Store, createMemoryStore } from "../../src/memory-store";
+import { expect, it } from "vitest";
+import Database from "better-sqlite3";
+import { createTables, seed } from "../../src/seed.js";
+import { createSQLiteStore } from "../../src/sqlite-store.js";
 import { careBearData } from "../fixtures/care-bear-data.js";
-import { careBearSchema } from "../fixtures/care-bears.schema";
+import { careBearSchema } from "../fixtures/care-bears.schema.js";
+import { careBearsConfig } from "../fixtures/care-bears-config.js";
 
-type LocalTestContext = {
-	store: Store<typeof careBearSchema>;
-};
+const db = Database(":memory:");
+createTables(db, careBearSchema, careBearsConfig);
+seed(db, careBearSchema, careBearsConfig, careBearData);
+const store = createSQLiteStore(careBearSchema, db, careBearsConfig);
 
-beforeEach<LocalTestContext>((context) => {
-	const store = createMemoryStore(careBearSchema);
-	store.seed(careBearData);
-
-	context.store = store;
-});
-
-it.only<LocalTestContext>("filters on a property equality constraint", async (context) => {
-	const result = await context.store.get({
+it("filters on a property equality constraint", async () => {
+	const result = await store.get({
 		type: "bears",
-		properties: { id: {}, name: {} },
+		properties: { id: "id", name: "name" },
 		where: { name: "Cheer Bear" },
 	});
 
 	expect(result).toEqual([{ id: "2", name: "Cheer Bear" }]);
 });
 
-it<LocalTestContext>("filters on a property that is not returned from properties", async (context) => {
-	const result = await context.store.get({
+it("filters on a property that is not returned from properties", async () => {
+	const result = await store.get({
 		type: "bears",
-		properties: { id: {} },
+		properties: { id: "id" },
 		where: { name: "Cheer Bear" },
 	});
 
 	expect(result).toEqual([{ id: "2" }]);
 });
 
-it<LocalTestContext>("filters on multiple property equality where", async (context) => {
-	const result = await context.store.get({
+it("filters on multiple property equality where", async () => {
+	const result = await store.get({
 		type: "homes",
 		where: {
 			caringMeter: 1,
@@ -43,77 +40,85 @@ it<LocalTestContext>("filters on multiple property equality where", async (conte
 		},
 	});
 
-	expect(result).toEqual([{ id: "2" }]);
+	expect(result).toEqual([{ type: "homes", id: "2" }]);
 });
 
-it<LocalTestContext>("filters using $eq operator", async (context) => {
-	const result = await context.store.get({
+it("filters using $eq operator", async () => {
+	const result = await store.get({
 		type: "bears",
 		where: {
 			yearIntroduced: { $eq: 2005 },
 		},
 	});
 
-	expect(result).toEqual([{ id: "5" }]);
+	expect(result).toEqual([{ type: "bears", id: "5" }]);
 });
 
-it<LocalTestContext>("filters using $gt operator", async (context) => {
-	const result = await context.store.get({
+it("filters using $gt operator", async () => {
+	const result = await store.get({
 		type: "bears",
 		where: {
 			yearIntroduced: { $gt: 2000 },
 		},
 	});
 
-	expect(result).toEqual([{ id: "5" }]);
+	expect(result).toEqual([{ type: "bears", id: "5" }]);
 });
 
-it<LocalTestContext>("filters using $lt operator", async (context) => {
-	const result = await context.store.get({
+it("filters using $lt operator", async () => {
+	const result = await store.get({
 		type: "bears",
 		where: {
 			yearIntroduced: { $lt: 2000 },
 		},
 	});
 
-	expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
+	expect(result).toEqual([
+		{ type: "bears", id: "1" },
+		{ type: "bears", id: "2" },
+		{ type: "bears", id: "3" },
+	]);
 });
 
-it<LocalTestContext>("filters using $lte operator", async (context) => {
-	const result = await context.store.get({
+it("filters using $lte operator", async () => {
+	const result = await store.get({
 		type: "bears",
 		where: {
 			yearIntroduced: { $lte: 2000 },
 		},
 	});
 
-	expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
+	expect(result).toEqual([
+		{ type: "bears", id: "1" },
+		{ type: "bears", id: "2" },
+		{ type: "bears", id: "3" },
+	]);
 });
 
-it<LocalTestContext>("filters using $gte operator", async (context) => {
-	const result = await context.store.get({
+it("filters using $gte operator", async () => {
+	const result = await store.get({
 		type: "bears",
 		where: {
 			yearIntroduced: { $gte: 2005 },
 		},
 	});
 
-	expect(result).toEqual([{ id: "5" }]);
+	expect(result).toEqual([{ type: "bears", id: "5" }]);
 });
 
-it<LocalTestContext>("filters using $in 1", async (context) => {
-	const result = await context.store.get({
+it("filters using $in 1", async () => {
+	const result = await store.get({
 		type: "bears",
 		where: {
 			yearIntroduced: { $in: [2005, 2022] },
 		},
 	});
 
-	expect(result).toEqual([{ id: "5" }]);
+	expect(result).toEqual([{ type: "bears", id: "5" }]);
 });
 
-it<LocalTestContext>("filters using $in 2", async (context) => {
-	const result = await context.store.get({
+it("filters using $in 2", async () => {
+	const result = await store.get({
 		type: "bears",
 		where: {
 			yearIntroduced: { $in: [2022] },
@@ -123,23 +128,26 @@ it<LocalTestContext>("filters using $in 2", async (context) => {
 	expect(result).toEqual([]);
 });
 
-it<LocalTestContext>("filters using $ne operator", async (context) => {
-	const result = await context.store.get({
+it("filters using $ne operator", async () => {
+	const result = await store.get({
 		type: "bears",
 		where: {
 			yearIntroduced: { $ne: 2005 },
 		},
 	});
 
-	expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
+	expect(result).toEqual([
+		{ type: "bears", id: "1" },
+		{ type: "bears", id: "2" },
+		{ type: "bears", id: "3" },
+	]);
 });
 
-it<LocalTestContext>("filters related resources", async (context) => {
-	const result = await context.store.get({
+it("filters related resources", async () => {
+	const result = await store.get({
 		type: "powers",
 		id: "careBearStare",
 		properties: {
-			powerId: {},
 			wielders: {
 				where: {
 					yearIntroduced: { $gt: 2000 },
@@ -148,5 +156,7 @@ it<LocalTestContext>("filters related resources", async (context) => {
 		},
 	});
 
-	expect(result).toEqual({ powerId: "careBearStare", wielders: [{ id: "5" }] });
+	expect(result).toEqual({
+		wielders: [{ type: "bears", id: "5" }],
+	});
 });

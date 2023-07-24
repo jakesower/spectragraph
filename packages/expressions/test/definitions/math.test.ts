@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
-import { createExpressionEngine } from "../../src/expressions.js";
+import { createDefaultExpressionEngine } from "../../src/expressions.js";
 import { mathDefinitions } from "../../src/definitions/math.js";
 
-const { evaluate } = createExpressionEngine(mathDefinitions);
+const { evaluate } = createDefaultExpressionEngine(mathDefinitions);
 
 it("$count", () => {
 	expect(

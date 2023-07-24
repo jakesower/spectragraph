@@ -1,33 +1,30 @@
-import { beforeEach, expect, it } from "vitest";
-import { Store, createMemoryStore } from "../../src/memory-store";
+import { expect, it } from "vitest";
+import Database from "better-sqlite3";
+import { createTables, seed } from "../../src/seed.js";
+import { createSQLiteStore } from "../../src/sqlite-store.js";
 import { careBearData } from "../fixtures/care-bear-data.js";
-import { careBearSchema } from "../fixtures/care-bears.schema";
+import { careBearSchema } from "../fixtures/care-bears.schema.js";
+import { careBearsConfig } from "../fixtures/care-bears-config.js";
 
-type LocalTestContext = {
-	store: Store<typeof careBearSchema>;
-};
+const db = Database(":memory:");
+createTables(db, careBearSchema, careBearsConfig);
+seed(db, careBearSchema, careBearsConfig, careBearData);
+const store = createSQLiteStore(careBearSchema, db, careBearsConfig);
 
-beforeEach<LocalTestContext>((context) => {
-	const store = createMemoryStore(careBearSchema);
-	store.seed(careBearData);
-
-	context.store = store;
-});
-
-it<LocalTestContext>("fetches a single resource", async (context) => {
-	const result = await context.store.get({
+it("fetches a single resource", async () => {
+	const result = await store.get({
 		type: "bears",
-		properties: { name: {} },
+		properties: { name: "name" },
 		limit: 1,
 	});
 
 	expect(result).toEqual([{ name: "Tenderheart Bear" }]);
 });
 
-it<LocalTestContext>("limits after sorting", async (context) => {
-	const result = await context.store.get({
+it("limits after sorting", async () => {
+	const result = await store.get({
 		type: "bears",
-		properties: { name: {} },
+		properties: { name: "name" },
 		order: [{ property: "name", direction: "asc" }],
 		limit: 2,
 	});
@@ -35,10 +32,10 @@ it<LocalTestContext>("limits after sorting", async (context) => {
 	expect(result).toEqual([{ name: "Cheer Bear" }, { name: "Smart Heart Bear" }]);
 });
 
-it<LocalTestContext>("limits after sorting with 1", async (context) => {
-	const result = await context.store.get({
+it("limits after sorting with 1", async () => {
+	const result = await store.get({
 		type: "bears",
-		properties: { name: {} },
+		properties: { name: "name" },
 		order: [{ property: "name", direction: "asc" }],
 		limit: 1,
 	});
@@ -46,10 +43,10 @@ it<LocalTestContext>("limits after sorting with 1", async (context) => {
 	expect(result).toEqual([{ name: "Cheer Bear" }]);
 });
 
-it<LocalTestContext>("limits with an offset", async (context) => {
-	const result = await context.store.get({
+it("limits with an offset", async () => {
+	const result = await store.get({
 		type: "bears",
-		properties: { name: {} },
+		properties: { name: "name" },
 		order: [{ property: "name", direction: "asc" }],
 		limit: 2,
 		offset: 1,
@@ -58,10 +55,10 @@ it<LocalTestContext>("limits with an offset", async (context) => {
 	expect(result).toEqual([{ name: "Smart Heart Bear" }, { name: "Tenderheart Bear" }]);
 });
 
-it<LocalTestContext>("allows for offset only", async (context) => {
-	const result = await context.store.get({
+it("allows for offset only", async () => {
+	const result = await store.get({
 		type: "bears",
-		properties: { name: {} },
+		properties: { name: "name" },
 		order: [{ property: "name", direction: "asc" }],
 		offset: 1,
 	});
@@ -73,10 +70,10 @@ it<LocalTestContext>("allows for offset only", async (context) => {
 	]);
 });
 
-it<LocalTestContext>("allows for limit + offset to exceed size of data", async (context) => {
-	const result = await context.store.get({
+it("allows for limit + offset to exceed size of data", async () => {
+	const result = await store.get({
 		type: "bears",
-		properties: { name: {} },
+		properties: { name: "name" },
 		order: [{ property: "name", direction: "asc" }],
 		limit: 6,
 		offset: 2,
@@ -85,10 +82,10 @@ it<LocalTestContext>("allows for limit + offset to exceed size of data", async (
 	expect(result).toEqual([{ name: "Tenderheart Bear" }, { name: "Wish Bear" }]);
 });
 
-it<LocalTestContext>("returns nothing when the offset has surpassed the data size", async (context) => {
-	const result = await context.store.get({
+it("returns nothing when the offset has surpassed the data size", async () => {
+	const result = await store.get({
 		type: "bears",
-		properties: { name: {} },
+		properties: { name: "name" },
 		order: [{ property: "name", direction: "asc" }],
 		limit: 6,
 		offset: 20,
@@ -97,10 +94,10 @@ it<LocalTestContext>("returns nothing when the offset has surpassed the data siz
 	expect(result).toEqual([]);
 });
 
-it<LocalTestContext>("allows a zero offset", async (context) => {
-	const result = await context.store.get({
+it("allows a zero offset", async () => {
+	const result = await store.get({
 		type: "bears",
-		properties: { name: {} },
+		properties: { name: "name" },
 		order: [{ property: "name", direction: "asc" }],
 		offset: 0,
 	});
@@ -113,18 +110,18 @@ it<LocalTestContext>("allows a zero offset", async (context) => {
 	]);
 });
 
-it<LocalTestContext>("errors for a bad limit", async (context) => {
+it("errors for a bad limit", async () => {
 	await expect(async () => {
-		await context.store.get({
+		await store.get({
 			type: "bears",
-			limit: 0,
+			limit: -2,
 		});
 	}).rejects.toThrowError();
 });
 
-it<LocalTestContext>("errors for a bad offset", async (context) => {
+it("errors for a bad offset", async () => {
 	await expect(async () => {
-		await context.store.get({
+		await store.get({
 			type: "bears",
 			limit: 3,
 			offset: -1,

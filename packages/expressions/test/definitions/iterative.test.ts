@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createExpressionEngine } from "../../src/expressions.js";
+import { createDefaultExpressionEngine } from "../../src/expressions.js";
 import { iterativeDefinitions } from "../../src/definitions/iterative.js";
 import { mathDefinitions } from "../../src/definitions/math.js";
 
@@ -9,7 +9,7 @@ const kids = [
 	{ name: "Zoe", age: 6 },
 ];
 
-const { evaluate } = createExpressionEngine({
+const { evaluate } = createDefaultExpressionEngine({
 	...mathDefinitions,
 	...iterativeDefinitions,
 });
