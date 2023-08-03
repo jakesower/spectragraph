@@ -95,8 +95,8 @@ export function ensureValidQuery<S extends Schema>(
 }
 
 export const evaluators = {
-	id: createDefaultExpressionEngine({}),
-	where: createDefaultExpressionEngine({}),
+	id: createDefaultExpressionEngine(),
+	where: createDefaultExpressionEngine(),
 };
 
 export function evaluateId(expression, args) {
