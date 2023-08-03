@@ -9,7 +9,7 @@ const $count = {
 
 const $max = {
 	name: "max",
-	apply: (val) => val.reduce((min, v) => Math.max(min, v)),
+	apply: (val) => val.length === 0 ? undefined : val.reduce((min, v) => Math.max(min, v)),
 	schema: {
 		type: "number",
 	},
@@ -17,7 +17,7 @@ const $max = {
 
 const $min = {
 	name: "min",
-	apply: (val) => val.reduce((min, v) => Math.min(min, v)),
+	apply: (val) => val.length === 0 ? undefined : val.reduce((min, v) => Math.min(min, v)),
 	schema: {
 		type: "number",
 	},

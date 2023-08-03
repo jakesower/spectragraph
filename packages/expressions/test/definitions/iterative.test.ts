@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { createDefaultExpressionEngine } from "../../src/expressions.js";
-import { iterativeDefinitions } from "../../src/definitions/iterative.js";
-import { mathDefinitions } from "../../src/definitions/math.js";
 
 const kids = [
 	{ name: "Ximena", age: 4 },
@@ -9,10 +7,7 @@ const kids = [
 	{ name: "Zoe", age: 6 },
 ];
 
-const { evaluate } = createDefaultExpressionEngine({
-	...mathDefinitions,
-	...iterativeDefinitions,
-});
+const { evaluate } = createDefaultExpressionEngine();
 
 describe("$map", () => {
 	it("should perform without subexpressions", () => {

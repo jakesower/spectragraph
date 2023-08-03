@@ -1,5 +1,3 @@
-import { FunctionExpression } from "../expressions";
-
 const $filter = (evaluate) => ({
 	apply: ([items, subexpr], input) =>
 		evaluate(items, input).filter((item) => evaluate(subexpr, item)),
