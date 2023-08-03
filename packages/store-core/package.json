@@ -1,6 +1,6 @@
 {
 	"name": "@data-prism/store-core",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"type": "module",
 	"main": "./dist/store-core.js",
 	"types": "./dist/store-core.d.ts",
