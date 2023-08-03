@@ -1,6 +1,7 @@
 import { expect, it, describe } from "vitest";
 import { project, projectionQueryProperties } from "../src/projection.js";
 import { careBearData } from "./fixtures/care-bear-data.js";
+import { mapValues } from "lodash-es";
 
 const deref = (type, id) => careBearData[type][id];
 
@@ -201,6 +202,30 @@ describe("dot notation", () => {
 			{ name: "Care-a-Lot", wieldersCount: 12 },
 			{ name: "Forest of Feelings", wieldersCount: 0 },
 			{ name: "Earth", wieldersCount: 0 },
+		]);
+	});
+});
+
+describe("advanced expression evaluation", () => {
+	it("evaluates the minimum across nested resources", async () => {
+		const results = Object.values(
+			mapValues(careBearData.homes, (h) => ({
+				...h,
+				residents: h.residents.map((r) => careBearData.bears[r]),
+			})),
+		);
+
+		const projection = {
+			name: "name",
+			minYear: { $min: "residents.$.yearIntroduced" },
+		};
+
+		const projected = project(results, projection);
+
+		expect(projected).toEqual([
+			{ name: "Care-a-Lot", minYear: 1982 },
+			{ name: "Forest of Feelings", minYear: null },
+			{ name: "Earth", minYear: null },
 		]);
 	});
 });
