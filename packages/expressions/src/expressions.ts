@@ -5,6 +5,7 @@ import { comparativeDefinitions } from "./definitions/comparative.js";
 import { distribute } from "./distribute.js";
 import { mathDefinitions } from "./definitions/math.js";
 import { iterativeDefinitions } from "./definitions/iterative.js";
+import { aggregativeDefinitions } from "./definitions/aggregative.js";
 
 export type Expression<Args, Input, Output> = {
 	apply: (args: Args, input: Input) => Output;
@@ -96,6 +97,7 @@ export function createExpressionEngine(definitions) {
 
 export function createDefaultExpressionEngine() {
 	return createExpressionEngine({
+		...aggregativeDefinitions,
 		...coreDefinitions,
 		...logicalDefinitions,
 		...comparativeDefinitions,

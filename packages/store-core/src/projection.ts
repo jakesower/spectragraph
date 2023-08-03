@@ -7,7 +7,7 @@ export type Projection = {
 };
 
 function distributeStrings(expression) {
-	const { isExpression } = createDefaultExpressionEngine({});
+	const { isExpression } = createDefaultExpressionEngine();
 
 	if (typeof expression === "string") {
 		const [iteratee, ...rest] = expression.split(".$.");
@@ -34,8 +34,15 @@ function distributeStrings(expression) {
 	return { [expressionName]: distributeStrings(expressionArgs) };
 }
 
+/**
+ * Takes a query and returns the fields that will need to be fetched to ensure
+ * all expressions within the query are usable.
+ * 
+ * @param projection - Projection
+ * @returns object
+ */
 export function projectionQueryProperties(projection: Projection) {
-	const { isExpression } = createDefaultExpressionEngine({});
+	const { isExpression } = createDefaultExpressionEngine();
 	const terminalExpressions = ["$literal", "$var"];
 
 	const go = (val) => {
@@ -80,7 +87,7 @@ export function projectionQueryProperties(projection: Projection) {
 }
 
 export function project(results: MultiResult, projection: Projection) {
-	const { evaluate } = createDefaultExpressionEngine({});
+	const { evaluate } = createDefaultExpressionEngine();
 
 	const projFns = mapValues(projection, (projProp) => {
 		const expr = distributeStrings(projProp);

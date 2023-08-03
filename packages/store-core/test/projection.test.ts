@@ -4,7 +4,7 @@ import { careBearData } from "./fixtures/care-bear-data.js";
 
 const deref = (type, id) => careBearData[type][id];
 
-it("projects a field onto itself", async (context) => {
+it("projects a field onto itself", async () => {
 	const results = Object.values(careBearData.bears);
 
 	const projection = {
@@ -21,7 +21,7 @@ it("projects a field onto itself", async (context) => {
 	]);
 });
 
-it("projects a field to a different name", async (context) => {
+it("projects a field to a different name", async () => {
 	const results = Object.values(careBearData.bears);
 
 	const projection = {
@@ -38,7 +38,7 @@ it("projects a field to a different name", async (context) => {
 	]);
 });
 
-it("projects a field to a literal expression", async (context) => {
+it("projects a field to a literal expression", async () => {
 	const results = Object.values(careBearData.bears);
 
 	const projection = {
@@ -55,7 +55,24 @@ it("projects a field to a literal expression", async (context) => {
 	]);
 });
 
-it("applies expressions over a nested resource", async (context) => {
+it("projects a field to an expression", async () => {
+	const results = Object.values(careBearData.homes);
+
+	const projection = {
+		name: "name",
+		numberOfResidents: { $count: "residents" },
+	};
+
+	const projected = project(results, projection);
+
+	expect(projected).toEqual([
+		{ name: "Care-a-Lot", numberOfResidents: 3 },
+		{ name: "Forest of Feelings", numberOfResidents: 0 },
+		{ name: "Earth", numberOfResidents: 0 },
+	]);
+});
+
+it("applies expressions over a nested resource", async () => {
 	const results = Object.values(
 		Object.values(careBearData.bears).map((bear) => ({
 			...bear,
@@ -79,7 +96,7 @@ it("applies expressions over a nested resource", async (context) => {
 });
 
 describe("dot notation", () => {
-	it("projects over a nested resource", async (context) => {
+	it("projects over a nested resource", async () => {
 		const results = Object.values(
 			Object.values(careBearData.bears).map((bear) => ({
 				...bear,
@@ -102,7 +119,7 @@ describe("dot notation", () => {
 		]);
 	});
 
-	it("applies expressions over a nested resource", async (context) => {
+	it("applies expressions over a nested resource", async () => {
 		const results = Object.values(
 			Object.values(careBearData.bears).map((bear) => ({
 				...bear,
@@ -125,7 +142,7 @@ describe("dot notation", () => {
 		]);
 	});
 
-	it("applies expressions over an aggregated resource", async (context) => {
+	it("applies expressions over an aggregated resource", async () => {
 		const results = Object.values(
 			Object.values(careBearData.homes).map((home) => ({
 				...home,
@@ -153,7 +170,7 @@ describe("dot notation", () => {
 		]);
 	});
 
-	it("applies expressions over a deeply nested aggregated resource", async (context) => {
+	it("applies expressions over a deeply nested aggregated resource", async () => {
 		const results = Object.values(
 			Object.values(careBearData.homes).map((home) => ({
 				...home,
@@ -196,7 +213,7 @@ describe("projectionQueryProperties", () => {
 
 		const qProps = projectionQueryProperties(projection);
 
-		expect(qProps).toEqual({ name: true });
+		expect(qProps).toEqual({ name: "name" });
 	});
 
 	it("ignores renamed query props", () => {
@@ -206,7 +223,7 @@ describe("projectionQueryProperties", () => {
 
 		const qProps = projectionQueryProperties(projection);
 
-		expect(qProps).toEqual({ name: true });
+		expect(qProps).toEqual({ name: "name" });
 	});
 
 	it("handles literals", () => {
@@ -227,7 +244,7 @@ describe("projectionQueryProperties", () => {
 
 		const qProps = projectionQueryProperties(projection);
 
-		expect(qProps).toEqual({ name: true, powers: true });
+		expect(qProps).toEqual({ name: "name", powers: "powers" });
 	});
 
 	it("handles nested props", () => {
@@ -238,7 +255,7 @@ describe("projectionQueryProperties", () => {
 
 		const qProps = projectionQueryProperties(projection);
 
-		expect(qProps).toEqual({ name: true, home: { properties: { name: true } } });
+		expect(qProps).toEqual({ name: "name", home: { properties: { name: "name" } } });
 	});
 
 	it("handles $ nesting", () => {
@@ -250,8 +267,8 @@ describe("projectionQueryProperties", () => {
 		const qProps = projectionQueryProperties(projection);
 
 		expect(qProps).toEqual({
-			name: true,
-			residents: { properties: { powers: true } },
+			name: "name",
+			residents: { properties: { powers: "powers" } },
 		});
 	});
 
@@ -265,8 +282,10 @@ describe("projectionQueryProperties", () => {
 		const qProps = projectionQueryProperties(projection);
 
 		expect(qProps).toEqual({
-			name: true,
-			home: { properties: { name: true, neighborhood: { properties: { name: true } } } },
+			name: "name",
+			home: {
+				properties: { name: "name", neighborhood: { properties: { name: "name" } } },
+			},
 		});
 	});
 });
