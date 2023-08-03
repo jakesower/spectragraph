@@ -6,7 +6,7 @@ import { InternalStore } from "./memory-store.js";
 
 type GetOperation = (results: MultiResult) => MultiResult;
 
-const evaluator = createDefaultExpressionEngine({});
+const evaluator = createDefaultExpressionEngine();
 
 export function runQuery<S extends Schema, Q extends RootQuery<S>>(
 	query: Q,

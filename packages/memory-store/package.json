@@ -1,6 +1,6 @@
 {
 	"name": "@data-prism/memory-store",
-	"version": "0.0.8",
+	"version": "0.0.9",
 	"type": "module",
 	"main": "./dist/memory-store.js",
 	"types": "./dist/memory-store.d.ts",
@@ -29,8 +29,8 @@
 	},
 	"private": false,
 	"dependencies": {
-		"@data-prism/expressions": "^0.0.3",
-		"@data-prism/store-core": "^0.0.3",
+		"@data-prism/expressions": "^0.0.4",
+		"@data-prism/store-core": "^0.0.5",
 		"lodash-es": "^4.17.21"
 	}
 }
