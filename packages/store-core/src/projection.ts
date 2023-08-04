@@ -1,5 +1,4 @@
 import { mapValues } from "lodash-es";
-import { MultiResult } from "./result.js";
 import { Expression, defaultExpressionEngine } from "@data-prism/expressions";
 
 export type Projection = {
@@ -84,19 +83,6 @@ export function projectionQueryProperties(projection: Projection) {
 	propertyPaths.forEach((path) => makePath(query, path));
 
 	return query;
-}
-
-export function project(results: MultiResult, projection: Projection) {
-	const { evaluate } = defaultExpressionEngine;
-
-	const projFns = mapValues(projection, (projProp) => {
-		const expr = distributeStrings(projProp);
-		return (result) => evaluate(expr, result);
-	});
-
-	return results.map((result) => {
-		return mapValues(projFns, (fn) => fn(result) ?? null);
-	});
 }
 
 export function createExpressionProjector(expression: Expression) {
