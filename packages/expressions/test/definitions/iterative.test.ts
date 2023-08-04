@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createDefaultExpressionEngine } from "../../src/expressions.js";
+import { defaultExpressionEngine } from "../../src/expressions.js";
 
 const kids = [
 	{ name: "Ximena", age: 4 },
@@ -7,7 +7,7 @@ const kids = [
 	{ name: "Zoe", age: 6 },
 ];
 
-const { evaluate } = createDefaultExpressionEngine();
+const { evaluate } = defaultExpressionEngine;
 
 describe("$map", () => {
 	it("should perform without subexpressions", () => {

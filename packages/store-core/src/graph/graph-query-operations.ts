@@ -1,14 +1,13 @@
-import { mapValues, omit, orderBy } from "lodash-es";
+import { get, mapValues, omit, orderBy } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
-import { createDefaultExpressionEngine } from "@data-prism/expressions";
+import { defaultExpressionEngine } from "@data-prism/expressions";
 import { MultiResult, Result } from "../result.js";
 import { Schema } from "../schema.js";
 import { RootQuery } from "../query.js";
-import { GraphConfig } from "./graph.js";
+import { GraphConfig } from "../graph.js";
+import { createExpressionProjector } from "../projection.js";
 
 type GetOperation = (results: MultiResult) => MultiResult;
-
-const evaluator = createDefaultExpressionEngine();
 
 export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 	query: Q,
@@ -31,16 +30,38 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 		const relResDef = schema.resources[resType].relationships[head];
 		const relResType = relResDef.resource;
 
-		return applyOrMap(result[head], (relResId) =>
-			getPropertyPath(tail, relResType, data[relResType][relResId]),
+		return applyOrMap(result[head], (relRes) =>
+			getPropertyPath(tail, relResType, relRes),
 		);
+	};
+
+	const makeDereffingProxy = (resource, resType) => {
+		const resDef = schema.resources[resType];
+
+		return new Proxy(resource, {
+			get(target, prop: string) {
+				if (Object.hasOwn(resDef.relationships, prop)) {
+					const relResType = resDef.relationships[prop].resource;
+					const relatedIdOrIds = target[prop];
+
+					return Array.isArray(relatedIdOrIds)
+						? relatedIdOrIds.map((id) =>
+							makeDereffingProxy(data[relResType][id], relResType),
+						  )
+						: relatedIdOrIds === null
+							? null
+							: makeDereffingProxy(data[relResType][relatedIdOrIds], relResType);
+				}
+				return target[prop];
+			},
+		});
 	};
 
 	// these are in order of execution
 	const operationDefinitions: { [k: string]: GetOperation } = {
 		where(results: MultiResult): MultiResult {
-			const filter = evaluator.distribute(query.where);
-			const filterFn = evaluator.compile(filter);
+			const filter = defaultExpressionEngine.distribute(query.where);
+			const filterFn = defaultExpressionEngine.compile(filter);
 
 			return results.filter((result) => filterFn(result));
 		},
@@ -73,37 +94,64 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 			}
 
 			const { properties } = query;
-			return results.map((result) =>
-				mapValues(properties, (propQuery, propName) => {
-					// possibilities: (1) property (2) nested property (3) subquery (4) ref (5) expression
-					if (typeof propQuery === "string") {
-						// relationship name -- return ref
-						if (propQuery in resDef.relationships) {
-							const relDef = resDef.relationships[propName];
-							return result[propQuery] === null
-								? null
-								: { type: relDef.resource, id: result[propQuery] };
-						}
 
-						// nested / shallow property
-						return getPropertyPath(propQuery.split("."), query.type, result);
+			const projectors = mapValues(properties, (propQuery, propName) => {
+				// possibilities: (1) property (2) nested property (3) subquery (4) ref (5) expression
+				if (typeof propQuery === "string") {
+					// relationship name -- return ref
+					if (propQuery in resDef.relationships) {
+						const relDef = resDef.relationships[propName];
+						return (result) =>
+							result[propQuery] === null
+								? null
+								: {
+									type: relDef.resource,
+									id: result[propQuery][resDef.idField ?? "id"],
+								  };
 					}
 
-					// subquery
-					const relDef = resDef.relationships[propName];
-					return relDef.cardinality === "one"
+					// nested / shallow property
+					return (result) => getPropertyPath(propQuery.split("."), query.type, result);
+				}
+
+				// expression
+				if (defaultExpressionEngine.isExpression(propQuery)) {
+					return createExpressionProjector(propQuery);
+				}
+
+				// subquery
+				const relDef = resDef.relationships[propName];
+				const relResDef = schema.resources[relDef.resource];
+				return (result) =>
+					relDef.cardinality === "one"
 						? result[propName]
 							? runTreeQuery(
-								{ ...propQuery, type: relDef.resource, id: result[propName] },
+								{
+									...propQuery,
+									type: relDef.resource,
+									id: result[propName][relResDef.idField ?? "id"],
+								},
 								context,
 							  )
 							: null
-						: [...result[propName]]
-							.map((id) =>
-								runTreeQuery({ ...propQuery, id, type: relDef.resource }, context),
+						: result[propName]
+							.map((res) =>
+								runTreeQuery(
+									{
+										...propQuery,
+										id: res[relResDef.idField ?? "id"],
+										type: relDef.resource,
+									},
+									context,
+								),
 							)
 							.filter(Boolean);
-				}),
+			});
+
+			return results.map((result) =>
+				mapValues(projectors, (project) =>
+					project(makeDereffingProxy(result, query.type)),
+				),
 			);
 		},
 	};

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createDefaultExpressionEngine } from "../src/expressions.js";
+import { defaultExpressionEngine } from "../src/expressions.js";
 import { comparativeDefinitions } from "../src/definitions/comparative.js";
 
 const kids = {
@@ -8,7 +8,7 @@ const kids = {
 	zoe: { name: "Zoe", age: 6, toy: "boat" },
 };
 
-const { compile } = createDefaultExpressionEngine(comparativeDefinitions);
+const { compile } = defaultExpressionEngine(comparativeDefinitions);
 
 describe("core expressions (plus $eq for help)", () => {
 	it("should compile an equality expression", () => {

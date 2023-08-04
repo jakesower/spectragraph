@@ -1,6 +1,6 @@
-import { Expression } from "../expressions";
+import { Operation } from "../expressions";
 
-const $and: Expression<any, any, boolean> = {
+const $and: Operation<any, any, boolean> = {
 	name: "and",
 	apply: (params) => params.every(Boolean),
 	distribute: (subexprs, distribute) => ({
@@ -11,7 +11,7 @@ const $and: Expression<any, any, boolean> = {
 	},
 };
 
-const $or: Expression<any, any, boolean> = {
+const $or: Operation<any, any, boolean> = {
 	name: "or",
 	apply: (params) => params.some(Boolean),
 	distribute: (subexprs, distribute) => ({
