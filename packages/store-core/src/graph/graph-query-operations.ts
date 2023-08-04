@@ -9,6 +9,9 @@ import { createExpressionProjector } from "../projection.js";
 
 type GetOperation = (results: MultiResult) => MultiResult;
 
+const ID = Symbol("id");
+const TYPE = Symbol("type");
+
 export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 	query: Q,
 	context: {
@@ -35,11 +38,17 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 		);
 	};
 
+	// this automatically dereferences resources as the graph is navigated; it
+	// also adds an ID and TYPE for convenience
 	const makeDereffingProxy = (resource, resType) => {
 		const resDef = schema.resources[resType];
+		const idField = resDef.idField ?? "id";
 
 		return new Proxy(resource, {
-			get(target, prop: string) {
+			get(target, prop: string | typeof ID | typeof TYPE) {
+				if (prop === ID) return target[idField];
+				if (prop === TYPE) return resType;
+
 				if (Object.hasOwn(resDef.relationships, prop)) {
 					const relResType = resDef.relationships[prop].resource;
 					const relatedIdOrIds = target[prop];
@@ -104,10 +113,7 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 						return (result) =>
 							result[propQuery] === null
 								? null
-								: {
-									type: relDef.resource,
-									id: result[propQuery][resDef.idField ?? "id"],
-								  };
+								: { type: relDef.resource, id: result[propQuery][ID] };
 					}
 
 					// nested / shallow property
@@ -121,27 +127,18 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 
 				// subquery
 				const relDef = resDef.relationships[propName];
-				const relResDef = schema.resources[relDef.resource];
 				return (result) =>
 					relDef.cardinality === "one"
 						? result[propName]
 							? runTreeQuery(
-								{
-									...propQuery,
-									type: relDef.resource,
-									id: result[propName][relResDef.idField ?? "id"],
-								},
+								{ ...propQuery, type: relDef.resource, id: result[propName][ID] },
 								context,
 							  )
 							: null
 						: result[propName]
 							.map((res) =>
 								runTreeQuery(
-									{
-										...propQuery,
-										id: res[relResDef.idField ?? "id"],
-										type: relDef.resource,
-									},
+									{ ...propQuery, id: res[ID], type: relDef.resource },
 									context,
 								),
 							)
