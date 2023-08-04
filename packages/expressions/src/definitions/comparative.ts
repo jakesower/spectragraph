@@ -1,13 +1,13 @@
 import { isEqual } from "lodash-es";
-import { Expression } from "../expressions";
+import { Operation } from "../expressions";
 
-type FilterExpression<T> = Expression<T, T, boolean>;
+type FilterOperation<T> = Operation<T, T, boolean>;
 
 const makeDistribute = (operationName) => (prop, args) => ({
 	$pipe: [{ $prop: prop }, { [operationName]: args }],
 });
 
-const $eq: FilterExpression<any> = {
+const $eq: FilterOperation<any> = {
 	name: "equal",
 	apply: isEqual,
 	distribute: makeDistribute("$eq"),
@@ -16,7 +16,7 @@ const $eq: FilterExpression<any> = {
 	},
 };
 
-const $ne: FilterExpression<any> = {
+const $ne: FilterOperation<any> = {
 	name: "not equal",
 	apply: (param, input) => !isEqual(param, input),
 	distribute: makeDistribute("$ne"),

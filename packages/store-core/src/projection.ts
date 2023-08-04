@@ -1,13 +1,13 @@
 import { mapValues } from "lodash-es";
 import { MultiResult } from "./result.js";
-import { createDefaultExpressionEngine } from "@data-prism/expressions";
+import { Expression, defaultExpressionEngine } from "@data-prism/expressions";
 
 export type Projection = {
 	[k: string]: any;
 };
 
 function distributeStrings(expression) {
-	const { isExpression } = createDefaultExpressionEngine();
+	const { isExpression } = defaultExpressionEngine;
 
 	if (typeof expression === "string") {
 		const [iteratee, ...rest] = expression.split(".$.");
@@ -37,12 +37,12 @@ function distributeStrings(expression) {
 /**
  * Takes a query and returns the fields that will need to be fetched to ensure
  * all expressions within the query are usable.
- * 
+ *
  * @param projection - Projection
  * @returns object
  */
 export function projectionQueryProperties(projection: Projection) {
-	const { isExpression } = createDefaultExpressionEngine();
+	const { isExpression } = defaultExpressionEngine;
 	const terminalExpressions = ["$literal", "$var"];
 
 	const go = (val) => {
@@ -87,7 +87,7 @@ export function projectionQueryProperties(projection: Projection) {
 }
 
 export function project(results: MultiResult, projection: Projection) {
-	const { evaluate } = createDefaultExpressionEngine();
+	const { evaluate } = defaultExpressionEngine;
 
 	const projFns = mapValues(projection, (projProp) => {
 		const expr = distributeStrings(projProp);
@@ -97,4 +97,11 @@ export function project(results: MultiResult, projection: Projection) {
 	return results.map((result) => {
 		return mapValues(projFns, (fn) => fn(result) ?? null);
 	});
+}
+
+export function createExpressionProjector(expression: Expression) {
+	const { evaluate } = defaultExpressionEngine;
+	const expr = distributeStrings(expression);
+
+	return (result) => evaluate(expr, result);
 }

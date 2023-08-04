@@ -1,5 +1,5 @@
 import { difference } from "lodash-es";
-import { createDefaultExpressionEngine } from "@data-prism/expressions";
+import { defaultExpressionEngine } from "@data-prism/expressions";
 import { Schema } from "./schema.js";
 
 export type Query<S extends Schema> = {
@@ -26,17 +26,22 @@ export type QueryOfType<
 	type: ResType;
 };
 
-export type RootQuery<S extends Schema> = Query<S> & {
+export type BaseRootQuery<S extends Schema> = Query<S> & {
 	type: keyof S["resources"] & string;
 };
 
-export type MultiRootQuery<S extends Schema> = RootQuery<S> & { id: never };
-export type SingleRootQuery<S extends Schema> = RootQuery<S> & { id: string | number };
+export type MultiRootQuery<S extends Schema> = BaseRootQuery<S> & { id?: never };
+export type SingleRootQuery<S extends Schema> = BaseRootQuery<S> & {
+	id: string | number;
+};
+export type RootQuery<S extends Schema> = MultiRootQuery<S> | SingleRootQuery<S>;
 
 export function ensureValidQuery<S extends Schema>(
-	schema: S,
 	rootQuery: RootQuery<S>,
+	config: { schema: S; expressionEngine: any },
 ): void {
+	const { schema, expressionEngine } = config;
+
 	if (!rootQuery.type) {
 		throw new Error("queries must have a `type` associated with them");
 	}
@@ -53,14 +58,14 @@ export function ensureValidQuery<S extends Schema>(
 		if (!query.properties) return;
 
 		const shallowPropValues = Object.values(query.properties).filter(
-			(p) => typeof p === "string",
+			(p) => typeof p === "string" && !p.includes("."),
 		);
 		const invalidShallowProps = difference(shallowPropValues, [
 			resDef.idField,
 			...Object.keys({ ...resDef.properties, ...resDef.relationships }),
 		]);
 
-		if (invalidShallowProps.length > 0 && false) {
+		if (invalidShallowProps.length > 0) {
 			throw new Error(
 				`Invalid prop(s) present in subquery: ${invalidShallowProps.join(
 					", ",
@@ -69,7 +74,9 @@ export function ensureValidQuery<S extends Schema>(
 		}
 
 		const relationshipPropKeys = Object.keys(query.properties).filter(
-			(k) => typeof query.properties[k] === "object",
+			(k) =>
+				typeof query.properties[k] === "object" &&
+				!expressionEngine.isExpression(query.properties[k]),
 		);
 		const invalidRelationshipProps = difference(
 			relationshipPropKeys,
@@ -95,8 +102,8 @@ export function ensureValidQuery<S extends Schema>(
 }
 
 export const evaluators = {
-	id: createDefaultExpressionEngine(),
-	where: createDefaultExpressionEngine(),
+	id: defaultExpressionEngine,
+	where: defaultExpressionEngine,
 };
 
 export function evaluateId(expression, args) {

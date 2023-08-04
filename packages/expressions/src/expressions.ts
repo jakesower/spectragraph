@@ -7,16 +7,25 @@ import { mathDefinitions } from "./definitions/math.js";
 import { iterativeDefinitions } from "./definitions/iterative.js";
 import { aggregativeDefinitions } from "./definitions/aggregative.js";
 
-export type Expression<Args, Input, Output> = {
+export type Expression = object;
+
+export type Operation<Args, Input, Output> = {
 	apply: (args: Args, input: Input) => Output;
 	distribute?: (args: any, distribute: (v: any) => any) => any;
 	name?: string;
 	schema: object;
 };
 
+export type ExpressionEngine = {
+	compile: (expression: Expression) => (input: any) => any;
+	distribute: (expression: Expression) => Expression;
+	evaluate: (expression: Expression, input: any) => any;
+	isExpression: (expression: Expression) => boolean;
+};
+
 export type FunctionExpression<Args, Input, Output> = (
 	evaluate: (...args: any) => any,
-) => Expression<Args, Input, Output>;
+) => Expression;
 
 const CONTROLS_EVALUATION = Symbol("contols evaluation");
 
@@ -31,7 +40,7 @@ export function isExpression(val: unknown, definitions): boolean {
 	);
 }
 
-export function createExpressionEngine(definitions) {
+export function createExpressionEngine(definitions: object): ExpressionEngine {
 	function evaluate<T>(rootExpression: T, input) {
 		const go = <Input>(expression: Input) => {
 			if (!isExpression(expression, definitions)) {
@@ -95,13 +104,11 @@ export function createExpressionEngine(definitions) {
 	};
 }
 
-export function createDefaultExpressionEngine() {
-	return createExpressionEngine({
-		...aggregativeDefinitions,
-		...coreDefinitions,
-		...logicalDefinitions,
-		...comparativeDefinitions,
-		...mathDefinitions,
-		...iterativeDefinitions,
-	});
-}
+export const defaultExpressionEngine = createExpressionEngine({
+	...aggregativeDefinitions,
+	...coreDefinitions,
+	...logicalDefinitions,
+	...comparativeDefinitions,
+	...mathDefinitions,
+	...iterativeDefinitions,
+});

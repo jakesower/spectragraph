@@ -1,14 +1,15 @@
-import { mapValues, merge } from "lodash-es";
+import { merge } from "lodash-es";
 import {
 	compileSchema,
 	ensureValidQuery,
-	project,
 	QueryOfType,
 	RootQuery,
+	SingleRootQuery,
 	Schema,
 	Result,
+	createGraph,
 } from "@data-prism/store-core";
-import { runQuery } from "./operations.js";
+import { defaultExpressionEngine } from "@data-prism/expressions";
 
 export type InternalStore = { [k: string]: { [k: string]: any } };
 
@@ -26,49 +27,53 @@ export type Store<S extends Schema> = {
 		query: RootQuery<S>,
 	) => (args?: object) => Promise<Result<Q>>;
 	get: <Q extends RootQuery<S>>(query: Q, args?: object) => Promise<Result<Q>>;
-	getProjection: (
-		query: GetQueryOfType<S>,
-		projection: object,
-		args?: object,
-	) => Promise<{ [k: string]: any }[]>;
 	seed: (seedData: object) => void;
 	setState: (data: object) => void;
 };
 
 export function createMemoryStore<S extends Schema>(schema: S): Store<S> {
 	const compiledSchema = compileSchema(schema);
-	const store: InternalStore = mapValues(schema.resources, () => ({}));
+	const expressionEngine = defaultExpressionEngine;
 
+	let graph = createGraph(compiledSchema, {}, { expressionEngine });
+
+	// mutates
 	const seed = (seedData) => {
-		merge(store, seedData); // mutates
-	};
-
-	const setState = (data) => {
-		Object.keys(schema.resources).forEach((k) => {
-			store[k] = data[k] ?? {};
+		graph = createGraph(compiledSchema, merge(graph.data, seedData), {
+			expressionEngine,
 		});
 	};
 
-	const get = (query: RootQuery<S>, args = {}) => {
-		ensureValidQuery(compiledSchema, { ...query, ...args });
-
-		return Promise.resolve(
-			runQuery({ ...query, ...args }, { schema: compiledSchema, store }),
-		);
+	const setState = (data) => {
+		graph = createGraph(compiledSchema, data, {
+			expressionEngine,
+		});
 	};
 
-	const getProjection = (query: RootQuery<S>, projection: object, args = {}) => {
-		ensureValidQuery(compiledSchema, query);
+	const runQuery = <Q extends RootQuery<S>>(query: Q): Result<Q> => {
+		return (
+			"id" in query ? graph.getTree(query as SingleRootQuery<S>) : graph.getTrees(query)
+		) as Result<Q>;
+	};
 
-		const results = runQuery(query, { schema: compiledSchema, store });
-		return Promise.resolve(project(results, projection));
+	const get = (query: RootQuery<S>, args = {}) => {
+		const compiledQuery = { ...query, ...args };
+		ensureValidQuery(compiledQuery, {
+			schema: compiledSchema,
+			expressionEngine,
+		});
+
+		return Promise.resolve(runQuery({ ...query, ...args }));
 	};
 
 	const compileQuery = (query: RootQuery<S>) => {
-		ensureValidQuery(compiledSchema, query);
-		return (args = {}) =>
-			Promise.resolve(runQuery({ ...query, ...args }, { schema: compiledSchema, store }));
+		ensureValidQuery(query, {
+			schema: compiledSchema,
+			expressionEngine,
+		});
+
+		return (args = {}) => Promise.resolve(runQuery({ ...query, ...args }));
 	};
 
-	return { compileQuery, get, getProjection, seed, setState };
+	return { compileQuery, get, seed, setState };
 }
