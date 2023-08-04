@@ -5,7 +5,9 @@ const $filter = (evaluate) => ({
 
 const $flatMap = (evaluate) => ({
 	apply: ([items, subexpr], input) =>
-		evaluate(items, input).flatMap((item) => evaluate(subexpr, item)),
+		evaluate(items, input)
+			.flatMap((item) => evaluate(subexpr, item))
+			.filter((item) => item != null),
 });
 
 const $map = (evaluate) => ({
@@ -18,3 +20,9 @@ export const iterativeDefinitions = {
 	$flatMap,
 	$map,
 } as const;
+
+// apply: ([items, subexpr], input) => {
+// 	console.log(items, subexpr, input);
+// 	console.log('e', evaluate(items, input))
+// 	evaluate(items, input).flatMap((item) => evaluate(subexpr, item))
+// },

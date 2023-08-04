@@ -341,7 +341,7 @@ describe("tree queries", () => {
 			]);
 		});
 
-		it("evaluates the minimum across nested resources", async () => {
+		it("evaluates the minimum across one-to-many nested resources", async () => {
 			const result = await graph.getTrees({
 				type: "homes",
 				properties: {
@@ -354,6 +354,36 @@ describe("tree queries", () => {
 				{ name: "Care-a-Lot", minYear: 1982 },
 				{ name: "Forest of Feelings", minYear: undefined },
 				{ name: "Earth", minYear: undefined },
+			]);
+		});
+
+		it("evaluates the minimum across many-to-many nested resources", async () => {
+			const result = await graph.getTrees({
+				type: "powers",
+				properties: {
+					name: "name",
+					minYear: { $min: "wielders.$.yearIntroduced" },
+				},
+			});
+
+			expect(result).toEqual([
+				{ name: "Care Bear Stare", minYear: 1982 },
+				{ name: "Make a Wish", minYear: undefined },
+			]);
+		});
+
+		it("evaluates deeply nested values", async () => {
+			const result = await graph.getTrees({
+				type: "powers",
+				properties: {
+					name: "name",
+					caring: { $sum: "wielders.$.home.caringMeter" },
+				},
+			});
+
+			expect(result).toEqual([
+				{ name: "Care Bear Stare", caring: 3 },
+				{ name: "Make a Wish", caring: 0 },
 			]);
 		});
 	});
