@@ -1,4 +1,4 @@
-export { projectionQueryProperties, project } from "./projection.js";
+export { projectionQueryProperties } from "./projection.js";
 export { ensureValidQuery } from "./query.js";
 export { compileSchema } from "./schema.js";
 export { createGraph } from "./graph.js";
