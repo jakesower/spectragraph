@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { defaultExpressionEngine } from "../src/expressions.js";
-import { comparativeDefinitions } from "../src/definitions/comparative.js";
 
 const kids = {
 	xinema: { name: "Ximena", age: 4, toy: "ball" },
@@ -8,7 +7,7 @@ const kids = {
 	zoe: { name: "Zoe", age: 6, toy: "boat" },
 };
 
-const { compile } = defaultExpressionEngine(comparativeDefinitions);
+const { compile } = defaultExpressionEngine;
 
 describe("core expressions (plus $eq for help)", () => {
 	it("should compile an equality expression", () => {
@@ -38,13 +37,13 @@ describe("core expressions (plus $eq for help)", () => {
 	});
 
 	it("evaluates expressions in arrays", () => {
-		const compiled = compile({ $echo: [{ $prop: "age" }, { $prop: "name" }] });
+		const compiled = compile({ $apply: [{ $prop: "age" }, { $prop: "name" }] });
 		expect(compiled(kids.yousef)).toEqual([5, "Yousef"]);
 	});
 
 	it("evaluates expressions in objects", () => {
 		const compiled = compile({
-			$echo: { age: { $prop: "age" }, name: { $prop: "name" } },
+			$apply: { age: { $prop: "age" }, name: { $prop: "name" } },
 		});
 		expect(compiled(kids.zoe)).toEqual({ age: 6, name: "Zoe" });
 	});

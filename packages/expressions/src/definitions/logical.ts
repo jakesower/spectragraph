@@ -3,8 +3,9 @@ import { Operation } from "../expressions";
 const $and: Operation<any, any, boolean> = {
 	name: "and",
 	apply: (params) => params.every(Boolean),
-	distribute: (subexprs, distribute) => ({
-		$and: subexprs.map(distribute),
+	evaluate: (params) => params.every(Boolean),
+	inject: (subexprs, inject) => ({
+		$and: subexprs.map(inject),
 	}),
 	schema: {
 		type: "boolean",
@@ -14,8 +15,9 @@ const $and: Operation<any, any, boolean> = {
 const $or: Operation<any, any, boolean> = {
 	name: "or",
 	apply: (params) => params.some(Boolean),
-	distribute: (subexprs, distribute) => ({
-		$or: subexprs.map(distribute),
+	evaluate: (params) => params.some(Boolean),
+	inject: (subexprs, inject) => ({
+		$or: subexprs.map(inject),
 	}),
 	schema: {
 		type: "boolean",

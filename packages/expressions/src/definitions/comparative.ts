@@ -3,14 +3,14 @@ import { Operation } from "../expressions";
 
 type FilterOperation<T> = Operation<T, T, boolean>;
 
-const makeDistribute = (operationName) => (prop, args) => ({
-	$pipe: [{ $prop: prop }, { [operationName]: args }],
-});
+const injectLeft = (param, implicit) => [implicit, param];
+const injectRight = (param, implicit) => [param, implicit];
 
 const $eq: FilterOperation<any> = {
 	name: "equal",
 	apply: isEqual,
-	distribute: makeDistribute("$eq"),
+	evaluate: ([left, right]) => isEqual(left, right),
+	inject: injectLeft,
 	schema: {
 		type: "boolean",
 	},
@@ -19,7 +19,8 @@ const $eq: FilterOperation<any> = {
 const $ne: FilterOperation<any> = {
 	name: "not equal",
 	apply: (param, input) => !isEqual(param, input),
-	distribute: makeDistribute("$ne"),
+	evaluate: ([left, right]) => !isEqual(left, right),
+	inject: injectLeft,
 	schema: {
 		type: "boolean",
 	},
@@ -28,7 +29,8 @@ const $ne: FilterOperation<any> = {
 const $gt = {
 	name: "greater than",
 	apply: (param, input) => input > param,
-	distribute: makeDistribute("$gt"),
+	evaluate: ([left, right]) => left > right,
+	inject: injectLeft,
 	schema: {
 		type: "boolean",
 	},
@@ -37,7 +39,8 @@ const $gt = {
 const $gte = {
 	name: "greater than or equal to",
 	apply: (param, input) => input >= param,
-	distribute: makeDistribute("$gte"),
+	evaluate: ([left, right]) => left >= right,
+	inject: injectLeft,
 	schema: {
 		type: "boolean",
 	},
@@ -46,7 +49,8 @@ const $gte = {
 const $lt = {
 	name: "less than",
 	apply: (param, input) => input < param,
-	distribute: makeDistribute("$lt"),
+	evaluate: ([left, right]) => left < right,
+	inject: injectLeft,
 	schema: {
 		type: "boolean",
 	},
@@ -55,7 +59,8 @@ const $lt = {
 const $lte = {
 	name: "less than or equal to",
 	apply: (param, input) => input <= param,
-	distribute: makeDistribute("$lte"),
+	evaluate: ([left, right]) => left <= right,
+	inject: injectLeft,
 	schema: {
 		type: "boolean",
 	},
@@ -64,7 +69,8 @@ const $lte = {
 const $in = {
 	name: "in",
 	apply: (param, input) => param.includes(input),
-	distribute: makeDistribute("$in"),
+	evaluate: (param, input) => param.includes(input),
+	inject: injectRight,
 	schema: {
 		type: "boolean",
 	},
@@ -73,7 +79,8 @@ const $in = {
 const $nin = {
 	name: "not in",
 	apply: (param, input) => !param.includes(input),
-	distribute: makeDistribute("$nin"),
+	evaluate: (param, input) => !param.includes(input),
+	inject: injectRight,
 	schema: {
 		type: "boolean",
 	},
