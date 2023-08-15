@@ -1,5 +1,9 @@
 import { mapValues } from "lodash-es";
-import { Expression, defaultExpressionEngine } from "@data-prism/expressions";
+import {
+	Expression,
+	TERMINAL_EXPRESSIONS,
+	defaultExpressionEngine,
+} from "@data-prism/expressions";
 
 export type Projection = {
 	[k: string]: any;
@@ -13,7 +17,11 @@ function distributeStrings(expression) {
 		if (rest.length === 0) return { $get: expression };
 
 		return {
-			$flatMap: [distributeStrings(iteratee), distributeStrings(rest.join(".$."))],
+			$pipe: [
+				{ $get: iteratee },
+				{ $flatMap: distributeStrings(rest.join(".$.")) },
+				{ $filter: { $defined: {} } },
+			],
 		};
 	}
 
@@ -27,10 +35,9 @@ function distributeStrings(expression) {
 
 	const [expressionName, expressionArgs] = Object.entries(expression)[0];
 
-	const terminalExpressions = ["$literal", "$var", "$get", "$prop"];
-	if (terminalExpressions.includes(expressionName)) return expression;
-
-	return { [expressionName]: distributeStrings(expressionArgs) };
+	return TERMINAL_EXPRESSIONS.includes(expressionName)
+		? expression
+		: { [expressionName]: distributeStrings(expressionArgs) };
 }
 
 /**
@@ -42,12 +49,12 @@ function distributeStrings(expression) {
  */
 export function projectionQueryProperties(projection: Projection) {
 	const { isExpression } = defaultExpressionEngine;
-	const terminalExpressions = ["$literal", "$var"];
+	const projectionTerminalExpressions = ["$literal", "$var"];
 
 	const go = (val) => {
 		if (isExpression(val)) {
 			const [exprName, exprVal] = Object.entries(val)[0];
-			if (terminalExpressions.includes(exprName)) {
+			if (projectionTerminalExpressions.includes(exprName)) {
 				return [];
 			}
 
@@ -86,8 +93,8 @@ export function projectionQueryProperties(projection: Projection) {
 }
 
 export function createExpressionProjector(expression: Expression) {
-	const { evaluate } = defaultExpressionEngine;
+	const { apply } = defaultExpressionEngine;
 	const expr = distributeStrings(expression);
 
-	return (result) => evaluate(expr, result);
+	return (result) => apply(expr, result);
 }

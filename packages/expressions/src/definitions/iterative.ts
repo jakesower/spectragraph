@@ -1,18 +1,13 @@
-const $filter = (evaluate) => ({
-	apply: ([items, subexpr], input) =>
-		evaluate(items, input).filter((item) => evaluate(subexpr, item)),
+const $filter = (apply) => ({
+	apply: (subexpr, arg) => arg.filter((item) => apply(subexpr, item)),
 });
 
-const $flatMap = (evaluate) => ({
-	apply: ([items, subexpr], input) =>
-		evaluate(items, input)
-			.flatMap((item) => evaluate(subexpr, item))
-			.filter((item) => item != null),
+const $flatMap = (apply) => ({
+	apply: (subexpr, arg) => arg.flatMap((item) => apply(subexpr, item)),
 });
 
-const $map = (evaluate) => ({
-	apply: ([items, subexpr], input) =>
-		evaluate(items, input).map((item) => evaluate(subexpr, item)),
+const $map = (apply) => ({
+	apply: (subexpr, arg) => arg.map((item) => apply(subexpr, item)),
 });
 
 export const iterativeDefinitions = {
@@ -21,8 +16,8 @@ export const iterativeDefinitions = {
 	$map,
 } as const;
 
-// apply: ([items, subexpr], input) => {
-// 	console.log(items, subexpr, input);
-// 	console.log('e', evaluate(items, input))
-// 	evaluate(items, input).flatMap((item) => evaluate(subexpr, item))
+// apply: ([items, subexpr], arg) => {
+// 	console.log(items, subexpr, arg);
+// 	console.log('e', evaluate(items, arg))
+// 	evaluate(items, arg).flatMap((item) => evaluate(subexpr, item))
 // },

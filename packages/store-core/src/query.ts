@@ -107,5 +107,5 @@ export const evaluators = {
 };
 
 export function evaluateId(expression, args) {
-	return evaluators.id.evaluate(expression, args);
+	return defaultExpressionEngine.apply(expression, args);
 }

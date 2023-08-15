@@ -7,34 +7,20 @@ const kids = [
 	{ name: "Zoe", age: 6 },
 ];
 
-const { evaluate } = defaultExpressionEngine;
+const { apply } = defaultExpressionEngine;
 
-describe("$map", () => {
-	it("should perform without subexpressions", () => {
-		expect(
-			evaluate({
-				$map: [[3], { $input: {} }],
-			}),
-		).toEqual([3]);
+describe("apply", () => {
+	describe("$map", () => {
+		it("should perform without subexpressions", () => {
+			expect(apply({ $map: { $echo: {} } }, [3])).toEqual([3]);
+		});
+
+		it("should perform with a subexpression", () => {
+			expect(apply({ $map: { $prop: "age" } }, kids)).toEqual([4, 5, 6]);
+		});
 	});
 
-	it("should perform with a subexpression in the first spot", () => {
-		expect(
-			evaluate({
-				$map: [{ $echo: [3] }, { $input: {} }],
-			}),
-		).toEqual([3]);
+	it("$filter", () => {
+		expect(apply({ $filter: { $eq: 2 } }, [1, 2, 3])).toEqual([2]);
 	});
-
-	it("should perform with a subexpression in the second spot", () => {
-		expect(
-			evaluate({
-				$map: [kids, { $prop: "age" }],
-			}),
-		).toEqual([4, 5, 6]);
-	});
-});
-
-it("$filter", () => {
-	expect(evaluate({ $filter: [[1, 2, 3], { $eq: 2 }] })).toEqual([2]);
 });

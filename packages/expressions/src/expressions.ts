@@ -2,23 +2,25 @@ import { mapValues } from "lodash-es";
 import { coreDefinitions } from "./definitions/core.js";
 import { logicalDefinitions } from "./definitions/logical.js";
 import { comparativeDefinitions } from "./definitions/comparative.js";
-import { distribute } from "./distribute.js";
 import { mathDefinitions } from "./definitions/math.js";
 import { iterativeDefinitions } from "./definitions/iterative.js";
 
+export type ApplicativeExpression = object;
 export type Expression = object;
 
 export type Operation<Args, Input, Output> = {
-	apply: (args: Args, input: Input) => Output;
-	distribute?: (args: any, distribute: (v: any) => any) => any;
+	apply: (expression: any, arg: Input) => Output;
+	applyImplicit?: (args: Args, vars: Input, implicitVar: any) => Output;
+	evaluate: (params: Input) => Output;
+	inject?: (args: any, inject: (v: any) => any) => any;
 	name?: string;
 	schema: object;
 };
 
 export type ExpressionEngine = {
-	compile: (expression: Expression) => (input: any) => any;
-	distribute: (expression: Expression) => Expression;
-	evaluate: (expression: Expression, input: any) => any;
+	apply: (expression: Expression, arg: any) => any;
+	compile: (expression: Expression) => (arg: any) => any;
+	evaluate: (expression: Expression) => any;
 	isExpression: (expression: Expression) => boolean;
 };
 
@@ -27,22 +29,55 @@ export type FunctionExpression<Args, Input, Output> = (
 ) => Expression;
 
 const CONTROLS_EVALUATION = Symbol("contols evaluation");
-
-export function isExpression(val: unknown, definitions): boolean {
-	const expressionKeys = new Set([...Object.keys(definitions ?? {}), "$var", "$literal"]);
-
-	return (
-		typeof val === "object" &&
-		!Array.isArray(val) &&
-		Object.keys(val).length === 1 &&
-		expressionKeys.has(Object.keys(val)[0])
-	);
-}
+export const TERMINAL_EXPRESSIONS = ["$get", "$literal", "$prop"];
 
 export function createExpressionEngine(definitions: object): ExpressionEngine {
-	function evaluate<T>(rootExpression: T, input) {
+	const allDefinitions = { ...coreDefinitions, ...definitions }; // mutated later
+	const isExpression = (val: unknown): boolean => {
+		const expressionKeys = new Set(Object.keys(allDefinitions));
+
+		return (
+			typeof val === "object" &&
+			!Array.isArray(val) &&
+			Object.keys(val).length === 1 &&
+			expressionKeys.has(Object.keys(val)[0])
+		);
+	};
+
+	const apply = (rootExpression: Expression, arg: any) => {
 		const go = <Input>(expression: Input) => {
-			if (!isExpression(expression, definitions)) {
+			if (!isExpression(expression)) {
+				return Array.isArray(expression)
+					? expression.map(go)
+					: typeof expression === "object"
+						? mapValues(expression, go)
+						: expression;
+			}
+
+			const [expressionName, expressionParams] = Object.entries(expression)[0];
+			const expressionDefinition = allDefinitions[expressionName] as any;
+
+			// some operations need to control the flow of evaluation
+			if (expressionDefinition[CONTROLS_EVALUATION]) {
+				return expressionDefinition.apply(expressionParams, arg);
+			}
+
+			// these special expressions don't use evaluated arguments
+			if (TERMINAL_EXPRESSIONS.includes(expressionName)) {
+				return allDefinitions[expressionName].apply(expressionParams, arg);
+			}
+
+			// with evaluated children
+			const evaluatedParams = go(expressionParams);
+			return expressionDefinition.apply(evaluatedParams, arg);
+		};
+
+		return go(rootExpression);
+	};
+
+	const evaluate = (rootExpression: Expression) => {
+		const go = <Input>(expression: Input) => {
+			if (!isExpression(expression)) {
 				return Array.isArray(expression)
 					? expression.map(go)
 					: typeof expression === "object"
@@ -54,52 +89,41 @@ export function createExpressionEngine(definitions: object): ExpressionEngine {
 
 			// these special expressions don't use evaluated arguments
 			if (expressionName === "$literal") return expression[expressionName];
-			if (expressionName === "$var") return input[expression[expressionName]];
 
 			// some operations need to control the flow of evaluation
 			const expressionDefinition = definitions[expressionName] as any;
 			if (expressionDefinition[CONTROLS_EVALUATION]) {
-				return expressionDefinition.apply(expressionArgs, input);
+				return expressionDefinition.evaluate(expressionArgs);
 			}
 
 			// with evaluated children
 			const evaluatedArgs = go(expressionArgs);
-			return expressionDefinition.apply(evaluatedArgs, input);
+			return expressionDefinition.evaluate(evaluatedArgs);
 		};
 
 		return go(rootExpression);
-	}
+	};
 
-	Object.keys(definitions).forEach((defKey) => {
-		const controlsEvaluation = typeof definitions[defKey] === "function";
+	Object.keys(allDefinitions).forEach((defKey) => {
+		const controlsEvaluation = typeof allDefinitions[defKey] === "function";
 		if (controlsEvaluation) {
-			definitions[defKey] = definitions[defKey](evaluate);
+			allDefinitions[defKey] = allDefinitions[defKey](apply);
 		}
 
-		definitions[defKey][CONTROLS_EVALUATION] = controlsEvaluation;
+		allDefinitions[defKey][CONTROLS_EVALUATION] = controlsEvaluation;
 	});
 
 	return {
-		compile(expression) {
-			if (!isExpression(expression, definitions)) {
-				throw new Error("only expressions can be compiled");
+		apply,
+		evaluate,
+		compile: (expression) => {
+			if (!isExpression(expression)) {
+				throw new Error("only expressions may be compiled");
 			}
 
-			return (input?: any) => evaluate(expression, input);
+			return (arg) => apply(expression, arg);
 		},
-		distribute(expression) {
-			return distribute(expression, definitions);
-		},
-		evaluate(expression, input?: any) {
-			if (!isExpression(expression, definitions)) {
-				throw new Error("only expressions can be compiled");
-			}
-
-			return evaluate(expression, input);
-		},
-		isExpression(expression) {
-			return isExpression(expression, definitions);
-		},
+		isExpression,
 	};
 }
 

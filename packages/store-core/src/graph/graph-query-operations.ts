@@ -69,10 +69,14 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 	// these are in order of execution
 	const operationDefinitions: { [k: string]: GetOperation } = {
 		where(results: MultiResult): MultiResult {
-			const filter = defaultExpressionEngine.distribute(query.where);
-			const filterFn = defaultExpressionEngine.compile(filter);
+			const filterFns = Object.entries(query.where).map(
+				([propPath, expr]) =>
+					(result) =>
+						defaultExpressionEngine.apply(expr, get(result, propPath)),
+			);
+			const filterFn = (result) => filterFns.every((fn) => fn(result));
 
-			return results.filter((result) => filterFn(result));
+			return results.filter(filterFn);
 		},
 		order(results: MultiResult): MultiResult {
 			return orderBy(
