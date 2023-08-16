@@ -29,8 +29,8 @@
 	},
 	"private": false,
 	"dependencies": {
-		"@data-prism/expressions": "^0.0.3",
-		"@data-prism/store-core": "*",
+		"@data-prism/core": "*",
+		"@data-prism/expressions": "^0.0.6",
 		"@data-prism/utils": "*",
 		"better-sqlite3": "^8.4.0",
 		"lodash-es": "^4.17.21"

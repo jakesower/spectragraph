@@ -11,7 +11,7 @@
 			"path": "../expressions"
 		},
 		{
-			"path": "../store-core"
+			"path": "../core"
 		}
 	],
 	"include": [

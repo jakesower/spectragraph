@@ -3,7 +3,7 @@ import { buildSql, composeClauses } from "./helpers/sql.js";
 import { runQuery } from "./operations/operations.js";
 import { flattenQuery } from "./helpers/query-helpers.ts";
 import { castValToDb } from "./helpers/sql.js";
-import { createGraph } from "@data-prism/store-core";
+import { createGraph } from "@data-prism/core";
 import { varsExpressionEngine } from "./helpers/sql-expressions.js";
 
 export function get(query, context) {

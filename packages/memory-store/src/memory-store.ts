@@ -2,25 +2,15 @@ import { merge } from "lodash-es";
 import {
 	compileSchema,
 	ensureValidQuery,
-	QueryOfType,
 	RootQuery,
 	SingleRootQuery,
 	Schema,
 	Result,
 	createGraph,
-} from "@data-prism/store-core";
+} from "@data-prism/core";
 import { defaultExpressionEngine } from "@data-prism/expressions";
 
 export type InternalStore = { [k: string]: { [k: string]: any } };
-
-// TODO: get this bugger working
-type GetQueryOfType<S extends Schema> = RootQuery<S> extends { type: infer ResType }
-	? ResType extends string
-		? ResType extends keyof S["resources"]
-			? QueryOfType<S, ResType>
-			: never
-		: never
-	: never;
 
 export type Store<S extends Schema> = {
 	compileQuery: <Q extends RootQuery<S>>(

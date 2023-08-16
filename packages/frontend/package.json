@@ -1,5 +1,5 @@
 {
-	"name": "@data-prism/core",
+	"name": "@data-prism/frontend",
 	"version": "0.0.1",
 	"type": "module",
 	"exports": {

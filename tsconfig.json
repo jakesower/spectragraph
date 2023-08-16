@@ -25,8 +25,8 @@
 			"@data-prism/sqlite-store": [
 				"./packages/sqlite-store"
 			],
-			"@data-prism/store-core": [
-				"./packages/store-core"
+			"@data-prism/core": [
+				"./packages/core"
 			],
 		}
 	},
@@ -35,7 +35,7 @@
 			"path": "./packages/expressions"
 		},
 		{
-			"path": "./packages/store-core"
+			"path": "./packages/core"
 		}
 	]
 }
