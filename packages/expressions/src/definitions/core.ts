@@ -10,11 +10,7 @@ const $apply = {
 
 const $defined = {
 	name: "defined",
-	apply: (_, arg) => {
-		console.log("$def", _, arg, arg !== undefined);
-		// return arg == 1
-		return arg !== undefined;
-	},
+	apply: (_, arg) => arg !== undefined,
 };
 
 const $echo = {

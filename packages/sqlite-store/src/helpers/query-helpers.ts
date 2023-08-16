@@ -1,4 +1,4 @@
-import { Query, RootQuery, Schema } from "@data-prism/store-core";
+import { Query, RootQuery, Schema } from "@data-prism/core";
 import { partition, pick } from "lodash-es";
 
 type QueryBreakdown<S extends Schema> = {
