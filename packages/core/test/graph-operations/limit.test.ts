@@ -19,7 +19,7 @@ it("limits after sorting", async () => {
 	const result = await graph.getTrees({
 		type: "bears",
 		properties: { name: "name" },
-		order: [{ property: "name", direction: "asc" }],
+		order: { name: "asc" },
 		limit: 2,
 	});
 
@@ -30,7 +30,7 @@ it("limits after sorting with 1", async () => {
 	const result = await graph.getTrees({
 		type: "bears",
 		properties: { name: "name" },
-		order: [{ property: "name", direction: "asc" }],
+		order: { name: "asc" },
 		limit: 1,
 	});
 
@@ -41,7 +41,7 @@ it("limits with an offset", async () => {
 	const result = await graph.getTrees({
 		type: "bears",
 		properties: { name: "name" },
-		order: [{ property: "name", direction: "asc" }],
+		order: { name: "asc" },
 		limit: 2,
 		offset: 1,
 	});
@@ -53,7 +53,7 @@ it("allows for offset only", async () => {
 	const result = await graph.getTrees({
 		type: "bears",
 		properties: { name: "name" },
-		order: [{ property: "name", direction: "asc" }],
+		order: { name: "asc" },
 		offset: 1,
 	});
 
@@ -68,7 +68,7 @@ it("allows for limit + offset to exceed size of data", async () => {
 	const result = await graph.getTrees({
 		type: "bears",
 		properties: { name: "name" },
-		order: [{ property: "name", direction: "asc" }],
+		order: { name: "asc" },
 		limit: 6,
 		offset: 2,
 	});
@@ -80,7 +80,7 @@ it("returns nothing when the offset has surpassed the data size", async () => {
 	const result = await graph.getTrees({
 		type: "bears",
 		properties: { name: "name" },
-		order: [{ property: "name", direction: "asc" }],
+		order: { name: "asc" },
 		limit: 6,
 		offset: 20,
 	});
@@ -92,7 +92,7 @@ it("allows a zero offset", async () => {
 	const result = await graph.getTrees({
 		type: "bears",
 		properties: { name: "name" },
-		order: [{ property: "name", direction: "asc" }],
+		order: { name: "asc" },
 		offset: 0,
 	});
 
