@@ -1,5 +1,5 @@
 export { projectionQueryProperties } from "./projection.js";
-export { ensureValidQuery } from "./query.js";
+export { ensureValidQuery, flattenQuery } from "./query.js";
 export { compileSchema } from "./schema.js";
 export { createGraph } from "./graph.js";
 export type {

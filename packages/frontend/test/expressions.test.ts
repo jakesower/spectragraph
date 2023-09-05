@@ -19,8 +19,8 @@ describe("core expressions (using $eq)", () => {
 	});
 
 	it("doesn't evaluate contents of $literal expressions", () => {
-		const exp = { $literal: { $var: "age" } };
-		expect(evaluate(exp, kids.xinema)).toEqual({ $var: "age" });
+		const exp = { $literal: { $prop: "age" } };
+		expect(evaluate(exp, kids.xinema)).toEqual({ $prop: "age" });
 	});
 
 	it("compiles and runs values that resolve to false", async (t) => {
@@ -29,33 +29,33 @@ describe("core expressions (using $eq)", () => {
 	});
 
 	it("looks up a variable", () => {
-		expect(evaluate({ $var: "age" }, kids.xinema)).toEqual(4);
+		expect(evaluate({ $prop: "age" }, kids.xinema)).toEqual(4);
 	});
 
 	it("should evaluate expressions within an array", () => {
-		const result = evaluate([1, { $var: "age" }], kids.xinema);
+		const result = evaluate([1, { $prop: "age" }], kids.xinema);
 		expect(result).toEqual([1, 4]);
 	});
 
 	it("should evaluate expressions within an object", () => {
-		const result = evaluate([1, { moo: { $var: "age" } }], kids.xinema);
+		const result = evaluate([1, { moo: { $prop: "age" } }], kids.xinema);
 		expect(result).toEqual([1, { moo: 4 }]);
 	});
 
 	it("should evaluate an expression within an expression", () => {
-		const result = evaluate({ $eq: [true, { $eq: [4, { $var: "age" }] }] }, kids.xinema);
+		const result = evaluate({ $eq: [true, { $eq: [4, { $prop: "age" }] }] }, kids.xinema);
 		expect(result).toBe(true);
 	});
 
 	it("looks up variables within an expression", async (t) => {
-		expect(evaluate({ $eq: [4, { $var: "age" }] }, kids.xinema)).toBe(true);
-		expect(evaluate({ $eq: [4, { $var: "age" }] }, kids.yousef)).toBe(false);
-		expect(evaluate({ $eq: [4, { $var: "age" }] }, kids.zoe)).toBe(false);
+		expect(evaluate({ $eq: [4, { $prop: "age" }] }, kids.xinema)).toBe(true);
+		expect(evaluate({ $eq: [4, { $prop: "age" }] }, kids.yousef)).toBe(false);
+		expect(evaluate({ $eq: [4, { $prop: "age" }] }, kids.zoe)).toBe(false);
 	});
 
 	it("doesn't evaluate contents of $literal expressions", () => {
-		const exp = { $literal: { $var: "age" } };
-		expect(evaluate(exp, kids.xinema)).toEqual({ $var: "age" });
+		const exp = { $literal: { $prop: "age" } };
+		expect(evaluate(exp, kids.xinema)).toEqual({ $prop: "age" });
 	});
 });
 
@@ -73,7 +73,7 @@ describe("the $eq expression", () => {
 
 it("implements the $gt expression", () => {
 	const exp = {
-		$gt: [{ $var: "age" }, 5],
+		$gt: [{ $prop: "age" }, 5],
 	};
 
 	expect(evaluate(exp, kids.xinema)).toBe(false);
@@ -83,7 +83,7 @@ it("implements the $gt expression", () => {
 
 it("implements the $gte expression", () => {
 	const exp = {
-		$gte: [{ $var: "age" }, 5],
+		$gte: [{ $prop: "age" }, 5],
 	};
 
 	expect(evaluate(exp, kids.xinema)).toBe(false);
@@ -93,7 +93,7 @@ it("implements the $gte expression", () => {
 
 it("implements the $lt expression", () => {
 	const exp = {
-		$lt: [{ $var: "age" }, 5],
+		$lt: [{ $prop: "age" }, 5],
 	};
 
 	expect(evaluate(exp, kids.xinema)).toBe(true);
@@ -103,7 +103,7 @@ it("implements the $lt expression", () => {
 
 it("implements the $lte expression", () => {
 	const exp = {
-		$lte: [{ $var: "age" }, 5],
+		$lte: [{ $prop: "age" }, 5],
 	};
 
 	expect(evaluate(exp, kids.xinema)).toBe(true);
@@ -113,7 +113,7 @@ it("implements the $lte expression", () => {
 
 it("implements the $ne expression", () => {
 	const exp = {
-		$ne: [{ $var: "age" }, 5],
+		$ne: [{ $prop: "age" }, 5],
 	};
 
 	expect(evaluate(exp, kids.xinema)).toBe(true);
@@ -123,7 +123,7 @@ it("implements the $ne expression", () => {
 
 it("implements the $in expression", () => {
 	const exp = {
-		$in: { needle: { $var: "age" }, haystack: [4, 6] },
+		$in: { needle: { $prop: "age" }, haystack: [4, 6] },
 	};
 
 	expect(evaluate(exp, kids.xinema)).toBe(true);
@@ -133,7 +133,7 @@ it("implements the $in expression", () => {
 
 it("implements the $nin expression", () => {
 	const exp = {
-		$nin: { needle: { $var: "age" }, haystack: [4, 6] },
+		$nin: { needle: { $prop: "age" }, haystack: [4, 6] },
 	};
 
 	expect(evaluate(exp, kids.xinema)).toBe(false);

@@ -156,3 +156,40 @@ it("filters related resources", async () => {
 		wielders: [{ type: "bears", id: "5" }],
 	});
 });
+
+it("filters on to-one relationships using dot notation", async () => {
+	const result = await graph.getTrees({
+		type: "bears",
+		properties: {
+			id: "id",
+			home: {
+				properties: {
+					name: "name",
+				},
+			},
+		},
+		where: {
+			"home.name": "Care-a-Lot",
+		},
+	});
+
+	expect(result).toEqual([
+		{ id: "1", home: { name: "Care-a-Lot" } },
+		{ id: "2", home: { name: "Care-a-Lot" } },
+		{ id: "3", home: { name: "Care-a-Lot" } },
+	]);
+});
+
+it("filters on to-one relationships using dot notation when not queried for in properties", async () => {
+	const result = await graph.getTrees({
+		type: "bears",
+		properties: {
+			id: "id",
+		},
+		where: {
+			"home.name": "Care-a-Lot",
+		},
+	});
+
+	expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
+});

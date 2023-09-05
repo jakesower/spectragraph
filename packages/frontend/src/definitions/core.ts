@@ -3,12 +3,12 @@ const $literal = {
 	name: "literal",
 };
 
-const $var = {
+const $prop = {
 	apply: (param, vars) => vars[param],
 	name: "var",
 };
 
 export const coreDefinitions = {
 	$literal,
-	$var,
+	$prop,
 } as const;

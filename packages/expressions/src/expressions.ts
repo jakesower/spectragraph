@@ -2,7 +2,7 @@ import { mapValues } from "lodash-es";
 import { coreDefinitions } from "./definitions/core.js";
 import { logicalDefinitions } from "./definitions/logical.js";
 import { comparativeDefinitions } from "./definitions/comparative.js";
-import { mathDefinitions } from "./definitions/math.js";
+import { aggregativeDefinitions } from "./definitions/aggregative.js";
 import { iterativeDefinitions } from "./definitions/iterative.js";
 
 export type ApplicativeExpression = object;
@@ -131,6 +131,6 @@ export const defaultExpressionEngine = createExpressionEngine({
 	...coreDefinitions,
 	...logicalDefinitions,
 	...comparativeDefinitions,
-	...mathDefinitions,
+	...aggregativeDefinitions,
 	...iterativeDefinitions,
 });
