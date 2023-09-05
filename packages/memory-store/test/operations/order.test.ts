@@ -18,7 +18,7 @@ it<LocalTestContext>("sorts on a numeric field", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
 		properties: { name: "name", yearIntroduced: "yearIntroduced" },
-		order: [{ property: "yearIntroduced", direction: "desc" }],
+		order: { yearIntroduced: "desc" },
 	});
 
 	expect(result).toEqual([
@@ -33,7 +33,7 @@ it<LocalTestContext>("sorts on a string field", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
 		properties: { name: "name", yearIntroduced: "yearIntroduced" },
-		order: [{ property: "name", direction: "asc" }],
+		order: { name: "asc" },
 	});
 
 	expect(result).toEqual([
@@ -48,10 +48,7 @@ it<LocalTestContext>("sorts on a numerical and a string field", async (context) 
 	const result = await context.store.get({
 		type: "bears",
 		properties: { name: "name", yearIntroduced: "yearIntroduced" },
-		order: [
-			{ property: "yearIntroduced", direction: "desc" },
-			{ property: "name", direction: "asc" },
-		],
+		order: [{ yearIntroduced: "desc" }, { name: "asc" }],
 	});
 
 	expect(result).toEqual([

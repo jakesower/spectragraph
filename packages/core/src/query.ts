@@ -6,7 +6,7 @@ export type Query<S extends Schema> = {
 	id?: string;
 	limit?: number;
 	offset?: number;
-	order?: { property: string; direction: "asc" | "desc" }[];
+	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
 	properties?: {
 		[k: string]: string | object;
 	};

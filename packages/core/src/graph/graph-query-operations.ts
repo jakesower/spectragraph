@@ -49,11 +49,11 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 			return results.filter(filterFn);
 		},
 		order(results: MultiResult): MultiResult {
-			return orderBy(
-				results,
-				query.order?.map((o) => o.property),
-				query.order?.map((o) => o.direction),
-			);
+			const order = Array.isArray(query.order) ? query.order : [query.order];
+			const properties = order.flatMap((o) => Object.keys(o));
+			const dirs = order.flatMap((o) => Object.values(o));
+
+			return orderBy(results, properties, dirs);
 		},
 		limit(results: MultiResult): MultiResult {
 			const { limit = 0, offset = 0 } = query;
