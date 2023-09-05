@@ -18,7 +18,7 @@ const $eq: FilterOperation<any> = {
 
 const $ne: FilterOperation<any> = {
 	name: "not equal",
-	apply: (param, input) => !isEqual(param, input),
+	apply: (param, arg) => !isEqual(param, arg),
 	evaluate: ([left, right]) => !isEqual(left, right),
 	inject: injectLeft,
 	schema: {
@@ -28,7 +28,7 @@ const $ne: FilterOperation<any> = {
 
 const $gt = {
 	name: "greater than",
-	apply: (param, input) => input > param,
+	apply: (param, arg) => arg > param,
 	evaluate: ([left, right]) => left > right,
 	inject: injectLeft,
 	schema: {
@@ -38,7 +38,7 @@ const $gt = {
 
 const $gte = {
 	name: "greater than or equal to",
-	apply: (param, input) => input >= param,
+	apply: (param, arg) => arg >= param,
 	evaluate: ([left, right]) => left >= right,
 	inject: injectLeft,
 	schema: {
@@ -48,7 +48,7 @@ const $gte = {
 
 const $lt = {
 	name: "less than",
-	apply: (param, input) => input < param,
+	apply: (param, arg) => arg < param,
 	evaluate: ([left, right]) => left < right,
 	inject: injectLeft,
 	schema: {
@@ -58,7 +58,7 @@ const $lt = {
 
 const $lte = {
 	name: "less than or equal to",
-	apply: (param, input) => input <= param,
+	apply: (param, arg) => arg <= param,
 	evaluate: ([left, right]) => left <= right,
 	inject: injectLeft,
 	schema: {
@@ -68,8 +68,8 @@ const $lte = {
 
 const $in = {
 	name: "in",
-	apply: (param, input) => param.includes(input),
-	evaluate: (param, input) => param.includes(input),
+	apply: (param, arg) => param.includes(arg),
+	evaluate: (param, arg) => param.includes(arg),
 	inject: injectRight,
 	schema: {
 		type: "boolean",
@@ -78,8 +78,8 @@ const $in = {
 
 const $nin = {
 	name: "not in",
-	apply: (param, input) => !param.includes(input),
-	evaluate: (param, input) => !param.includes(input),
+	apply: (param, arg) => !param.includes(arg),
+	evaluate: (param, arg) => !param.includes(arg),
 	inject: injectRight,
 	schema: {
 		type: "boolean",

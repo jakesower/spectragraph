@@ -27,9 +27,9 @@ describe("core expressions (plus $eq for help)", () => {
 	// });
 
 	it("doesn't compile contents of $literal expressions", () => {
-		const exp = { $literal: { $var: "age" } };
+		const exp = { $literal: { $prop: "age" } };
 		const compiled = compile(exp);
-		expect(compiled(kids.xinema)).toEqual({ $var: "age" });
+		expect(compiled(kids.xinema)).toEqual({ $prop: "age" });
 	});
 
 	it("looks up a variable", () => {

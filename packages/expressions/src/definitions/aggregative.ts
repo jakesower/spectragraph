@@ -45,7 +45,7 @@ const $sum = {
 	},
 };
 
-export const mathDefinitions = {
+export const aggregativeDefinitions = {
 	$count,
 	$max,
 	$min,

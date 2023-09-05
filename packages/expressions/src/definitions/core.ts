@@ -38,11 +38,6 @@ const $prop = {
 	apply: (params, arg) => arg[params],
 };
 
-const $var = {
-	name: "var",
-	apply: (params, arg) => arg[params],
-};
-
 export const coreDefinitions = {
 	$apply,
 	$defined,
@@ -51,5 +46,4 @@ export const coreDefinitions = {
 	$literal,
 	$pipe,
 	$prop,
-	$var,
 } as const;

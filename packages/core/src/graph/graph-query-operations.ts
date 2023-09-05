@@ -4,13 +4,10 @@ import { defaultExpressionEngine } from "@data-prism/expressions";
 import { MultiResult, Result } from "../result.js";
 import { Schema } from "../schema.js";
 import { RootQuery } from "../query.js";
-import { GraphConfig } from "../graph.js";
+import { GraphConfig, ID } from "../graph.js";
 import { createExpressionProjector } from "../projection.js";
 
 type GetOperation = (results: MultiResult) => MultiResult;
-
-const ID = Symbol("id");
-const TYPE = Symbol("type");
 
 export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 	query: Q,
@@ -36,34 +33,6 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 		return applyOrMap(result[head], (relRes) =>
 			getPropertyPath(tail, relResType, relRes),
 		);
-	};
-
-	// this automatically dereferences resources as the graph is navigated; it
-	// also adds an ID and TYPE for convenience
-	const makeDereffingProxy = (resource, resType) => {
-		const resDef = schema.resources[resType];
-		const idField = resDef.idField ?? "id";
-
-		return new Proxy(resource, {
-			get(target, prop: string | typeof ID | typeof TYPE) {
-				if (prop === ID) return target[idField];
-				if (prop === TYPE) return resType;
-
-				if (Object.hasOwn(resDef.relationships, prop)) {
-					const relResType = resDef.relationships[prop].resource;
-					const relatedIdOrIds = target[prop];
-
-					return Array.isArray(relatedIdOrIds)
-						? relatedIdOrIds.map((id) =>
-							makeDereffingProxy(data[relResType][id], relResType),
-						  )
-						: relatedIdOrIds === null
-							? null
-							: makeDereffingProxy(data[relResType][relatedIdOrIds], relResType);
-				}
-				return target[prop];
-			},
-		});
 	};
 
 	// these are in order of execution
@@ -95,9 +64,6 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 		offset(results: MultiResult): MultiResult {
 			if ((query.offset ?? 0) < 0) throw new Error("`offset` must be at least 0");
 			return query.limit ? results : results.slice(query.offset);
-		},
-		first(results) {
-			return [results[0]];
 		},
 		properties(results) {
 			if (!query.properties) {
@@ -150,11 +116,7 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 							.filter(Boolean);
 			});
 
-			return results.map((result) =>
-				mapValues(projectors, (project) =>
-					project(makeDereffingProxy(result, query.type)),
-				),
-			);
+			return results.map((result) => mapValues(projectors, (project) => project(result)));
 		},
 	};
 

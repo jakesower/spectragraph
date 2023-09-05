@@ -49,7 +49,7 @@ function distributeStrings(expression) {
  */
 export function projectionQueryProperties(projection: Projection) {
 	const { isExpression } = defaultExpressionEngine;
-	const projectionTerminalExpressions = ["$literal", "$var"];
+	const projectionTerminalExpressions = ["$literal", "$prop"];
 
 	const go = (val) => {
 		if (isExpression(val)) {

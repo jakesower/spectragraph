@@ -1,4 +1,4 @@
-import { difference } from "lodash-es";
+import { difference, partition, pick } from "lodash-es";
 import { defaultExpressionEngine } from "@data-prism/expressions";
 import { Schema } from "./schema.js";
 
@@ -36,11 +36,22 @@ export type SingleRootQuery<S extends Schema> = BaseRootQuery<S> & {
 };
 export type RootQuery<S extends Schema> = MultiRootQuery<S> | SingleRootQuery<S>;
 
+type QueryBreakdown<S extends Schema> = {
+	isRefQuery: boolean;
+	query: Query<S>;
+	parent: QueryBreakdown<S> | null;
+	parentRelationship: string | null;
+	path: string[];
+	properties: any;
+	relationships: any;
+	type: string & keyof S["resources"];
+};
+
 export function ensureValidQuery<S extends Schema>(
 	rootQuery: RootQuery<S>,
-	config: { schema: S; expressionEngine: any },
+	config: { schema: S; expressionEngine?: any },
 ): void {
-	const { schema, expressionEngine } = config;
+	const { schema, expressionEngine = defaultExpressionEngine } = config;
 
 	if (!rootQuery.type) {
 		throw new Error("queries must have a `type` associated with them");
@@ -101,11 +112,48 @@ export function ensureValidQuery<S extends Schema>(
 	go(rootQuery.type, rootQuery);
 }
 
-export const evaluators = {
-	id: defaultExpressionEngine,
-	where: defaultExpressionEngine,
-};
+export function flattenQuery<S extends Schema>(
+	schema: S,
+	rootQuery: RootQuery<S>,
+): QueryBreakdown<S>[] {
+	const go = (
+		query: Query<S>,
+		type,
+		path,
+		parent = null,
+		parentRelationship = null,
+	): QueryBreakdown<S>[] => {
+		const resDef = schema.resources[type];
+		const [propertiesEntries, relationshipsEntries] = partition(
+			Object.entries(query.properties ?? {}),
+			([, propVal]) =>
+				typeof propVal === "string" && (propVal in resDef.properties || propVal === "id"),
+		);
 
-export function evaluateId(expression, args) {
-	return defaultExpressionEngine.apply(expression, args);
+		const properties = propertiesEntries.map((pe) => pe[1]);
+		const relationshipKeys = relationshipsEntries.map((pe) => pe[0]);
+
+		const level: QueryBreakdown<S> = {
+			isRefQuery: !query.properties,
+			parent,
+			parentRelationship,
+			path,
+			properties,
+			query,
+			relationships: pick(query.properties, relationshipKeys),
+			type,
+		};
+
+		return [
+			level,
+			...relationshipKeys.flatMap((relKey) => {
+				const relDef = resDef.relationships[relKey];
+				const subquery = query.properties[relKey] as Query<S>;
+
+				return go(subquery, relDef.resource, [...path, relKey], level, relKey);
+			}),
+		];
+	};
+
+	return go(rootQuery, rootQuery.type, []);
 }

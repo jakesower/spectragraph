@@ -21,6 +21,9 @@ const defaultConfig: GraphConfig = {
 	omittedOperations: [],
 };
 
+export const ID = Symbol("id");
+export const TYPE = Symbol("type");
+
 export function createGraph<S extends Schema>(
 	schema: S,
 	resources,
@@ -32,27 +35,19 @@ export function createGraph<S extends Schema>(
 
 	const data = { ...mapValues(schema.resources, () => ({})), ...resources };
 
-	// // this allows for resources in the graph to automatically dereference
-	// // themselves for much easier crawling of the raw graph data
-	// const makeDereffingProxy = (resource, resType) => {
-	// 	const resDef = schema.resources[resType];
+	Object.entries(data).forEach(([resType, ressById]) => {
+		Object.entries(ressById).forEach(([resId, res]) => {
+			res[TYPE] = resType;
+			res[ID] = resId;
 
-	// 	return new Proxy(resource, {
-	// 		get(target, prop: string) {
-	// 			if (!(prop in resDef.relationships)) return target[prop];
-
-	// 			const relResType = resDef.relationships[prop].resource;
-	// 			const relatedIdOrIds = target[prop];
-	// 			return Array.isArray(relatedIdOrIds)
-	// 				? relatedIdOrIds.map((id) =>
-	// 					makeDereffingProxy(data[relResType][id], relResType),
-	// 				  )
-	// 				: relatedIdOrIds === null
-	// 					? null
-	// 					: makeDereffingProxy(data[relResType][relatedIdOrIds], relResType);
-	// 		},
-	// 	});
-	// };
+			const resDef = schema.resources[resType];			
+			Object.entries((resDef.relationships)).forEach(([relName, relDef]) => {
+				relDef.cardinality === "many"
+					? res[relName] = res[relName].map((relId) => data[relDef.resource][relId])
+					: res[relName] = data[relDef.resource][res[relName]] ?? null;
+			})
+		})
+	})
 
 	return {
 		data,
@@ -65,6 +60,12 @@ export function createGraph<S extends Schema>(
 			const fullQuery = { ...query, ...args };
 			ensureValidQuery(fullQuery, { schema: compiledSchema, expressionEngine });
 			return runTreeQuery(fullQuery, { config: fullConfig, schema, data });
+		},
+		setResource(type, id, value) {
+			// TODO: handle inverses?
+			const existing = data[type][id] ?? {};
+
+			data[type][id] = { ...existing, ...value };
 		},
 	};
 }

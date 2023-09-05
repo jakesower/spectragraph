@@ -27,7 +27,7 @@ return a function that takes the (requisite) variables. If no variables are
 used throughout, the root should be wrapped in a function that returns the
 pre-evaluated value of the expression.
 
-$var and $literal are special. They are always leaf expressions.
+$prop and $literal are special. They are always leaf expressions.
 
 During "target" expressions will be traversed. During "bubble" either a
 constant value or function will be returned from the child. Should it be a
@@ -51,12 +51,12 @@ export const expressionDefinitions = {
 	...filterDefinitions,
 };
 
-type VarExpression = { $var: string };
+type VarExpression = { $prop: string };
 type LiteralExpression = { $literal: unknown };
 
 const expressionKeys = new Set([
 	...Object.keys(expressionDefinitions),
-	"$var",
+	"$prop",
 	"$literal",
 ]);
 
@@ -86,12 +86,12 @@ export function evaluate<T>(root: T, params: object = {}) {
 			| LiteralExpression;
 		const expressionName = Object.keys(expression)[0] as
 			| keyof typeof expressionDefinitions
-			| "$var"
+			| "$prop"
 			| "$literal";
 
 		// these expressions are always terminal
 		if (expressionName === "$literal") return expression[expressionName];
-		if (expressionName === "$var") return params[expression[expressionName]];
+		if (expressionName === "$prop") return params[expression[expressionName]];
 
 		// with evaluated children
 		const args = expression[expressionName];
