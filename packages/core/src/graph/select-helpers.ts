@@ -1,13 +1,11 @@
 import { mapValues } from "lodash-es";
-import {
-	Expression,
-	TERMINAL_EXPRESSIONS,
-	defaultExpressionEngine,
-} from "@data-prism/expressions";
+import { Expression, defaultExpressionEngine } from "@data-prism/expressions";
 
 export type Projection = {
 	[k: string]: any;
 };
+
+const TERMINAL_EXPRESSIONS = ["$get", "$prop", "$literal"];
 
 function distributeStrings(expression) {
 	const { isExpression } = defaultExpressionEngine;

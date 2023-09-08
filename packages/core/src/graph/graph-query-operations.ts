@@ -5,7 +5,8 @@ import { MultiResult, Result } from "../result.js";
 import { Schema } from "../schema.js";
 import { RootQuery } from "../query.js";
 import { GraphConfig, ID } from "../graph.js";
-import { createExpressionProjector } from "../projection.js";
+import { createExpressionProjector } from "./select-helpers.js";
+import { buildWhereExpression } from "./where-helpers.js";
 
 type GetOperation = (results: MultiResult) => MultiResult;
 
@@ -38,15 +39,11 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 	// these are in order of execution
 	const operationDefinitions: { [k: string]: GetOperation } = {
 		where(results: MultiResult): MultiResult {
-			const filterFns = Object.entries(query.where).map(([propPath, expr]) =>
-				defaultExpressionEngine.isExpression(expr)
-					? (result) => defaultExpressionEngine.apply(expr, get(result, propPath))
-					: (result) =>
-						defaultExpressionEngine.apply({ $eq: expr }, get(result, propPath)),
-			);
-			const filterFn = (result) => filterFns.every((fn) => fn(result));
+			const whereExpression = buildWhereExpression(query.where);
 
-			return results.filter(filterFn);
+			return results.filter((result) =>
+				defaultExpressionEngine.apply(whereExpression, result),
+			);
 		},
 		order(results: MultiResult): MultiResult {
 			const order = Array.isArray(query.order) ? query.order : [query.order];
@@ -57,7 +54,7 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 		},
 		limit(results: MultiResult): MultiResult {
 			const { limit = 0, offset = 0 } = query;
-			if (limit <= 0) throw new Error("`limit` must be at least 1");
+			if (limit < 1) throw new Error("`limit` must be at least 1");
 
 			return results.slice(offset, limit + offset);
 		},

@@ -1,14 +1,17 @@
-const $filter = (apply) => ({
-	apply: (subexpr, arg) => arg.filter((item) => apply(subexpr, item)),
-});
+const $filter = {
+	apply: (subexpr, arg, apply) => arg.filter((item) => apply(subexpr, item)),
+	controlsEvaluation: true,
+};
 
-const $flatMap = (apply) => ({
-	apply: (subexpr, arg) => arg.flatMap((item) => apply(subexpr, item)),
-});
+const $flatMap = {
+	apply: (subexpr, arg, apply) => arg.flatMap((item) => apply(subexpr, item)),
+	controlsEvaluation: true,
+};
 
-const $map = (apply) => ({
-	apply: (subexpr, arg) => arg.map((item) => apply(subexpr, item)),
-});
+const $map = {
+	apply: (subexpr, arg, apply) => arg.map((item) => apply(subexpr, item)),
+	controlsEvaluation: true,
+};
 
 export const iterativeDefinitions = {
 	$filter,

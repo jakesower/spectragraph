@@ -193,3 +193,50 @@ it("filters on to-one relationships using dot notation when not queried for in p
 
 	expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
 });
+
+it("filters using an $or operation", async () => {
+	const result = await graph.getTrees({
+		type: "bears",
+		properties: {
+			id: "id",
+		},
+		where: {
+			$or: [{ yearIntroduced: { $gt: 2000 } }, { bellyBadge: "rainbow" }],
+		},
+	});
+
+	expect(result).toEqual([{ id: "2" }, { id: "5" }]);
+});
+
+it("filters using an $or and $and operation", async () => {
+	const result = await graph.getTrees({
+		type: "bears",
+		properties: {
+			id: "id",
+		},
+		where: {
+			$or: [
+				{ yearIntroduced: { $gt: 2000 } },
+				{ $and: [{ name: "Tenderheart Bear" }, { bellyBadge: "rainbow" }] },
+			],
+		},
+	});
+
+	expect(result).toEqual([{ id: "5" }]);
+});
+
+it.only("filters using an $or and $not operation", async () => {
+	const result = await graph.getTrees({
+		type: "bears",
+		properties: {
+			id: "id",
+		},
+		where: {
+			$not: {
+				$or: [{ yearIntroduced: { $gt: 2000 } }, { bellyBadge: "rainbow" }],
+			},
+		},
+	});
+
+	expect(result).toEqual([{ id: "1" }, { id: "3" }]);
+});

@@ -1,30 +1,32 @@
-import { Operation } from "../expressions";
-
-const $and: Operation<any, any, boolean> = {
+const $and = {
 	name: "and",
-	apply: (params) => params.every(Boolean),
+	apply: (params, arg, apply) => params.every((subexpr) => apply(subexpr, arg)),
+	controlsEvaluation: true,
 	evaluate: (params) => params.every(Boolean),
-	inject: (subexprs, inject) => ({
-		$and: subexprs.map(inject),
-	}),
 	schema: {
 		type: "boolean",
 	},
 };
 
-const $or: Operation<any, any, boolean> = {
+const $or = {
 	name: "or",
-	apply: (params) => params.some(Boolean),
+	apply: (params, arg, apply) => params.some((subexpr) => apply(subexpr, arg)),
+	controlsEvaluation: true,
 	evaluate: (params) => params.some(Boolean),
-	inject: (subexprs, inject) => ({
-		$or: subexprs.map(inject),
-	}),
 	schema: {
 		type: "boolean",
 	},
+};
+
+const $not = {
+	name: "not",
+	apply: (subexpr, arg, apply) => !apply(subexpr, arg),
+	controlsEvaluation: true,
+	schema: { type: "boolean" },
 };
 
 export const logicalDefinitions = {
 	$and,
+	$not,
 	$or,
 } as const;
