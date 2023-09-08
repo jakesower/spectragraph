@@ -17,7 +17,7 @@ beforeEach<LocalTestContext>((context) => {
 it<LocalTestContext>("fetches a single resource", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: { name: "name" },
+		select: { name: "name" },
 		limit: 1,
 	});
 
@@ -27,7 +27,7 @@ it<LocalTestContext>("fetches a single resource", async (context) => {
 it<LocalTestContext>("limits after sorting", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: { name: "name" },
+		select: { name: "name" },
 		order: { name: "asc" },
 		limit: 2,
 	});
@@ -38,7 +38,7 @@ it<LocalTestContext>("limits after sorting", async (context) => {
 it<LocalTestContext>("limits after sorting with 1", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: { name: "name" },
+		select: { name: "name" },
 		order: { name: "asc" },
 		limit: 1,
 	});
@@ -49,7 +49,7 @@ it<LocalTestContext>("limits after sorting with 1", async (context) => {
 it<LocalTestContext>("limits with an offset", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: { name: "name" },
+		select: { name: "name" },
 		order: { name: "asc" },
 		limit: 2,
 		offset: 1,
@@ -61,7 +61,7 @@ it<LocalTestContext>("limits with an offset", async (context) => {
 it<LocalTestContext>("allows for offset only", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: { name: "name" },
+		select: { name: "name" },
 		order: { name: "asc" },
 		offset: 1,
 	});
@@ -76,7 +76,7 @@ it<LocalTestContext>("allows for offset only", async (context) => {
 it<LocalTestContext>("allows for limit + offset to exceed size of data", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: { name: "name" },
+		select: { name: "name" },
 		order: { name: "asc" },
 		limit: 6,
 		offset: 2,
@@ -88,7 +88,7 @@ it<LocalTestContext>("allows for limit + offset to exceed size of data", async (
 it<LocalTestContext>("returns nothing when the offset has surpassed the data size", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: { name: "name" },
+		select: { name: "name" },
 		order: { name: "asc" },
 		limit: 6,
 		offset: 20,
@@ -100,7 +100,7 @@ it<LocalTestContext>("returns nothing when the offset has surpassed the data siz
 it<LocalTestContext>("allows a zero offset", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: { name: "name" },
+		select: { name: "name" },
 		order: { name: "asc" },
 		offset: 0,
 	});

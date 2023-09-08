@@ -11,7 +11,7 @@ describe("tree queries", () => {
 			const result = await graph.getTree({
 				type: "bears",
 				id: "1",
-				properties: {
+				select: {
 					name: "name",
 				},
 			});
@@ -23,7 +23,7 @@ describe("tree queries", () => {
 			const result = await graph.getTree({
 				type: "bears",
 				id: "1",
-				properties: {
+				select: {
 					id: "id",
 					name: "name",
 				},
@@ -45,7 +45,7 @@ describe("tree queries", () => {
 			const result = await graph.getTree({
 				type: "bears",
 				id: "1",
-				properties: {
+				select: {
 					name: "name",
 				},
 			});
@@ -57,7 +57,7 @@ describe("tree queries", () => {
 			const result = await graph.getTree({
 				type: "bears",
 				id: "1",
-				properties: {
+				select: {
 					nombre: "name",
 				},
 			});
@@ -75,7 +75,7 @@ describe("tree queries", () => {
 		it("fetches a property from multiple resources", async () => {
 			const result = await graph.getTrees({
 				type: "bears",
-				properties: { name: "name" },
+				select: { name: "name" },
 			});
 			const expected = [
 				"Tenderheart Bear",
@@ -97,7 +97,7 @@ describe("tree queries", () => {
 			const q = {
 				type: "bears",
 				id: "1",
-				properties: {
+				select: {
 					home: {},
 				},
 			} as const;
@@ -113,7 +113,7 @@ describe("tree queries", () => {
 			const q = {
 				type: "homes",
 				id: "1",
-				properties: { residents: {} },
+				select: { residents: {} },
 			} as const;
 
 			const result = await graph.getTree(q);
@@ -131,7 +131,7 @@ describe("tree queries", () => {
 			const result = await graph.getTree({
 				type: "bears",
 				id: "1",
-				properties: { id: "id", name: "name", furColor: "furColor" },
+				select: { id: "id", name: "name", furColor: "furColor" },
 			});
 
 			expect(result).toEqual({ id: "1", name: "Tenderheart Bear", furColor: "tan" });
@@ -141,7 +141,7 @@ describe("tree queries", () => {
 			const q = {
 				type: "bears",
 				id: "1",
-				properties: { home: { properties: { caringMeter: "caringMeter" } } },
+				select: { home: { select: { caringMeter: "caringMeter" } } },
 			} as const;
 
 			const result = await graph.getTree(q);
@@ -153,7 +153,7 @@ describe("tree queries", () => {
 			const result = await graph.getTree({
 				type: "powers",
 				id: "careBearStare",
-				properties: {
+				select: {
 					powerId: "powerId",
 				},
 			});
@@ -176,7 +176,7 @@ describe("tree queries", () => {
 			const result = await graph.getTree({
 				type: "bears",
 				id: "1",
-				properties: { powers: {} },
+				select: { powers: {} },
 			});
 
 			expect(result).toEqual({ powers: [{ type: "powers", id: "careBearStare" }] });
@@ -186,9 +186,9 @@ describe("tree queries", () => {
 			const result = await graph.getTree({
 				type: "bears",
 				id: "1",
-				properties: {
+				select: {
 					home: {
-						properties: {
+						select: {
 							residents: {},
 						},
 					},
@@ -211,7 +211,7 @@ describe("tree queries", () => {
 		it("handles subqueries between the same type", async () => {
 			const result = await graph.getTrees({
 				type: "bears",
-				properties: {
+				select: {
 					id: "id",
 					bestFriend: "bestFriend",
 				},
@@ -233,14 +233,14 @@ describe("tree queries", () => {
 
 		it("fails validation for invalid top level props", async () => {
 			await expect(async () => {
-				await graph.getTree({ type: "bears", id: "1", properties: { koopa: {} } });
+				await graph.getTree({ type: "bears", id: "1", select: { koopa: {} } });
 			}).rejects.toThrowError();
 		});
 
 		it("fetches nested fields with dot notation", async () => {
 			const result = await graph.getTrees({
 				type: "bears",
-				properties: {
+				select: {
 					name: "name",
 					residence: "home.name",
 				},
@@ -257,7 +257,7 @@ describe("tree queries", () => {
 		it("fetches doubly nested fields with dot notation", async () => {
 			const result = await graph.getTrees({
 				type: "bears",
-				properties: {
+				select: {
 					name: "name",
 					friendsResidence: "bestFriend.home.name",
 				},
@@ -274,7 +274,7 @@ describe("tree queries", () => {
 		it("fetches mapped array data with dot notation", async () => {
 			const result = await graph.getTrees({
 				type: "homes",
-				properties: {
+				select: {
 					name: "name",
 					residentNames: "residents.name",
 				},
@@ -295,7 +295,7 @@ describe("tree queries", () => {
 		it("projects a field to a literal expression", async () => {
 			const result = await graph.getTrees({
 				type: "bears",
-				properties: {
+				select: {
 					beep: { $literal: "boop" },
 				},
 			});
@@ -311,7 +311,7 @@ describe("tree queries", () => {
 		it("projects a field to an expression", async () => {
 			const result = await graph.getTrees({
 				type: "homes",
-				properties: {
+				select: {
 					name: "name",
 					numberOfResidents: { $count: "residents" },
 				},
@@ -327,7 +327,7 @@ describe("tree queries", () => {
 		it("applies expressions over a nested resource", async () => {
 			const result = await graph.getTrees({
 				type: "bears",
-				properties: {
+				select: {
 					name: "name",
 					powerCount: { $count: { $get: "powers" } },
 				},
@@ -344,7 +344,7 @@ describe("tree queries", () => {
 		it("evaluates the minimum across one-to-many nested resources", async () => {
 			const result = await graph.getTrees({
 				type: "homes",
-				properties: {
+				select: {
 					name: "name",
 					minYear: { $min: "residents.$.yearIntroduced" },
 				},
@@ -360,7 +360,7 @@ describe("tree queries", () => {
 		it("evaluates the minimum across many-to-many nested resources", async () => {
 			const result = await graph.getTrees({
 				type: "powers",
-				properties: {
+				select: {
 					name: "name",
 					minYear: { $min: "wielders.$.yearIntroduced" },
 				},
@@ -375,7 +375,7 @@ describe("tree queries", () => {
 		it("evaluates deeply nested values", async () => {
 			const result = await graph.getTrees({
 				type: "powers",
-				properties: {
+				select: {
 					name: "name",
 					caring: { $sum: "wielders.$.home.caringMeter" },
 				},

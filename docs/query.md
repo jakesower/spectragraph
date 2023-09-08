@@ -8,17 +8,17 @@ Queries are responsible for describing a request to fetch data. It describes the
 {
   "type": "bears",
   "id": "1",
-  "properties": {
+  "select": {
     "name": "name",
   },
 }
 ```
 
-This query means "get me the name of the bear with id '1'". `type` is required at the top level to tell the store where to start. `id` is optional and allows for the selection of a single resource. `properties` is also required and determines the properties that are desired. They are keyed by the keys of the desired result and are set to the names of the properties to be returned.
+This query means "get me the name of the bear with id '1'". `type` is required at the top level to tell the store where to start. `id` is optional and allows for the selection of a single resource. `select` is also required and determines the properties that are desired. They are keyed by the keys of the desired result and are set to the names of the properties to be returned.
 
 ### Results
 
-Results are returned to match the properties of the query.
+Results are returned to match the select clause of the query.
 
 ```json
 { "name": "Tenderheart" }
@@ -29,7 +29,7 @@ Results are returned to match the properties of the query.
 ```json
 {
   "type": "bears",
-  "properties": {
+  "select": {
     "id": "id",
     "bestFriend": "bestFriend",
   },
@@ -64,10 +64,10 @@ Query:
 ```json
 {
   "type": "bears",
-  "properties": {
+  "select": {
     "id": "id",
     "bestFriend": {
-      "properties": {
+      "select": {
         "name": "name"
       }
     }
@@ -106,7 +106,7 @@ A subquery to `bestFriend` was used in this example. A `type` isn't required bec
 {
   type: <resource type>,
   id?: unique string/integer,
-  properties?: property names/paths/subqueries/expressions,
+  select?: property names/paths/subqueries/expressions,
   where?: constraint clauses,
   order?: sorting clauses,
   limit?: integer of results to return,
@@ -124,13 +124,13 @@ This must be a valid resource type according to the schema. Results will be of t
 
 A single id of a resource. This will cause the query to return a single resource rather than an array of resources.
 
-### properties
+### select
 
 These are the meat of the query in that the specify the things to return. This property is optional. If omitted the query will return a ref, such as `{ "type": "bears", "id": "abc123" }`. Otherwise, a property can be made of a resource property, a resource property path, a subquery, or an expression.
 
 ```json
 {
-  "properties": {
+  "select": {
     "name": "name",
     "year": "yearIntroduced",
     "homeName": "home.name",
@@ -179,7 +179,7 @@ Example Query:
 ```json
 {
   "type": "homes",
-  "properties": {
+  "select": {
     "name": "name",
     "residentCount": { "$count": "residents" },
     "oldestIntroductionYear": { "$min": "residents.$.yearIntroduced" }

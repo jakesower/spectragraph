@@ -17,7 +17,7 @@ beforeEach<LocalTestContext>((context) => {
 it<LocalTestContext>("sorts on a numeric field", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: { name: "name", yearIntroduced: "yearIntroduced" },
+		select: { name: "name", yearIntroduced: "yearIntroduced" },
 		order: { yearIntroduced: "desc" },
 	});
 
@@ -32,7 +32,7 @@ it<LocalTestContext>("sorts on a numeric field", async (context) => {
 it<LocalTestContext>("sorts on a string field", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: { name: "name", yearIntroduced: "yearIntroduced" },
+		select: { name: "name", yearIntroduced: "yearIntroduced" },
 		order: { name: "asc" },
 	});
 
@@ -47,7 +47,7 @@ it<LocalTestContext>("sorts on a string field", async (context) => {
 it<LocalTestContext>("sorts on a numerical and a string field", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: { name: "name", yearIntroduced: "yearIntroduced" },
+		select: { name: "name", yearIntroduced: "yearIntroduced" },
 		order: [{ yearIntroduced: "desc" }, { name: "asc" }],
 	});
 

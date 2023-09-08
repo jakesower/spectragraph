@@ -19,7 +19,7 @@ it<LocalTestContext>("fetches a single resource", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
 		id: "1",
-		properties: {
+		select: {
 			name: "name",
 		},
 	});
@@ -31,7 +31,7 @@ it<LocalTestContext>("fetches a single resource with its id", async (context) =>
 	const result = await context.store.get({
 		type: "bears",
 		id: "1",
-		properties: {
+		select: {
 			id: "id",
 			name: "name",
 		},
@@ -53,7 +53,7 @@ it<LocalTestContext>("fetches a single resource without its id", async (context)
 	const result = await context.store.get({
 		type: "bears",
 		id: "1",
-		properties: {
+		select: {
 			name: "name",
 		},
 	});
@@ -65,7 +65,7 @@ it<LocalTestContext>("fetches a single resource and maps property names", async 
 	const result = await context.store.get({
 		type: "bears",
 		id: "1",
-		properties: {
+		select: {
 			nombre: "name",
 		},
 	});
@@ -81,7 +81,7 @@ it<LocalTestContext>("fetches multiple resources", async (context) => {
 });
 
 it<LocalTestContext>("fetches a property from multiple resources", async (context) => {
-	const result = await context.store.get({ type: "bears", properties: { name: "name" } });
+	const result = await context.store.get({ type: "bears", select: { name: "name" } });
 	const expected = [
 		"Tenderheart Bear",
 		"Cheer Bear",
@@ -102,7 +102,7 @@ it<LocalTestContext>("fetches a single resource with a many-to-one relationship"
 	const q = {
 		type: "bears",
 		id: "1",
-		properties: {
+		select: {
 			home: {},
 		},
 	} as const;
@@ -118,7 +118,7 @@ it<LocalTestContext>("a single resource with a one-to-many relationship", async 
 	const q = {
 		type: "homes",
 		id: "1",
-		properties: { residents: {} },
+		select: { residents: {} },
 	} as const;
 
 	const result = await context.store.get(q);
@@ -136,7 +136,7 @@ it<LocalTestContext>("fetches a single resource with a subset of props", async (
 	const result = await context.store.get({
 		type: "bears",
 		id: "1",
-		properties: { id: "id", name: "name", furColor: "furColor" },
+		select: { id: "id", name: "name", furColor: "furColor" },
 	});
 
 	expect(result).toEqual({ id: "1", name: "Tenderheart Bear", furColor: "tan" });
@@ -146,7 +146,7 @@ it<LocalTestContext>("fetches a single resource with a subset of props on a rela
 	const q = {
 		type: "bears",
 		id: "1",
-		properties: { home: { properties: { caringMeter: "caringMeter" } } },
+		select: { home: { select: { caringMeter: "caringMeter" } } },
 	} as const;
 
 	const result = await context.store.get(q);
@@ -158,7 +158,7 @@ it<LocalTestContext>("uses explicitly set id fields", async (context) => {
 	const result = await context.store.get({
 		type: "powers",
 		id: "careBearStare",
-		properties: {
+		select: {
 			powerId: "powerId",
 		},
 	});
@@ -181,7 +181,7 @@ it<LocalTestContext>("fetches a single resource with many-to-many relationship",
 	const result = await context.store.get({
 		type: "bears",
 		id: "1",
-		properties: { powers: {} },
+		select: { powers: {} },
 	});
 
 	expect(result).toEqual({ powers: [{ type: "powers", id: "careBearStare" }] });
@@ -191,9 +191,9 @@ it<LocalTestContext>("fetches multiple subqueries of various types", async (cont
 	const result = await context.store.get({
 		type: "bears",
 		id: "1",
-		properties: {
+		select: {
 			home: {
-				properties: {
+				select: {
 					residents: {},
 				},
 			},
@@ -216,7 +216,7 @@ it<LocalTestContext>("fetches multiple subqueries of various types", async (cont
 it<LocalTestContext>("handles subqueries between the same type", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: {
+		select: {
 			id: "id",
 			bestFriend: "bestFriend",
 		},
@@ -238,14 +238,14 @@ it<LocalTestContext>("fails validation for invalid types", async (context) => {
 
 it<LocalTestContext>("fails validation for invalid top level props", async (context) => {
 	await expect(async () => {
-		await context.store.get({ type: "bears", id: "1", properties: { koopa: {} } });
+		await context.store.get({ type: "bears", id: "1", select: { koopa: {} } });
 	}).rejects.toThrowError();
 });
 
 it<LocalTestContext>("fetches nested fields with dot notation", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: {
+		select: {
 			name: "name",
 			residence: "home.name",
 		},
@@ -262,7 +262,7 @@ it<LocalTestContext>("fetches nested fields with dot notation", async (context) 
 it<LocalTestContext>("fetches doubly nested fields with dot notation", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: {
+		select: {
 			name: "name",
 			friendsResidence: "bestFriend.home.name",
 		},
@@ -279,7 +279,7 @@ it<LocalTestContext>("fetches doubly nested fields with dot notation", async (co
 it<LocalTestContext>("fetches mapped array data with dot notation", async (context) => {
 	const result = await context.store.get({
 		type: "homes",
-		properties: {
+		select: {
 			name: "name",
 			residentNames: "residents.name",
 		},

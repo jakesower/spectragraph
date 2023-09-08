@@ -40,14 +40,14 @@ export function createGraph<S extends Schema>(
 			res[TYPE] = resType;
 			res[ID] = resId;
 
-			const resDef = schema.resources[resType];			
-			Object.entries((resDef.relationships)).forEach(([relName, relDef]) => {
+			const resDef = schema.resources[resType];
+			Object.entries(resDef.relationships).forEach(([relName, relDef]) => {
 				relDef.cardinality === "many"
-					? res[relName] = res[relName].map((relId) => data[relDef.resource][relId])
-					: res[relName] = data[relDef.resource][res[relName]] ?? null;
-			})
-		})
-	})
+					? (res[relName] = res[relName].map((relId) => data[relDef.resource][relId]))
+					: (res[relName] = data[relDef.resource][res[relName]] ?? null);
+			});
+		});
+	});
 
 	return {
 		data,

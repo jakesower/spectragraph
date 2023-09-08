@@ -10,6 +10,9 @@ export type Query<S extends Schema> = {
 	properties?: {
 		[k: string]: string | object;
 	};
+	select?: {
+		[k: string]: string | object;
+	};
 	type?: keyof S["resources"] & string;
 	where?: { [k: string]: any };
 };
@@ -19,6 +22,11 @@ export type QueryOfType<
 	ResType extends keyof S["resources"],
 > = Query<S> & {
 	properties?:
+		| {
+				[K in keyof S["resources"][ResType]["properties"]]?: any;
+		  }
+		| { [k: string]: any };
+	select?:
 		| {
 				[K in keyof S["resources"][ResType]["properties"]]?: any;
 		  }
