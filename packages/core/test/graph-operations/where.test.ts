@@ -8,7 +8,7 @@ const graph = createGraph(careBearSchema, careBearData);
 it("filters on a property equality constraint", async () => {
 	const result = await graph.getTrees({
 		type: "bears",
-		properties: { id: "id", name: "name" },
+		select: { id: "id", name: "name" },
 		where: { name: "Cheer Bear" },
 	});
 
@@ -18,7 +18,7 @@ it("filters on a property equality constraint", async () => {
 it("filters on a property that is not returned from properties", async () => {
 	const result = await graph.getTrees({
 		type: "bears",
-		properties: { id: "id" },
+		select: { id: "id" },
 		where: { name: { $eq: "Cheer Bear" } },
 	});
 
@@ -141,7 +141,7 @@ it("filters related resources", async () => {
 	const result = await graph.getTree({
 		type: "powers",
 		id: "careBearStare",
-		properties: {
+		select: {
 			powerId: "powerId",
 			wielders: {
 				where: {
@@ -160,10 +160,10 @@ it("filters related resources", async () => {
 it("filters on to-one relationships using dot notation", async () => {
 	const result = await graph.getTrees({
 		type: "bears",
-		properties: {
+		select: {
 			id: "id",
 			home: {
-				properties: {
+				select: {
 					name: "name",
 				},
 			},
@@ -183,7 +183,7 @@ it("filters on to-one relationships using dot notation", async () => {
 it("filters on to-one relationships using dot notation when not queried for in properties", async () => {
 	const result = await graph.getTrees({
 		type: "bears",
-		properties: {
+		select: {
 			id: "id",
 		},
 		where: {
@@ -197,7 +197,7 @@ it("filters on to-one relationships using dot notation when not queried for in p
 it("filters using an $or operation", async () => {
 	const result = await graph.getTrees({
 		type: "bears",
-		properties: {
+		select: {
 			id: "id",
 		},
 		where: {
@@ -211,7 +211,7 @@ it("filters using an $or operation", async () => {
 it("filters using an $or and $and operation", async () => {
 	const result = await graph.getTrees({
 		type: "bears",
-		properties: {
+		select: {
 			id: "id",
 		},
 		where: {
@@ -225,10 +225,10 @@ it("filters using an $or and $and operation", async () => {
 	expect(result).toEqual([{ id: "5" }]);
 });
 
-it.only("filters using an $or and $not operation", async () => {
+it("filters using an $or and $not operation", async () => {
 	const result = await graph.getTrees({
 		type: "bears",
-		properties: {
+		select: {
 			id: "id",
 		},
 		where: {

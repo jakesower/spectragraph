@@ -1,4 +1,4 @@
-import { get, mapValues, omit, orderBy } from "lodash-es";
+import { mapValues, omit, orderBy } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
 import { defaultExpressionEngine } from "@data-prism/expressions";
 import { MultiResult, Result } from "../result.js";
@@ -62,17 +62,16 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 			if ((query.offset ?? 0) < 0) throw new Error("`offset` must be at least 0");
 			return query.limit ? results : results.slice(query.offset);
 		},
-		properties(results) {
-			if (!query.properties) {
+		select(results) {
+			const select = query.select ?? query.properties;
+			if (!select) {
 				return results.map((result) => ({
 					type: query.type,
 					id: result[resDef.idField ?? "id"],
 				}));
 			}
 
-			const { properties } = query;
-
-			const projectors = mapValues(properties, (propQuery, propName) => {
+			const projectors = mapValues(select, (propQuery, propName) => {
 				// possibilities: (1) property (2) nested property (3) subquery (4) ref (5) expression
 				if (typeof propQuery === "string") {
 					// relationship name -- return ref
@@ -115,6 +114,10 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 
 			return results.map((result) => mapValues(projectors, (project) => project(result)));
 		},
+		properties(results) {
+			console.warn("properties is a deprecated query key; use select instead");
+			return results;
+		},
 	};
 
 	const usedOperationDefinitions = omit(operationDefinitions, config.omittedOperations);
@@ -124,7 +127,8 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 		: Object.values(data[query.type]);
 
 	const processed = Object.entries(usedOperationDefinitions).reduce(
-		(acc, [opName, fn]) => (opName in query || opName === "properties" ? fn(acc) : acc),
+		(acc, [opName, fn]) =>
+			opName in query || opName === "select" ? fn(acc) : acc,
 		results,
 	);
 

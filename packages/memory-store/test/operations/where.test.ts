@@ -17,7 +17,7 @@ beforeEach<LocalTestContext>((context) => {
 it<LocalTestContext>("filters on a property equality constraint", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: { id: "id", name: "name" },
+		select: { id: "id", name: "name" },
 		where: { name: "Cheer Bear" },
 	});
 
@@ -27,7 +27,7 @@ it<LocalTestContext>("filters on a property equality constraint", async (context
 it<LocalTestContext>("filters on a property that is not returned from properties", async (context) => {
 	const result = await context.store.get({
 		type: "bears",
-		properties: { id: "id" },
+		select: { id: "id" },
 		where: { name: "Cheer Bear" },
 	});
 
@@ -150,7 +150,7 @@ it<LocalTestContext>("filters related resources", async (context) => {
 	const result = await context.store.get({
 		type: "powers",
 		id: "careBearStare",
-		properties: {
+		select: {
 			powerId: "powerId",
 			wielders: {
 				where: {
