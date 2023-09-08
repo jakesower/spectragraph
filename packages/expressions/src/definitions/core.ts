@@ -21,21 +21,25 @@ const $echo = {
 const $get = {
 	name: "get",
 	apply: (params, arg) => get(arg, params),
+	controlsEvaluation: true,
 };
 
 const $literal = {
 	name: "literal",
 	apply: (params) => params,
+	controlsEvaluation: true,
 };
 
-const $pipe = (apply) => ({
+const $pipe = {
 	name: "pipe",
-	apply: (params, arg) => params.reduce((acc, expr) => apply(expr, acc), arg),
-});
+	apply: (params, arg, apply) => params.reduce((acc, expr) => apply(expr, acc), arg),
+	controlsEvaluation: true,
+};
 
 const $prop = {
 	name: "prop",
 	apply: (params, arg) => arg[params],
+	controlsEvaluation: true,
 };
 
 export const coreDefinitions = {
