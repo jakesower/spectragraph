@@ -132,8 +132,10 @@ export function flattenQuery<S extends Schema>(
 		parentRelationship = null,
 	): QueryBreakdown<S>[] => {
 		const resDef = schema.resources[type];
+		const select = query.select ?? query.properties;
+
 		const [propertiesEntries, relationshipsEntries] = partition(
-			Object.entries(query.properties ?? {}),
+			Object.entries(select ?? {}),
 			([, propVal]) =>
 				typeof propVal === "string" && (propVal in resDef.properties || propVal === "id"),
 		);
@@ -142,13 +144,13 @@ export function flattenQuery<S extends Schema>(
 		const relationshipKeys = relationshipsEntries.map((pe) => pe[0]);
 
 		const level: QueryBreakdown<S> = {
-			isRefQuery: !query.properties,
+			isRefQuery: !select,
 			parent,
 			parentRelationship,
 			path,
 			properties,
 			query,
-			relationships: pick(query.properties, relationshipKeys),
+			relationships: pick(select, relationshipKeys),
 			type,
 		};
 
@@ -156,7 +158,7 @@ export function flattenQuery<S extends Schema>(
 			level,
 			...relationshipKeys.flatMap((relKey) => {
 				const relDef = resDef.relationships[relKey];
-				const subquery = query.properties[relKey] as Query<S>;
+				const subquery = select[relKey] as Query<S>;
 
 				return go(subquery, relDef.resource, [...path, relKey], level, relKey);
 			}),
