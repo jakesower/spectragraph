@@ -1,4 +1,4 @@
-import { difference, partition, pick } from "lodash-es";
+import { difference, mapValues, partition, pick } from "lodash-es";
 import { defaultExpressionEngine } from "@data-prism/expressions";
 import { Schema } from "./schema.js";
 
@@ -67,6 +67,7 @@ export function ensureValidQuery<S extends Schema>(
 
 	const go = (resType: string, query: Query<S>) => {
 		const resDef = schema.resources[resType];
+		const select = query.select ?? query.properties;
 
 		if (!resDef) {
 			throw new Error(
@@ -74,9 +75,9 @@ export function ensureValidQuery<S extends Schema>(
 			);
 		}
 
-		if (!query.properties) return;
+		if (!select) return;
 
-		const shallowPropValues = Object.values(query.properties).filter(
+		const shallowPropValues = Object.values(select).filter(
 			(p) => typeof p === "string" && !p.includes("."),
 		);
 		const invalidShallowProps = difference(shallowPropValues, [
@@ -92,10 +93,10 @@ export function ensureValidQuery<S extends Schema>(
 			);
 		}
 
-		const relationshipPropKeys = Object.keys(query.properties).filter(
+		const relationshipPropKeys = Object.keys(select).filter(
 			(k) =>
-				typeof query.properties[k] === "object" &&
-				!expressionEngine.isExpression(query.properties[k]),
+				typeof select[k] === "object" &&
+				!expressionEngine.isExpression(select[k]),
 		);
 		const invalidRelationshipProps = difference(
 			relationshipPropKeys,
@@ -110,7 +111,7 @@ export function ensureValidQuery<S extends Schema>(
 		}
 
 		// ensure valid subqueries
-		Object.entries(query.properties).forEach(([propName, propArgs]) => {
+		Object.entries(select).forEach(([propName, propArgs]) => {
 			if (propName in resDef.relationships) {
 				go(resDef.relationships[propName].resource, propArgs as object);
 			}
@@ -166,4 +167,40 @@ export function flattenQuery<S extends Schema>(
 	};
 
 	return go(rootQuery, rootQuery.type, []);
+}
+
+export function createScopedSchema(schema, query) {
+	const types = [];
+	const propertiesByType = {};
+	const relationshipsByType = {};
+
+	const flattenedQuery = flattenQuery(schema, query);
+	flattenedQuery.forEach((subquery) => {
+		types.push(subquery.type);
+
+		propertiesByType[subquery.type] = propertiesByType[subquery.type] ?? [];
+
+		// properties with paths need special treatment -- TODO
+		propertiesByType[subquery.type] = [
+			...propertiesByType[subquery.type],
+			...subquery.properties,
+		];
+
+		relationshipsByType[subquery.type] = relationshipsByType[subquery.type] ?? [];
+		relationshipsByType[subquery.type] = [
+			...relationshipsByType[subquery.type],
+			...Object.keys(subquery.relationships),
+		];
+	});
+
+	const scopedResources = mapValues(pick(schema.resources, types), (resDef, resType) => ({
+		...resDef,
+		properties: pick(resDef.properties, propertiesByType[resType]),
+		relationships: pick(resDef.relationships, relationshipsByType[resType]),
+	}));
+
+	return {
+		...schema,
+		resources: scopedResources,
+	};
 }
