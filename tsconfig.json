@@ -7,7 +7,7 @@
 		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true,
 		"lib": [
-			"ESNext"
+			"ES2022"
 		],
 		"isolatedModules": true,
 		"resolveJsonModule": true,
@@ -28,6 +28,9 @@
 			"@data-prism/core": [
 				"./packages/core"
 			],
+			"@data-prism/utils": [
+				"./packages/core"
+			],
 		}
 	},
 	"references": [
@@ -36,6 +39,9 @@
 		},
 		{
 			"path": "./packages/core"
+		},
+		{
+			"path": "./packages/utils"
 		}
 	]
 }

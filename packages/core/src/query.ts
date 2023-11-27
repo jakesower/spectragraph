@@ -7,31 +7,13 @@ export type Query<S extends Schema> = {
 	limit?: number;
 	offset?: number;
 	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
-	properties?: {
-		[k: string]: string | object;
-	};
-	select?: {
-		[k: string]: string | object;
-	};
+	select?:
+		| (string | { [k: string]: string | object })[]
+		| {
+				[k: string]: string | object;
+		  };
 	type?: keyof S["resources"] & string;
 	where?: { [k: string]: any };
-};
-
-export type QueryOfType<
-	S extends Schema,
-	ResType extends keyof S["resources"],
-> = Query<S> & {
-	properties?:
-		| {
-				[K in keyof S["resources"][ResType]["properties"]]?: any;
-		  }
-		| { [k: string]: any };
-	select?:
-		| {
-				[K in keyof S["resources"][ResType]["properties"]]?: any;
-		  }
-		| { [k: string]: any };
-	type: ResType;
 };
 
 export type BaseRootQuery<S extends Schema> = Query<S> & {
@@ -43,6 +25,22 @@ export type SingleRootQuery<S extends Schema> = BaseRootQuery<S> & {
 	id: string | number;
 };
 export type RootQuery<S extends Schema> = MultiRootQuery<S> | SingleRootQuery<S>;
+
+export type CompiledQuery<S extends Schema> = {
+	id?: string;
+	limit?: number;
+	offset?: number;
+	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
+	select?: {
+		[k: string]: string | object;
+	};
+	type?: keyof S["resources"] & string;
+	where?: { [k: string]: any };
+};
+
+export type CompiledRootQuery<S extends Schema> = CompiledQuery<S> & {
+	type: keyof S["resources"] & string;
+};
 
 type QueryBreakdown<S extends Schema> = {
 	isRefQuery: boolean;
@@ -67,7 +65,7 @@ export function ensureValidQuery<S extends Schema>(
 
 	const go = (resType: string, query: Query<S>) => {
 		const resDef = schema.resources[resType];
-		const select = query.select ?? query.properties;
+		const { select } = query;
 
 		if (!resDef) {
 			throw new Error(
@@ -94,9 +92,7 @@ export function ensureValidQuery<S extends Schema>(
 		}
 
 		const relationshipPropKeys = Object.keys(select).filter(
-			(k) =>
-				typeof select[k] === "object" &&
-				!expressionEngine.isExpression(select[k]),
+			(k) => typeof select[k] === "object" && !expressionEngine.isExpression(select[k]),
 		);
 		const invalidRelationshipProps = difference(
 			relationshipPropKeys,
@@ -121,6 +117,28 @@ export function ensureValidQuery<S extends Schema>(
 	go(rootQuery.type, rootQuery);
 }
 
+export function compileQuery<S extends Schema>(
+	rootQuery: RootQuery<S>,
+	config: { schema: S; expressionEngine?: any },
+): CompiledRootQuery<S> {
+	ensureValidQuery(rootQuery, config);
+
+	const stringToProp = (str) => ({ [str]: str });
+	const go = (query) => {
+		const { select } = query;
+		const selectObj = Array.isArray(select)
+			? select.reduce((selectObj, item) => {
+				const subObj = typeof item === "string" ? stringToProp(item) : item;
+				return { ...selectObj, ...subObj };
+			  }, {})
+			: select;
+
+		return { ...query, select: selectObj };
+	};
+
+	return go(rootQuery);
+}
+
 export function flattenQuery<S extends Schema>(
 	schema: S,
 	rootQuery: RootQuery<S>,
@@ -133,7 +151,7 @@ export function flattenQuery<S extends Schema>(
 		parentRelationship = null,
 	): QueryBreakdown<S>[] => {
 		const resDef = schema.resources[type];
-		const select = query.select ?? query.properties;
+		const { select } = query;
 
 		const [propertiesEntries, relationshipsEntries] = partition(
 			Object.entries(select ?? {}),

@@ -7,7 +7,17 @@ const graph = createGraph(careBearSchema, careBearData);
 
 describe("tree queries", () => {
 	describe("without expressions", () => {
-		it("fetches a single resource", async () => {
+		it("fetches a single resource with array notation", async () => {
+			const result = await graph.getTree({
+				type: "bears",
+				id: "1",
+				select: ["name"],
+			});
+
+			expect(result).toEqual({ name: "Tenderheart Bear" });
+		});
+
+		it("fetches a single resource with object notation", async () => {
 			const result = await graph.getTree({
 				type: "bears",
 				id: "1",
@@ -17,6 +27,16 @@ describe("tree queries", () => {
 			});
 
 			expect(result).toEqual({ name: "Tenderheart Bear" });
+		});
+
+		it("fetches a single resource with mixed notation", async () => {
+			const result = await graph.getTree({
+				type: "bears",
+				id: "1",
+				select: ["name", { yearIntroduced: "yearIntroduced" }],
+			});
+
+			expect(result).toEqual({ name: "Tenderheart Bear", yearIntroduced: 1982 });
 		});
 
 		it("fetches a single resource with its id", async () => {

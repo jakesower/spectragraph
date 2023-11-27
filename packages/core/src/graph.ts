@@ -1,6 +1,11 @@
 import { mapValues } from "lodash-es";
 import { Schema, compileSchema } from "./schema.js";
-import { MultiRootQuery, SingleRootQuery, ensureValidQuery } from "./query.js";
+import {
+	MultiRootQuery,
+	SingleRootQuery,
+	compileQuery,
+	ensureValidQuery,
+} from "./query.js";
 import { Result } from "./result.js";
 import { runTreeQuery } from "./graph/graph-query-operations.js";
 import { ExpressionEngine, defaultExpressionEngine } from "@data-prism/expressions";
@@ -55,13 +60,21 @@ export function createGraph<S extends Schema>(
 		data,
 		getTree<Q extends SingleRootQuery<S>>(query: Q, args = {}) {
 			const fullQuery = { ...query, ...args };
-			ensureValidQuery(fullQuery, { schema: compiledSchema, expressionEngine });
-			return runTreeQuery(fullQuery, { config: fullConfig, schema, data });
+			const compiled = compileQuery(fullQuery, {
+				schema: compiledSchema,
+				expressionEngine,
+			});
+
+			return runTreeQuery(compiled, { config: fullConfig, schema, data });
 		},
 		getTrees<Q extends MultiRootQuery<S>>(query: Q, args = {}) {
 			const fullQuery = { ...query, ...args };
-			ensureValidQuery(fullQuery, { schema: compiledSchema, expressionEngine });
-			return runTreeQuery(fullQuery, { config: fullConfig, schema, data });
+			const compiled = compileQuery(fullQuery, {
+				schema: compiledSchema,
+				expressionEngine,
+			});
+
+			return runTreeQuery(compiled, { config: fullConfig, schema, data });
 		},
 		setResource(type, id, value) {
 			// TODO: handle inverses?
