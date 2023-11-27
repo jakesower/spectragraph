@@ -2,14 +2,14 @@ import { mapValues, omit, orderBy } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
 import { MultiResult, Result } from "../result.js";
 import { Schema } from "../schema.js";
-import { RootQuery } from "../query.js";
+import { CompiledRootQuery } from "../query.js";
 import { GraphConfig, ID } from "../graph.js";
 import { createExpressionProjector } from "./select-helpers.js";
 import { buildWhereExpression } from "./where-helpers.js";
 
 type GetOperation = (results: MultiResult) => MultiResult;
 
-export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
+export function runTreeQuery<S extends Schema, Q extends CompiledRootQuery<S>>(
 	query: Q,
 	context: {
 		schema: S;
@@ -61,7 +61,7 @@ export function runTreeQuery<S extends Schema, Q extends RootQuery<S>>(
 			return query.limit ? results : results.slice(query.offset);
 		},
 		select(results) {
-			const select = query.select ?? query.properties;
+			const { select } = query;
 			if (!select) {
 				return results.map((result) => ({
 					type: query.type,
