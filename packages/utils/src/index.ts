@@ -1,5 +1,3 @@
-// export { tabularize } from "./tree.js";
-
 export function applyOrMap(itemItemsOrNull, fn) {
 	if (itemItemsOrNull == null) return itemItemsOrNull;
 
