@@ -148,11 +148,11 @@
     "resourceRelationship": {
       "type": "object",
       "required": [
-        "resource",
+        "type",
         "cardinality"
       ],
       "properties": {
-        "resource": {
+        "type": {
           "type": "string"
         },
         "cardinality": {
