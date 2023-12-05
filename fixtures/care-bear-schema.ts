@@ -4,7 +4,7 @@ export const careBearSchema = {
 	resources: {
 		bears: {
 			idField: "id",
-			properties: {
+			attributes: {
 				name: { type: "string" },
 				yearIntroduced: { type: "number" },
 				bellyBadge: { type: "string" },
@@ -30,7 +30,7 @@ export const careBearSchema = {
 		},
 		homes: {
 			idField: "id",
-			properties: {
+			attributes: {
 				name: { type: "string" },
 				location: { type: "string" },
 				caringMeter: { type: "number" },
@@ -46,7 +46,7 @@ export const careBearSchema = {
 		},
 		powers: {
 			idField: "powerId",
-			properties: {
+			attributes: {
 				name: { type: "string" },
 				description: { type: "string" },
 				type: { type: "string" },

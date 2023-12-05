@@ -80,7 +80,7 @@ export function ensureValidQuery<S extends Schema>(
 		);
 		const invalidShallowProps = difference(shallowPropValues, [
 			resDef.idField,
-			...Object.keys({ ...resDef.properties, ...resDef.relationships }),
+			...Object.keys({ ...resDef.attributes, ...resDef.relationships }),
 		]);
 
 		if (invalidShallowProps.length > 0) {
@@ -163,7 +163,7 @@ export function flattenQuery<S extends Schema>(
 		const [propertiesEntries, relationshipsEntries] = partition(
 			Object.entries(select ?? {}),
 			([, propVal]) =>
-				typeof propVal === "string" && (propVal in resDef.properties || propVal === "id"),
+				typeof propVal === "string" && (propVal in resDef.attributes || propVal === "id"),
 		);
 
 		const properties = propertiesEntries.map((pe) => pe[1]);
