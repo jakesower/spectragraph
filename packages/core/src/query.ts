@@ -8,9 +8,9 @@ export type Query<S extends Schema> = {
 	offset?: number;
 	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
 	select?:
-		| (string | { [k: string]: string | object })[]
+		| readonly (string | { [k: string]: string | object })[]
 		| {
-				[k: string]: string | object;
+				[k: string]: readonly string | object;
 		  };
 	type?: keyof S["resources"] & string;
 	where?: { [k: string]: any };
@@ -121,8 +121,7 @@ export function compileQuery<S extends Schema>(
 	rootQuery: RootQuery<S>,
 	config: { schema: S; expressionEngine?: any },
 ): CompiledRootQuery<S> {
-	ensureValidQuery(rootQuery, config);
-
+	const defaultedExpressionEngine = config.expressionEngine ?? defaultExpressionEngine;
 	const stringToProp = (str) => ({ [str]: str });
 	const go = (query) => {
 		const { select } = query;
@@ -133,10 +132,18 @@ export function compileQuery<S extends Schema>(
 			  }, {})
 			: select;
 
-		return { ...query, select: selectObj };
+		const subqueries = mapValues(selectObj, (sel) =>
+			(typeof sel === "object" && !defaultedExpressionEngine.isExpression(sel))
+				? go(sel)
+				: sel,
+		);
+
+		return { ...query, select: subqueries };
 	};
 
-	return go(rootQuery);
+	const compiled = go(rootQuery);
+	ensureValidQuery(compiled, config);
+	return compiled;
 }
 
 export function flattenQuery<S extends Schema>(

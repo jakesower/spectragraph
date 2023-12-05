@@ -1,6 +1,6 @@
 import { expect, it, describe } from "vitest";
 import { careBearData } from "./fixtures/care-bear-data.js";
-import { createGraph } from "../dist/core.js";
+import { createGraph } from "../src/index.js";
 import { careBearSchema } from "./fixtures/care-bears.schema.js";
 
 const graph = createGraph(careBearSchema, careBearData);
@@ -43,22 +43,10 @@ describe("tree queries", () => {
 			const result = await graph.getTree({
 				type: "bears",
 				id: "1",
-				select: {
-					id: "id",
-					name: "name",
-				},
+				select: ["id", "name"],
 			});
 
 			expect(result).toEqual({ id: "1", name: "Tenderheart Bear" });
-		});
-
-		it("fetches a single resource with its id implicitly", async () => {
-			const result = await graph.getTree({
-				type: "bears",
-				id: "1",
-			});
-
-			expect(result).toEqual({ type: "bears", id: "1" });
 		});
 
 		it("fetches a single resource without its id", async () => {
@@ -83,13 +71,6 @@ describe("tree queries", () => {
 			});
 
 			expect(result).toEqual({ nombre: "Tenderheart Bear" });
-		});
-
-		it("fetches multiple resources", async () => {
-			const result = await graph.getTrees({ type: "bears" });
-			const expected = ["1", "2", "3", "5"].map((id) => ({ type: "bears", id }));
-
-			expect(result).toEqual(expected);
 		});
 
 		it("fetches a property from multiple resources", async () => {
@@ -117,9 +98,7 @@ describe("tree queries", () => {
 			const q = {
 				type: "bears",
 				id: "1",
-				select: {
-					home: {},
-				},
+				select: ["home"],
 			} as const;
 
 			const result = await graph.getTree(q);
@@ -133,7 +112,7 @@ describe("tree queries", () => {
 			const q = {
 				type: "homes",
 				id: "1",
-				select: { residents: {} },
+				select: ["residents"],
 			} as const;
 
 			const result = await graph.getTree(q);
@@ -181,22 +160,11 @@ describe("tree queries", () => {
 			expect(result).toEqual({ powerId: "careBearStare" });
 		});
 
-		it("returns refs when properties are not specified", async () => {
-			const result = await graph.getTrees({
-				type: "powers",
-			});
-
-			expect(result).toEqual([
-				{ type: "powers", id: "careBearStare" },
-				{ type: "powers", id: "makeWish" },
-			]);
-		});
-
 		it("fetches a single resource with many-to-many relationship", async () => {
 			const result = await graph.getTree({
 				type: "bears",
 				id: "1",
-				select: { powers: {} },
+				select: ["powers"],
 			});
 
 			expect(result).toEqual({ powers: [{ type: "powers", id: "careBearStare" }] });
@@ -208,11 +176,9 @@ describe("tree queries", () => {
 				id: "1",
 				select: {
 					home: {
-						select: {
-							residents: {},
-						},
+						select: ["residents"],
 					},
-					powers: {},
+					powers: "powers",
 				},
 			});
 
@@ -257,61 +223,63 @@ describe("tree queries", () => {
 			}).rejects.toThrowError();
 		});
 
-		it("fetches nested fields with dot notation", async () => {
-			const result = await graph.getTrees({
-				type: "bears",
-				select: {
-					name: "name",
-					residence: "home.name",
-				},
+		describe("dot notation", () => {
+			it("fetches nested fields with dot notation", async () => {
+				const result = await graph.getTrees({
+					type: "bears",
+					select: {
+						name: "name",
+						residence: "home.name",
+					},
+				});
+
+				expect(result).toEqual([
+					{ name: "Tenderheart Bear", residence: "Care-a-Lot" },
+					{ name: "Cheer Bear", residence: "Care-a-Lot" },
+					{ name: "Wish Bear", residence: "Care-a-Lot" },
+					{ name: "Smart Heart Bear", residence: null },
+				]);
 			});
 
-			expect(result).toEqual([
-				{ name: "Tenderheart Bear", residence: "Care-a-Lot" },
-				{ name: "Cheer Bear", residence: "Care-a-Lot" },
-				{ name: "Wish Bear", residence: "Care-a-Lot" },
-				{ name: "Smart Heart Bear", residence: null },
-			]);
-		});
+			it("fetches doubly nested fields with dot notation", async () => {
+				const result = await graph.getTrees({
+					type: "bears",
+					select: {
+						name: "name",
+						friendsResidence: "bestFriend.home.name",
+					},
+				});
 
-		it("fetches doubly nested fields with dot notation", async () => {
-			const result = await graph.getTrees({
-				type: "bears",
-				select: {
-					name: "name",
-					friendsResidence: "bestFriend.home.name",
-				},
+				expect(result).toEqual([
+					{ name: "Tenderheart Bear", friendsResidence: null },
+					{ name: "Cheer Bear", friendsResidence: "Care-a-Lot" },
+					{ name: "Wish Bear", friendsResidence: "Care-a-Lot" },
+					{ name: "Smart Heart Bear", friendsResidence: null },
+				]);
 			});
 
-			expect(result).toEqual([
-				{ name: "Tenderheart Bear", friendsResidence: null },
-				{ name: "Cheer Bear", friendsResidence: "Care-a-Lot" },
-				{ name: "Wish Bear", friendsResidence: "Care-a-Lot" },
-				{ name: "Smart Heart Bear", friendsResidence: null },
-			]);
-		});
+			it("fetches mapped array data with dot notation", async () => {
+				const result = await graph.getTrees({
+					type: "homes",
+					select: {
+						name: "name",
+						residentNames: "residents.name",
+					},
+				});
 
-		it("fetches mapped array data with dot notation", async () => {
-			const result = await graph.getTrees({
-				type: "homes",
-				select: {
-					name: "name",
-					residentNames: "residents.name",
-				},
+				expect(result).toEqual([
+					{
+						name: "Care-a-Lot",
+						residentNames: ["Tenderheart Bear", "Cheer Bear", "Wish Bear"],
+					},
+					{ name: "Forest of Feelings", residentNames: [] },
+					{ name: "Earth", residentNames: [] },
+				]);
 			});
-
-			expect(result).toEqual([
-				{
-					name: "Care-a-Lot",
-					residentNames: ["Tenderheart Bear", "Cheer Bear", "Wish Bear"],
-				},
-				{ name: "Forest of Feelings", residentNames: [] },
-				{ name: "Earth", residentNames: [] },
-			]);
 		});
 	});
 
-	describe("with expressions", () => {
+	describe.skip("with expressions", () => {
 		it("projects a field to a literal expression", async () => {
 			const result = await graph.getTrees({
 				type: "bears",

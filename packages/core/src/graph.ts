@@ -1,10 +1,9 @@
-import { mapValues } from "lodash-es";
+import { mapValues, pick } from "lodash-es";
 import { Schema, compileSchema } from "./schema.js";
 import {
 	MultiRootQuery,
 	SingleRootQuery,
 	compileQuery,
-	ensureValidQuery,
 } from "./query.js";
 import { Result } from "./result.js";
 import { runTreeQuery } from "./graph/graph-query-operations.js";
@@ -18,46 +17,48 @@ export type Graph<S extends Schema> = {
 
 export type GraphConfig = {
 	expressionEngine: ExpressionEngine;
+	linkInverses: boolean;
 	omittedOperations: string[];
 };
 
+type ResourceGraph = {
+	type: string;
+	id: string | number;
+	attributes: { [k: string]: unknown };
+	relationships: {
+		[k: string] : {
+			type: string;
+			id: string | number;
+		}
+	}
+}
+
 const defaultConfig: GraphConfig = {
 	expressionEngine: defaultExpressionEngine,
+	linkInverses: false,
 	omittedOperations: [],
 };
-
-export const ID = Symbol("id");
-export const TYPE = Symbol("type");
 
 export function createGraph<S extends Schema>(
 	schema: S,
 	resources,
 	config: Partial<GraphConfig> = {},
-) {
+): Graph<S> {
 	const compiledSchema = compileSchema(schema);
-	const fullConfig = { ...defaultConfig, ...config };
+	const fullConfig: GraphConfig = { ...defaultConfig, ...config };
 	const { expressionEngine } = fullConfig;
 
-	const data = structuredClone({
+	// subject to mutations; for internal use only
+	const workingData = structuredClone({
 		...mapValues(schema.resources, (_, resType) => resources[resType] ?? {}),
 	});
 
-	Object.entries(data).forEach(([resType, ressById]) => {
-		Object.entries(ressById).forEach(([resId, res]) => {
-			res[TYPE] = resType;
-			res[ID] = resId;
+	const runQuery = (query) => {
 
-			const resDef = schema.resources[resType];
-			Object.entries(resDef.relationships).forEach(([relName, relDef]) => {
-				relDef.cardinality === "many"
-					? (res[relName] = res[relName].map((relId) => data[relDef.resource][relId]))
-					: (res[relName] = data[relDef.resource][res[relName]] ?? null);
-			});
-		});
-	});
+	};
 
 	return {
-		data,
+		data: resources,
 		getTree<Q extends SingleRootQuery<S>>(query: Q, args = {}) {
 			const fullQuery = { ...query, ...args };
 			const compiled = compileQuery(fullQuery, {
@@ -75,12 +76,6 @@ export function createGraph<S extends Schema>(
 			});
 
 			return runTreeQuery(compiled, { config: fullConfig, schema, data });
-		},
-		setResource(type, id, value) {
-			// TODO: handle inverses?
-			const existing = data[type][id] ?? {};
-
-			data[type][id] = { ...existing, ...value };
 		},
 	};
 }
