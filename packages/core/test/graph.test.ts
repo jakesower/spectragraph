@@ -53,9 +53,7 @@ describe("tree queries", () => {
 			const result = await graph.getTree({
 				type: "bears",
 				id: "1",
-				select: {
-					name: "name",
-				},
+				select: ["name"],
 			});
 
 			expect(result).toEqual({ name: "Tenderheart Bear" });
