@@ -13,17 +13,17 @@ export const careBearSchema = {
 			relationships: {
 				home: {
 					cardinality: "one",
-					resource: "homes",
+					type: "homes",
 					inverse: "residents",
 				},
 				powers: {
 					cardinality: "many",
-					resource: "powers",
+					type: "powers",
 					inverse: "wielders",
 				},
 				bestFriend: {
 					cardinality: "one",
-					resource: "bears",
+					type: "bears",
 					inverse: "bestFriend",
 				},
 			},
@@ -39,7 +39,7 @@ export const careBearSchema = {
 			relationships: {
 				residents: {
 					cardinality: "many",
-					resource: "bears",
+					type: "bears",
 					inverse: "home",
 				},
 			},
@@ -53,7 +53,7 @@ export const careBearSchema = {
 			},
 			relationships: {
 				wielders: {
-					resource: "bears",
+					type: "bears",
 					cardinality: "many",
 					inverse: "powers",
 				},
