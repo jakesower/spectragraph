@@ -1,7 +1,7 @@
 /* eslint-disable no-use-before-define */
 import { mapValues } from "lodash-es";
 
-type LooseSchemaProperty = {
+type LooseSchemaAttribute = {
 	type: string;
 	title?: string;
 	description?: string;
@@ -19,7 +19,7 @@ type LooseSchemaRelationship = {
 
 type LooseSchemaResource = {
 	idField?: string;
-	properties: { [k: string]: LooseSchemaProperty };
+	attributes: { [k: string]: LooseSchemaAttribute };
 	relationships: { [k: string]: LooseSchemaRelationship };
 };
 
@@ -33,7 +33,7 @@ export type LooseSchema = {
 	resources: { [k: string]: LooseSchemaResource };
 };
 
-type SchemaProperty = {
+type SchemaAttribute = {
 	type: "object" | "array" | "boolean" | "string" | "number" | "integer" | "null";
 	title?: string;
 	description?: string;
@@ -51,7 +51,7 @@ type SchemaRelationship = {
 
 type SchemaResource = {
 	idField?: string;
-	properties: { [k: string]: SchemaProperty };
+	attributes: { [k: string]: SchemaAttribute };
 	relationships: { [k: string]: SchemaRelationship };
 };
 
@@ -86,7 +86,7 @@ export function compileSchema<S extends Schema>(schema: S): CompiledSchema<S> {
 		...schema,
 		resources: mapValues(schema.resources, (resDef) => ({
 			idField: "id",
-			properties: {},
+			attributes: {},
 			relationships: {},
 			...resDef,
 		})),

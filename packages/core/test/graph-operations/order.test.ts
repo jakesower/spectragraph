@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { careBearData } from "../fixtures/care-bear-data.js";
-import { careBearSchema } from "../fixtures/care-bears.schema";
+import { careBearSchema } from "../fixtures/care-bears.schema.js";
 import { createGraph } from "../../src/graph.js";
 
 const graph = createGraph(careBearSchema, careBearData);
