@@ -2,10 +2,10 @@
 	"name": "@data-prism/core",
 	"version": "0.0.15",
 	"type": "module",
-	"main": "./dist/core.js",
-	"types": "./dist/core.d.ts",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"exports": {
-		".": "./dist/core.js",
+		".": "./dist/index.js",
 		"./*": "./src/*.ts"
 	},
 	"scripts": {
