@@ -7,7 +7,7 @@ export type Query<S extends Schema> = {
 	limit?: number;
 	offset?: number;
 	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
-	select?:
+	select:
 		| readonly (string | { [k: string]: string | object })[]
 		| {
 				[k: string]: string | object;
@@ -73,7 +73,7 @@ export function ensureValidQuery<S extends Schema>(
 			);
 		}
 
-		if (!select) return;
+		if (!select) throw new Error("select is a required field on queries");
 
 		const shallowPropValues = Object.values(select).filter(
 			(p) => typeof p === "string" && !p.includes("."),
@@ -108,8 +108,8 @@ export function ensureValidQuery<S extends Schema>(
 
 		// ensure valid subqueries
 		Object.entries(select).forEach(([propName, propArgs]) => {
-			if (propName in resDef.relationships) {
-				go(resDef.relationships[propName].type, propArgs as object);
+			if (propName in resDef.relationships && (typeof propArgs === "object")) {
+				go(resDef.relationships[propName].type, propArgs as Query<S>);
 			}
 		});
 	};

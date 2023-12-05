@@ -1,5 +1,5 @@
 {
-	"$schema": "file:///home/jake/dev/data-prism/packages/frontend/src/schemas/data-prism-schema.1.0.0.schema.json",
+	"$schema": "https://raw.githubusercontent.com/jakesower/data-prism/rejigger/schemas/data-prism-schema.1.0.alpha2.schema.json",
 	"resources": {
 		"bears": {
 			"idField": "id",
@@ -12,17 +12,17 @@
 			"relationships": {
 				"home": {
 					"cardinality": "one",
-					"resource": "homes",
+					"type": "homes",
 					"inverse": "residents"
 				},
 				"powers": {
 					"cardinality": "many",
-					"resource": "powers",
+					"type": "powers",
 					"inverse": "wielders"
 				},
 				"bestFriend": {
 					"cardinality": "one",
-					"resource": "bears",
+					"type": "bears",
 					"inverse": "bestFriend"
 				}
 			}
@@ -38,7 +38,7 @@
 			"relationships": {
 				"residents": {
 					"cardinality": "many",
-					"resource": "bears",
+					"type": "bears",
 					"inverse": "home"
 				}
 			}
@@ -52,7 +52,7 @@
 			},
 			"relationships": {
 				"wielders": {
-					"resource": "bears",
+					"type": "bears",
 					"cardinality": "many",
 					"inverse": "powers"
 				}

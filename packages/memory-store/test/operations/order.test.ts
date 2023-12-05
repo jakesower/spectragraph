@@ -1,7 +1,7 @@
 import { beforeEach, expect, it } from "vitest";
 import { Store, createMemoryStore } from "../../src/memory-store";
 import { careBearData } from "../fixtures/care-bear-data.js";
-import { careBearSchema } from "../fixtures/care-bears.schema";
+import { careBearSchema } from "../fixtures/care-bear-schema.js";
 
 type LocalTestContext = {
 	store: Store<typeof careBearSchema>;
@@ -9,7 +9,7 @@ type LocalTestContext = {
 
 beforeEach<LocalTestContext>((context) => {
 	const store = createMemoryStore(careBearSchema);
-	store.seed(careBearData);
+	store.setState(careBearData);
 
 	context.store = store;
 });
