@@ -30,7 +30,7 @@ export function runTreeQuery<S extends Schema, Q extends CompiledRootQuery<S>>(
 		if (tail.length === 0) return result[head];
 
 		const relResDef = schema.resources[resType].relationships[head];
-		const relResType = relResDef.resource;
+		const relResType = relResDef.type;
 
 		return applyOrMap(result[head], (relRes) =>
 			getPropertyPath(tail, relResType, relRes),
@@ -88,14 +88,14 @@ export function runTreeQuery<S extends Schema, Q extends CompiledRootQuery<S>>(
 					relDef.cardinality === "one"
 						? result[propName]
 							? runTreeQuery(
-								{ ...propQuery, type: relDef.resource, id: result[propName][ID] },
+								{ ...propQuery, type: relDef.type, id: result[propName][ID] },
 								context,
 							  )
 							: null
 						: result[propName]
 							.map((res) =>
 								runTreeQuery(
-									{ ...propQuery, id: res[ID], type: relDef.resource },
+									{ ...propQuery, id: res[ID], type: relDef.type },
 									context,
 								),
 							)

@@ -10,7 +10,7 @@ export type Query<S extends Schema> = {
 	select?:
 		| readonly (string | { [k: string]: string | object })[]
 		| {
-				[k: string]: readonly string | object;
+				[k: string]: string | object;
 		  };
 	type?: keyof S["resources"] & string;
 	where?: { [k: string]: any };
@@ -109,7 +109,7 @@ export function ensureValidQuery<S extends Schema>(
 		// ensure valid subqueries
 		Object.entries(select).forEach(([propName, propArgs]) => {
 			if (propName in resDef.relationships) {
-				go(resDef.relationships[propName].resource, propArgs as object);
+				go(resDef.relationships[propName].type, propArgs as object);
 			}
 		});
 	};
@@ -186,7 +186,7 @@ export function flattenQuery<S extends Schema>(
 				const relDef = resDef.relationships[relKey];
 				const subquery = select[relKey] as Query<S>;
 
-				return go(subquery, relDef.resource, [...path, relKey], level, relKey);
+				return go(subquery, relDef.type, [...path, relKey], level, relKey);
 			}),
 		];
 	};
