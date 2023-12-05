@@ -1,6 +1,4 @@
-import { merge } from "lodash-es";
 import {
-	compileSchema,
 	ensureValidQuery,
 	RootQuery,
 	SingleRootQuery,
@@ -17,27 +15,16 @@ export type Store<S extends Schema> = {
 		query: RootQuery<S>,
 	) => (args?: object) => Promise<Result<Q>>;
 	get: <Q extends RootQuery<S>>(query: Q, args?: object) => Promise<Result<Q>>;
-	seed: (seedData: object) => void;
 	setState: (data: object) => void;
 };
 
 export function createMemoryStore<S extends Schema>(schema: S): Store<S> {
-	const compiledSchema = compileSchema(schema);
 	const expressionEngine = defaultExpressionEngine;
 
-	let graph = createGraph(compiledSchema, {}, { expressionEngine });
-
-	// mutates
-	const seed = (seedData) => {
-		graph = createGraph(compiledSchema, merge(graph.data, seedData), {
-			expressionEngine,
-		});
-	};
+	let graph = createGraph(schema, {}, { expressionEngine });
 
 	const setState = (data) => {
-		graph = createGraph(compiledSchema, data, {
-			expressionEngine,
-		});
+		graph = createGraph(schema, data, { expressionEngine });
 	};
 
 	const runQuery = <Q extends RootQuery<S>>(query: Q): Result<Q> => {
@@ -49,7 +36,7 @@ export function createMemoryStore<S extends Schema>(schema: S): Store<S> {
 	const get = (query: RootQuery<S>, args = {}) => {
 		const compiledQuery = { ...query, ...args };
 		ensureValidQuery(compiledQuery, {
-			schema: compiledSchema,
+			schema,
 			expressionEngine,
 		});
 
@@ -58,12 +45,12 @@ export function createMemoryStore<S extends Schema>(schema: S): Store<S> {
 
 	const compileQuery = (query: RootQuery<S>) => {
 		ensureValidQuery(query, {
-			schema: compiledSchema,
+			schema,
 			expressionEngine,
 		});
 
 		return (args = {}) => Promise.resolve(runQuery({ ...query, ...args }));
 	};
 
-	return { compileQuery, get, seed, setState };
+	return { compileQuery, get, setState };
 }

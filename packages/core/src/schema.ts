@@ -75,8 +75,16 @@ export type CompiledSchema<S extends Schema> = S & {
 	};
 };
 
-function ensureValidSchema(schema) {
-	// TODO
+function ensureValidSchema(schema: any) {
+	if (!schema.resources) {
+		throw new Error("schemas must have a resources key");
+	}
+
+	Object.values(schema.resources).forEach((resSchema: any) => {
+		if (!resSchema.attributes) {
+			throw new Error("schema resources must have an attributes key");
+		}
+	});
 }
 
 export function compileSchema<S extends Schema>(schema: S): CompiledSchema<S> {

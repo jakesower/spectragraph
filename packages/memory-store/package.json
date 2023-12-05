@@ -29,7 +29,7 @@
 	},
 	"private": false,
 	"dependencies": {
-		"@data-prism/core": "^0.0.14",
+		"@data-prism/core": "^0.0.16",
 		"@data-prism/expressions": "^0.0.9",
 		"lodash-es": "^4.17.21"
 	}

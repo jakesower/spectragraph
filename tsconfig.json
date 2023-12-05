@@ -29,7 +29,7 @@
 				"./packages/core"
 			],
 			"@data-prism/utils": [
-				"./packages/core"
+				"./packages/utils"
 			],
 		}
 	},

@@ -1,10 +1,9 @@
 {
 	"name": "@data-prism/utils",
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"type": "module",
-	"main": "./dist/index.js",
-	"module": "./dist/index.js",
-	"types": "./dist/index.d.ts",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
 	"exports": {
 		".": "./dist/index.js"
 	},
