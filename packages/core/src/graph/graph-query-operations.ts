@@ -3,7 +3,7 @@ import { applyOrMap } from "@data-prism/utils";
 import { MultiResult, Result } from "../result.js";
 import { Schema } from "../schema.js";
 import { CompiledRootQuery } from "../query.js";
-import { GraphConfig } from "../graph.js";
+import { GraphConfig, ID, TYPE } from "../graph.js";
 import { createExpressionProjector } from "./select-helpers.js";
 import { buildWhereExpression } from "./where-helpers.js";
 
@@ -32,8 +32,8 @@ export function runTreeQuery<S extends Schema, Q extends CompiledRootQuery<S>>(
 		const relResDef = schema.resources[resType].relationships[head];
 		const relResType = relResDef.resource;
 
-		return applyOrMap(result[head], ({ type, id }) =>
-			getPropertyPath(tail, relResType, data[type][id]),
+		return applyOrMap(result[head], (relRes) =>
+			getPropertyPath(tail, relResType, relRes),
 		);
 	};
 
@@ -62,10 +62,17 @@ export function runTreeQuery<S extends Schema, Q extends CompiledRootQuery<S>>(
 		},
 		select(results) {
 			const { select } = query;
-
 			const projectors = mapValues(select, (propQuery, propName) => {
 				// possibilities: (1) property (2) nested property (3) subquery (4) ref (5) expression
 				if (typeof propQuery === "string") {
+					// relationship name -- return ref
+					if (propQuery in resDef.relationships) {
+						return (result) => applyOrMap(
+							result[propQuery],
+							(r) => ({ type: r[TYPE], id: r[ID] }),
+						);
+					}
+
 					// nested / shallow property
 					return (result) => getPropertyPath(propQuery.split("."), query.type, result);
 				}
@@ -77,18 +84,18 @@ export function runTreeQuery<S extends Schema, Q extends CompiledRootQuery<S>>(
 
 				// subquery
 				const relDef = resDef.relationships[propName];
-				return (result) => 
+				return (result) =>
 					relDef.cardinality === "one"
 						? result[propName]
 							? runTreeQuery(
-								{ ...propQuery, type: relDef.resource, id: result[propName].id },
+								{ ...propQuery, type: relDef.resource, id: result[propName][ID] },
 								context,
 							  )
 							: null
 						: result[propName]
 							.map((res) =>
 								runTreeQuery(
-									{ ...propQuery, id: res.id, type: relDef.resource },
+									{ ...propQuery, id: res[ID], type: relDef.resource },
 									context,
 								),
 							)
