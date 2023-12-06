@@ -1,6 +1,6 @@
 {
 	"name": "@data-prism/core",
-	"version": "0.0.16",
+	"version": "0.0.21",
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
