@@ -87,7 +87,7 @@ describe("tree queries", () => {
 		});
 
 		it("fetches null for a nonexistent resource", async () => {
-			const result = await graph.getTree({ type: "bears", id: "6" });
+			const result = await graph.getTree({ type: "bears", id: "6", select: ["id"] });
 
 			expect(result).toEqual(null);
 		});
