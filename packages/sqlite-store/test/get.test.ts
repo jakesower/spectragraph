@@ -3,8 +3,8 @@ import Database from "better-sqlite3";
 import { createTables, seed } from "../src/seed.js";
 import { createSQLiteStore } from "../src/sqlite-store.js";
 import { careBearData } from "./fixtures/care-bear-data.js";
-import { careBearSchema } from "./fixtures/care-bears.schema.js";
-import { careBearsConfig } from "./fixtures/care-bears-config.js";
+import { careBearSchema } from "./fixtures/care-bear.schema.js";
+import { careBearsConfig } from "./fixtures/care-bear-config.js";
 
 const db = Database(":memory:");
 createTables(db, careBearSchema, careBearsConfig);
@@ -15,7 +15,7 @@ it("fetches a single resource", async () => {
 	const result = await store.get({
 		type: "bears",
 		id: "1",
-		properties: {
+		select: {
 			name: "name",
 		},
 	});
@@ -27,7 +27,7 @@ it("fetches a single resource with its id", async () => {
 	const result = await store.get({
 		type: "bears",
 		id: "1",
-		properties: {
+		select: {
 			id: "id",
 			name: "name",
 		},
@@ -49,7 +49,7 @@ it("fetches a single resource without its id", async () => {
 	const result = await store.get({
 		type: "bears",
 		id: "1",
-		properties: {
+		select: {
 			name: "name",
 		},
 	});
@@ -65,7 +65,7 @@ it("fetches multiple resources", async () => {
 });
 
 it("fetches a property from multiple resources", async () => {
-	const result = await store.get({ type: "bears", properties: { name: "name" } });
+	const result = await store.get({ type: "bears", select: { name: "name" } });
 	const expected = [
 		"Tenderheart Bear",
 		"Cheer Bear",
@@ -86,8 +86,8 @@ it("fetches a single resource with a many-to-one relationship", async () => {
 	const q = {
 		type: "bears",
 		id: "1",
-		properties: {
-			home: { properties: { id: "id" } },
+		select: {
+			home: { select: { id: "id" } },
 		},
 	} as const;
 
@@ -102,7 +102,7 @@ it("fetches a single resource with a one-to-many relationship", async () => {
 	const q = {
 		type: "homes",
 		id: "1",
-		properties: { residents: { properties: { id: "id" } } },
+		select: { residents: { select: { id: "id" } } },
 	} as const;
 
 	const result = await store.get(q);
@@ -116,7 +116,7 @@ it("fetches a single resource with a one-to-many relationship and an implicit re
 	const q = {
 		type: "homes",
 		id: "1",
-		properties: { residents: {} },
+		select: { residents: {} },
 	} as const;
 
 	const result = await store.get(q);
@@ -134,7 +134,7 @@ it("fetches a single resource with a subset of props", async () => {
 	const result = await store.get({
 		type: "bears",
 		id: "1",
-		properties: { id: "id", name: "name", furColor: "furColor" },
+		select: { id: "id", name: "name", furColor: "furColor" },
 	});
 
 	expect(result).toEqual({ id: "1", name: "Tenderheart Bear", furColor: "tan" });
@@ -144,7 +144,7 @@ it("fetches a single resource with a renamed prop", async () => {
 	const result = await store.get({
 		type: "bears",
 		id: "1",
-		properties: { id: "id", color: "furColor" },
+		select: { id: "id", color: "furColor" },
 	});
 
 	expect(result).toEqual({ id: "1", color: "tan" });
@@ -154,7 +154,7 @@ it("fetches a single resource with a subset of props on a relationship", async (
 	const q = {
 		type: "bears",
 		id: "1",
-		properties: { home: { properties: { caringMeter: "caringMeter" } } },
+		select: { home: { select: { caringMeter: "caringMeter" } } },
 	} as const;
 
 	const result = await store.get(q);
@@ -186,7 +186,7 @@ it("fetches a single resource with many-to-many relationship", async () => {
 	const result = await store.get({
 		type: "bears",
 		id: "1",
-		properties: { powers: {} },
+		select: { powers: {} },
 	});
 
 	expect(result).toEqual({ powers: [{ type: "powers", id: "careBearStare" }] });
@@ -196,9 +196,9 @@ it("fetches multiple subqueries of various types", async () => {
 	const result = await store.get({
 		type: "bears",
 		id: "1",
-		properties: {
+		select: {
 			home: {
-				properties: {
+				select: {
 					residents: {},
 				},
 			},
@@ -221,7 +221,7 @@ it("fetches multiple subqueries of various types", async () => {
 it("handles subqueries between the same type", async () => {
 	const result = await store.get({
 		type: "bears",
-		properties: {
+		select: {
 			id: "id",
 			bestFriend: {},
 		},
@@ -236,7 +236,7 @@ it("handles subqueries between the same type", async () => {
 });
 
 it.todo(
-	"merges properties when resource has different properties from different parts of the query tree",
+	"merges select when resource has different select from different parts of the query tree",
 );
 
 // it.skip("fails validation for invalid types", async () => {
@@ -247,6 +247,6 @@ it.todo(
 
 it.skip("fails validation for invalid top level props", async () => {
 	await expect(async () => {
-		await store.get({ type: "bears", id: "1", properties: { koopa: {} } });
+		await store.get({ type: "bears", id: "1", select: { koopa: {} } });
 	}).rejects.toThrowError();
 });

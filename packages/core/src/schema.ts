@@ -84,6 +84,10 @@ function ensureValidSchema(schema: any) {
 		if (!resSchema.attributes) {
 			throw new Error("schema resources must have an attributes key");
 		}
+
+		if (!resSchema.relationships) {
+			throw new Error("schema resources must have a relationships key");
+		}
 	});
 }
 

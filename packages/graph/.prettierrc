@@ -1,0 +1,6 @@
+{
+  "experimentalTernaries": false,
+  "printWidth": 90,
+	"trailingComma": "all",
+	"useTabs": true
+}

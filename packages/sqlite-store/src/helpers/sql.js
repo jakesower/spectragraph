@@ -1,6 +1,5 @@
-import { createExpressionEngine } from "@data-prism/expressions";
 import { mapValues, uniq } from "lodash-es";
-import { varsExpressionEngine, whereExpressionEngine } from "./sql-expressions.js";
+import { whereExpressionEngine } from "./sql-expressions.js";
 
 const defaultClause = {
 	compose: (acc, item) => uniq([...(acc ?? []), ...(item ?? [])]),
