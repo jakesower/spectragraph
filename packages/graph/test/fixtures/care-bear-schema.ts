@@ -1,10 +1,10 @@
 export const careBearSchema = {
 	$schema:
-		"file:///home/jake/dev/data-prism/packages/frontend/src/schemas/data-prism-schema.1.0.0.schema.json",
+		"https://raw.githubusercontent.com/jakesower/data-prism/main/schemas/data-prism-schema.1.0.schema.json",
 	resources: {
 		bears: {
 			idField: "id",
-			properties: {
+			attributes: {
 				name: { type: "string" },
 				yearIntroduced: { type: "number" },
 				bellyBadge: { type: "string" },
@@ -13,24 +13,24 @@ export const careBearSchema = {
 			relationships: {
 				home: {
 					cardinality: "one",
-					resource: "homes",
+					type: "homes",
 					inverse: "residents",
 				},
 				powers: {
 					cardinality: "many",
-					resource: "powers",
+					type: "powers",
 					inverse: "wielders",
 				},
 				bestFriend: {
 					cardinality: "one",
-					resource: "bears",
+					type: "bears",
 					inverse: "bestFriend",
 				},
 			},
 		},
 		homes: {
 			idField: "id",
-			properties: {
+			attributes: {
 				name: { type: "string" },
 				location: { type: "string" },
 				caringMeter: { type: "number" },
@@ -39,21 +39,21 @@ export const careBearSchema = {
 			relationships: {
 				residents: {
 					cardinality: "many",
-					resource: "bears",
+					type: "bears",
 					inverse: "home",
 				},
 			},
 		},
 		powers: {
 			idField: "powerId",
-			properties: {
+			attributes: {
 				name: { type: "string" },
 				description: { type: "string" },
 				type: { type: "string" },
 			},
 			relationships: {
 				wielders: {
-					resource: "bears",
+					type: "bears",
 					cardinality: "many",
 					inverse: "powers",
 				},

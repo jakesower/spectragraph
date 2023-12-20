@@ -53,7 +53,7 @@ export const careBearData = {
 			relationships: {
 				bestFriend: null,
 				home: null,
-				powers: [],
+				powers: [{ type: "powers", id: "careBearStare" }],
 			},
 		},
 	},

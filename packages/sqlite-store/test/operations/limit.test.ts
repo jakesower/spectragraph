@@ -3,8 +3,8 @@ import Database from "better-sqlite3";
 import { createTables, seed } from "../../src/seed.js";
 import { createSQLiteStore } from "../../src/sqlite-store.js";
 import { careBearData } from "../fixtures/care-bear-data.js";
-import { careBearSchema } from "../fixtures/care-bears.schema.js";
-import { careBearsConfig } from "../fixtures/care-bears-config.js";
+import { careBearSchema } from "../fixtures/care-bear.schema.js";
+import { careBearsConfig } from "../fixtures/care-bear-config.js";
 
 const db = Database(":memory:");
 createTables(db, careBearSchema, careBearsConfig);

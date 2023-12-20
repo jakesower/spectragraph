@@ -53,17 +53,6 @@ const operations = {
 				const expr = { $and: propExprs };
 
 				return { where: [expr], vars: [expr] };
-
-				// console.log("exxx", expr[0].$and);
-				// console.log(
-				// 	"dist",
-				// 	JSON.stringify(whereExpressionEngine.distribute(expr), null, 2),
-				// );
-				// console.log('eval', varsExpressionEngine.evaluate(varsExpressionEngine.distribute(expr[0])))
-				return {
-					where: [whereExpressionEngine.distribute(expr)],
-					vars: [varsExpressionEngine.distribute(expr)],
-				};
 			},
 		},
 	},

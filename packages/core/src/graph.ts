@@ -1,11 +1,5 @@
-import { mapValues } from "lodash-es";
 import { Schema, compileSchema } from "./schema.js";
-import {
-	MultiRootQuery,
-	SingleRootQuery,
-	compileQuery,
-	ensureValidQuery,
-} from "./query.js";
+import { MultiRootQuery, RootQuery, SingleRootQuery, compileQuery } from "./query.js";
 import { Result } from "./result.js";
 import { runTreeQuery } from "./graph/graph-query-operations.js";
 import { ExpressionEngine, defaultExpressionEngine } from "@data-prism/expressions";
@@ -20,13 +14,14 @@ type CanonicalGraph = {
 	[k: string]: {
 		[k: string]: {
 			attributes: { [k: string]: unknown };
-			relationships: { [k: string]: Ref | Ref[]}
+			relationships: { [k: string]: Ref | Ref[] };
 		}
 	}
 }
 
 export type Graph<S extends Schema> = {
 	data: { [k: string]: { [k: string]: any } };
+	get: <Q extends RootQuery<S>>(query: Q) => Result<Q>;
 	getTree: <Q extends SingleRootQuery<S>>(query: Q) => Result<Q>;
 	getTrees: <Q extends MultiRootQuery<S>>(query: Q) => Result<Q>;
 };
@@ -48,7 +43,7 @@ export function createGraph<S extends Schema>(
 	schema: S,
 	resources: CanonicalGraph,
 	config: Partial<GraphConfig> = {},
-) {
+): Graph<S> {
 	const compiledSchema = compileSchema(schema);
 	const fullConfig = { ...defaultConfig, ...config };
 	const { expressionEngine } = fullConfig;
@@ -75,6 +70,7 @@ export function createGraph<S extends Schema>(
 							writable: false,
 							configurable: false,
 						});
+
 						return dereffed;
 					},
 					configurable: true,
@@ -86,58 +82,23 @@ export function createGraph<S extends Schema>(
 		});
 	});
 
-	// const data = structuredClone({
-	// 	...mapValues(schema.resources, (_, resType) =>
-	// 		mapValues(resources[resType] ?? {}, (res, resId) => ({
-	// 			[TYPE]: resType,
-	// 			[ID]: resId,
-	// 			...res.attributes,
-	// 			...res.relationships,
-	// 		})),
-	// 	),
-	// });
+	const get = (query) => {
+		const compiled = compileQuery(query, {
+			schema: compiledSchema,
+			expressionEngine,
+		});
 
-	// Object.entries(data).forEach(([resType, ressById]) => {
-	// 	Object.entries(ressById).forEach(([resId, res]) => {
-	// 		res[TYPE] = resType;
-	// 		res[ID] = resId;
-
-	// 		const resDef = schema.resources[resType];
-	// 		Object.entries(resDef.relationships).forEach(([relName, relDef]) => {
-	// 			if (!res[relName]) return;
-
-	// 			relDef.cardinality === "many"
-	// 				? (res[relName] = res[relName].map(({ type, id }) => data[type][id]))
-	// 				: (res[relName] = data[res[relName].type][res[relName].id] ?? null);
-	// 		});
-	// 	});
-	// });
+		return runTreeQuery(compiled, { schema, data, config: fullConfig });
+	};
 
 	return {
 		data,
-		getTree<Q extends SingleRootQuery<S>>(query: Q, args = {}) {
-			const fullQuery = { ...query, ...args };
-			const compiled = compileQuery(fullQuery, {
-				schema: compiledSchema,
-				expressionEngine,
-			});
-
-			return runTreeQuery(compiled, { config: fullConfig, schema, data });
+		get,
+		getTree<Q extends SingleRootQuery<S>>(query: Q) {
+			return get(query);
 		},
-		getTrees<Q extends MultiRootQuery<S>>(query: Q, args = {}) {
-			const fullQuery = { ...query, ...args };
-			const compiled = compileQuery(fullQuery, {
-				schema: compiledSchema,
-				expressionEngine,
-			});
-
-			return runTreeQuery(compiled, { config: fullConfig, schema, data });
-		},
-		setResource(type, id, value) {
-			// TODO: handle inverses?
-			const existing = data[type][id] ?? {};
-
-			data[type][id] = { ...existing, ...value };
+		getTrees<Q extends MultiRootQuery<S>>(query: Q) {
+			return get(query);
 		},
 	};
 }
