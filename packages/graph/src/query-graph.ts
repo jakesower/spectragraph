@@ -109,13 +109,12 @@ function runQuery<Q extends CompiledRootQuery>(rootQuery: Q, data: object): Resu
 					// possibilities: (1) property (2) expression (3) subquery
 					if (typeof propQuery === "string") {
 						// nested / shallow property
-						return (result) => {
-							return propQuery in result[RAW].relationships
+						return (result) =>
+							propQuery in result[RAW].relationships
 								? result[RAW].relationships[propQuery]
 								: propQuery
-										.split(".")
-										.reduce((out, path) => (out === null ? null : out?.[path]), result);
-						};
+									.split(".")
+									.reduce((out, path) => (out === null ? null : out?.[path]), result);
 					}
 
 					// expression
