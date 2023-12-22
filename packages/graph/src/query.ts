@@ -38,8 +38,8 @@ export function compileQuery(rootQuery): CompiledRootQuery {
 		const { select } = query;
 		const selectObj = Array.isArray(select)
 			? select.reduce((selectObj, item) => {
-					const subObj = typeof item === "string" ? stringToProp(item) : item;
-					return { ...selectObj, ...subObj };
+				const subObj = typeof item === "string" ? stringToProp(item) : item;
+				return { ...selectObj, ...subObj };
 			  }, {})
 			: select;
 
