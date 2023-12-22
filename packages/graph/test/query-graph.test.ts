@@ -690,7 +690,7 @@ describe("queryTree", () => {
 
 		it("errors for a bad offset", async () => {
 			await expect(async () => {
-				const result = await graph.query({
+				await graph.query({
 					type: "bears",
 					select: ["id"],
 					limit: 3,
