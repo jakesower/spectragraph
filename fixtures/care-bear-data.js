@@ -38,7 +38,10 @@ export const careBearData = {
 			},
 			relationships: {
 				home: { type: "homes", id: "1" },
-				powers: [{ type: "powers", id: "careBearStare" }],
+				powers: [
+					{ type: "powers", id: "careBearStare" },
+					{ type: "powers", id: "makeWish" },
+				],
 				bestFriend: { type: "bears", id: "2" },
 			},
 		},
@@ -53,7 +56,7 @@ export const careBearData = {
 			relationships: {
 				bestFriend: null,
 				home: null,
-				powers: [{ type: "powers", id: "careBearStare" }],
+				powers: [],
 			},
 		},
 	},
@@ -112,7 +115,6 @@ export const careBearData = {
 					{ type: "bears", id: "1" },
 					{ type: "bears", id: "2" },
 					{ type: "bears", id: "3" },
-					{ type: "bears", id: "5" },
 				],
 			},
 		},

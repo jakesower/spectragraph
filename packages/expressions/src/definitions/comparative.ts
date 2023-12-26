@@ -1,5 +1,5 @@
 import { isEqual } from "lodash-es";
-import { Operation } from "../expressions";
+import { Operation } from "..";
 
 type FilterOperation<T> = Operation<T, T, boolean>;
 

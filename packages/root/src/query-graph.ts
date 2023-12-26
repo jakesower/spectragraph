@@ -1,7 +1,7 @@
 import { defaultExpressionEngine } from "@data-prism/expressions";
 import { mapValues, orderBy } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
-import { CompiledRootQuery, RootQuery, compileQuery } from "./query.js";
+import { NormalRootQuery, RootQuery, normalizeQuery } from "./query.js";
 import { buildWhereExpression } from "./graph/where-helpers.js";
 import { createExpressionProjector } from "./graph/select-helpers.js";
 
@@ -14,16 +14,16 @@ type Ref = {
 	id: string | number;
 };
 
-export type CanonicalResource = {
+export type NormalResource = {
 	id?: number | string;
 	type?: string;
 	attributes: { [k: string]: unknown };
-	relationships: { [k: string]: Ref | Ref[] };
+	relationships: { [k: string]: Ref | Ref[] | null };
 };
 
-export type CanonicalResources = {
+export type Graph = {
 	[k: string]: {
-		[k: string | number]: CanonicalResource;
+		[k: string | number]: NormalResource;
 	};
 };
 
@@ -57,7 +57,10 @@ function prepData(resources) {
 			Object.entries(res.relationships).forEach(([relName, relVal]) => {
 				Object.defineProperty(val, relName, {
 					get() {
-						const dereffed = applyOrMap(relVal, (rel: Ref) => data[rel.type][rel.id]);
+						const dereffed = applyOrMap(
+							relVal,
+							(rel: Ref) => data[rel.type][rel.id],
+						);
 						Object.defineProperty(this, relName, {
 							value: dereffed,
 							writable: false,
@@ -78,7 +81,10 @@ function prepData(resources) {
 	return data;
 }
 
-function runQuery<Q extends CompiledRootQuery>(rootQuery: Q, data: object): Result {
+function runQuery<Q extends NormalRootQuery>(
+	rootQuery: Q,
+	data: object,
+): Result {
 	const go = (query) => {
 		if (query.id && !data[query.type][query.id]) return null;
 
@@ -121,12 +127,18 @@ function runQuery<Q extends CompiledRootQuery>(rootQuery: Q, data: object): Resu
 								? result[RAW].relationships[propQuery]
 								: propQuery
 										.split(".")
-										.reduce((out, path) => (out === null ? null : out?.[path]), result);
+										.reduce(
+											(out, path) => (out === null ? null : out?.[path]),
+											result,
+										);
 					}
 
 					// expression
 					if (defaultExpressionEngine.isExpression(propQuery)) {
-						return createExpressionProjector(propQuery, defaultExpressionEngine);
+						return createExpressionProjector(
+							propQuery,
+							defaultExpressionEngine,
+						);
 					}
 
 					// subquery
@@ -166,20 +178,20 @@ function runQuery<Q extends CompiledRootQuery>(rootQuery: Q, data: object): Resu
 	return go(rootQuery);
 }
 
-export function createQueryGraph(resources: CanonicalResources): QueryGraph {
-	const data = prepData(resources);
+export function createQueryGraph(graph: Graph): QueryGraph {
+	const data = prepData(graph);
 
 	return {
 		query<Q extends RootQuery>(query: Q): Result {
-			const compiled = compileQuery(query);
+			const compiled = normalizeQuery(query);
 			return runQuery(compiled, data) as Result;
 		},
 	};
 }
 
 export function queryGraph<Q extends RootQuery>(
-	resources: CanonicalResources,
+	graph: Graph,
 	query: Q,
 ): Result {
-	return createQueryGraph(resources).query(query);
+	return createQueryGraph(graph).query(query);
 }
