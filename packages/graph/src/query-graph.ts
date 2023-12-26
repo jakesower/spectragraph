@@ -2,26 +2,33 @@ import { defaultExpressionEngine } from "@data-prism/expressions";
 import { mapValues, orderBy } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
 import { CompiledRootQuery, RootQuery, compileQuery } from "./query.js";
-import { Result } from "./result.js";
 import { buildWhereExpression } from "./graph/where-helpers.js";
 import { createExpressionProjector } from "./graph/select-helpers.js";
+
+export type Result = {
+	[k: string]: unknown;
+};
 
 type Ref = {
 	type: string;
 	id: string | number;
 };
 
+export type CanonicalResource = {
+	id?: number | string;
+	type?: string;
+	attributes: { [k: string]: unknown };
+	relationships: { [k: string]: Ref | Ref[] };
+};
+
 export type CanonicalResources = {
 	[k: string]: {
-		[k: string | number]: {
-			attributes: { [k: string]: unknown };
-			relationships: { [k: string]: Ref | Ref[] };
-		};
+		[k: string | number]: CanonicalResource;
 	};
 };
 
 type QueryGraph = {
-	query: <Q extends RootQuery>(query: Q) => Result<Q>;
+	query: <Q extends RootQuery>(query: Q) => Result;
 };
 
 const ID = Symbol("id");
@@ -71,7 +78,7 @@ function prepData(resources) {
 	return data;
 }
 
-function runQuery<Q extends CompiledRootQuery>(rootQuery: Q, data: object): Result<Q> {
+function runQuery<Q extends CompiledRootQuery>(rootQuery: Q, data: object): Result {
 	const go = (query) => {
 		if (query.id && !data[query.type][query.id]) return null;
 
@@ -113,8 +120,8 @@ function runQuery<Q extends CompiledRootQuery>(rootQuery: Q, data: object): Resu
 							propQuery in result[RAW].relationships
 								? result[RAW].relationships[propQuery]
 								: propQuery
-									.split(".")
-									.reduce((out, path) => (out === null ? null : out?.[path]), result);
+										.split(".")
+										.reduce((out, path) => (out === null ? null : out?.[path]), result);
 					}
 
 					// expression
@@ -163,9 +170,9 @@ export function createQueryGraph(resources: CanonicalResources): QueryGraph {
 	const data = prepData(resources);
 
 	return {
-		query<Q extends RootQuery>(query: Q): Result<Q> {
+		query<Q extends RootQuery>(query: Q): Result {
 			const compiled = compileQuery(query);
-			return runQuery(compiled, data);
+			return runQuery(compiled, data) as Result;
 		},
 	};
 }
@@ -173,6 +180,6 @@ export function createQueryGraph(resources: CanonicalResources): QueryGraph {
 export function queryGraph<Q extends RootQuery>(
 	resources: CanonicalResources,
 	query: Q,
-): Result<Q> {
+): Result {
 	return createQueryGraph(resources).query(query);
 }

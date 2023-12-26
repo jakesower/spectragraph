@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultExpressionEngine } from "../../src/expressions.js";
+import { defaultExpressionEngine } from "../../src/index.js";
 
 const { evaluate } = defaultExpressionEngine;
 

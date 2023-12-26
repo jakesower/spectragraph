@@ -121,6 +121,7 @@ it("filters using $in 1", async () => {
 it("filters using $in 2", async () => {
 	const result = await graph.getTrees({
 		type: "bears",
+		select: ["id"],
 		where: {
 			yearIntroduced: { $in: [2022] },
 		},
