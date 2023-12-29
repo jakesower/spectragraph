@@ -86,6 +86,13 @@ export const flatCareBearData = {
 			name: "Make a Wish",
 			description: "Makes a wish on Twinkers",
 			type: "individual power",
+			wielders: ["3"],
+		},
+		{
+			powerId: "transform",
+			name: "Transform",
+			description: "Transform into a kaiju",
+			type: "individual power",
 			wielders: [],
 		},
 	],

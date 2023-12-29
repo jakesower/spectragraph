@@ -126,6 +126,17 @@ export const careBearData = {
 				type: "individual power",
 			},
 			relationships: {
+				wielders: [{ type: "bears", id: "3" }],
+			},
+		},
+		transform: {
+			attributes: {
+				powerId: "transform",
+				name: "Transform",
+				description: "Transform into a kaiju",
+				type: "individual power",
+			},
+			relationships: {
 				wielders: [],
 			},
 		},

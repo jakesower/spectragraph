@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { expect, it, describe } from "vitest";
 import { omit } from "lodash-es";
 import {
@@ -34,7 +36,7 @@ const normalQuery1 = normalizeQuery(query1);
 describe("forEachQuery", () => {
 	it("doesn't mutate the query", () => {
 		const result = structuredClone(query1);
-		foreachQuery(query1, () => {});
+		foreachQuery(query1, () => {}); // eslint-disable-line
 		expect(result).toEqual(query1);
 	});
 

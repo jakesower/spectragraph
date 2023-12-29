@@ -23,11 +23,18 @@ export type Query = {
 export type RootQuery = Query & {
     type: string;
 };
-export type CompiledQuery = Query & {
+export type NormalQuery = Query & {
     select: {
-        [k: string]: string | CompiledQuery;
+        [k: string]: string | NormalQuery | Expression;
     };
 };
-export type CompiledRootQuery = RootQuery & CompiledQuery;
-export declare function compileQuery(rootQuery: any): CompiledRootQuery;
+export type NormalRootQuery = RootQuery & NormalQuery;
+export type QueryInfo = {
+    path: string[];
+    parent: Query | null;
+};
+export declare function normalizeQuery(rootQuery: RootQuery): NormalRootQuery;
+export declare function foreachQuery(query: any, fn: any): void;
+export declare function mapQuery(query: any, fn: any): any;
+export declare function reduceQuery(query: any, fn: any, init: any): any;
 //# sourceMappingURL=query.d.ts.map

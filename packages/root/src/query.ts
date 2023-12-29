@@ -2,7 +2,7 @@ import { defaultExpressionEngine } from "@data-prism/expressions";
 import { mapValues } from "lodash-es";
 
 export type Expression = {
-	[k: string]: any;
+	[k: string]: unknown;
 };
 
 export type Query = {
@@ -16,7 +16,7 @@ export type Query = {
 				[k: string]: string | Query | Expression;
 		  };
 	type?: string;
-	where?: { [k: string]: any };
+	where?: { [k: string]: unknown };
 };
 
 export type RootQuery = Query & {

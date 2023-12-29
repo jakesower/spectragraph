@@ -1,5 +1,5 @@
 import { expect, it, describe } from "vitest";
-import { careBearData } from "../fixtures/care-bear-data.js";
+import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
 import { createQueryGraph } from "../../src/query-graph.js";
 
 const graph = createQueryGraph(careBearData);
@@ -81,7 +81,8 @@ describe("select expressions", () => {
 
 		expect(result).toEqual([
 			{ name: "Care Bear Stare", minYear: 1982 },
-			{ name: "Make a Wish", minYear: undefined },
+			{ name: "Make a Wish", minYear: 1982 },
+			{ name: "Transform", minYear: undefined },
 		]);
 	});
 
@@ -96,7 +97,8 @@ describe("select expressions", () => {
 
 		expect(result).toEqual([
 			{ name: "Care Bear Stare", caring: 3 },
-			{ name: "Make a Wish", caring: 0 },
+			{ name: "Make a Wish", caring: 1 },
+			{ name: "Transform", caring: 0 },
 		]);
 	});
 });

@@ -4,7 +4,9 @@
 		"rootDir": "./src",
 		"outDir": "./dist",
 		"composite": true,
-		"esModuleInterop": true
+		"esModuleInterop": true,
+		"allowImportingTsExtensions": true,
+		"noEmit": true
 	},
 	"references": [
 		{
@@ -14,7 +16,5 @@
 			"path": "../utils"
 		}
 	],
-	"include": [
-		"./src/**/*"
-	]
+	"include": ["./src/**/*"]
 }

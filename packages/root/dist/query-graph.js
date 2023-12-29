@@ -1,7 +1,7 @@
 import { defaultExpressionEngine } from "@data-prism/expressions";
 import { mapValues, orderBy } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
-import { compileQuery } from "./query.js";
+import { normalizeQuery } from "./query.ts";
 import { buildWhereExpression } from "./graph/where-helpers.js";
 import { createExpressionProjector } from "./graph/select-helpers.js";
 const ID = Symbol("id");
@@ -111,15 +111,15 @@ function runQuery(rootQuery, data) {
     };
     return go(rootQuery);
 }
-export function createQueryGraph(resources) {
-    const data = prepData(resources);
+export function createQueryGraph(graph) {
+    const data = prepData(graph);
     return {
         query(query) {
-            const compiled = compileQuery(query);
+            const compiled = normalizeQuery(query);
             return runQuery(compiled, data);
         },
     };
 }
-export function queryGraph(resources, query) {
-    return createQueryGraph(resources).query(query);
+export function queryGraph(graph, query) {
+    return createQueryGraph(graph).query(query);
 }

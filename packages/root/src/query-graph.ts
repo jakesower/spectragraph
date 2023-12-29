@@ -4,27 +4,10 @@ import { applyOrMap } from "@data-prism/utils";
 import { NormalRootQuery, RootQuery, normalizeQuery } from "./query.js";
 import { buildWhereExpression } from "./graph/where-helpers.js";
 import { createExpressionProjector } from "./graph/select-helpers.js";
+import { Graph, Ref } from "./graph.js";
 
 export type Result = {
 	[k: string]: unknown;
-};
-
-type Ref = {
-	type: string;
-	id: string | number;
-};
-
-export type NormalResource = {
-	id?: number | string;
-	type?: string;
-	attributes: { [k: string]: unknown };
-	relationships: { [k: string]: Ref | Ref[] | null };
-};
-
-export type Graph = {
-	[k: string]: {
-		[k: string | number]: NormalResource;
-	};
 };
 
 type QueryGraph = {
@@ -90,7 +73,7 @@ function runQuery<Q extends NormalRootQuery>(
 
 		// these are in order of execution
 		const operationDefinitions = {
-			where(results: any[]): any[] {
+			where(results: unknown[]): unknown[] {
 				const whereExpression = buildWhereExpression(
 					query.where,
 					defaultExpressionEngine,
@@ -99,20 +82,20 @@ function runQuery<Q extends NormalRootQuery>(
 					defaultExpressionEngine.apply(whereExpression, result),
 				);
 			},
-			order(results: any[]): any[] {
+			order(results: unknown[]): unknown[] {
 				const order = Array.isArray(query.order) ? query.order : [query.order];
 				const properties = order.flatMap((o) => Object.keys(o));
 				const dirs = order.flatMap((o) => Object.values(o));
 
 				return orderBy(results, properties, dirs);
 			},
-			limit(results: any[]): any[] {
+			limit(results: unknown[]): unknown[] {
 				const { limit, offset = 0 } = query;
 				if (limit < 1) throw new Error("`limit` must be at least 1");
 
 				return results.slice(offset, limit + offset);
 			},
-			offset(results: any[]): any[] {
+			offset(results: unknown[]): unknown[] {
 				if (query.offset < 0) throw new Error("`offset` must be at least 0");
 				return query.limit ? results : results.slice(query.offset);
 			},
