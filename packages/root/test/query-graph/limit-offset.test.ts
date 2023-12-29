@@ -1,5 +1,5 @@
 import { expect, it, describe } from "vitest";
-import { careBearData } from "../fixtures/care-bear-data.js";
+import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
 import { createQueryGraph } from "../../src/query-graph.js";
 
 const graph = createQueryGraph(careBearData);
@@ -23,7 +23,10 @@ describe("limit/offset", () => {
 			limit: 2,
 		});
 
-		expect(result).toEqual([{ name: "Cheer Bear" }, { name: "Smart Heart Bear" }]);
+		expect(result).toEqual([
+			{ name: "Cheer Bear" },
+			{ name: "Smart Heart Bear" },
+		]);
 	});
 
 	it("limits after sorting with 1", async () => {
@@ -46,7 +49,10 @@ describe("limit/offset", () => {
 			offset: 1,
 		});
 
-		expect(result).toEqual([{ name: "Smart Heart Bear" }, { name: "Tenderheart Bear" }]);
+		expect(result).toEqual([
+			{ name: "Smart Heart Bear" },
+			{ name: "Tenderheart Bear" },
+		]);
 	});
 
 	it("allows for offset only", async () => {
@@ -73,7 +79,10 @@ describe("limit/offset", () => {
 			offset: 2,
 		});
 
-		expect(result).toEqual([{ name: "Tenderheart Bear" }, { name: "Wish Bear" }]);
+		expect(result).toEqual([
+			{ name: "Tenderheart Bear" },
+			{ name: "Wish Bear" },
+		]);
 	});
 
 	it("returns nothing when the offset has surpassed the data size", async () => {

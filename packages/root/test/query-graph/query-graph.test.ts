@@ -1,5 +1,5 @@
 import { expect, it, describe } from "vitest";
-import { careBearData } from "../fixtures/care-bear-data.js";
+import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
 import { createQueryGraph, queryGraph } from "../../src/query-graph.js";
 
 const graph = createQueryGraph(careBearData);

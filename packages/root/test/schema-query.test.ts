@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-function */
+
 import { expect, it, describe } from "vitest";
 import { careBearSchema } from "./fixtures/care-bear-schema.js";
 import { forEachSchemaQuery, reduceSchemaQuery } from "../src/schema-query.js";

@@ -1,5 +1,4 @@
 import { defaultExpressionEngine } from "@data-prism/expressions";
-import { mapValues } from "lodash-es";
 import { Query, QueryInfo, RootQuery, normalizeQuery } from "./query";
 import { Schema } from "./schema";
 

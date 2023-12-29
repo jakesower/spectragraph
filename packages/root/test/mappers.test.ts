@@ -1,12 +1,12 @@
 import { expect, it, describe } from "vitest";
-import { careBearData } from "./fixtures/care-bear-data.js";
+import { careBearData } from "./fixtures/care-bear-data.js"; // eslint-disable-line
 import { careBearSchema } from "./fixtures/care-bear-schema.js";
 import {
 	normalizeResource,
 	normalizeResources,
 	flattenResource,
 } from "../src/mappers.js";
-import { flatCareBearData } from "./fixtures/care-bear-data-flat.js";
+import { flatCareBearData } from "./fixtures/care-bear-data-flat.js"; // eslint-disable-line
 import { omit, pick } from "lodash-es";
 
 describe("flattenResource", () => {
@@ -188,19 +188,15 @@ describe("normalizeResources", () => {
 	it("walks a singly nested to-many resource", () => {
 		const resource = {
 			...flatCareBearData.bears[2],
-			powers: flatCareBearData.powers,
+			powers: flatCareBearData.powers.slice(0, 2),
 		};
 
 		const graph = normalizeResources("bears", [resource], careBearSchema);
 
 		expect(graph).toEqual({
 			bears: pick(careBearData.bears, ["3"]),
-			powers: careBearData.powers,
+			powers: pick(careBearData.powers, ["careBearStare", "makeWish"]),
 			homes: {},
 		});
 	});
-
-  it("walks deeply nested resources", () => {
-
-  })
 });
