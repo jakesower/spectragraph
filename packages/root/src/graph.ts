@@ -20,7 +20,7 @@ export type Graph = {
 	};
 };
 
-export function emptyGraph(schema: Schema) {
+export function emptyGraph(schema: Schema): Graph {
 	return mapValues(schema.resources, () => ({}));
 }
 
