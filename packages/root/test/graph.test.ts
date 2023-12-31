@@ -1,8 +1,8 @@
 import { expect, it, describe } from "vitest";
 import { careBearData } from "./fixtures/care-bear-data.js"; // eslint-disable-line
-import { linkInverses } from "../src/graph.js";
+import { Graph, linkInverses, mergeGraphs } from "../src/graph.js";
 import { careBearSchema } from "./fixtures/care-bear-schema.js";
-import { mapValues, omit } from "lodash-es";
+import { mapValues, omit, pick } from "lodash-es";
 
 describe("linkInverses", () => {
 	it("doesn't change anything for an already linked graph", () => {
@@ -51,5 +51,42 @@ describe("linkInverses", () => {
 		);
 
 		expect(linked).toEqual(careBearData);
+	});
+});
+
+describe("mergeGraphs", () => {
+	it("merges graphs with different resource types", () => {
+		const left = { bears: careBearData.bears };
+		const right = { homes: careBearData.homes };
+
+		const merged = mergeGraphs(left, right);
+
+		expect(merged).toEqual(pick(careBearData, ["bears", "homes"]));
+	});
+
+	it("merges graphs with resources of the same type", () => {
+		const left = { bears: pick(careBearData.bears, ["1"]) } as Graph;
+		const right = { bears: omit(careBearData.bears, ["1"]) } as Graph;
+
+		const merged = mergeGraphs(left, right);
+
+		expect(merged).toEqual(pick(careBearData, ["bears"]));
+	});
+
+	it("merges graphs with a mix of things", () => {
+		const left = {
+			bears: pick(careBearData.bears, ["1"]),
+			powers: careBearData.powers,
+			companions: careBearData.companions,
+		} as Graph;
+
+		const right = {
+			bears: omit(careBearData.bears, ["1"]),
+			homes: careBearData.homes,
+		} as Graph;
+
+		const merged = mergeGraphs(left, right);
+
+		expect(merged).toEqual(careBearData);
 	});
 });
