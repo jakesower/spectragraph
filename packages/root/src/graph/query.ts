@@ -1,10 +1,10 @@
 import { defaultExpressionEngine } from "@data-prism/expressions";
 import { mapValues, orderBy } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
-import { NormalRootQuery, RootQuery, normalizeQuery } from "./query.js";
-import { buildWhereExpression } from "./graph/where-helpers.js";
-import { createExpressionProjector } from "./graph/select-helpers.js";
-import { Graph, Ref } from "./graph.js";
+import { NormalRootQuery, RootQuery, normalizeQuery } from "../query.js";
+import { buildWhereExpression } from "./where-helpers.js";
+import { createExpressionProjector } from "./select-helpers.js";
+import { Graph, Ref } from "../graph.js";
 
 export type Result = {
 	[k: string]: unknown;
