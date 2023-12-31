@@ -8,13 +8,13 @@ A `flatResource` is a resource that doesn't differentiate between attributes and
 
 ```json
 {
-  "id": "a-uuid",
-  "name": "Tenderheart Bear",
-  "powers": ["some-uuid", "another-uuid"],
-  "home": {
-    "id": "home-uuid",
-    "name": "Care-a-Lot"
-  }
+	"id": "a-uuid",
+	"name": "Tenderheart Bear",
+	"powers": ["some-uuid", "another-uuid"],
+	"home": {
+		"id": "home-uuid",
+		"name": "Care-a-Lot"
+	}
 }
 ```
 
@@ -27,27 +27,27 @@ These functions are meant to handle API responses or data from trees or other fo
 ### `normalizeResource`
 
 ```javascript
-normalizeResource(resourceType, flatResource, schema, resourceMappers = {});
+normalizeResource(resourceType, flatResource, schema, (resourceMappers = {}));
 ```
 
 This function uses a schema to separate the attributes and relationships within a resource. It adds an optional `resourceMappers` object to handle attributes and relationships that somehow don't copy over directly. Let's have a look at some examples. These use the [Care Bear Schema]("./test/care-bear-schema.js"), so familiarize yourself with that or have it handy to reference.
 
 ```javascript
 const bearAPIData = {
-  id: "bear-abc-123",
-  name: "Tenderheart Bear",
-  yearIntroduced: 1982,
-  bellyBadge: "red heart with pink outline",
-  furColor: "tan",
-  home: {
-    id: "home-def-234",
-    name: "Care-a-Lot",
-    location: "Kingdom of Caring",
-    caringMeter: 1,
-    isInClouds: true,
-  },
-  powers: ["power-fgh-345", "power-ijk-456"]
-}
+	id: "bear-abc-123",
+	name: "Tenderheart Bear",
+	yearIntroduced: 1982,
+	bellyBadge: "red heart with pink outline",
+	furColor: "tan",
+	home: {
+		id: "home-def-234",
+		name: "Care-a-Lot",
+		location: "Kingdom of Caring",
+		caringMeter: 1,
+		isInClouds: true,
+	},
+	powers: ["power-fgh-345", "power-ijk-456"],
+};
 
 const normalBear = normalizeResource("bears", bearAPIData, careBearSchema);
 ```
@@ -83,7 +83,7 @@ The nested `home` data was lost as a part of the process, as we're formatting a 
 ### `normalizeResources`
 
 ```javascript
-normalizeResources(resourceType, flatResources, schema, graphMappers = {});
+normalizeResources(resourceType, flatResources, schema, (graphMappers = {}));
 ```
 
 This function is similar to the previous one, but will create an entire graph based on an array of flat resources. It attempts to capture as much data as possible, conforming to the provided schema.
@@ -92,20 +92,20 @@ Let's return to our example:
 
 ```javascript
 const bearAPIData = {
-  id: "bear-abc-123",
-  name: "Tenderheart Bear",
-  yearIntroduced: 1982,
-  bellyBadge: "red heart with pink outline",
-  furColor: "tan",
-  home: {
-    id: "home-def-234",
-    name: "Care-a-Lot",
-    location: "Kingdom of Caring",
-    caringMeter: 1,
-    isInClouds: true,
-  },
-  powers: ["power-fgh-345", "power-ijk-456"]
-}
+	id: "bear-abc-123",
+	name: "Tenderheart Bear",
+	yearIntroduced: 1982,
+	bellyBadge: "red heart with pink outline",
+	furColor: "tan",
+	home: {
+		id: "home-def-234",
+		name: "Care-a-Lot",
+		location: "Kingdom of Caring",
+		caringMeter: 1,
+		isInClouds: true,
+	},
+	powers: ["power-fgh-345", "power-ijk-456"],
+};
 
 const normalBear = normalizeResources("bears", [bearAPIData], careBearSchema);
 ```
@@ -159,20 +159,20 @@ Let's say that the API data doesn't match up with our schema exactly. Let's chan
 
 ```javascript
 const bearAPIData = {
-  id: "bear-abc-123",
-  name: "Tenderheart Bear",
-  date_introduced: "1982-02-04",
-  belly_badge: "red heart with pink outline",
-  fur_color: "tan",
-  home: {
-    uuid: "home-def-234",
-    name: "Care-a-Lot",
-    location: "Kingdom of Caring",
-    caring_meter: 1,
-    is_in_clouds: true,
-  },
-  powers: ["power-fgh-345", "power-ijk-456"]
-}
+	id: "bear-abc-123",
+	name: "Tenderheart Bear",
+	date_introduced: "1982-02-04",
+	belly_badge: "red heart with pink outline",
+	fur_color: "tan",
+	home: {
+		uuid: "home-def-234",
+		name: "Care-a-Lot",
+		location: "Kingdom of Caring",
+		caring_meter: 1,
+		is_in_clouds: true,
+	},
+	powers: ["power-fgh-345", "power-ijk-456"],
+};
 ```
 
 Here we see that the API is delivering us data with snake_case attributes instead of camelCase. Additionally, the `yearIntroduced` field doesn't appear at all. Rather, we get `date_introduced` which contains the data, but in an unhelpful format.
@@ -192,17 +192,17 @@ Let's have a look at what will work for our example above.
 
 ```javascript
 const graphMappers = {
-  bears: {
-    bellyBadge: 'belly_badge',
-    furColor: 'fur_color',
-    yearIntroduced: (resource) => Number(resource.date_introduced.slice(0, 4)),
-  },
-  homes: {
-    id: 'uuid',
-    caringMeter: 'caring_meter',
-    isInClouds: 'is_in_clouds',
-  }
-}
+	bears: {
+		bellyBadge: "belly_badge",
+		furColor: "fur_color",
+		yearIntroduced: (resource) => Number(resource.date_introduced.slice(0, 4)),
+	},
+	homes: {
+		id: "uuid",
+		caringMeter: "caring_meter",
+		isInClouds: "is_in_clouds",
+	},
+};
 ```
 
 Most of the values here are strings. These act as renamings for the fields. So `belly_badge` from the API data becomes `bellyBadge` in our normalized graph. More interestingly, `yearIntroduced` takes in a function. Each time a `bears` resource is being normalized, the raw API value will be passed to the function and its return value will be what populates the normalized resource.
@@ -211,20 +211,20 @@ Mappers work with relationships as well. Let's change up the API data again slig
 
 ```javascript
 const bearAPIData = {
-  id: "bear-abc-123",
-  name: "Tenderheart Bear",
-  date_introduced: "1982-02-04",
-  belly_badge: "red heart with pink outline",
-  fur_color: "tan",
-  abode: {
-    id: "home-def-234",
-    name: "Care-a-Lot",
-    location: "Kingdom of Caring",
-    caring_meter: 1,
-    is_in_clouds: true,
-  },
-  powers: ["power-fgh-345", "power-ijk-456"]
-}
+	id: "bear-abc-123",
+	name: "Tenderheart Bear",
+	date_introduced: "1982-02-04",
+	belly_badge: "red heart with pink outline",
+	fur_color: "tan",
+	abode: {
+		id: "home-def-234",
+		name: "Care-a-Lot",
+		location: "Kingdom of Caring",
+		caring_meter: 1,
+		is_in_clouds: true,
+	},
+	powers: ["power-fgh-345", "power-ijk-456"],
+};
 ```
 
 Here we see that `home` was changed to `abode`. We need only update our mappers to target the relationship and it will be similarly mapped.
@@ -234,6 +234,14 @@ const bearsMapper = { home: "abode" };
 ```
 
 Mappers allow for a great deal of flexibility and will hopefully streamline the process of normalizing resources by focusing on what needs to be changed to make things fit.
+
+### `mergeGraphs`
+
+```javascript
+mergeGraphs(leftGraph, rightGraph);
+```
+
+This creates a new graph with all of the resources from both graphs combined. Note that it does not combine resources themselves, rather it treats resources of the same type and the same ID as being the same.
 
 ### `linkInverses`
 
@@ -344,28 +352,28 @@ It's typically best to run this as a final step before using the graph for queri
 ### `flattenResource`
 
 ```javascript
-flattenResource(resourceId, resource, idField = "id");
+flattenResource(resourceId, resource, (idField = "id"));
 ```
 
 This is an inverse function for `normalizeResource`.
 
 ```javascript
 const resource = {
-  attributes: {
-    id: "bear-abc-123",
-    name: "Tenderheart Bear",
-    yearIntroduced: 1982,
-    bellyBadge: "red heart with pink outline",
-    furColor: "tan",
-  },
-  relationships: {
-    home: { type: "homes", id: "home-def-234" },
-    powers: [
-      { type: "powers", id: "power-fgh-345" },
-      { type: "powers", id: "power-ijk-456" }
-    ]
-  }
-}
+	attributes: {
+		id: "bear-abc-123",
+		name: "Tenderheart Bear",
+		yearIntroduced: 1982,
+		bellyBadge: "red heart with pink outline",
+		furColor: "tan",
+	},
+	relationships: {
+		home: { type: "homes", id: "home-def-234" },
+		powers: [
+			{ type: "powers", id: "power-fgh-345" },
+			{ type: "powers", id: "power-ijk-456" },
+		],
+	},
+};
 
 const flat = flattenResource("bear-abc-123", resource, "id");
 ```
@@ -392,20 +400,22 @@ Scenario: We're trying to create a URL to send to an API to get the data necessa
 
 ```javascript
 const query = {
-  type: "bears",
-  select: ["name", "yearIntroduced"],
-}
+	type: "bears",
+	select: ["name", "yearIntroduced"],
+};
 ```
 
 This case isn't so bad and we can whip up a URL without doing anything fancy:
 
 ```javascript
 // a helper function we'll use in future examples as well
-const makeFieldStr = (fields) => Object.entries(fields)
-  .map(
-    ([resourceType, resourceFields]) => `fields[${resourceType}]=${resourceFields.join(",")}`
-  )
-  .join("&");
+const makeFieldStr = (fields) =>
+	Object.entries(fields)
+		.map(
+			([resourceType, resourceFields]) =>
+				`fields[${resourceType}]=${resourceFields.join(",")}`,
+		)
+		.join("&");
 
 const fields = { bears: query.select.join(",") };
 const fieldStr = makeFieldStr(fields);
@@ -419,17 +429,17 @@ There may be too much going on there, so let's focus on `const fields = { bears:
 
 ```javascript
 const query = {
-  type: "bears",
-  select: [
-    "name",
-    "yearIntroduced",
-    {
-      home: {
-        select: ["name"],
-      }
-    }
-  ],
-}
+	type: "bears",
+	select: [
+		"name",
+		"yearIntroduced",
+		{
+			home: {
+				select: ["name"],
+			},
+		},
+	],
+};
 ```
 
 The code we used above is completely unhelpful in this situation. Having a subquery in the `select` clause means that we can't join the arguments there. This has become a pretty annoying looking problem. We're going to have to traverse the query somehow to extract all the info we need. Ultimately what we want to end up with is a URL like `https://example.com/bears?fields[bears]=name,yearIntroduced&fields[homes]=name`.
@@ -446,8 +456,8 @@ What this will do is call `fn` once for each subquery in our tree. We'll refer t
 
 ```javascript
 forEachQuery(careBearSchema, query, (subquery) => {
-  console.log("hello from subquery", JSON.stringify(subquery, null, 2));
-})
+	console.log("hello from subquery", JSON.stringify(subquery, null, 2));
+});
 ```
 
 This will output:
@@ -477,8 +487,8 @@ That means that our function was invoked twice. That's nice an all, but let's ha
 
 ```javascript
 forEachQuery(careBearSchema, query, (subquery, info) => {
-  console.log("hello", JSON.stringify(info, null, 2));
-})
+	console.log("hello", JSON.stringify(info, null, 2));
+});
 ```
 
 Output:
@@ -522,8 +532,8 @@ There are some useful goodies in that `info` argument that comes in second argum
 const fields = {};
 
 forEachQuery(careBearSchema, query, (subquery, info) => {
-  const { type, attributes } = info;
-  fields[type] = attributes;
+	const { type, attributes } = info;
+	fields[type] = attributes;
 });
 ```
 
@@ -547,29 +557,28 @@ const fields = reduceQuery(
 
 In the above example, we mentioned that out JSON API also supported pagination. The implementation we'll assume is `page[number]`, which specifies how many pages in to the results are, and `page[size]` which indicates how many results will be returned per page. Let's consider a query:
 
-
 ```javascript
 const query = {
-  type: "bears",
-  select: [
-    "name",
-    "yearIntroduced",
-    {
-      home: {
-        select: ["name"],
-      }
-    }
-  ],
-  limit: 10,
-  offset: 20,
-}
+	type: "bears",
+	select: [
+		"name",
+		"yearIntroduced",
+		{
+			home: {
+				select: ["name"],
+			},
+		},
+	],
+	limit: 10,
+	offset: 20,
+};
 ```
 
 Examining this we can see that each page has 10 items (`limit` 10) we're on the third page (`offset` 20). We can construct the required URLs using the patterns discussed in the previous section. However, our query as-is will be wrong once that's factored in. That's because our query is telling us to skip 20 and take 10 in the results. But the results already have that baked in. We're going to have to modify the query on our end to make everything line up smoothly. Once again, there's the hassle of walking the queries that is addressed by the helper functions. In this case, we want to reach for `mapQuery`. Like it sounds, this function will modify each subquery by running it through a function. (We'll also employ the `omit` function from lodash.)
 
 ```javascript
 mapQuery(careBearSchema, query, (subquery) =>
-  omit(subquery, ["limit", "offset"])
+	omit(subquery, ["limit", "offset"]),
 );
 ```
 

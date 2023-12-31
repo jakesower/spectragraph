@@ -1,3 +1,4 @@
+import { mapValues } from "lodash-es";
 import { Schema } from "./schema.js";
 import { applyOrMap } from "@data-prism/utils";
 
@@ -18,6 +19,10 @@ export type Graph = {
 		[k: string | number]: NormalResource;
 	};
 };
+
+export function emptyGraph(schema: Schema) {
+	return mapValues(schema.resources, () => ({}));
+}
 
 export function linkInverses(graph: Graph, schema: Schema): Graph {
 	const output = structuredClone(graph);
@@ -63,6 +68,15 @@ export function linkInverses(graph: Graph, schema: Schema): Graph {
 				});
 			}
 		});
+	});
+
+	return output;
+}
+
+export function mergeGraphs(left: Graph, right: Graph): Graph {
+	const output = structuredClone(left);
+	Object.entries(right).forEach(([resourceType, resources]) => {
+		output[resourceType] = { ...resources, ...(left[resourceType] ?? {}) };
 	});
 
 	return output;
