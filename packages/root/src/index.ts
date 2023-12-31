@@ -4,7 +4,7 @@ export {
 	normalizeResource,
 	normalizeResources,
 } from "./mappers.js";
-export { createQueryGraph, queryGraph } from "./query-graph.js";
+export { createQueryGraph, queryGraph } from "./graph/query.js";
 export {
 	forEachQuery,
 	mapQuery,
