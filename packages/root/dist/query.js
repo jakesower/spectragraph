@@ -16,7 +16,7 @@ export function normalizeQuery(rootQuery) {
     };
     return go(rootQuery);
 }
-export function foreachQuery(query, fn) {
+export function forEachSchemalessQuery(query, fn) {
     const go = (subquery, info) => {
         fn(subquery, info);
         Object.entries(subquery.select).forEach(([prop, select]) => {
@@ -35,7 +35,7 @@ export function foreachQuery(query, fn) {
     };
     go(normalizeQuery(query), initInfo);
 }
-export function mapQuery(query, fn) {
+export function mapSchemalessQuery(query, fn) {
     const go = (subquery, info) => {
         const mappedSelect = mapValues(subquery.select, (select, prop) => {
             if (typeof select !== "object" || isExpression(select))
@@ -54,7 +54,7 @@ export function mapQuery(query, fn) {
     };
     return go(normalizeQuery(query), initInfo);
 }
-export function reduceQuery(query, fn, init) {
+export function reduceSchemalessQuery(query, fn, init) {
     const go = (subquery, info, accValue) => Object.entries(subquery.select).reduce((acc, [prop, select]) => {
         if (typeof select !== "object" || isExpression(select))
             return acc;

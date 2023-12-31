@@ -4,10 +4,10 @@ import { expect, it, describe } from "vitest";
 import { omit } from "lodash-es";
 import {
 	RootQuery,
-	foreachQuery,
-	mapQuery,
+	forEachSchemalessQuery,
+	mapSchemalessQuery,
 	normalizeQuery,
-	reduceQuery,
+	reduceSchemalessQuery,
 } from "../src/query.js";
 
 const query1: RootQuery = {
@@ -33,16 +33,16 @@ const query1: RootQuery = {
 
 const normalQuery1 = normalizeQuery(query1);
 
-describe("forEachQuery", () => {
+describe("forEachSchemalessQuery", () => {
 	it("doesn't mutate the query", () => {
 		const result = structuredClone(query1);
-		foreachQuery(query1, () => {}); // eslint-disable-line
+		forEachSchemalessQuery(query1, () => {}); // eslint-disable-line
 		expect(result).toEqual(query1);
 	});
 
 	it("visits each subquery", () => {
 		const visited = [] as any[];
-		foreachQuery(query1, (subquery) => {
+		forEachSchemalessQuery(query1, (subquery) => {
 			visited.push(subquery);
 		});
 
@@ -51,7 +51,7 @@ describe("forEachQuery", () => {
 
 	it("collects path info", () => {
 		const pathInfo = [] as any[];
-		foreachQuery(query1, (subquery, { path }) => {
+		forEachSchemalessQuery(query1, (subquery, { path }) => {
 			pathInfo.push(path);
 		});
 
@@ -60,7 +60,7 @@ describe("forEachQuery", () => {
 
 	it("collects parent info", () => {
 		const parents = [] as any[];
-		foreachQuery(query1, (subquery, { parent }) => {
+		forEachSchemalessQuery(query1, (subquery, { parent }) => {
 			parents.push(parent);
 		});
 
@@ -68,9 +68,9 @@ describe("forEachQuery", () => {
 	});
 });
 
-describe("mapQuery", () => {
+describe("mapSchemalessQuery", () => {
 	it("maps the query, stripping out limits", () => {
-		const result = mapQuery(query1, (subquery) => omit(subquery, ["limit"]));
+		const result = mapSchemalessQuery(query1, (subquery) => omit(subquery, ["limit"]));
 
 		expect(result).toEqual({
 			type: "bears",
@@ -89,7 +89,7 @@ describe("mapQuery", () => {
 	});
 
 	it("maps the query, interfering with child queries", () => {
-		const result = mapQuery(query1, (subquery, { parent }) =>
+		const result = mapSchemalessQuery(query1, (subquery, { parent }) =>
 			parent ? "chicken" : subquery,
 		);
 
@@ -106,7 +106,7 @@ describe("mapQuery", () => {
 
 	it("visits each subquery", () => {
 		const visited = [] as any[];
-		mapQuery(query1, (subquery) => {
+		mapSchemalessQuery(query1, (subquery) => {
 			visited.push(subquery);
 		});
 
@@ -115,7 +115,7 @@ describe("mapQuery", () => {
 
 	it("collects path info", () => {
 		const pathInfo = [] as any[];
-		mapQuery(query1, (subquery, { path }) => {
+		mapSchemalessQuery(query1, (subquery, { path }) => {
 			pathInfo.push(path);
 		});
 
@@ -124,7 +124,7 @@ describe("mapQuery", () => {
 
 	it("collects parent info", () => {
 		const parents = [] as any[];
-		mapQuery(query1, (subquery, { parent }) => {
+		mapSchemalessQuery(query1, (subquery, { parent }) => {
 			parents.push(parent);
 		});
 
@@ -132,9 +132,9 @@ describe("mapQuery", () => {
 	});
 });
 
-describe("reduceQuery", () => {
+describe("reduceSchemalessQuery", () => {
 	it("reduces the query, collecting limits", () => {
-		const result = reduceQuery(
+		const result = reduceSchemalessQuery(
 			query1,
 			(acc, subquery) => [...acc, subquery.limit],
 			[],
@@ -144,7 +144,7 @@ describe("reduceQuery", () => {
 	});
 
 	it("reduces the query, finding query attributes with their paths", () => {
-		const result = reduceQuery(
+		const result = reduceSchemalessQuery(
 			query1,
 			(acc, subquery, { path }) => {
 				const out = acc;
@@ -167,7 +167,7 @@ describe("reduceQuery", () => {
 
 	it("visits each subquery", () => {
 		const visited = [] as any[];
-		reduceQuery(
+		reduceSchemalessQuery(
 			query1,
 			(subquery) => {
 				visited.push(subquery);
@@ -180,7 +180,7 @@ describe("reduceQuery", () => {
 
 	it("collects path info", () => {
 		const pathInfo = [] as any[];
-		reduceQuery(
+		reduceSchemalessQuery(
 			query1,
 			(acc, subquery, { path }) => {
 				pathInfo.push(path);
@@ -193,7 +193,7 @@ describe("reduceQuery", () => {
 
 	it("collects parent info", () => {
 		const parents = [] as any[];
-		reduceQuery(
+		reduceSchemalessQuery(
 			query1,
 			(acc, subquery, { parent }) => {
 				parents.push(parent);

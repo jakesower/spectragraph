@@ -34,7 +34,7 @@ export type QueryInfo = {
     parent: Query | null;
 };
 export declare function normalizeQuery(rootQuery: RootQuery): NormalRootQuery;
-export declare function foreachQuery(query: any, fn: any): void;
-export declare function mapQuery(query: any, fn: any): any;
-export declare function reduceQuery(query: any, fn: any, init: any): any;
+export declare function forEachSchemalessQuery(query: any, fn: any): void;
+export declare function mapSchemalessQuery(query: any, fn: any): any;
+export declare function reduceSchemalessQuery(query: any, fn: any, init: any): any;
 //# sourceMappingURL=query.d.ts.map

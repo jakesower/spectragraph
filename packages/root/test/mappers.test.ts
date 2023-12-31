@@ -72,6 +72,38 @@ describe("normalizeResource", () => {
 		});
 	});
 
+	it("formats a nested resource", () => {
+		const base = omit(flatCareBearData.bears[0], ["powers", "bestFriend"]);
+		const withNested = { ...base, home: flatCareBearData.homes[0] };
+
+		const resource = normalizeResource("bears", withNested, careBearSchema);
+
+		expect(resource).toEqual({
+			...careBearData.bears[1],
+			relationships: {
+				home: { type: "homes", id: "1" },
+				bestFriend: null,
+				powers: [],
+			},
+		});
+	});
+
+	it("formats a nested resource with a nonstandard ID", () => {
+		const base = omit(flatCareBearData.bears[0], ["home", "bestFriend"]);
+		const withNested = { ...base, powers: [flatCareBearData.powers[0]] };
+
+		const resource = normalizeResource("bears", withNested, careBearSchema);
+
+		expect(resource).toEqual({
+			...careBearData.bears[1],
+			relationships: {
+				home: null,
+				bestFriend: null,
+				powers: [{ type: "powers", id: "careBearStare" }],
+			},
+		});
+	});
+
 	it("formats with a renaming", () => {
 		const base = {
 			...flatCareBearData.bears[0],
@@ -86,6 +118,25 @@ describe("normalizeResource", () => {
 		expect(resource).toEqual({
 			...careBearData.bears[1],
 			attributes: { ...careBearData.bears[1].attributes, name: "Tiernosito" },
+		});
+	});
+
+	it("formats with a relationship renaming", () => {
+		const base = {
+			...flatCareBearData.bears[0],
+			casa: flatCareBearData.homes[1],
+		};
+
+		const resource = normalizeResource("bears", base, careBearSchema, {
+			home: "casa",
+		});
+
+		expect(resource).toEqual({
+			...careBearData.bears[1],
+			relationships: {
+				...careBearData.bears[1].relationships,
+				home: { type: "homes", id: "2" },
+			},
 		});
 	});
 

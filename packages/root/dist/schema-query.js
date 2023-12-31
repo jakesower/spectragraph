@@ -1,7 +1,7 @@
 import { defaultExpressionEngine } from "@data-prism/expressions";
 import { normalizeQuery } from "./query";
 const { isExpression } = defaultExpressionEngine;
-export function forEachSchemaQuery(schema, query, fn) {
+export function forEachQuery(schema, query, fn) {
     const go = (subquery, info) => {
         fn(subquery, info);
         const { path, type } = info;
@@ -24,7 +24,7 @@ export function forEachSchemaQuery(schema, query, fn) {
     };
     go(normalizeQuery(query), initInfo);
 }
-export function reduceSchemaQuery(schema, query, fn, init) {
+export function reduceQuery(schema, query, fn, init) {
     const go = (subquery, info, accValue) => {
         const { path, type } = info;
         const resourceSchema = schema.resources[type];
