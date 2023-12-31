@@ -66,13 +66,13 @@ export function normalizeResources(
 	rootResourceType: string,
 	rootResources: { [k: string]: unknown }[],
 	schema: Schema,
-	mappers: GraphMappers = {},
+	graphMappers: GraphMappers = {},
 ): Graph {
 	const output = mapValues(schema.resources, () => ({}));
 
 	const go = (resourceType, resource) => {
 		const resourceSchema = schema.resources[resourceType];
-		const resourceMappers = mappers[resourceType] ?? {};
+		const resourceMappers = graphMappers[resourceType] ?? {};
 
 		const idField = resourceMappers.id ?? resourceSchema.idField ?? "id";
 		const resourceId = resource[idField as string];

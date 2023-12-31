@@ -1,6 +1,8 @@
 # Querable Graphs
 
-This library exposes the ability to query graphs to receive result trees using a robust query language. It requires two components.
+This library exposes the ability to query graphs to receive result trees using a robust query language. In addition it provides a suite of utility functions to help wrangle data into appropriate formats and interact with data structures effectively. See [helper functions]("./helpers.md").
+
+This document focuses on constructing queries as this is the most common and use case for the library that requires a fair bit of explaination.
 
 ## Resource Data
 
