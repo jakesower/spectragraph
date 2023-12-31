@@ -1,5 +1,5 @@
 import { defaultExpressionEngine } from "@data-prism/expressions";
-import { mapValues } from "lodash-es";
+import { mapValues, pick } from "lodash-es";
 const { isExpression } = defaultExpressionEngine;
 export function normalizeQuery(rootQuery) {
     const stringToProp = (str) => ({ [str]: str });
@@ -67,6 +67,95 @@ export function reduceSchemalessQuery(query, fn, init) {
     const initInfo = {
         path: [],
         parent: null,
+    };
+    return go(normalizeQuery(query), initInfo, init);
+}
+export function forEachQuery(schema, query, fn) {
+    const go = (subquery, info) => {
+        const { path, type } = info;
+        const resourceSchema = schema.resources[type];
+        const attributes = Object.keys(resourceSchema.attributes).filter((a) => a in subquery.select);
+        const relationships = pick(subquery.select, Object.keys(resourceSchema.relationships));
+        const fullInfo = {
+            ...info,
+            attributes,
+            relationships,
+        };
+        fn(subquery, fullInfo);
+        Object.entries(subquery.select).forEach(([prop, select]) => {
+            if (typeof select === "object" && !isExpression(select)) {
+                const nextInfo = {
+                    path: [...path, prop],
+                    parent: subquery,
+                    type: resourceSchema.relationships[prop].type,
+                };
+                go(select, nextInfo);
+            }
+        });
+    };
+    const initInfo = {
+        path: [],
+        parent: null,
+        type: query.type,
+    };
+    go(normalizeQuery(query), initInfo);
+}
+export function mapQuery(schema, query, fn) {
+    const go = (subquery, info) => {
+        const { path, type } = info;
+        const resourceSchema = schema.resources[type];
+        const attributes = Object.keys(resourceSchema.attributes).filter((a) => a in subquery.select);
+        const relationships = pick(subquery.select, Object.keys(resourceSchema.relationships));
+        const fullInfo = {
+            ...info,
+            attributes,
+            relationships,
+        };
+        const mappedSelect = mapValues(subquery.select, (select, prop) => {
+            if (typeof select !== "object" || isExpression(select))
+                return select;
+            const nextInfo = {
+                path: [...path, prop],
+                parent: subquery,
+                type: resourceSchema.relationships[prop].type,
+            };
+            return go(select, nextInfo);
+        });
+        return fn({ ...subquery, select: mappedSelect }, fullInfo);
+    };
+    const initInfo = {
+        path: [],
+        parent: null,
+        type: query.type,
+    };
+    return go(normalizeQuery(query), initInfo);
+}
+export function reduceQuery(schema, query, fn, init) {
+    const go = (subquery, info, accValue) => {
+        const { path, type } = info;
+        const resourceSchema = schema.resources[type];
+        const attributes = Object.keys(resourceSchema.attributes).filter((a) => a in subquery.select);
+        const relationships = pick(subquery.select, Object.keys(resourceSchema.relationships));
+        const fullInfo = {
+            ...info,
+            attributes,
+            relationships,
+        };
+        return Object.entries(subquery.select).reduce((acc, [prop, select]) => {
+            if (typeof select !== "object" || isExpression(select))
+                return acc;
+            const nextInfo = {
+                path: [...path, prop],
+                parent: subquery,
+                type: resourceSchema.relationships[prop].type,
+            };
+            return go(select, nextInfo, acc);
+        }, fn(accValue, subquery, fullInfo));
+    };
+    const initInfo = {
+        path: [],
+        parent: null,
+        type: query.type,
     };
     return go(normalizeQuery(query), initInfo, init);
 }

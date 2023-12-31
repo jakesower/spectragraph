@@ -1,4 +1,9 @@
+import { mapValues } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
+export { createQueryGraph, queryGraph } from "./graph/query.js";
+export function emptyGraph(schema) {
+    return mapValues(schema.resources, () => ({}));
+}
 export function linkInverses(graph, schema) {
     const output = structuredClone(graph);
     Object.entries(schema.resources).forEach(([resType, resSchema]) => {
@@ -36,6 +41,13 @@ export function linkInverses(graph, schema) {
                 });
             }
         });
+    });
+    return output;
+}
+export function mergeGraphs(left, right) {
+    const output = structuredClone(left);
+    Object.entries(right).forEach(([resourceType, resources]) => {
+        output[resourceType] = { ...resources, ...(left[resourceType] ?? {}) };
     });
     return output;
 }

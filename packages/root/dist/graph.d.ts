@@ -1,4 +1,5 @@
 import { Schema } from "./schema.js";
+export { createQueryGraph, queryGraph } from "./graph/query.js";
 export type Ref = {
     type: string;
     id: string | number;
@@ -18,5 +19,7 @@ export type Graph = {
         [k: string | number]: NormalResource;
     };
 };
+export declare function emptyGraph(schema: Schema): Graph;
 export declare function linkInverses(graph: Graph, schema: Schema): Graph;
+export declare function mergeGraphs(left: Graph, right: Graph): Graph;
 //# sourceMappingURL=graph.d.ts.map

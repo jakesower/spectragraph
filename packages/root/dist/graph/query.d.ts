@@ -1,5 +1,5 @@
-import { RootQuery } from "./query.ts";
-import { Graph } from "./graph.js";
+import { RootQuery } from "../query.js";
+import { Graph } from "../graph.js";
 export type Result = {
     [k: string]: unknown;
 };
@@ -9,4 +9,4 @@ type QueryGraph = {
 export declare function createQueryGraph(graph: Graph): QueryGraph;
 export declare function queryGraph<Q extends RootQuery>(graph: Graph, query: Q): Result;
 export {};
-//# sourceMappingURL=query-graph.d.ts.map
+//# sourceMappingURL=query.d.ts.map

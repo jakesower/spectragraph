@@ -1,9 +1,9 @@
 import { defaultExpressionEngine } from "@data-prism/expressions";
 import { mapValues, orderBy } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
-import { normalizeQuery } from "./query.ts";
-import { buildWhereExpression } from "./graph/where-helpers.js";
-import { createExpressionProjector } from "./graph/select-helpers.js";
+import { normalizeQuery } from "../query.js";
+import { buildWhereExpression } from "./where-helpers.js";
+import { createExpressionProjector } from "./select-helpers.js";
 const ID = Symbol("id");
 const TYPE = Symbol("type");
 const RAW = Symbol("raw");

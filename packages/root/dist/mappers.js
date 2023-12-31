@@ -36,11 +36,11 @@ export function normalizeResource(resourceType, resource, schema, resourceMapper
         relationships,
     };
 }
-export function normalizeResources(rootResourceType, rootResources, schema, mappers = {}) {
+export function normalizeResources(rootResourceType, rootResources, schema, graphMappers = {}) {
     const output = mapValues(schema.resources, () => ({}));
     const go = (resourceType, resource) => {
         const resourceSchema = schema.resources[resourceType];
-        const resourceMappers = mappers[resourceType] ?? {};
+        const resourceMappers = graphMappers[resourceType] ?? {};
         const idField = resourceMappers.id ?? resourceSchema.idField ?? "id";
         const resourceId = resource[idField];
         output[resourceType][resourceId] = normalizeResource(resourceType, resource, schema, resourceMappers);
@@ -53,9 +53,8 @@ export function normalizeResources(rootResourceType, rootResources, schema, mapp
                     ? resource[mapper]
                     : resource[relName];
             return applyOrMap(relVal ?? emptyRel, (relRes) => {
-                if (typeof relRes === "object") {
+                if (typeof relRes === "object")
                     go(relSchema.type, relRes);
-                }
             });
         });
     };
