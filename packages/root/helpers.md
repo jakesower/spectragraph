@@ -583,3 +583,7 @@ mapQuery(careBearSchema, query, (subquery) =>
 ```
 
 That will clear out the appropriate keys, leaving us with a new query that will work as we'd like it to.
+
+### Schemaless Helpers
+
+There are other helper functions, namely `forEachSchemalessQuery`, `mapSchemalessQuery`, and `reduceSchemalessQuery` that do not require a schema. This, however, means that there is much less available info. For these, the `info` argument for the passed in function only contains `path` and `parent`.
