@@ -19,7 +19,15 @@ export type Graph = {
         [k: string | number]: NormalResource;
     };
 };
-export declare function emptyGraph(schema: Schema): Graph;
-export declare function linkInverses(graph: Graph, schema: Schema): Graph;
-export declare function mergeGraphs(left: Graph, right: Graph): Graph;
-//# sourceMappingURL=graph.d.ts.map
+export declare function createStore(schema: Schema, initialData?: Graph): {
+    linkInverses: () => void;
+    merge: (graph: Graph) => void;
+    mergeTree: (resourceType: string, tree: {
+        [k: string]: unknown;
+    }, mappers?: {}) => void;
+    mergeTrees: (resourceType: string, trees: {
+        [k: string]: unknown;
+    }[], mappers?: {}) => void;
+    query: (query: any) => any;
+};
+//# sourceMappingURL=store.d.ts.map

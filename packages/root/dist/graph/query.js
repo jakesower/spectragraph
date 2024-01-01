@@ -90,7 +90,12 @@ function runQuery(rootQuery, data) {
                     return (result) => {
                         if (Array.isArray(result[propName])) {
                             return result[propName]
-                                .map((r) => go({ ...propQuery, type: r[TYPE], id: r[ID] }))
+                                .map((r) => {
+                                if (r === undefined) {
+                                    throw new Error(`A related resource was not found on resource ${query.type}.${query.id}. ${propName}: ${JSON.stringify(result[propName])}. Check that all of the refs in ${query.type}.${query.id} are valid.`);
+                                }
+                                return go({ ...propQuery, type: r[TYPE], id: r[ID] });
+                            })
                                 .filter(Boolean);
                         }
                         return go({
