@@ -8,11 +8,11 @@ A `flatResource` is a resource that doesn't differentiate between attributes and
 
 ```json
 {
-	"id": "a-uuid",
+	"id": "an-id",
 	"name": "Tenderheart Bear",
-	"powers": ["some-uuid", "another-uuid"],
+	"powers": ["some-id", "another-id"],
 	"home": {
-		"id": "home-uuid",
+		"id": "home-id",
 		"name": "Care-a-Lot"
 	}
 }
@@ -83,7 +83,7 @@ The nested `home` data was lost as a part of the process, as we're formatting a 
 ### `normalizeResources`
 
 ```javascript
-normalizeResources(resourceType, flatResources, schema, (graphMappers = {}));
+normalizeResources(resourceType, flatResources, schema, graphMappers = {});
 ```
 
 This function is similar to the previous one, but will create an entire graph based on an array of flat resources. It attempts to capture as much data as possible, conforming to the provided schema.
