@@ -62,7 +62,7 @@ export function normalizeResource(
 	};
 }
 
-export function normalizeResources(
+export function createGraphFromTrees(
 	rootResourceType: string,
 	rootResources: { [k: string]: unknown }[],
 	schema: Schema,

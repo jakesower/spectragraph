@@ -5,7 +5,7 @@ import {
 	linkInverses,
 	mergeGraphs,
 } from "./graph.js";
-import { normalizeResources } from "./mappers.js";
+import { createGraphFromTrees } from "./mappers.js";
 export { createQueryGraph, queryGraph } from "./graph/query.js";
 
 export type Ref = {
@@ -45,7 +45,7 @@ export function createStore(schema: Schema, initialData: Graph = {}) {
 		trees: { [k: string]: unknown }[],
 		mappers = {},
 	) => {
-		const graph = normalizeResources(resourceType, trees, schema, mappers);
+		const graph = createGraphFromTrees(resourceType, trees, schema, mappers);
 		merge(graph);
 	};
 

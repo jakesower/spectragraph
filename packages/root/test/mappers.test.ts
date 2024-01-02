@@ -3,7 +3,7 @@ import { careBearData } from "./fixtures/care-bear-data.js"; // eslint-disable-l
 import { careBearSchema } from "./fixtures/care-bear-schema.js";
 import {
 	normalizeResource,
-	normalizeResources,
+	createGraphFromTrees,
 	flattenResource,
 } from "../src/mappers.js";
 import { flatCareBearData } from "./fixtures/care-bear-data-flat.js"; // eslint-disable-line
@@ -171,11 +171,11 @@ describe("normalizeResource", () => {
 	});
 });
 
-describe("normalizeResources", () => {
+describe("createGraphFromTrees", () => {
 	it("makes a graph from a single resource", () => {
 		const resource = flatCareBearData.bears[0];
 
-		const graph = normalizeResources("bears", [resource], careBearSchema);
+		const graph = createGraphFromTrees("bears", [resource], careBearSchema);
 
 		expect(graph).toEqual({
 			bears: pick(careBearData.bears, ["1"]),
@@ -187,7 +187,7 @@ describe("normalizeResources", () => {
 	it("makes a graph from multiple resources", () => {
 		const resources = flatCareBearData.bears;
 
-		const graph = normalizeResources("bears", resources, careBearSchema);
+		const graph = createGraphFromTrees("bears", resources, careBearSchema);
 
 		expect(graph).toEqual({
 			bears: careBearData.bears,
@@ -205,7 +205,7 @@ describe("normalizeResources", () => {
 
 		const mappers = { bears: { yearIntroduced: "año" } };
 
-		const graph = normalizeResources(
+		const graph = createGraphFromTrees(
 			"bears",
 			[resource],
 			careBearSchema,
@@ -227,7 +227,7 @@ describe("normalizeResources", () => {
 			},
 		};
 
-		const graph = normalizeResources("bears", [resource], careBearSchema);
+		const graph = createGraphFromTrees("bears", [resource], careBearSchema);
 
 		expect(graph).toEqual({
 			bears: pick(careBearData.bears, ["1"]),
@@ -242,7 +242,7 @@ describe("normalizeResources", () => {
 			powers: flatCareBearData.powers.slice(0, 2),
 		};
 
-		const graph = normalizeResources("bears", [resource], careBearSchema);
+		const graph = createGraphFromTrees("bears", [resource], careBearSchema);
 
 		expect(graph).toEqual({
 			bears: pick(careBearData.bears, ["3"]),
