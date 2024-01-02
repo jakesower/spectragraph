@@ -80,10 +80,10 @@ This is the normal format for data prism and will allow us to use it for queryin
 
 The nested `home` data was lost as a part of the process, as we're formatting a single resource. The next function, however, will handle such cases.
 
-### `normalizeResources`
+### `createGraphFromTrees`
 
 ```javascript
-normalizeResources(resourceType, flatResources, schema, graphMappers = {});
+createGraphFromTrees(resourceType, flatResources, schema, graphMappers = {});
 ```
 
 This function is similar to the previous one, but will create an entire graph based on an array of flat resources. It attempts to capture as much data as possible, conforming to the provided schema.
@@ -107,7 +107,7 @@ const bearAPIData = {
 	powers: ["power-fgh-345", "power-ijk-456"],
 };
 
-const normalBear = normalizeResources("bears", [bearAPIData], careBearSchema);
+const normalBear = createGraphFromTrees("bears", [bearAPIData], careBearSchema);
 ```
 
 Note that we made our API data into an array. This will return to us a graph:
@@ -177,7 +177,7 @@ const bearAPIData = {
 
 Here we see that the API is delivering us data with snake_case attributes instead of camelCase. Additionally, the `yearIntroduced` field doesn't appear at all. Rather, we get `date_introduced` which contains the data, but in an unhelpful format.
 
-To deal with these, we can use mappers. Recall that `normalizeResource` and `normalizeResources` take in an optional mapper argument. These have the form:
+To deal with these, we can use mappers. Recall that `normalizeResource` and `createGraphFromTrees` take in an optional mapper argument. These have the form:
 
 ```javascript
 {

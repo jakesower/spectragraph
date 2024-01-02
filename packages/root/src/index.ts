@@ -2,7 +2,7 @@ export { linkInverses, emptyGraph, mergeGraphs } from "./graph.js";
 export {
 	flattenResource,
 	normalizeResource,
-	normalizeResources,
+	createGraphFromTrees,
 } from "./mappers.js";
 export { createQueryGraph, queryGraph } from "./graph/query.js";
 export {
@@ -13,3 +13,4 @@ export {
 	mapSchemalessQuery,
 	reduceSchemalessQuery,
 } from "./query.js";
+export { createStore } from "./store.js";

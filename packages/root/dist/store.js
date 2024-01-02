@@ -1,5 +1,5 @@
 import { createQueryGraph, emptyGraph, linkInverses, mergeGraphs, } from "./graph.js";
-import { normalizeResources } from "./mappers.js";
+import { createGraphFromTrees } from "./mappers.js";
 export { createQueryGraph, queryGraph } from "./graph/query.js";
 export function createStore(schema, initialData = {}) {
     let queryGraph;
@@ -14,7 +14,7 @@ export function createStore(schema, initialData = {}) {
         storeGraph = mergeGraphs(storeGraph, graph);
     };
     const mergeTrees = (resourceType, trees, mappers = {}) => {
-        const graph = normalizeResources(resourceType, trees, schema, mappers);
+        const graph = createGraphFromTrees(resourceType, trees, schema, mappers);
         merge(graph);
     };
     const mergeTree = (resourceType, tree, mappers = {}) => {
