@@ -126,6 +126,12 @@ function runQuery<Q extends NormalRootQuery>(
 
 					// subquery
 					return (result) => {
+						if (result[propName] === undefined) {
+							throw new Error(
+								`The "${propName}" relationship is undefined on a resource of type "${query.type}. You probably constructed your graph wrong. Try linking the inverses (via "linkInverses") and check your schema to make sure all inverses have been defined correctly there.`,
+							);
+						}
+
 						if (Array.isArray(result[propName])) {
 							return result[propName]
 								.map((r) => {

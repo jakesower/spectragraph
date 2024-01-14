@@ -42,8 +42,8 @@ describe("linkInverses", () => {
 	it("links a many-to-many relationship", () => {
 		const unlinkedBears = mapValues(careBearData.bears, (bear) => ({
 			...bear,
-			relationships: omit(bear.relationships, ["powers"]),
-		}));
+			relationships: { ...bear.relationships, powers: undefined },
+		})) as any; // eslint-disable-line
 
 		const linked = linkInverses(
 			{ ...careBearData, bears: unlinkedBears },

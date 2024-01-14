@@ -3,8 +3,8 @@ import { applyOrMap } from "@data-prism/utils";
 import { Graph, NormalResource } from "./graph.js";
 import { Schema } from "./schema.js";
 
-type Mapper = string | ((res: any) => unknown);  // eslint-disable-line
-type ResourceMappers = { [k: string]: Mapper };
+type Mapper = string | ((res: any) => unknown); // eslint-disable-line
+type ResourceMappers = { [k: string]: Mapper; id?: string };
 type GraphMappers = { [k: string]: ResourceMappers };
 
 export function flattenResource(resourceId, resource, idField = "id") {
@@ -23,9 +23,10 @@ export function normalizeResource(
 	resourceType: string,
 	resource: { [k: string]: unknown },
 	schema: Schema,
-	resourceMappers: ResourceMappers = {},
+	graphMappers: GraphMappers = {},
 ): NormalResource {
 	const resSchema = schema.resources[resourceType];
+	const resourceMappers = graphMappers[resourceType] ?? {};
 
 	const attributes = mapValues(resSchema.attributes, (_, attr) => {
 		const mapper = resourceMappers[attr];
@@ -38,9 +39,11 @@ export function normalizeResource(
 	});
 
 	const relationships = mapValues(resSchema.relationships, (relSchema, rel) => {
+		const relMapper = graphMappers[relSchema.type] ?? {};
+		const relResSchema = schema.resources[relSchema.type];
 		const mapper = resourceMappers[rel];
 		const emptyRel = relSchema.cardinality === "many" ? [] : null;
-		const relIdField = schema.resources[relSchema.type].idField ?? "id";
+		const relIdField = relMapper.id ?? relResSchema.idField ?? "id";
 
 		const relVal =
 			typeof mapper === "function"
@@ -48,6 +51,8 @@ export function normalizeResource(
 				: mapper
 					? resource[mapper]
 					: resource[rel];
+
+		if (relVal === undefined) return undefined;
 
 		return applyOrMap(relVal ?? emptyRel, (relRes) =>
 			typeof relRes === "object"
@@ -75,13 +80,13 @@ export function createGraphFromTrees(
 		const resourceMappers = graphMappers[resourceType] ?? {};
 
 		const idField = resourceMappers.id ?? resourceSchema.idField ?? "id";
-		const resourceId = resource[idField as string];
+		const resourceId = resource[idField];
 
 		output[resourceType][resourceId] = normalizeResource(
 			resourceType,
 			resource,
 			schema,
-			resourceMappers,
+			graphMappers,
 		);
 
 		Object.entries(resourceSchema.relationships).forEach(

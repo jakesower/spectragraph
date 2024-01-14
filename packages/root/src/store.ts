@@ -6,7 +6,7 @@ import {
 	mergeGraphs,
 } from "./graph.js";
 import { createGraphFromTrees } from "./mappers.js";
-export { createQueryGraph, queryGraph } from "./graph/query.js";
+export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 
 export type Ref = {
 	type: string;
