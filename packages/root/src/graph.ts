@@ -1,7 +1,7 @@
 import { mapValues } from "lodash-es";
 import { Schema } from "./schema.js";
 import { applyOrMap } from "@data-prism/utils";
-export { createQueryGraph, queryGraph } from "./graph/query.js";
+export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 
 export type Ref = {
 	type: string;
@@ -30,6 +30,7 @@ export function linkInverses(graph: Graph, schema: Schema): Graph {
 
 	Object.entries(schema.resources).forEach(([resType, resSchema]) => {
 		const sampleRes = Object.values(graph[resType])[0];
+		if (!sampleRes) return;
 
 		Object.entries(resSchema.relationships).forEach(([relName, relSchema]) => {
 			const { cardinality, type: foreignType, inverse } = relSchema;

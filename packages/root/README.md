@@ -1,4 +1,4 @@
-# Querable Graphs
+# Queryable Graphs
 
 This library exposes the ability to query graphs to receive result trees using a robust query language. In addition it provides a suite of utility functions to help wrangle data into appropriate formats and interact with data structures effectively. See [helper functions](./helpers.md).
 
@@ -17,10 +17,10 @@ Resource data is a representation of the graph of data to be queried on. It shou
         attr2: "value2"
       },
       relationships: {
-        [relationshipName1]: { type: "other resource", id: "1234" },
-        [relationshipName2]: [
-          { type: "bar resource", id: 1 },
-          { type: "bar resource", id: 2 }
+        relationship1: { type: "other_resource", id: "1234" },
+      [relationship2]: [
+          { type: "bar_resource", id: 1 },
+          { type: "bar_resource", id: 2 }
         ]
       }
     }

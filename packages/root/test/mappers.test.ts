@@ -64,11 +64,7 @@ describe("normalizeResource", () => {
 
 		expect(resource).toEqual({
 			...careBearData.bears[1],
-			relationships: {
-				home: null,
-				bestFriend: null,
-				powers: [],
-			},
+			relationships: {},
 		});
 	});
 
@@ -82,8 +78,6 @@ describe("normalizeResource", () => {
 			...careBearData.bears[1],
 			relationships: {
 				home: { type: "homes", id: "1" },
-				bestFriend: null,
-				powers: [],
 			},
 		});
 	});
@@ -97,8 +91,6 @@ describe("normalizeResource", () => {
 		expect(resource).toEqual({
 			...careBearData.bears[1],
 			relationships: {
-				home: null,
-				bestFriend: null,
 				powers: [{ type: "powers", id: "careBearStare" }],
 			},
 		});
@@ -112,7 +104,9 @@ describe("normalizeResource", () => {
 		};
 
 		const resource = normalizeResource("bears", base, careBearSchema, {
-			name: "nombre",
+			bears: {
+				name: "nombre",
+			},
 		});
 
 		expect(resource).toEqual({
@@ -128,7 +122,9 @@ describe("normalizeResource", () => {
 		};
 
 		const resource = normalizeResource("bears", base, careBearSchema, {
-			home: "casa",
+			bears: {
+				home: "casa",
+			},
 		});
 
 		expect(resource).toEqual({
@@ -140,6 +136,39 @@ describe("normalizeResource", () => {
 		});
 	});
 
+	it("formats with a relationship renaming and a nonstandard id", () => {
+		const powaz = {
+			...flatCareBearData.powers.map((p) => ({
+				...p,
+				powerId: undefined,
+				powaId: p.powerId,
+			})),
+		};
+
+		const base = {
+			...flatCareBearData.bears[0],
+			powers: undefined,
+			powaz: [powaz[0]],
+		};
+
+		const resource = normalizeResource("bears", base, careBearSchema, {
+			bears: {
+				powers: "powaz",
+			},
+			powers: {
+				id: "powaId",
+			},
+		});
+
+		expect(resource).toEqual({
+			...careBearData.bears[1],
+			relationships: {
+				...careBearData.bears[1].relationships,
+				powers: [{ type: "powers", id: "careBearStare" }],
+			},
+		});
+	});
+
 	it("formats with a function", () => {
 		const base = {
 			...flatCareBearData.bears[0],
@@ -147,7 +176,9 @@ describe("normalizeResource", () => {
 		};
 
 		const resource = normalizeResource("bears", base, careBearSchema, {
-			name: (res) => `${res.name} a.k.a. ${res.nombre}`,
+			bears: {
+				name: (res) => `${res.name} a.k.a. ${res.nombre}`,
+			},
 		});
 
 		expect(resource).toEqual({
@@ -168,6 +199,21 @@ describe("normalizeResource", () => {
 		const resource = normalizeResource("bears", base, careBearSchema);
 
 		expect(resource).toEqual(careBearData.bears[1]);
+	});
+
+	it("keeps undefined relationships undefined", () => {
+		const base = omit(flatCareBearData.bears[0], ["home", "powers"]);
+
+		const resource = normalizeResource("bears", base, careBearSchema);
+
+		expect(resource).toEqual({
+			...careBearData.bears[1],
+			relationships: {
+				bestFriend: null,
+				home: undefined,
+				powers: undefined,
+			},
+		});
 	});
 });
 

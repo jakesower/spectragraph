@@ -251,6 +251,30 @@ describe("queryTree core", () => {
 		expect(result).toEqual({ koopa: undefined });
 	});
 
+	it("errors out on undefined resources", async () => {
+		await expect(async () => {
+			const graph = {
+				...careBearData,
+				bears: {
+					...careBearData.bears,
+					1: {
+						...careBearData.bears[1],
+						relationships: {},
+					},
+				},
+			};
+
+			queryGraph(graph, {
+				type: "bears",
+				id: "1",
+				select: {
+					name: "name",
+					home: { select: ["name"] },
+				},
+			});
+		}).rejects.toThrowError();
+	});
+
 	describe("dot notation", () => {
 		it("fetches nested fields with dot notation", async () => {
 			const result = await graph.query({

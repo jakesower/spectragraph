@@ -8,8 +8,9 @@ export function flattenResource(resourceId, resource, idField = "id") {
         ...relationships,
     };
 }
-export function normalizeResource(resourceType, resource, schema, resourceMappers = {}) {
+export function normalizeResource(resourceType, resource, schema, graphMappers = {}) {
     const resSchema = schema.resources[resourceType];
+    const resourceMappers = graphMappers[resourceType] ?? {};
     const attributes = mapValues(resSchema.attributes, (_, attr) => {
         const mapper = resourceMappers[attr];
         return typeof mapper === "function"
@@ -19,14 +20,18 @@ export function normalizeResource(resourceType, resource, schema, resourceMapper
                 : resource[attr];
     });
     const relationships = mapValues(resSchema.relationships, (relSchema, rel) => {
+        const relMapper = graphMappers[relSchema.type] ?? {};
+        const relResSchema = schema.resources[relSchema.type];
         const mapper = resourceMappers[rel];
         const emptyRel = relSchema.cardinality === "many" ? [] : null;
-        const relIdField = schema.resources[relSchema.type].idField ?? "id";
+        const relIdField = relMapper.id ?? relResSchema.idField ?? "id";
         const relVal = typeof mapper === "function"
             ? mapper(resource)
             : mapper
                 ? resource[mapper]
                 : resource[rel];
+        if (relVal === undefined)
+            return undefined;
         return applyOrMap(relVal ?? emptyRel, (relRes) => typeof relRes === "object"
             ? { type: relSchema.type, id: relRes[relIdField] }
             : { type: relSchema.type, id: relRes });
@@ -43,7 +48,7 @@ export function createGraphFromTrees(rootResourceType, rootResources, schema, gr
         const resourceMappers = graphMappers[resourceType] ?? {};
         const idField = resourceMappers.id ?? resourceSchema.idField ?? "id";
         const resourceId = resource[idField];
-        output[resourceType][resourceId] = normalizeResource(resourceType, resource, schema, resourceMappers);
+        output[resourceType][resourceId] = normalizeResource(resourceType, resource, schema, graphMappers);
         Object.entries(resourceSchema.relationships).forEach(([relName, relSchema]) => {
             const mapper = resourceMappers[relName];
             const emptyRel = relSchema.cardinality === "many" ? [] : null;
