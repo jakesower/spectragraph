@@ -4,12 +4,12 @@ import { createTables, seed } from "../../src/seed.js";
 import { createSQLiteStore } from "../../src/sqlite-store.js";
 import { careBearData } from "../fixtures/care-bear-data.js";
 import { careBearSchema } from "../fixtures/care-bear.schema.js";
-import { careBearsConfig } from "../fixtures/care-bear-config.js";
+import { careBearConfig } from "../fixtures/care-bear-config.js";
 
 const db = Database(":memory:");
-createTables(db, careBearSchema, careBearsConfig);
-seed(db, careBearSchema, careBearsConfig, careBearData);
-const store = createSQLiteStore(careBearSchema, db, careBearsConfig);
+createTables(db, careBearSchema, careBearConfig);
+seed(db, careBearSchema, careBearConfig, careBearData);
+const store = createSQLiteStore(careBearSchema, db, careBearConfig);
 
 it("filters on a property equality constraint", async () => {
 	const result = await store.get({

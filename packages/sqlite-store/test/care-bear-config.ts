@@ -1,4 +1,4 @@
-export const careBearsConfig = {
+export const careBearConfig = {
 	resources: {
 		bears: {
 			table: "bears",

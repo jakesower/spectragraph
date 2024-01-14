@@ -1,18 +1,20 @@
 import { mapValues } from "lodash-es";
+import { queryGraph } from "data-prism";
 import { buildSql, composeClauses } from "./helpers/sql.js";
 import { runQuery } from "./operations/operations.js";
 import { flattenQuery } from "./helpers/query-helpers.ts";
 import { castValToDb } from "./helpers/sql.js";
-import { createGraph } from "@data-prism/core";
 import { varsExpressionEngine } from "./helpers/sql-expressions.js";
 
 export function get(query, context) {
-	const { schema, db, config, rootClauses = [] } = context;
-	const resConfig = config.resources[query.type];
+	const { schema, config, rootClauses = [] } = context;
+	const { db, resources, table } = config;
+
+	const resConfig = resources[query.type];
 	const rootTable = resConfig.table;
 
 	const initModifiers = {
-		from: resConfig.table,
+		from: table,
 	};
 
 	return runQuery(query, context, (queryModifiers) => {
@@ -40,15 +42,18 @@ export function get(query, context) {
 
 		const buildExtractor = () => {
 			const extractors = flatQuery.flatMap((queryPart) => {
-				const { parent, parentQuery, parentRelationship, properties, type } = queryPart;
+				const { parent, parentQuery, parentRelationship, properties, type } =
+					queryPart;
 				const queryPartConfig = config.resources[type];
 				const { idProperty = "id" } = queryPartConfig;
 
 				const parentType = parent?.type;
 				const parentRelDef =
-					parentQuery && schema.resources[parentType].relationships[parentRelationship];
+					parentQuery &&
+					schema.resources[parentType].relationships[parentRelationship];
 
-				const pathStr = queryPart.path.length > 0 ? `$${queryPart.path.join("$")}` : "";
+				const pathStr =
+					queryPart.path.length > 0 ? `$${queryPart.path.join("$")}` : "";
 				const idPath = `${rootTable}${pathStr}.${idProperty}`;
 				const idIdx = selectPropertyMap[idPath];
 
@@ -60,20 +65,25 @@ export function get(query, context) {
 							queryPart.path.length > 1
 								? `$${queryPart.path.slice(0, -1).join("$")}`
 								: "";
-						const parentIdProperty = config.resources[parentType].idProperty ?? "id";
+						const parentIdProperty =
+							config.resources[parentType].idProperty ?? "id";
 						const parentIdPath = `${rootTable}${parentPathStr}.${parentIdProperty}`;
 						const parentIdIdx = selectPropertyMap[parentIdPath];
 						const parentId = result[parentIdIdx];
 
 						if (!dataGraph[parentType][parentId]) {
-							dataGraph[parentType][parentId] = { [idProperty]: parentId, id: parentId };
+							dataGraph[parentType][parentId] = {
+								[idProperty]: parentId,
+								id: parentId,
+							};
 						}
 						const parent = dataGraph[parentType][parentId];
 
 						if (parentRelDef.cardinality === "one") {
 							parent[parentRelationship] = id ?? null;
 						} else {
-							parent[parentRelationship] = parent[parentRelationship] ?? new Set();
+							parent[parentRelationship] =
+								parent[parentRelationship] ?? new Set();
 							parent[parentRelationship].add(id);
 						}
 					}
@@ -101,8 +111,6 @@ export function get(query, context) {
 		const extractor = buildExtractor();
 		allResults.forEach((row) => extractor(row));
 
-		return createGraph(schema, dataGraph, {
-			omittedOperations: ["limit", "offset", "where"],
-		}).getTrees(query);
+		return queryGraph(dataGraph, query);
 	});
 }

@@ -1,6 +1,6 @@
 import { mapValues } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
-export { createQueryGraph, queryGraph } from "./graph/query.js";
+export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 export function emptyGraph(schema) {
     return mapValues(schema.resources, () => ({}));
 }

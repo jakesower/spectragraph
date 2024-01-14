@@ -1,4 +1,4 @@
-export { linkInverses, emptyGraph, mergeGraphs } from "./graph.js";
+export { linkInverses, emptyGraph, mergeGraphs, Graph } from "./graph.js";
 export {
 	flattenResource,
 	normalizeResource,
