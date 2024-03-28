@@ -3,7 +3,7 @@ import { partition, pick } from "lodash-es";
 
 type QueryBreakdown<S extends Schema> = {
 	path: string[];
-	properties: any;
+	attributes: any;
 	relationships: any;
 	type: string & keyof S["resources"];
 }[];
@@ -14,13 +14,13 @@ export function flattenQuery<S extends Schema>(
 ): QueryBreakdown<S> {
 	const go = (query: Query<S>, type, path, parent = null, parentRelationship = null) => {
 		const resDef = schema.resources[type];
-		const [propertiesEntries, relationshipsEntries] = partition(
+		const [attributesEntries, relationshipsEntries] = partition(
 			Object.entries(query.select ?? {}),
 			([, propVal]) =>
 				typeof propVal === "string" && (propVal in resDef.attributes || propVal === "id"),
 		);
 
-		const properties = propertiesEntries.map((pe) => pe[1]);
+		const attributes = attributesEntries.map((pe) => pe[1]);
 		const relationshipKeys = relationshipsEntries.map((pe) => pe[0]);
 
 		const level = {
@@ -28,7 +28,7 @@ export function flattenQuery<S extends Schema>(
 			parentQuery: parent?.query ?? null,
 			parentRelationship,
 			path,
-			properties,
+			attributes,
 			query,
 			ref: !query.select,
 			relationships: pick(query.select, relationshipKeys),

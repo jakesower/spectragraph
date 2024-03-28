@@ -1,4 +1,5 @@
-import { groupBy, mapValues, uniq, uniqBy } from "lodash-es";
+import { applyOrMap } from "@data-prism/utils";
+import { groupBy, mapValues, uniqBy } from "lodash-es";
 
 const boolToNum = (val) => (val === true ? 1 : val === false ? 0 : val) ?? null;
 const defaultColumnTypes = {
@@ -11,18 +12,20 @@ const defaultColumnTypes = {
 export function createTables(db, schema, config) {
 	Object.entries(schema.resources).forEach(([resType, resDef]) => {
 		const resConfig = config.resources[resType];
-		const { idProperty = "id", table } = resConfig;
+		const { idAttribute = "id", table } = resConfig;
 
-		const idCol = { name: idProperty, type: "VARCHAR" };
-		const propCols = Object.entries(resDef.properties).map(([propName, propDef]) => ({
-			name: propName,
-			type: defaultColumnTypes[propDef.type],
-		}));
+		const idCol = { name: idAttribute, type: "VARCHAR" };
+		const attrCols = Object.entries(resDef.attributes)
+			.filter(([attrName]) => attrName !== idAttribute)
+			.map(([attrName, attrDef]) => ({
+				name: attrName,
+				type: defaultColumnTypes[attrDef.type],
+			}));
 		const joinCols = Object.values(resConfig.joins)
 			.filter((j) => j.localColumn)
 			.map((j) => ({ name: j.localColumn, type: "VARCHAR" }));
 
-		const allCols = [idCol, ...propCols, ...joinCols];
+		const allCols = [idCol, ...attrCols, ...joinCols];
 
 		const sql = `CREATE TABLE ${table} (${allCols
 			.map((col) => `${col.name} ${col.type}`)
@@ -31,10 +34,16 @@ export function createTables(db, schema, config) {
 		db.exec(sql);
 	});
 
-	const joinTableConfigs = Object.values(config.resources).flatMap((resConfig) =>
-		Object.values(resConfig.joins).filter((resJoinConfig) => resJoinConfig.joinTable),
+	const joinTableConfigs = Object.values(config.resources).flatMap(
+		(resConfig) =>
+			Object.values(resConfig.joins).filter(
+				(resJoinConfig) => resJoinConfig.joinTable,
+			),
 	);
-	const joinTables = groupBy(Object.values(joinTableConfigs), (jtc) => jtc.joinTable);
+	const joinTables = groupBy(
+		Object.values(joinTableConfigs),
+		(jtc) => jtc.joinTable,
+	);
 	Object.entries(joinTables).forEach(([joinTable, jt]) => {
 		const joinCols = jt.map((j) => j.localJoinColumn);
 		joinCols.sort();
@@ -51,34 +60,36 @@ export function seed(db, schema, config, seedData) {
 	const tableConfigs = mapValues(schema.resources, (resDef, resType) => {
 		const resConfig = config.resources[resType];
 
-		const id = (res) => res[resConfig.idProperty ?? "id"];
-		const props = Object.entries(resDef.properties).map(([propName, propDef]) =>
-			propDef.type === "boolean"
-				? (res) => boolToNum(res[propName])
-				: (res) => res[propName],
-		);
+		const idAttribute = resConfig.idAttribute ?? "id";
+		const attrs = Object.entries(resDef.attributes)
+			.filter(([attrName]) => attrName !== idAttribute)
+			.map(([attrName, attrDef]) =>
+				attrDef.type === "boolean"
+					? (res) => boolToNum(res.attributes[attrName])
+					: (res) => res.attributes[attrName],
+			);
 		const joins = Object.entries(resConfig.joins)
 			.filter(([_, j]) => j.localColumn)
 			.map(
-				([joinProp]) =>
+				([joinAttr]) =>
 					(res) =>
-						res[joinProp],
+						applyOrMap(res.relationships[joinAttr], ({ id }) => id),
 			);
 
-		return [id, ...props, ...joins];
+		return [...attrs, ...joins];
 	});
 
 	Object.entries(seedData).forEach(([resType, resources]) => {
 		const { table } = config.resources[resType];
 		const tableConfig = tableConfigs[resType];
-		const placeholders = tableConfig.map(() => "?");
+		const placeholders = ["id", ...tableConfig].map(() => "?");
 		const sql = `INSERT INTO ${table} VALUES (${placeholders})`;
 		const dbQuery = db.prepare(sql);
 
-		Object.values(resources).forEach((resource) => {
+		Object.entries(resources).forEach(([id, resource]) => {
 			const values = tableConfig.map((fn) => fn(resource));
 
-			dbQuery.run(values);
+			dbQuery.run([id, ...values]);
 		});
 	});
 
@@ -89,7 +100,7 @@ export function seed(db, schema, config, seedData) {
 				.map(([relName, join]) => ({
 					table: join.joinTable,
 					resourceType: resType,
-					property: relName,
+					attribute: relName,
 					localColumn: join.localJoinColumn,
 					foreignColumn: join.foreignJoinColumn,
 				})),
@@ -97,14 +108,16 @@ export function seed(db, schema, config, seedData) {
 	const joinTableConfigs = uniqBy(allJoinTableConfigs, (j) => j.table);
 
 	joinTableConfigs.forEach((join) => {
-		const { table, resourceType, property, localColumn, foreignColumn } = join;
+		const { table, resourceType, attribute, localColumn, foreignColumn } = join;
 		const sql = `INSERT INTO ${table} VALUES (?,?)`;
 		const dbQuery = db.prepare(sql);
 
 		Object.entries(seedData[resourceType]).forEach(([localId, resource]) => {
-			resource[property].forEach((foreignId) => {
+			resource.relationships[attribute].forEach(({ id: foreignId }) => {
 				const values =
-					localColumn < foreignColumn ? [localId, foreignId] : [foreignId, localId];
+					localColumn < foreignColumn
+						? [localId, foreignId]
+						: [foreignId, localId];
 
 				dbQuery.run(values);
 			});

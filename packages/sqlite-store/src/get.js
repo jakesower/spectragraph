@@ -8,13 +8,13 @@ import { varsExpressionEngine } from "./helpers/sql-expressions.js";
 
 export function get(query, context) {
 	const { schema, config, rootClauses = [] } = context;
-	const { db, resources, table } = config;
+	const { db, resources } = config;
 
 	const resConfig = resources[query.type];
 	const rootTable = resConfig.table;
 
 	const initModifiers = {
-		from: table,
+		from: rootTable,
 	};
 
 	return runQuery(query, context, (queryModifiers) => {
@@ -24,9 +24,9 @@ export function get(query, context) {
 			...queryModifiers,
 		]);
 
-		const selectPropertyMap = {};
-		composedModifiers.select.forEach((prop, idx) => {
-			selectPropertyMap[prop] = idx;
+		const selectAttributeMap = {};
+		composedModifiers.select.forEach((attr, idx) => {
+			selectAttributeMap[attr] = idx;
 		});
 
 		const sql = buildSql(composedModifiers);
@@ -42,10 +42,10 @@ export function get(query, context) {
 
 		const buildExtractor = () => {
 			const extractors = flatQuery.flatMap((queryPart) => {
-				const { parent, parentQuery, parentRelationship, properties, type } =
+				const { parent, parentQuery, parentRelationship, attributes, type } =
 					queryPart;
 				const queryPartConfig = config.resources[type];
-				const { idProperty = "id" } = queryPartConfig;
+				const { idAttribute = "id" } = queryPartConfig;
 
 				const parentType = parent?.type;
 				const parentRelDef =
@@ -54,8 +54,8 @@ export function get(query, context) {
 
 				const pathStr =
 					queryPart.path.length > 0 ? `$${queryPart.path.join("$")}` : "";
-				const idPath = `${rootTable}${pathStr}.${idProperty}`;
-				const idIdx = selectPropertyMap[idPath];
+				const idPath = `${rootTable}${pathStr}.${idAttribute}`;
+				const idIdx = selectAttributeMap[idPath];
 
 				return (result) => {
 					const id = result[idIdx];
@@ -65,15 +65,15 @@ export function get(query, context) {
 							queryPart.path.length > 1
 								? `$${queryPart.path.slice(0, -1).join("$")}`
 								: "";
-						const parentIdProperty =
-							config.resources[parentType].idProperty ?? "id";
-						const parentIdPath = `${rootTable}${parentPathStr}.${parentIdProperty}`;
-						const parentIdIdx = selectPropertyMap[parentIdPath];
+						const parentIdAttribute =
+							config.resources[parentType].idAttribute ?? "id";
+						const parentIdPath = `${rootTable}${parentPathStr}.${parentIdAttribute}`;
+						const parentIdIdx = selectAttributeMap[parentIdPath];
 						const parentId = result[parentIdIdx];
 
 						if (!dataGraph[parentType][parentId]) {
 							dataGraph[parentType][parentId] = {
-								[idProperty]: parentId,
+								[idAttribute]: parentId,
 								id: parentId,
 							};
 						}
@@ -89,14 +89,18 @@ export function get(query, context) {
 					}
 
 					if (!id) return;
-					dataGraph[type][id] = dataGraph[type][id] ?? { [idProperty]: id };
+					dataGraph[type][id] = dataGraph[type][id] ?? {
+						id,
+						attributes: {},
+						relationships: {},
+					};
 
-					if (properties.length > 0) {
-						properties.forEach((prop) => {
-							const fullPropPath = `${rootTable}${pathStr}.${prop}`;
-							const resultIdx = selectPropertyMap[fullPropPath];
+					if (attributes.length > 0) {
+						attributes.forEach((attr) => {
+							const fullAttrPath = `${rootTable}${pathStr}.${attr}`;
+							const resultIdx = selectAttributeMap[fullAttrPath];
 
-							dataGraph[type][id][prop] = result[resultIdx];
+							dataGraph[type][id].attributes[attr] = result[resultIdx];
 						});
 					} else {
 						dataGraph[type][id].id = id;
@@ -111,6 +115,7 @@ export function get(query, context) {
 		const extractor = buildExtractor();
 		allResults.forEach((row) => extractor(row));
 
+		console.log(allResults)
 		return queryGraph(dataGraph, query);
 	});
 }
