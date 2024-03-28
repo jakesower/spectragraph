@@ -1,18 +1,15 @@
-import { applyOrMap } from "@data-prism/utils";
 import { preQueryRelationships } from "./relationships.js";
 import { flattenQuery } from "../helpers/query-helpers.ts";
 import { uniq } from "lodash-es";
-import {
-	varsExpressionEngine,
-	whereExpressionEngine,
-} from "../helpers/sql-expressions.js";
+import { whereExpressionEngine } from "../helpers/sql-expressions.js";
 
 const hasToManyRelationship = (schema, query) => {
 	const flatQueries = flattenQuery(schema, query);
 
 	return flatQueries.some((flatQuery) =>
 		Object.keys(flatQuery.relationships).some(
-			(relKey) => schema.resources[query.type].properties[relKey].cardinality === "many",
+			(relKey) =>
+				schema.resources[query.type].attributes[relKey].cardinality === "many",
 		),
 	);
 };
@@ -40,15 +37,17 @@ const operations = {
 				// 	return compileExpression(where, expressionDefinitions, context)();
 				// }
 
-				// an object of properties has been passed in
-				const propExprs = Object.entries(where).map(([propKey, propValOrExpr]) => {
-					if (whereExpressionEngine.isExpression(propValOrExpr)) {
-						const [operation, args] = Object.entries(propValOrExpr)[0];
-						return { [operation]: [`${table}.${propKey}`, args] };
-					}
+				// an object of attributes has been passed in
+				const propExprs = Object.entries(where).map(
+					([propKey, propValOrExpr]) => {
+						if (whereExpressionEngine.isExpression(propValOrExpr)) {
+							const [operation, args] = Object.entries(propValOrExpr)[0];
+							return { [operation]: [`${table}.${propKey}`, args] };
+						}
 
-					return { $eq: [`${table}.${propKey}`, propValOrExpr] };
-				});
+						return { $eq: [`${table}.${propKey}`, propValOrExpr] };
+					},
+				);
 
 				const expr = { $and: propExprs };
 
@@ -90,36 +89,28 @@ const operations = {
 			},
 		},
 	},
-	properties: {
+	select: {
 		preQuery: {
-			apply: (properties, context) => {
+			apply: (select, context) => {
 				const { config, flatQuery, table } = context;
 				const { type } = flatQuery;
 				const { idProperty = "id" } = config.resources[type];
 
-				const propertyProps = Object.values(properties).filter(
+				const attributeProps = Object.values(select).filter(
 					(p) => typeof p === "string",
 				);
 
 				const relationshipsModifiers = preQueryRelationships(context);
 
 				return {
-					select: uniq([idProperty, ...propertyProps]).map((col) => `${table}.${col}`),
+					select: uniq([idProperty, ...attributeProps]).map(
+						(col) => `${table}.${col}`,
+					),
 					...relationshipsModifiers,
 				};
 			},
 		},
 	},
-};
-
-const applyOverPaths = (resources, path, fn) => {
-	if (path.length === 0) return fn(resources);
-
-	const [head, ...tail] = path;
-	return applyOrMap(resources, (resource) => ({
-		...resource,
-		[head]: applyOverPaths(resource[head], tail, fn),
-	}));
 };
 
 // helpful: split query up into props, refs, and subqueries
@@ -153,9 +144,15 @@ const gatherPreOperations = (query, context) => {
 		);
 
 		const refPart =
-			flatQuery.ref && flatQuery.parentQuery ? [preQueryRelationships(argContext)] : [];
+			flatQuery.ref && flatQuery.parentQuery
+				? [preQueryRelationships(argContext)]
+				: [];
 
-		return [{ select: [`${table}.${idProperty}`] }, ...operationParts, ...refPart];
+		return [
+			{ select: [`${table}.${idProperty}`] },
+			...operationParts,
+			...refPart,
+		];
 	});
 
 	return queryParts;

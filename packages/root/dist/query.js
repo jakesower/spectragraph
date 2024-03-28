@@ -5,6 +5,8 @@ export function normalizeQuery(rootQuery) {
     const stringToProp = (str) => ({ [str]: str });
     const go = (query) => {
         const { select } = query;
+        if (!select)
+            throw new Error("queries must have a `select` clause");
         const selectObj = Array.isArray(select)
             ? select.reduce((selectObj, item) => {
                 const subObj = typeof item === "string" ? stringToProp(item) : item;

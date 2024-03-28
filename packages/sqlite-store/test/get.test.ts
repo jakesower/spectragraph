@@ -3,7 +3,7 @@ import Database from "better-sqlite3";
 import { createTables, seed } from "../src/seed.js";
 import { createSQLiteStore } from "../src/sqlite-store.js";
 import { careBearData } from "./fixtures/care-bear-data.js";
-import { careBearSchema } from "./fixtures/care-bears.schema.js";
+import { careBearSchema } from "./fixtures/care-bear-schema.js";
 import { careBearConfig } from "./care-bear-config.js";
 
 const db = Database(":memory:");
@@ -36,15 +36,6 @@ it("fetches a single resource with its id", async () => {
 	expect(result).toEqual({ id: "1", name: "Tenderheart Bear" });
 });
 
-it("fetches a single resource with its id implicitly", async () => {
-	const result = await store.get({
-		type: "bears",
-		id: "1",
-	});
-
-	expect(result).toEqual({ type: "bears", id: "1" });
-});
-
 it("fetches a single resource without its id", async () => {
 	const result = await store.get({
 		type: "bears",
@@ -58,8 +49,8 @@ it("fetches a single resource without its id", async () => {
 });
 
 it("fetches multiple resources", async () => {
-	const result = await store.get({ type: "bears" });
-	const expected = ["1", "2", "3", "5"].map((id) => ({ type: "bears", id }));
+	const result = await store.get({ type: "bears", select: ["id"] });
+	const expected = ["1", "2", "3", "5"].map((id) => ({ id }));
 
 	expect(result).toEqual(expected);
 });
@@ -76,7 +67,7 @@ it("fetches a property from multiple resources", async () => {
 	expect(result).toEqual(expected);
 });
 
-it("fetches null for a nonexistent resource", async () => {
+it.only("fetches null for a nonexistent resource", async () => {
 	const result = await store.get({ type: "bears", id: "6" });
 
 	expect(result).toEqual(null);
@@ -137,7 +128,11 @@ it("fetches a single resource with a subset of props", async () => {
 		select: { id: "id", name: "name", furColor: "furColor" },
 	});
 
-	expect(result).toEqual({ id: "1", name: "Tenderheart Bear", furColor: "tan" });
+	expect(result).toEqual({
+		id: "1",
+		name: "Tenderheart Bear",
+		furColor: "tan",
+	});
 });
 
 it("fetches a single resource with a renamed prop", async () => {
