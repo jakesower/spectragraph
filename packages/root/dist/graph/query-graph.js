@@ -101,6 +101,11 @@ function runQuery(rootQuery, data) {
                             })
                                 .filter(Boolean);
                         }
+                        if (result[propName] === undefined) {
+                            throw new Error(`A related resource was not found on resource ${query.type}.${query.id}. ${propName}: ${JSON.stringify(result[RAW].relationships[propName])}. Check that all of the refs in ${query.type}.${query.id} are valid.`);
+                        }
+                        if (result[propName] === null)
+                            return null;
                         return go({
                             ...propQuery,
                             type: result[propName][TYPE],
