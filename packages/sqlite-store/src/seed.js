@@ -12,11 +12,11 @@ const defaultColumnTypes = {
 export function createTables(db, schema, config) {
 	Object.entries(schema.resources).forEach(([resType, resDef]) => {
 		const resConfig = config.resources[resType];
-		const { idAttribute = "id", table } = resConfig;
+		const { idField = "id", table } = resConfig;
 
-		const idCol = { name: idAttribute, type: "VARCHAR" };
+		const idCol = { name: idField, type: "VARCHAR" };
 		const attrCols = Object.entries(resDef.attributes)
-			.filter(([attrName]) => attrName !== idAttribute)
+			.filter(([attrName]) => attrName !== idField)
 			.map(([attrName, attrDef]) => ({
 				name: attrName,
 				type: defaultColumnTypes[attrDef.type],
@@ -60,9 +60,9 @@ export function seed(db, schema, config, seedData) {
 	const tableConfigs = mapValues(schema.resources, (resDef, resType) => {
 		const resConfig = config.resources[resType];
 
-		const idAttribute = resConfig.idAttribute ?? "id";
+		const idField = resConfig.idField ?? "id";
 		const attrs = Object.entries(resDef.attributes)
-			.filter(([attrName]) => attrName !== idAttribute)
+			.filter(([attrName]) => attrName !== idField)
 			.map(([attrName, attrDef]) =>
 				attrDef.type === "boolean"
 					? (res) => boolToNum(res.attributes[attrName])

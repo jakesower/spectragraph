@@ -52,20 +52,14 @@ export function projectionQueryProperties(projection: Projection) {
 	const go = (val) => {
 		if (isExpression(val)) {
 			const [exprName, exprVal] = Object.entries(val)[0];
-			if (projectionTerminalExpressions.includes(exprName)) {
-				return [];
-			}
+			if (projectionTerminalExpressions.includes(exprName)) return [];
 
 			return go(exprVal);
 		}
 
-		if (Array.isArray(val)) {
-			return val.map(go);
-		}
+		if (Array.isArray(val)) return val.map(go);
 
-		if (typeof val === "object") {
-			return Object.values(val).map(go);
-		}
+		if (typeof val === "object") return Object.values(val).map(go);
 
 		return [val.split(".").filter((v) => v !== "$")];
 	};
@@ -90,7 +84,10 @@ export function projectionQueryProperties(projection: Projection) {
 	return query;
 }
 
-export function createExpressionProjector(expression: Expression, expressionEngine) {
+export function createExpressionProjector(
+	expression: Expression,
+	expressionEngine,
+) {
 	const { apply } = expressionEngine;
 	const expr = distributeStrings(expression, expressionEngine);
 

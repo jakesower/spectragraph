@@ -4,7 +4,7 @@ import { createTables, seed } from "../src/seed.js";
 import { createSQLiteStore } from "../src/sqlite-store.js";
 import { careBearData } from "./fixtures/care-bear-data.js";
 import { careBearSchema } from "./fixtures/care-bear-schema.js";
-import { careBearConfig } from "./care-bear-config.js";
+import { careBearConfig } from "./fixtures/care-bear-config.js";
 
 const db = Database(":memory:");
 createTables(db, careBearSchema, careBearConfig);
@@ -15,9 +15,7 @@ it("fetches a single resource", async () => {
 	const result = await store.get({
 		type: "bears",
 		id: "1",
-		select: {
-			name: "name",
-		},
+		select: ["name"],
 	});
 
 	expect(result).toEqual({ name: "Tenderheart Bear" });
@@ -67,8 +65,8 @@ it("fetches a property from multiple resources", async () => {
 	expect(result).toEqual(expected);
 });
 
-it.only("fetches null for a nonexistent resource", async () => {
-	const result = await store.get({ type: "bears", id: "6" });
+it("fetches null for a nonexistent resource", async () => {
+	const result = await store.get({ type: "bears", id: "6", select: ["id"] });
 
 	expect(result).toEqual(null);
 });
@@ -107,17 +105,13 @@ it("fetches a single resource with a one-to-many relationship and an implicit re
 	const q = {
 		type: "homes",
 		id: "1",
-		select: { residents: {} },
+		select: { residents: { select: ["id"] } },
 	} as const;
 
 	const result = await store.get(q);
 
 	expect(result).toEqual({
-		residents: [
-			{ type: "bears", id: "1" },
-			{ type: "bears", id: "2" },
-			{ type: "bears", id: "3" },
-		],
+		residents: [{ id: "1" }, { id: "2" }, { id: "3" }],
 	});
 });
 
@@ -161,30 +155,20 @@ it("uses explicitly set id fields", async () => {
 	const result = await store.get({
 		type: "powers",
 		id: "careBearStare",
+		select: ["powerId"],
 	});
 
-	expect(result).toEqual({ type: "powers", id: "careBearStare" });
-});
-
-it("always returns explicitly set id fields", async () => {
-	const result = await store.get({
-		type: "powers",
-	});
-
-	expect(result).toEqual([
-		{ type: "powers", id: "careBearStare" },
-		{ type: "powers", id: "makeWish" },
-	]);
+	expect(result).toEqual({ powerId: "careBearStare" });
 });
 
 it("fetches a single resource with many-to-many relationship", async () => {
 	const result = await store.get({
 		type: "bears",
 		id: "1",
-		select: { powers: {} },
+		select: { powers: { select: ["powerId"] } },
 	});
 
-	expect(result).toEqual({ powers: [{ type: "powers", id: "careBearStare" }] });
+	expect(result).toEqual({ powers: [{ powerId: "careBearStare" }] });
 });
 
 it("fetches multiple subqueries of various types", async () => {
@@ -194,22 +178,18 @@ it("fetches multiple subqueries of various types", async () => {
 		select: {
 			home: {
 				select: {
-					residents: {},
+					residents: { select: ["id"] },
 				},
 			},
-			powers: {},
+			powers: { select: ["powerId"] },
 		},
 	});
 
 	expect(result).toEqual({
 		home: {
-			residents: [
-				{ type: "bears", id: "1" },
-				{ type: "bears", id: "2" },
-				{ type: "bears", id: "3" },
-			],
+			residents: [{ id: "1" }, { id: "2" }, { id: "3" }],
 		},
-		powers: [{ type: "powers", id: "careBearStare" }],
+		powers: [{ powerId: "careBearStare" }],
 	});
 });
 
@@ -218,14 +198,14 @@ it("handles subqueries between the same type", async () => {
 		type: "bears",
 		select: {
 			id: "id",
-			bestFriend: {},
+			bestFriend: { select: ["id"] },
 		},
 	});
 
 	expect(result).toEqual([
 		{ id: "1", bestFriend: null },
-		{ id: "2", bestFriend: { type: "bears", id: "3" } },
-		{ id: "3", bestFriend: { type: "bears", id: "2" } },
+		{ id: "2", bestFriend: { id: "3" } },
+		{ id: "3", bestFriend: { id: "2" } },
 		{ id: "5", bestFriend: null },
 	]);
 });

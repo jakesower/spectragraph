@@ -45,7 +45,7 @@ export function get(query, context) {
 				const { parent, parentQuery, parentRelationship, attributes, type } =
 					queryPart;
 				const queryPartConfig = config.resources[type];
-				const { idAttribute = "id" } = queryPartConfig;
+				const { idField = "id" } = queryPartConfig;
 
 				const parentType = parent?.type;
 				const parentRelDef =
@@ -54,7 +54,7 @@ export function get(query, context) {
 
 				const pathStr =
 					queryPart.path.length > 0 ? `$${queryPart.path.join("$")}` : "";
-				const idPath = `${rootTable}${pathStr}.${idAttribute}`;
+				const idPath = `${rootTable}${pathStr}.${idField}`;
 				const idIdx = selectAttributeMap[idPath];
 
 				return (result) => {
@@ -66,31 +66,43 @@ export function get(query, context) {
 								? `$${queryPart.path.slice(0, -1).join("$")}`
 								: "";
 						const parentIdAttribute =
-							config.resources[parentType].idAttribute ?? "id";
+							config.resources[parentType].idField ?? "id";
 						const parentIdPath = `${rootTable}${parentPathStr}.${parentIdAttribute}`;
 						const parentIdIdx = selectAttributeMap[parentIdPath];
 						const parentId = result[parentIdIdx];
 
 						if (!dataGraph[parentType][parentId]) {
 							dataGraph[parentType][parentId] = {
-								[idAttribute]: parentId,
+								[idField]: parentId,
 								id: parentId,
+								type: parentType,
 							};
 						}
 						const parent = dataGraph[parentType][parentId];
 
 						if (parentRelDef.cardinality === "one") {
-							parent[parentRelationship] = id ?? null;
+							parent.relationships[parentRelationship] = id
+								? { id, type }
+								: null;
 						} else {
-							parent[parentRelationship] =
-								parent[parentRelationship] ?? new Set();
-							parent[parentRelationship].add(id);
+							parent.relationships[parentRelationship] =
+								parent.relationships[parentRelationship] ?? [];
+
+							if (
+								!parent.relationships[parentRelationship].some(
+									(r) => r.id === id,
+								)
+							) {
+								parent.relationships[parentRelationship].push({ type, id });
+							}
 						}
 					}
 
 					if (!id) return;
+
 					dataGraph[type][id] = dataGraph[type][id] ?? {
 						id,
+						type,
 						attributes: {},
 						relationships: {},
 					};
@@ -115,7 +127,6 @@ export function get(query, context) {
 		const extractor = buildExtractor();
 		allResults.forEach((row) => extractor(row));
 
-		console.log(allResults)
 		return queryGraph(dataGraph, query);
 	});
 }

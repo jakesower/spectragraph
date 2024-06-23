@@ -18,8 +18,8 @@ const operations = {
 	id: {
 		preQuery: {
 			apply: (id, { config, query }) => {
-				const { table, idProperty = "id" } = config.resources[query.type];
-				return { where: [`${table}.${idProperty} = ?`], vars: [id] };
+				const { table, idField = "id" } = config.resources[query.type];
+				return { where: [`${table}.${idField} = ?`], vars: [id] };
 			},
 		},
 		postQuery: {
@@ -94,7 +94,7 @@ const operations = {
 			apply: (select, context) => {
 				const { config, flatQuery, table } = context;
 				const { type } = flatQuery;
-				const { idProperty = "id" } = config.resources[type];
+				const { idField = "id" } = config.resources[type];
 
 				const attributeProps = Object.values(select).filter(
 					(p) => typeof p === "string",
@@ -103,7 +103,7 @@ const operations = {
 				const relationshipsModifiers = preQueryRelationships(context);
 
 				return {
-					select: uniq([idProperty, ...attributeProps]).map(
+					select: uniq([idField, ...attributeProps]).map(
 						(col) => `${table}.${col}`,
 					),
 					...relationshipsModifiers,
@@ -131,7 +131,7 @@ const gatherPreOperations = (query, context) => {
 		};
 
 		const partConfig = config.resources[flatQuery.type];
-		const { idProperty = "id" } = partConfig;
+		const { idField = "id" } = partConfig;
 
 		const operationParts = Object.entries(flatQuery.query).flatMap(
 			([operationKey, operationArg]) => {
@@ -149,7 +149,7 @@ const gatherPreOperations = (query, context) => {
 				: [];
 
 		return [
-			{ select: [`${table}.${idProperty}`] },
+			{ select: [`${table}.${idField}`] },
 			...operationParts,
 			...refPart,
 		];
