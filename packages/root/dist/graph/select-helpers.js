@@ -40,17 +40,14 @@ export function projectionQueryProperties(projection) {
     const go = (val) => {
         if (isExpression(val)) {
             const [exprName, exprVal] = Object.entries(val)[0];
-            if (projectionTerminalExpressions.includes(exprName)) {
+            if (projectionTerminalExpressions.includes(exprName))
                 return [];
-            }
             return go(exprVal);
         }
-        if (Array.isArray(val)) {
+        if (Array.isArray(val))
             return val.map(go);
-        }
-        if (typeof val === "object") {
+        if (typeof val === "object")
             return Object.values(val).map(go);
-        }
         return [val.split(".").filter((v) => v !== "$")];
     };
     // mutates!

@@ -13,6 +13,7 @@ type SchemaAttribute = {
 	$comment?: string;
 	deprecated?: boolean;
 	meta?: unknown;
+	[k: string]: unknown;
 };
 
 type SchemaRelationship = {
