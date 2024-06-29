@@ -110,10 +110,12 @@ export function createExpressionEngine(definitions: object): ExpressionEngine {
 	};
 }
 
-export const defaultExpressionEngine = createExpressionEngine({
+export const defaultExpressions = {
 	...coreDefinitions,
 	...logicalDefinitions,
 	...comparativeDefinitions,
 	...aggregativeDefinitions,
 	...iterativeDefinitions,
-});
+};
+
+export const defaultExpressionEngine = createExpressionEngine(defaultExpressions);

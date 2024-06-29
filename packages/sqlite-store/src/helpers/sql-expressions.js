@@ -1,6 +1,24 @@
 import { createExpressionEngine } from "@data-prism/expressions";
 import { mapValues } from "lodash-es";
 
+export let whereExpressionEngine;
+
+const extractWhere = (where, table) =>
+	Object.entries(where).map(([propKey, propValOrExpr]) => {
+		if (whereExpressionEngine.isExpression(where)) {
+			const [operation, args] = Object.entries(where)[0];
+			return whereExpressionEngine.evaluate(where);
+		}
+
+		if (whereExpressionEngine.isExpression(propValOrExpr)) {
+			const [operation, args] = Object.entries(propValOrExpr)[0];
+			console.log("hi", { [operation]: [`${table}.${propKey}`, args] });
+			return { [operation]: [`${table}.${propKey}`, args] };
+		}
+
+		return { $eq: [`${table}.${propKey}`, propValOrExpr] };
+	});
+
 const sqlExpressions = {
 	$and: {
 		name: "and",
@@ -39,20 +57,32 @@ const sqlExpressions = {
 	},
 	$in: {
 		name: "contained in",
-		where: (params) => `${params[0]} IN (${params[1].map(() => "?").join(",")})`,
+		where: (params) =>
+			`${params[0]} IN (${params[1].map(() => "?").join(",")})`,
 		vars: (params) => params[1],
 	},
 	$nin: {
 		name: "not contained in",
-		where: (params) => `${params[0]} NOT IN (${params[1].map(() => "?").join(",")})`,
+		where: (params) =>
+			`${params[0]} NOT IN (${params[1].map(() => "?").join(",")})`,
 		vars: (params) => params[1],
+	},
+	$or: { // TODO
+		name: "or",
+		controlsEvaluation: true,
+		where: (params, evaluate) => {
+			console.log("args", params.map(evaluate));
+		},
+		vars: (...args) => {
+			console.log("Var args", args);
+		},
 	},
 };
 
-export const whereExpressionEngine = createExpressionEngine(
-	mapValues(sqlExpressions, (expr) => ({ ...expr, apply: expr.where })),
+whereExpressionEngine = createExpressionEngine(
+	mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.where })),
 );
 
 export const varsExpressionEngine = createExpressionEngine(
-	mapValues(sqlExpressions, (expr) => ({ ...expr, apply: expr.vars })),
+	mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.vars })),
 );

@@ -1,5 +1,5 @@
-import { mapValues } from "lodash-es";
-import { queryGraph } from "data-prism";
+import { mapValues, omit } from "lodash-es";
+import { mapSchemalessQuery, queryGraph } from "data-prism";
 import { buildSql, composeClauses } from "./helpers/sql.js";
 import { runQuery } from "./operations/operations.js";
 import { flattenQuery } from "./helpers/query-helpers.ts";
@@ -127,6 +127,9 @@ export function get(query, context) {
 		const extractor = buildExtractor();
 		allResults.forEach((row) => extractor(row));
 
-		return queryGraph(dataGraph, query);
+		return queryGraph(
+			dataGraph,
+			mapSchemalessQuery(query, (q) => omit(q, ["limit", "offset", "where"])),
+		);
 	});
 }

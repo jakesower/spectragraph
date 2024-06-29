@@ -70,10 +70,11 @@ export function createExpressionEngine(definitions) {
         isExpression,
     };
 }
-export const defaultExpressionEngine = createExpressionEngine({
+export const defaultExpressions = {
     ...coreDefinitions,
     ...logicalDefinitions,
     ...comparativeDefinitions,
     ...aggregativeDefinitions,
     ...iterativeDefinitions,
-});
+};
+export const defaultExpressionEngine = createExpressionEngine(defaultExpressions);
