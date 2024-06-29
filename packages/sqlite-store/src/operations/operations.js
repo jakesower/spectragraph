@@ -40,6 +40,12 @@ const operations = {
 				// an object of attributes has been passed in
 				const propExprs = Object.entries(where).map(
 					([propKey, propValOrExpr]) => {
+						if (whereExpressionEngine.isExpression(where)) {
+							// TODO
+							const [operation, args] = Object.entries(where)[0];
+							return whereExpressionEngine.evaluate(where);
+						}
+
 						if (whereExpressionEngine.isExpression(propValOrExpr)) {
 							const [operation, args] = Object.entries(propValOrExpr)[0];
 							return { [operation]: [`${table}.${propKey}`, args] };
@@ -58,7 +64,18 @@ const operations = {
 	order: {
 		preQuery: {
 			apply: (order, context) => [
-				{ orderBy: order.map((o) => ({ ...o, table: context.table })) },
+				{
+					orderBy: (Array.isArray(order) ? order : [order]).map(
+						(orderEntry) => {
+							const k = Object.keys(orderEntry)[0];
+							return {
+								property: k,
+								direction: orderEntry[k],
+								table: context.table,
+							};
+						},
+					),
+				},
 			],
 		},
 	},
@@ -148,11 +165,7 @@ const gatherPreOperations = (query, context) => {
 				? [preQueryRelationships(argContext)]
 				: [];
 
-		return [
-			{ select: [`${table}.${idField}`] },
-			...operationParts,
-			...refPart,
-		];
+		return [{ select: [`${table}.${idField}`] }, ...operationParts, ...refPart];
 	});
 
 	return queryParts;

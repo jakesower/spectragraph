@@ -1,9 +1,9 @@
 {
-	"$schema": "https://raw.githubusercontent.com/jakesower/data-prism/rejigger/schemas/data-prism-schema.1.0.alpha2.schema.json",
 	"resources": {
 		"bears": {
 			"idField": "id",
-			"properties": {
+			"attributes": {
+				"id": { "type": "string" },
 				"name": { "type": "string" },
 				"yearIntroduced": { "type": "number" },
 				"bellyBadge": { "type": "string" },
@@ -29,7 +29,8 @@
 		},
 		"homes": {
 			"idField": "id",
-			"properties": {
+			"attributes": {
+				"id": { "type": "string" },
 				"name": { "type": "string" },
 				"location": { "type": "string" },
 				"caringMeter": { "type": "number" },
@@ -45,7 +46,8 @@
 		},
 		"powers": {
 			"idField": "powerId",
-			"properties": {
+			"attributes": {
+				"powerId": { "type": "string" },
 				"name": { "type": "string" },
 				"description": { "type": "string" },
 				"type": { "type": "string" }
