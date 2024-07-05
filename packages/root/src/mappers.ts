@@ -1,4 +1,4 @@
-import { mapValues } from "lodash-es";
+import { mapValues, pickBy } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
 import { Graph, NormalResource } from "./graph.js";
 import { Schema } from "./schema.js";
@@ -63,7 +63,7 @@ export function normalizeResource(
 
 	return {
 		attributes,
-		relationships,
+		relationships: pickBy(relationships, (r) => r !== undefined),
 	};
 }
 

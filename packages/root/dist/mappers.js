@@ -1,4 +1,4 @@
-import { mapValues } from "lodash-es";
+import { mapValues, pickBy } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
 export function flattenResource(resourceId, resource, idField = "id") {
     const relationships = mapValues(resource.relationships, (_, relName) => applyOrMap(resource.relationships[relName], ({ id }) => id));
@@ -38,7 +38,7 @@ export function normalizeResource(resourceType, resource, schema, graphMappers =
     });
     return {
         attributes,
-        relationships,
+        relationships: pickBy(relationships, (r) => r !== undefined),
     };
 }
 export function createGraphFromTrees(rootResourceType, rootResources, schema, graphMappers = {}) {

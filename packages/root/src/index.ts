@@ -1,3 +1,4 @@
+export type { Schema } from "./schema.js";
 export { linkInverses, emptyGraph, mergeGraphs, Graph } from "./graph.js";
 export {
 	flattenResource,
