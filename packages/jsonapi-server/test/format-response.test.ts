@@ -21,7 +21,6 @@ it("formats a request for all resources of a type", () => {
 	);
 
 	expect(response).toEqual(allBearsResponse);
-	validateResponse(response);
 	expect(validateResponse(response)).toEqual(true);
 });
 
@@ -33,6 +32,5 @@ it("formats a request for a single resource", () => {
 	);
 
 	expect(response).toEqual({ data: allBearsResponse.data[0] });
-	validateResponse(response);
 	expect(validateResponse(response)).toEqual(true);
 });
