@@ -8,6 +8,7 @@ import { formatResponse } from "../src/format-response.js";
 function applySchemaRoutes(schema: Schema, store, app) {
 	Object.entries(schema.resources).forEach(([type, resDef]) => {
 		app.get(`/${type}`, (req, res) => {
+			console.log(req.query);
 			const query = parseRequest(schema, {
 				...req.query,
 				type,

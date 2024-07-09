@@ -7,7 +7,7 @@ describe("requests with no subqueries", () => {
 	it("parses a request for multiple resources", async () => {
 		const query = parseRequest(careBearSchema as Schema, { type: "bears" });
 
-		expect(query).toEqual({
+		expect(query).toStrictEqual({
 			type: "bears",
 			select: Object.keys(careBearSchema.resources.bears.attributes),
 		});
@@ -19,24 +19,38 @@ describe("requests with no subqueries", () => {
 			id: "1",
 		});
 
-		expect(query).toEqual({
+		expect(query).toStrictEqual({
 			type: "bears",
 			id: "1",
 			select: Object.keys(careBearSchema.resources.bears.attributes),
 		});
 	});
 
-	it("limits fields on the root query", () => {
+	it("limits fields on the root query with the id", () => {
 		const query = parseRequest(careBearSchema as Schema, {
 			type: "bears",
 			id: "1",
 			fields: { bears: "name,bellyBadge" },
 		});
 
-		expect(query).toEqual({
+		expect(query).toStrictEqual({
 			type: "bears",
 			id: "1",
-			select: ["name", "bellyBadge"],
+			select: ["name", "bellyBadge", "id"],
+		});
+	});
+
+	it("limits fields on the root query with a nonstandard id", () => {
+		const query = parseRequest(careBearSchema as Schema, {
+			type: "powers",
+			id: "careBearStare",
+			fields: { powers: "name,type" },
+		});
+
+		expect(query).toStrictEqual({
+			type: "powers",
+			id: "careBearStare",
+			select: ["name", "type", "powerId"],
 		});
 	});
 
@@ -47,7 +61,7 @@ describe("requests with no subqueries", () => {
 				filter: { yearIntroduced: 1982 },
 			});
 
-			expect(query).toEqual({
+			expect(query).toStrictEqual({
 				type: "bears",
 				select: Object.keys(careBearSchema.resources.bears.attributes),
 				where: { yearIntroduced: 1982 },
@@ -60,7 +74,7 @@ describe("requests with no subqueries", () => {
 				filter: { yearIntroduced: 1982, bellyBadge: "rainbow" },
 			});
 
-			expect(query).toEqual({
+			expect(query).toStrictEqual({
 				type: "bears",
 				select: Object.keys(careBearSchema.resources.bears.attributes),
 				where: { yearIntroduced: 1982, bellyBadge: "rainbow" },
@@ -73,7 +87,7 @@ describe("requests with no subqueries", () => {
 				filter: { yearIntroduced: { $lt: 1985 } },
 			});
 
-			expect(query).toEqual({
+			expect(query).toStrictEqual({
 				type: "bears",
 				select: Object.keys(careBearSchema.resources.bears.attributes),
 				where: { yearIntroduced: { $lt: 1985 } },
@@ -86,11 +100,111 @@ describe("requests with no subqueries", () => {
 				filter: { yearIntroduced: "{ $lt: 1985 }" },
 			});
 
-			expect(query).toEqual({
+			expect(query).toStrictEqual({
 				type: "bears",
 				select: Object.keys(careBearSchema.resources.bears.attributes),
 				where: { yearIntroduced: { $lt: 1985 } },
 			});
+		});
+	});
+
+	describe("sorting", () => {
+		it("sorts ascending on a single field", () => {
+			const query = parseRequest(careBearSchema as Schema, {
+				type: "bears",
+				sort: "yearIntroduced",
+			});
+
+			expect(query).toStrictEqual({
+				type: "bears",
+				select: Object.keys(careBearSchema.resources.bears.attributes),
+				order: [{ yearIntroduced: "asc" }],
+			});
+		});
+
+		it("sorts descending on a single field", () => {
+			const query = parseRequest(careBearSchema as Schema, {
+				type: "bears",
+				sort: "-yearIntroduced",
+			});
+
+			expect(query).toStrictEqual({
+				type: "bears",
+				select: Object.keys(careBearSchema.resources.bears.attributes),
+				order: [{ yearIntroduced: "desc" }],
+			});
+		});
+
+		it("doesn't allow sorting on an invalid field", () => {
+			expect(() =>
+				parseRequest(careBearSchema as Schema, {
+					type: "bears",
+					sort: "foo",
+				}),
+			).toThrowError();
+		});
+
+		it("sorts on multiple fields", () => {
+			const query = parseRequest(careBearSchema as Schema, {
+				type: "bears",
+				sort: "-yearIntroduced,name",
+			});
+
+			expect(query).toStrictEqual({
+				type: "bears",
+				select: Object.keys(careBearSchema.resources.bears.attributes),
+				order: [{ yearIntroduced: "desc" }, { name: "asc" }],
+			});
+		});
+	});
+
+	describe("pagination", () => {
+		it("limits results", () => {
+			const query = parseRequest(careBearSchema as Schema, {
+				type: "bears",
+				page: { size: 3 },
+			});
+
+			expect(query).toStrictEqual({
+				type: "bears",
+				select: Object.keys(careBearSchema.resources.bears.attributes),
+				limit: 3,
+			});
+		});
+
+		it("limits and offsets results", () => {
+			const query = parseRequest(careBearSchema as Schema, {
+				type: "bears",
+				page: { size: 3, number: 2 },
+			});
+
+			expect(query).toStrictEqual({
+				type: "bears",
+				select: Object.keys(careBearSchema.resources.bears.attributes),
+				limit: 3,
+				offset: 3,
+			});
+		});
+	});
+});
+
+describe("requests with subqueries", () => {
+	it("parses a request for a nested singular relationship", async () => {
+		const query = parseRequest(careBearSchema as Schema, {
+			type: "bears",
+			include: "home",
+		});
+
+		expect(query).toStrictEqual({
+			type: "bears",
+			select: [
+				...Object.keys(careBearSchema.resources.bears.attributes),
+				{
+					home: {
+						select: Object.keys(careBearSchema.resources.homes.attributes),
+					},
+				},
+			],
 		});
 	});
 });

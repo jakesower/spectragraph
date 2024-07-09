@@ -62,7 +62,7 @@ export function normalizeResource(
 	});
 
 	return {
-		attributes,
+		attributes: pickBy(attributes, (a) => a !== undefined),
 		relationships: pickBy(relationships, (r) => r !== undefined),
 	};
 }
