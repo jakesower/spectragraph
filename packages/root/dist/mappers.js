@@ -37,7 +37,7 @@ export function normalizeResource(resourceType, resource, schema, graphMappers =
             : { type: relSchema.type, id: relRes });
     });
     return {
-        attributes,
+        attributes: pickBy(attributes, (a) => a !== undefined),
         relationships: pickBy(relationships, (r) => r !== undefined),
     };
 }
