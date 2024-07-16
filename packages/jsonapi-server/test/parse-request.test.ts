@@ -207,4 +207,130 @@ describe("requests with subqueries", () => {
 			],
 		});
 	});
+
+	it("parses a request for a two relationships", async () => {
+		const query = parseRequest(careBearSchema as Schema, {
+			type: "bears",
+			include: "home,powers",
+		});
+
+		expect(query).toStrictEqual({
+			type: "bears",
+			select: [
+				...Object.keys(careBearSchema.resources.bears.attributes),
+				{
+					home: {
+						select: Object.keys(careBearSchema.resources.homes.attributes),
+					},
+				},
+				{
+					powers: {
+						select: Object.keys(careBearSchema.resources.powers.attributes),
+					},
+				},
+			],
+		});
+	});
+
+	it("parses a request for a doubly nested relationship", async () => {
+		const query = parseRequest(careBearSchema as Schema, {
+			type: "homes",
+			include: "residents,residents.powers",
+		});
+
+		expect(query).toStrictEqual({
+			type: "homes",
+			select: [
+				...Object.keys(careBearSchema.resources.homes.attributes),
+				{
+					residents: {
+						select: [
+							...Object.keys(careBearSchema.resources.bears.attributes),
+							{
+								powers: {
+									select: Object.keys(
+										careBearSchema.resources.powers.attributes,
+									),
+								},
+							},
+						],
+					},
+				},
+			],
+		});
+	});
+
+	it("parses a request for a triply nested relationship", async () => {
+		const query = parseRequest(careBearSchema as Schema, {
+			type: "homes",
+			include: "residents,residents.powers,residents.powers.wielders",
+		});
+
+		expect(query).toStrictEqual({
+			type: "homes",
+			select: [
+				...Object.keys(careBearSchema.resources.homes.attributes),
+				{
+					residents: {
+						select: [
+							...Object.keys(careBearSchema.resources.bears.attributes),
+							{
+								powers: {
+									select: [
+										...Object.keys(careBearSchema.resources.powers.attributes),
+										{
+											wielders: {
+												select: Object.keys(
+													careBearSchema.resources.bears.attributes,
+												),
+											},
+										},
+									],
+								},
+							},
+						],
+					},
+				},
+			],
+		});
+	});
+
+	it("parses a request for a relationship of the same type", () => {
+		const query = parseRequest(careBearSchema as Schema, {
+			type: "bears",
+			include: "bestFriend",
+		});
+
+		expect(query).toStrictEqual({
+			type: "bears",
+			select: [
+				...Object.keys(careBearSchema.resources.bears.attributes),
+				{
+					bestFriend: {
+						select: Object.keys(careBearSchema.resources.bears.attributes),
+					},
+				},
+			],
+		});
+	});
+
+	it("narrows the fields on a nested resource", async () => {
+		const query = parseRequest(careBearSchema as Schema, {
+			type: "bears",
+			include: "home",
+			fields: { homes: "name" },
+		});
+
+		expect(query).toStrictEqual({
+			type: "bears",
+			select: [
+				...Object.keys(careBearSchema.resources.bears.attributes),
+				{
+					home: {
+						select: ["name", "id"],
+					},
+				},
+			],
+		});
+	});
 });
