@@ -31,7 +31,7 @@ it("formats a request for all resources of a type", () => {
 	expect(validateResponse(response)).toStrictEqual(true);
 });
 
-it("formats a request for a single resource", () => {
+it("formats a response for a single resource", () => {
 	const response = formatResponse(
 		careBearSchema,
 		{
@@ -46,7 +46,7 @@ it("formats a request for a single resource", () => {
 	expect(validateResponse(response)).toStrictEqual(true);
 });
 
-it("formats a request for a nested resource", () => {
+it("formats a response for a nested resource", () => {
 	const query = {
 		type: "bears",
 		id: "1",
@@ -151,6 +151,87 @@ it("formats a response for a doubly nested resource", () => {
 				id: "makeWish",
 				attributes: { name: "Make a Wish" },
 				relationships: {},
+			},
+		],
+	});
+
+	expect(validateResponse(response)).toStrictEqual(true);
+});
+
+it("formats a response for a nested resource of the same type as the primary resource", () => {
+	const query = {
+		type: "bears",
+		id: "2",
+		select: ["id", "name", { bestFriend: { select: ["id", "name"] } }],
+	};
+
+	const result = store.query(query);
+	const response = formatResponse(careBearSchema, query, result);
+
+	expect(response).toStrictEqual({
+		data: {
+			type: "bears",
+			id: "2",
+			attributes: { name: "Cheer Bear" },
+			relationships: {
+				bestFriend: { data: { type: "bears", id: "3" } },
+			},
+		},
+		included: [
+			{
+				type: "bears",
+				id: "3",
+				attributes: { name: "Wish Bear" },
+				relationships: {},
+			},
+		],
+	});
+
+	expect(validateResponse(response)).toStrictEqual(true);
+});
+
+it("formats a response for a nested resource of the same type as the primary resource when both are in data", () => {
+	const query = {
+		type: "bears",
+		select: ["id", "name", { bestFriend: { select: ["id", "name"] } }],
+	};
+
+	const result = store.query(query);
+	const response = formatResponse(careBearSchema, query, result);
+
+	expect(response).toStrictEqual({
+		data: [
+			{
+				type: "bears",
+				id: "1",
+				attributes: { name: "Tenderheart Bear" },
+				relationships: {
+					bestFriend: { data: null },
+				},
+			},
+			{
+				type: "bears",
+				id: "2",
+				attributes: { name: "Cheer Bear" },
+				relationships: {
+					bestFriend: { data: { type: "bears", id: "3" } },
+				},
+			},
+			{
+				type: "bears",
+				id: "3",
+				attributes: { name: "Wish Bear" },
+				relationships: {
+					bestFriend: { data: { type: "bears", id: "2" } },
+				},
+			},
+			{
+				type: "bears",
+				id: "5",
+				attributes: { name: "Smart Heart Bear" },
+				relationships: {
+					bestFriend: { data: null },
+				},
 			},
 		],
 	});

@@ -36,13 +36,17 @@ export function formatResponse(schema, query, result) {
 		schema,
 	);
 
+	const dataIds = new Set(
+		Array.isArray(data) ? data.map((d) => d.id) : data.id,
+	);
+
 	const included = [];
 	Object.entries(graph).map(([type, ress]) => {
-		if (type === query.type) return;
-
 		const relDef = schema.resources[type];
 
 		Object.entries(ress).forEach(([id, res]) => {
+			if (type === query.type && dataIds.has(id)) return;
+
 			included.push({
 				type,
 				id,
@@ -52,5 +56,5 @@ export function formatResponse(schema, query, result) {
 		});
 	});
 
-	return { data, included };
+	return { data, ...(included.length === 0 ? {} : { included }) };
 }
