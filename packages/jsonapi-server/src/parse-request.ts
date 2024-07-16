@@ -16,9 +16,14 @@ export function parseRequest(schema: Schema, params) {
 		const { id, fields, filter, sort, page } = params;
 		const resDef = schema.resources[type];
 
-		const included = parsedInclude.filter(
-			(i) => path.length === 0 || i.startsWith(`${path.join(".")}.`),
-		);
+		const included = parsedInclude
+			.filter(
+				(i) =>
+					(path.length === 0 && !i.includes(".")) ||
+					(i.startsWith(`${path.join(".")}.`) &&
+						!i.split(`${path.join(".")}.`)[1].includes(".")),
+			)
+			.map((i) => (path.length === 0 ? i : i.split(`${path.join(".")}.`)[1]));
 
 		const select = [
 			...(fields?.[type]

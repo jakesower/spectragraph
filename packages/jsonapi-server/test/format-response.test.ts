@@ -77,3 +77,83 @@ it("formats a request for a nested resource", () => {
 
 	expect(validateResponse(response)).toStrictEqual(true);
 });
+
+it("formats a response for a doubly nested resource", () => {
+	const query = {
+		type: "homes",
+		id: "1",
+		select: [
+			"id",
+			"name",
+			{
+				residents: {
+					select: ["id", "name", { powers: { select: ["powerId", "name"] } }],
+				},
+			},
+		],
+	};
+
+	const result = store.query(query);
+	const response = formatResponse(careBearSchema, query, result);
+
+	expect(response).toStrictEqual({
+		data: {
+			type: "homes",
+			id: "1",
+			attributes: { name: "Care-a-Lot" },
+			relationships: {
+				residents: {
+					data: ["1", "2", "3"].map((id) => ({
+						type: "bears",
+						id,
+					})),
+				},
+			},
+		},
+		included: [
+			{
+				type: "bears",
+				id: "1",
+				attributes: { name: "Tenderheart Bear" },
+				relationships: {
+					powers: { data: [{ type: "powers", id: "careBearStare" }] },
+				},
+			},
+			{
+				type: "bears",
+				id: "2",
+				attributes: { name: "Cheer Bear" },
+				relationships: {
+					powers: { data: [{ type: "powers", id: "careBearStare" }] },
+				},
+			},
+			{
+				type: "bears",
+				id: "3",
+				attributes: { name: "Wish Bear" },
+				relationships: {
+					powers: {
+						data: [
+							{ type: "powers", id: "careBearStare" },
+							{ type: "powers", id: "makeWish" },
+						],
+					},
+				},
+			},
+			{
+				type: "powers",
+				id: "careBearStare",
+				attributes: { name: "Care Bear Stare" },
+				relationships: {},
+			},
+			{
+				type: "powers",
+				id: "makeWish",
+				attributes: { name: "Make a Wish" },
+				relationships: {},
+			},
+		],
+	});
+
+	expect(validateResponse(response)).toStrictEqual(true);
+});

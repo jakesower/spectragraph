@@ -8,17 +8,16 @@ import { mapValues, omit } from "lodash-es";
 
 export function formatResponse(schema, query, result) {
 	const data = applyOrMap(result, (res) => {
+		const resSchema = schema.resources[query.type];
 		const normalized = normalizeResource(query.type, res, schema);
 
 		return {
 			type: query.type,
 			id: res.id,
-			attributes: omit(normalized.attributes, ["id"]),
-			relationships: mapValues(normalized.relationships, (rel) =>
-				applyOrMap(rel, (r) => ({
-					data: r,
-				})),
-			),
+			attributes: omit(normalized.attributes, [resSchema.idField ?? "id"]),
+			relationships: mapValues(normalized.relationships, (rel) => ({
+				data: rel,
+			})),
 		};
 	});
 
@@ -48,9 +47,7 @@ export function formatResponse(schema, query, result) {
 				type,
 				id,
 				attributes: omit(res.attributes, relDef.idField ?? "id"),
-				relationships: mapValues(res.relationships, (rel) =>
-					applyOrMap(res.relationships, (r) => ({ data: r })),
-				),
+				relationships: mapValues(res.relationships, (rel) => ({ data: rel })),
 			});
 		});
 	});
