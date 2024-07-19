@@ -14,7 +14,14 @@ export function normalizeQuery(rootQuery) {
             }, {})
             : select;
         const subqueries = mapValues(selectObj, (sel) => typeof sel === "object" && !isExpression(sel) ? go(sel) : sel);
-        return { ...query, select: subqueries };
+        const orderObj = query.order
+            ? { order: !Array.isArray(query.order) ? [query.order] : query.order }
+            : {};
+        return {
+            ...query,
+            select: subqueries,
+            ...orderObj,
+        };
     };
     return go(rootQuery);
 }

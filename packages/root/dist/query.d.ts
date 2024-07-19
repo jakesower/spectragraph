@@ -28,6 +28,9 @@ export type NormalQuery = Query & {
     select: {
         [k: string]: string | NormalQuery | Expression;
     };
+    order?: {
+        [k: string]: "asc" | "desc";
+    }[];
 };
 export type NormalRootQuery = RootQuery & NormalQuery;
 export type QueryInfo = {
