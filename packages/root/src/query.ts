@@ -28,6 +28,7 @@ export type NormalQuery = Query & {
 	select: {
 		[k: string]: string | NormalQuery | Expression;
 	};
+	order?: { [k: string]: "asc" | "desc" }[];
 };
 
 export type NormalRootQuery = RootQuery & NormalQuery;
@@ -67,7 +68,15 @@ export function normalizeQuery(rootQuery: RootQuery): NormalRootQuery {
 			typeof sel === "object" && !isExpression(sel) ? go(sel) : sel,
 		);
 
-		return { ...query, select: subqueries };
+		const orderObj = query.order
+			? { order: !Array.isArray(query.order) ? [query.order] : query.order }
+			: {};
+
+		return {
+			...query,
+			select: subqueries,
+			...orderObj,
+		} as NormalQuery;
 	};
 
 	return go(rootQuery) as NormalRootQuery;
