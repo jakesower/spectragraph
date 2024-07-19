@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import careBearSchema from "./fixtures/care-bears.schema.json";
-import { formatRequest } from "../src/format-request";
+import { formatRequest } from "../../jsonapi-server/src/format-request";
 
 const config = { baseURL: "https://example.lol" };
 
