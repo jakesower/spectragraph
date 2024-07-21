@@ -296,4 +296,273 @@ describe("createGraphFromTrees", () => {
 			homes: {},
 		});
 	});
+
+	it("walks a doubly nested to-many resource", () => {
+		const resource = {
+			...flatCareBearData.bears[2],
+			powers: flatCareBearData.powers.slice(0, 2).map((power) => ({
+				...power,
+				wielders: power.wielders.map((bearId) =>
+					flatCareBearData.bears.find((b) => b.id === bearId),
+				),
+			})),
+		};
+
+		const graph = createGraphFromTrees("bears", [resource], careBearSchema);
+
+		expect(graph).toEqual({
+			bears: omit(careBearData.bears, ["5"]),
+			powers: pick(careBearData.powers, ["careBearStare", "makeWish"]),
+			homes: {},
+		});
+	});
+});
+
+describe("the zoo", () => {
+	it.only("deals with a weird doubly nested resource (2024-06-21)", () => {
+		const resource = {
+			id: "1",
+			name: "Care-a-Lot",
+			location: "Kingdom of Caring",
+			caringMeter: 1,
+			isInClouds: true,
+			residents: [
+				{
+					id: "1",
+					name: "Tenderheart Bear",
+					yearIntroduced: 1982,
+					bellyBadge: "red heart with pink outline",
+					furColor: "tan",
+					powers: [
+						{
+							powerId: "careBearStare",
+							name: "Care Bear Stare",
+							description: "Purges evil.",
+							type: "group power",
+							wielders: [
+								{
+									id: "1",
+									name: "Tenderheart Bear",
+									yearIntroduced: 1982,
+									bellyBadge: "red heart with pink outline",
+									furColor: "tan",
+								},
+								{
+									id: "2",
+									name: "Cheer Bear",
+									yearIntroduced: 1982,
+									bellyBadge: "rainbow",
+									furColor: "carnation pink",
+								},
+								{
+									id: "3",
+									name: "Wish Bear",
+									yearIntroduced: 1982,
+									bellyBadge: "shooting star",
+									furColor: "turquoise",
+								},
+							],
+						},
+					],
+				},
+				{
+					id: "2",
+					name: "Cheer Bear",
+					yearIntroduced: 1982,
+					bellyBadge: "rainbow",
+					furColor: "carnation pink",
+					powers: [
+						{
+							powerId: "careBearStare",
+							name: "Care Bear Stare",
+							description: "Purges evil.",
+							type: "group power",
+							wielders: [
+								{
+									id: "1",
+									name: "Tenderheart Bear",
+									yearIntroduced: 1982,
+									bellyBadge: "red heart with pink outline",
+									furColor: "tan",
+								},
+								{
+									id: "2",
+									name: "Cheer Bear",
+									yearIntroduced: 1982,
+									bellyBadge: "rainbow",
+									furColor: "carnation pink",
+								},
+								{
+									id: "3",
+									name: "Wish Bear",
+									yearIntroduced: 1982,
+									bellyBadge: "shooting star",
+									furColor: "turquoise",
+								},
+							],
+						},
+					],
+				},
+				{
+					id: "3",
+					name: "Wish Bear",
+					yearIntroduced: 1982,
+					bellyBadge: "shooting star",
+					furColor: "turquoise",
+					powers: [
+						{
+							powerId: "careBearStare",
+							name: "Care Bear Stare",
+							description: "Purges evil.",
+							type: "group power",
+							wielders: [
+								{
+									id: "1",
+									name: "Tenderheart Bear",
+									yearIntroduced: 1982,
+									bellyBadge: "red heart with pink outline",
+									furColor: "tan",
+								},
+								{
+									id: "2",
+									name: "Cheer Bear",
+									yearIntroduced: 1982,
+									bellyBadge: "rainbow",
+									furColor: "carnation pink",
+								},
+								{
+									id: "3",
+									name: "Wish Bear",
+									yearIntroduced: 1982,
+									bellyBadge: "shooting star",
+									furColor: "turquoise",
+								},
+							],
+						},
+						{
+							powerId: "makeWish",
+							name: "Make a Wish",
+							description: "Makes a wish on Twinkers",
+							type: "individual power",
+							wielders: [
+								{
+									id: "3",
+									name: "Wish Bear",
+									yearIntroduced: 1982,
+									bellyBadge: "shooting star",
+									furColor: "turquoise",
+								},
+							],
+						},
+					],
+				},
+			],
+		};
+
+		const graph = createGraphFromTrees("homes", [resource], careBearSchema);
+
+		expect(graph).toStrictEqual({
+			bears: {
+				"1": {
+					attributes: {
+						id: "1",
+						name: "Tenderheart Bear",
+						yearIntroduced: 1982,
+						bellyBadge: "red heart with pink outline",
+						furColor: "tan",
+					},
+					relationships: { powers: careBearData.bears[1].relationships.powers },
+				},
+				"2": {
+					attributes: {
+						id: "2",
+						name: "Cheer Bear",
+						yearIntroduced: 1982,
+						bellyBadge: "rainbow",
+						furColor: "carnation pink",
+					},
+					relationships: { powers: careBearData.bears[2].relationships.powers },
+				},
+				"3": {
+					attributes: {
+						id: "3",
+						name: "Wish Bear",
+						yearIntroduced: 1982,
+						bellyBadge: "shooting star",
+						furColor: "turquoise",
+					},
+					relationships: { powers: careBearData.bears[3].relationships.powers },
+				},
+			},
+			homes: {
+				"1": {
+					attributes: {
+						id: "1",
+						name: "Care-a-Lot",
+						location: "Kingdom of Caring",
+						caringMeter: 1,
+						isInClouds: true,
+					},
+					relationships: {
+						residents: [
+							{
+								type: "bears",
+								id: "1",
+							},
+							{
+								type: "bears",
+								id: "2",
+							},
+							{
+								type: "bears",
+								id: "3",
+							},
+						],
+					},
+				},
+			},
+			powers: {
+				careBearStare: {
+					attributes: {
+						powerId: "careBearStare",
+						name: "Care Bear Stare",
+						description: "Purges evil.",
+						type: "group power",
+					},
+					relationships: {
+						wielders: [
+							{
+								type: "bears",
+								id: "1",
+							},
+							{
+								type: "bears",
+								id: "2",
+							},
+							{
+								type: "bears",
+								id: "3",
+							},
+						],
+					},
+				},
+				makeWish: {
+					attributes: {
+						powerId: "makeWish",
+						name: "Make a Wish",
+						description: "Makes a wish on Twinkers",
+						type: "individual power",
+					},
+					relationships: {
+						wielders: [
+							{
+								type: "bears",
+								id: "3",
+							},
+						],
+					},
+				},
+			},
+		});
+	});
 });

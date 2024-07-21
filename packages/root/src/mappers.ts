@@ -67,6 +67,14 @@ export function normalizeResource(
 	};
 }
 
+function mergeResources(left, right = { attributes: {}, relationships: {} }) {
+	return {
+		...left,
+		attributes: { ...left.attributes, ...right.attributes },
+		relationships: { ...left.relationships, ...right.relationships },
+	};
+}
+
 export function createGraphFromTrees(
 	rootResourceType: string,
 	rootResources: { [k: string]: unknown }[],
@@ -82,11 +90,9 @@ export function createGraphFromTrees(
 		const idField = resourceMappers.id ?? resourceSchema.idField ?? "id";
 		const resourceId = resource[idField];
 
-		output[resourceType][resourceId] = normalizeResource(
-			resourceType,
-			resource,
-			schema,
-			graphMappers,
+		output[resourceType][resourceId] = mergeResources(
+			normalizeResource(resourceType, resource, schema, graphMappers),
+			output[resourceType][resourceId],
 		);
 
 		Object.entries(resourceSchema.relationships).forEach(
