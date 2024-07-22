@@ -9,7 +9,11 @@ type Config = {
 const objectToParamStr = (obj, rootKey) => {
 	const go = (cur) =>
 		Object.entries(cur).flatMap(([k, v]) =>
-			typeof v === "object" ? `[${k}]${go(v)}` : `[${k}]=${v}`,
+			Array.isArray(v)
+				? `[${k}]=[${v.join(",")}]`
+				: typeof v === "object"
+				? `[${k}]${go(v)}`
+				: `[${k}]=${v}`,
 		);
 
 	return go(obj)
@@ -23,6 +27,7 @@ export function formatRequest(schema, config: Config, query: RootQuery) {
 	const include: string[] = [];
 	const filters: { [k: string]: any } = {};
 
+	// fields and where/filter
 	forEachQuery(schema, query, (subquery, info) => {
 		if (info.parent) {
 			include.push(info.path.join("."));
@@ -54,12 +59,13 @@ export function formatRequest(schema, config: Config, query: RootQuery) {
 			)
 			.join(",")}`;
 
+	const { limit, offset = 0 } = query;
 	const pageStr =
-		query.limit &&
+		limit &&
 		objectToParamStr(
 			{
-				number: Math.round((query.offset ?? 0) / query.limit) + 1,
-				size: query.limit,
+				number: Math.floor(offset / limit) + 1,
+				size: limit + (offset % limit),
 			},
 			"page",
 		);

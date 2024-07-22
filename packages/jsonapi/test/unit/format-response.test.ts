@@ -1,14 +1,14 @@
 import { expect, it } from "vitest";
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
-import careBearSchema from "./fixtures/care-bears.schema.json";
-import jsonApiSchema from "./fixtures/json-api-schema.json";
-import { formatResponse } from "../src/format-response";
+import careBearSchema from "../fixtures/care-bears.schema.json";
+import jsonApiSchema from "../fixtures/json-api-schema.json";
+import { formatResponse } from "../../src/format-response";
 import {
 	allBearsResult,
 	allBearsResponse,
-} from "./fixtures/formatted-care-bear-data.js";
-import { careBearData } from "./fixtures/care-bear-data.js"; // eslint-disable-line
+} from "../fixtures/formatted-care-bear-data.js";
+import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
 import { Schema, createStore } from "data-prism";
 
 const store = createStore(careBearSchema as Schema, careBearData);

@@ -163,8 +163,8 @@ export function forEachQuery<S extends Schema>(
 		const { path, type } = info;
 		const resourceSchema = schema.resources[type];
 
-		const attributes = Object.keys(resourceSchema.attributes).filter(
-			(a) => a in subquery.select,
+		const attributes = Object.keys(resourceSchema.attributes).filter((a) =>
+			Object.values(subquery.select).includes(a),
 		);
 		const relationships = pick(
 			subquery.select,
@@ -210,8 +210,8 @@ export function mapQuery<S extends Schema>(
 		const { path, type } = info;
 		const resourceSchema = schema.resources[type];
 
-		const attributes = Object.keys(resourceSchema.attributes).filter(
-			(a) => a in subquery.select,
+		const attributes = Object.keys(resourceSchema.attributes).filter((a) =>
+			Object.values(subquery.select).includes(a),
 		);
 		const relationships = pick(
 			subquery.select,
@@ -258,8 +258,8 @@ export function reduceQuery<S extends Schema, T>(
 		const { path, type } = info;
 		const resourceSchema = schema.resources[type];
 
-		const attributes = Object.keys(resourceSchema.attributes).filter(
-			(a) => a in subquery.select,
+		const attributes = Object.keys(resourceSchema.attributes).filter((a) =>
+			Object.values(subquery.select).includes(a),
 		);
 		const relationships = pick(
 			subquery.select,

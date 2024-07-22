@@ -74,6 +74,8 @@ function runQuery<Q extends NormalRootQuery>(
 		// these are in order of execution
 		const operationDefinitions = {
 			where(results: unknown[]): unknown[] {
+				if (Object.keys(query.where).length === 0) return results;
+
 				const whereExpression = buildWhereExpression(
 					query.where,
 					defaultExpressionEngine,
