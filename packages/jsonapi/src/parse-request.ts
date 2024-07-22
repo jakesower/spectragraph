@@ -1,12 +1,27 @@
 import { Schema } from "data-prism";
 import { defaultExpressionEngine } from "@data-prism/expressions";
 import JSON5 from "json5";
-import { mapValues } from "lodash-es";
+import { mapValues, pickBy, uniq } from "lodash-es";
 
 const casters = {
-	string: (x) => x,
+	boolean: (x) => x === "true",
 	number: (x) => Number(x),
 	integer: (x) => Number(x),
+};
+
+const castFilterValue = (type, val) => {
+	if (!casters[type]) return val;
+
+	const parsed =
+		typeof val === "string" && val.match(/^\[.*\]$/)
+			? val.slice(1, -1).split(",")
+			: val;
+
+	return Array.isArray(parsed)
+		? parsed.map(casters[type])
+		: typeof val === "object"
+		? mapValues(val, (v) => castFilterValue(type, v))
+		: casters[type](val);
 };
 
 export function parseRequest(schema: Schema, params) {
@@ -15,6 +30,38 @@ export function parseRequest(schema: Schema, params) {
 	const go = (type, path = []) => {
 		const { id, fields, filter, sort, page } = params;
 		const resDef = schema.resources[type];
+
+		const relevantFilters = pickBy(
+			filter ?? {},
+			(f, k) =>
+				(path.length === 0 && !k.includes(".")) ||
+				(k.startsWith(`${path.join(".")}.`) &&
+					!k.split(`${path.join(".")}.`)[1].includes(".")),
+		);
+
+		const parsedFilters = {};
+		Object.entries(relevantFilters).forEach(([key, val]) => {
+			parsedFilters[
+				path.length === 0 ? key : key.split(`${path.join(".")}.`)[1]
+			] = val;
+		});
+
+		const castFilters = mapValues(parsedFilters, (param, key) => {
+			const attrType = resDef.attributes[key].type;
+
+			if (defaultExpressionEngine.isExpression(param)) {
+				return castFilterValue(attrType, param);
+			}
+
+			try {
+				const parsed = JSON5.parse(param);
+				if (defaultExpressionEngine.isExpression(parsed)) {
+					return castFilterValue(attrType, parsed);
+				}
+			} catch {}
+
+			return castFilterValue(attrType, param);
+		});
 
 		const included = parsedInclude
 			.filter(
@@ -27,28 +74,16 @@ export function parseRequest(schema: Schema, params) {
 
 		const select = [
 			...(fields?.[type]
-				? [...fields?.[type]?.split(","), resDef.idField ?? "id"]
+				? uniq([
+						...fields?.[type]?.split(","),
+						resDef.idField ?? "id",
+						...Object.keys(parsedFilters ?? {}),
+				  ])
 				: Object.keys(resDef.attributes)),
 			...included.map((related) => ({
 				[related]: go(resDef.relationships[related].type, [...path, related]),
 			})),
 		];
-
-		const castFilters = mapValues(filter ?? {}, (param, key) => {
-			if (defaultExpressionEngine.isExpression(param)) {
-				return param;
-			}
-
-			try {
-				const parsed = JSON5.parse(param);
-				if (defaultExpressionEngine.isExpression(parsed)) {
-					return parsed;
-				}
-			} catch {}
-
-			const attrType = resDef.attributes[key].type;
-			return casters[attrType] ? casters[attrType](param) : param;
-		});
 
 		const order = sort
 			? sort.split(",").map((field) => {
@@ -72,7 +107,9 @@ export function parseRequest(schema: Schema, params) {
 			...(path.length === 0 ? { type } : {}),
 			...(id ? { id } : {}),
 			select,
-			...(filter ? { where: castFilters } : {}),
+			...(Object.keys(relevantFilters).length > 0
+				? { where: castFilters }
+				: {}),
 			...(order ? { order } : {}),
 			...(limit ? { limit } : {}),
 			...(offset ? { offset } : {}),

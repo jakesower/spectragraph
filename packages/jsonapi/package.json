@@ -9,8 +9,9 @@
 	},
 	"scripts": {
 		"build": "tsc -p ./tsconfig.json",
+		"start": "tsx test/server.ts",
 		"test": "NODE_ENV=test vitest",
-		"test-server": "tsx test/server.ts"
+		"test:e2e": "start-test 3000"
 	},
 	"keywords": [],
 	"author": "Jake Sower",
@@ -20,10 +21,12 @@
 		"@typescript-eslint/parser": "^5.59.8",
 		"ajv": "^8.16.0",
 		"ajv-formats": "^3.0.1",
+		"axios": "^1.7.2",
 		"eslint": "^8.41.0",
 		"eslint-config-prettier": "^8.8.0",
 		"eslint-config-standard": "^17.1.0",
 		"prettier": "^2.8.8",
+		"start-server-and-test": "^2.0.4",
 		"tsx": "^4.16.2",
 		"typescript": "^5.5.3",
 		"typescript-eslint": "^0.0.1-alpha.0",

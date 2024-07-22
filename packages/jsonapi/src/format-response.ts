@@ -13,7 +13,7 @@ export function formatResponse(schema, query, result) {
 
 		return {
 			type: query.type,
-			id: res.id,
+			id: res[resSchema.idField ?? "id"],
 			attributes: omit(normalized.attributes, [resSchema.idField ?? "id"]),
 			relationships: mapValues(normalized.relationships, (rel) => ({
 				data: rel,

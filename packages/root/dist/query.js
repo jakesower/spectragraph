@@ -83,7 +83,7 @@ export function forEachQuery(schema, query, fn) {
     const go = (subquery, info) => {
         const { path, type } = info;
         const resourceSchema = schema.resources[type];
-        const attributes = Object.keys(resourceSchema.attributes).filter((a) => a in subquery.select);
+        const attributes = Object.keys(resourceSchema.attributes).filter((a) => Object.values(subquery.select).includes(a));
         const relationships = pick(subquery.select, Object.keys(resourceSchema.relationships));
         const fullInfo = {
             ...info,
@@ -113,7 +113,7 @@ export function mapQuery(schema, query, fn) {
     const go = (subquery, info) => {
         const { path, type } = info;
         const resourceSchema = schema.resources[type];
-        const attributes = Object.keys(resourceSchema.attributes).filter((a) => a in subquery.select);
+        const attributes = Object.keys(resourceSchema.attributes).filter((a) => Object.values(subquery.select).includes(a));
         const relationships = pick(subquery.select, Object.keys(resourceSchema.relationships));
         const fullInfo = {
             ...info,
@@ -143,7 +143,7 @@ export function reduceQuery(schema, query, fn, init) {
     const go = (subquery, info, accValue) => {
         const { path, type } = info;
         const resourceSchema = schema.resources[type];
-        const attributes = Object.keys(resourceSchema.attributes).filter((a) => a in subquery.select);
+        const attributes = Object.keys(resourceSchema.attributes).filter((a) => Object.values(subquery.select).includes(a));
         const relationships = pick(subquery.select, Object.keys(resourceSchema.relationships));
         const fullInfo = {
             ...info,

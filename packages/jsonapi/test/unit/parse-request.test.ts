@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import careBearSchema from "./fixtures/care-bears.schema.json";
-import { parseRequest } from "../src/parse-request.js";
+import careBearSchema from "../fixtures/care-bears.schema.json";
+import { parseRequest } from "../../src/parse-request.js";
 import { Schema } from "data-prism";
 
 describe("requests with no subqueries", () => {

@@ -50,6 +50,8 @@ function runQuery(rootQuery, data) {
         // these are in order of execution
         const operationDefinitions = {
             where(results) {
+                if (Object.keys(query.where).length === 0)
+                    return results;
                 const whereExpression = buildWhereExpression(query.where, defaultExpressionEngine);
                 return results.filter((result) => defaultExpressionEngine.apply(whereExpression, result));
             },
