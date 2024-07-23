@@ -7,9 +7,11 @@ import {
 import { mapValues, omit } from "lodash-es";
 
 export function formatResponse(schema, query, result) {
+	const dataIds = new Set();
 	const data = applyOrMap(result, (res) => {
 		const resSchema = schema.resources[query.type];
 		const normalized = normalizeResource(query.type, res, schema);
+		dataIds.add(res[resSchema.idField ?? "id"]);
 
 		return {
 			type: query.type,
@@ -34,10 +36,6 @@ export function formatResponse(schema, query, result) {
 		query.type,
 		Array.isArray(result) ? result : [result],
 		schema,
-	);
-
-	const dataIds = new Set(
-		Array.isArray(data) ? data.map((d) => d.id) : data.id,
 	);
 
 	const included = [];

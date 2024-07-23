@@ -1,7 +1,7 @@
 import { createQueryGraph, emptyGraph, linkInverses, mergeGraphs, } from "./graph.js";
 import { createGraphFromTrees } from "./mappers.js";
 export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
-export function createStore(schema, initialData = {}) {
+export function createMemoryStore(schema, initialData = {}) {
     let queryGraph;
     let storeGraph = mergeGraphs(emptyGraph(schema), initialData);
     const runQuery = (query) => {

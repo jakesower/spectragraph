@@ -19,7 +19,7 @@ export type Graph = {
         [k: string | number]: NormalResource;
     };
 };
-export declare function createStore(schema: Schema, initialData?: Graph): {
+export declare function createMemoryStore(schema: Schema, initialData?: Graph): {
     linkInverses: () => void;
     merge: (graph: Graph) => void;
     mergeTree: (resourceType: string, tree: {

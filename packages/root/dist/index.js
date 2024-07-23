@@ -3,4 +3,4 @@ export { flattenResource, normalizeResource, createGraphFromTrees, } from "./map
 export { normalizeQuery } from "./query.js";
 export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 export { forEachQuery, mapQuery, reduceQuery, forEachSchemalessQuery, mapSchemalessQuery, reduceSchemalessQuery, } from "./query.js";
-export { createStore } from "./store.js";
+export { createMemoryStore } from "./store.js";

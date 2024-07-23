@@ -3,7 +3,7 @@ import { useSources } from "../../../contexts/source-context";
 import { RemixOperation, useDataTable } from "../../../contexts/data-table-context";
 import "./remix.scss";
 import { ImportSource } from "../../shared/import-source";
-import { createStore } from "solid-js/store";
+import { createMemoryStore } from "solid-js/store";
 
 const initOperation: RemixOperation = {
 	type: "derivative",
@@ -15,7 +15,7 @@ export const Remix: Component = () => {
 	const [sources] = useSources();
 	const [dataTable, setDataTable] = useDataTable();
 	const [currentOperation, setCurrentOperation] =
-		createStore<RemixOperation>(initOperation);
+		createMemoryStore<RemixOperation>(initOperation);
 
 	return (
 		<>
