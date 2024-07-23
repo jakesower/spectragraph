@@ -1,5 +1,5 @@
-import { formatRequest } from "./format-request";
-import { parseResponse } from "./parse-response";
+import { formatRequest } from "./format-request.js";
+import { parseResponse } from "./parse-response.js";
 
 export function createJSONAPIStore(schema, config) {
 	const { transport } = config;

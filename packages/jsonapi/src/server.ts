@@ -1,7 +1,7 @@
 import express from "express";
 import { Schema } from "data-prism";
-import { formatResponse } from "./format-response";
-import { parseRequest } from "./parse-request";
+import { formatResponse } from "./format-response.js";
+import { parseRequest } from "./parse-request.js";
 
 export function applySchemaRoutes(schema: Schema, store, app) {
 	const handleRequest = (type) => (req, res) => {

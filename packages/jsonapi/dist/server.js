@@ -1,6 +1,6 @@
 import express from "express";
-import { formatResponse } from "./format-response";
-import { parseRequest } from "./parse-request";
+import { formatResponse } from "./format-response.js";
+import { parseRequest } from "./parse-request.js";
 export function applySchemaRoutes(schema, store, app) {
     const handleRequest = (type) => (req, res) => {
         const query = parseRequest(schema, {
