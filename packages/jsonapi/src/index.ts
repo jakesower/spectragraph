@@ -1,2 +1,2 @@
-export { createJSONAPIStore } from "./jsonapi-store";
-export { applySchemaRoutes, createServer } from "./server";
+export { createJSONAPIStore } from "./jsonapi-store.js";
+export { applySchemaRoutes, createServer } from "./server.js";
