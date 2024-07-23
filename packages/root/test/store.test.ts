@@ -1,7 +1,7 @@
 import { expect, it, describe } from "vitest";
 import { careBearData } from "./fixtures/care-bear-data.js"; // eslint-disable-line
 import { careBearSchema } from "./fixtures/care-bear-schema.js";
-import { createStore } from "../src/store.js";
+import { createMemoryStore } from "../src/store.js";
 
 const singleBearWithHomeTree = {
 	id: "bear-abc-123",
@@ -29,7 +29,7 @@ const barePowersTrees = [
 
 describe("queryTree core", () => {
 	it("fetches appropriately on an empty store", async () => {
-		const store = createStore(careBearSchema);
+		const store = createMemoryStore(careBearSchema);
 		const result = store.query({
 			type: "bears",
 			id: "1",
@@ -40,7 +40,7 @@ describe("queryTree core", () => {
 	});
 
 	it("fetches appropriately on an empty store with multiple resources", async () => {
-		const store = createStore(careBearSchema);
+		const store = createMemoryStore(careBearSchema);
 		const result = store.query({
 			type: "bears",
 			select: ["name"],
@@ -50,7 +50,7 @@ describe("queryTree core", () => {
 	});
 
 	it("fetches a single resource", async () => {
-		const store = createStore(careBearSchema, careBearData);
+		const store = createMemoryStore(careBearSchema, careBearData);
 
 		const result = store.query({
 			type: "bears",
@@ -62,7 +62,7 @@ describe("queryTree core", () => {
 	});
 
 	it("can merge data into the store", async () => {
-		const store = createStore(careBearSchema);
+		const store = createMemoryStore(careBearSchema);
 		store.merge({ bears: careBearData.bears });
 
 		const result = store.query({
@@ -79,7 +79,7 @@ describe("queryTree core", () => {
 	});
 
 	it("can merge tree data into the store", async () => {
-		const store = createStore(careBearSchema);
+		const store = createMemoryStore(careBearSchema);
 		store.mergeTree("bears", singleBearWithHomeTree);
 
 		const result = store.query({
@@ -95,7 +95,7 @@ describe("queryTree core", () => {
 	});
 
 	it("can merge multiple trees", async () => {
-		const store = createStore(careBearSchema);
+		const store = createMemoryStore(careBearSchema);
 		store.mergeTree("bears", singleBearWithHomeTree);
 		store.mergeTrees("powers", barePowersTrees);
 

@@ -26,7 +26,7 @@ export type Graph = {
 	};
 };
 
-export function createStore(schema: Schema, initialData: Graph = {}) {
+export function createMemoryStore(schema: Schema, initialData: Graph = {}) {
 	let queryGraph;
 	let storeGraph = mergeGraphs(emptyGraph(schema), initialData);
 

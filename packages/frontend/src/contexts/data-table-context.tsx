@@ -5,7 +5,7 @@ import {
 	mergeProps,
 	useContext,
 } from "solid-js";
-import { createStore, SetStoreFunction } from "solid-js/store";
+import { createMemoryStore, SetStoreFunction } from "solid-js/store";
 import { Source } from "../data/source";
 import { useSources } from "./source-context";
 import { deriveOperations } from "../ui/sections/remix/remix-operations";
@@ -40,7 +40,7 @@ export function DataTableProvider(props) {
 	const stored = null;
 	const init: DataTable = stored ? JSON.parse(stored) : defaultDataTableState;
 
-	const [dataTable, setDataTable] = createStore<DataTable>(init);
+	const [dataTable, setDataTable] = createMemoryStore<DataTable>(init);
 
 	const remixed = createMemo(() => {
 		const rootSource = sources[dataTable.sourceKey];

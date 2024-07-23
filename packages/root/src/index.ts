@@ -15,4 +15,4 @@ export {
 	mapSchemalessQuery,
 	reduceSchemalessQuery,
 } from "./query.js";
-export { createStore } from "./store.js";
+export { createMemoryStore } from "./store.js";

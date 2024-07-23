@@ -1,4 +1,4 @@
-import { Schema, createStore } from "data-prism";
+import { Schema, createMemoryStore } from "data-prism";
 import { expect, it } from "vitest";
 import careBearSchema from "../fixtures/care-bears.schema.json";
 import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
@@ -8,7 +8,7 @@ import {
 	allBearsResponse,
 } from "../fixtures/formatted-care-bear-data.js";
 
-const store = createStore(careBearSchema as Schema, careBearData);
+const store = createMemoryStore(careBearSchema as Schema, careBearData);
 
 it("parses a response with multiple resources", async () => {
 	const result = parseResponse(

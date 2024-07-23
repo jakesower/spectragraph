@@ -1,5 +1,5 @@
 import express from "express";
-import { Schema, createStore } from "data-prism";
+import { Schema, createMemoryStore } from "data-prism";
 import { parseRequest } from "../src/parse-request.js";
 import careBearSchema from "./fixtures/care-bears.schema.json" assert { type: "json" };
 import { careBearData } from "./fixtures/care-bear-data.js"; // eslint-disable-line
@@ -38,9 +38,7 @@ function applySchemaRoutes(schema: Schema, store, app) {
 }
 
 const app = express();
-// app.set("query parser", "simple");
-
-const store = createStore(careBearSchema as Schema, careBearData);
+const store = createMemoryStore(careBearSchema as Schema, careBearData);
 
 applySchemaRoutes(careBearSchema as Schema, store, app);
 app.get("/", (req, res) => {

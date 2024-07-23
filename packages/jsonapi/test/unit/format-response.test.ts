@@ -9,9 +9,9 @@ import {
 	allBearsResponse,
 } from "../fixtures/formatted-care-bear-data.js";
 import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
-import { Schema, createStore } from "data-prism";
+import { Schema, createMemoryStore } from "data-prism";
 
-const store = createStore(careBearSchema as Schema, careBearData);
+const store = createMemoryStore(careBearSchema as Schema, careBearData);
 
 const ajv = new Ajv();
 addFormats(ajv);
