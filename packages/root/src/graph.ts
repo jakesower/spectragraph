@@ -21,8 +21,13 @@ export type Graph = {
 	};
 };
 
-export function emptyGraph(schema: Schema): Graph {
+export function createEmptyGraph(schema: Schema): Graph {
 	return mapValues(schema.resources, () => ({}));
+}
+
+export function emptyGraph(schema: Schema): Graph {
+	console.warn("`emptyGraph` is deprecated in favor of `createEmptyGraphh`");
+	return createEmptyGraph(schema);
 }
 
 export function linkInverses(graph: Graph, schema: Schema): Graph {

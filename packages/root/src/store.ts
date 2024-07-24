@@ -1,7 +1,7 @@
 import { Schema } from "./schema.js";
 import {
 	createQueryGraph,
-	emptyGraph,
+	createEmptyGraph,
 	linkInverses,
 	mergeGraphs,
 } from "./graph.js";
@@ -28,7 +28,7 @@ export type Graph = {
 
 export function createMemoryStore(schema: Schema, initialData: Graph = {}) {
 	let queryGraph;
-	let storeGraph = mergeGraphs(emptyGraph(schema), initialData);
+	let storeGraph = mergeGraphs(createEmptyGraph(schema), initialData);
 
 	const runQuery = (query) => {
 		if (!queryGraph) queryGraph = createQueryGraph(storeGraph);
