@@ -19,6 +19,7 @@ export type Graph = {
         [k: string | number]: NormalResource;
     };
 };
+export declare function createEmptyGraph(schema: Schema): Graph;
 export declare function emptyGraph(schema: Schema): Graph;
 export declare function linkInverses(graph: Graph, schema: Schema): Graph;
 export declare function mergeGraphs(left: Graph, right: Graph): Graph;

@@ -33,7 +33,6 @@ export function createServer(schema, store, options: Options = {}) {
 
 	app.get("/", (req, res) => {
 		res.send("OK");
-		console.log(req.headers);
 	});
 
 	app.listen(port, "0.0.0.0", () => {
