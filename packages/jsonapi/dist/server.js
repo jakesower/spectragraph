@@ -23,7 +23,6 @@ export function createServer(schema, store, options = {}) {
     applySchemaRoutes(schema, store, app);
     app.get("/", (req, res) => {
         res.send("OK");
-        console.log(req.headers);
     });
     app.listen(port, "0.0.0.0", () => {
         console.log(`running on port ${port}`);

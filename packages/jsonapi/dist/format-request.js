@@ -1,11 +1,14 @@
+import { defaultExpressionEngine } from "@data-prism/expressions";
 import { forEachQuery, normalizeQuery } from "data-prism";
 import { uniq } from "lodash-es";
 const objectToParamStr = (obj, rootKey) => {
-    const go = (cur) => Object.entries(cur).flatMap(([k, v]) => Array.isArray(v)
-        ? `[${k}]=[${v.join(",")}]`
-        : typeof v === "object"
-            ? `[${k}]${go(v)}`
-            : `[${k}]=${v}`);
+    const go = (cur) => Object.entries(cur).flatMap(([k, v]) => defaultExpressionEngine.isExpression(obj)
+        ? JSON.stringify(v)
+        : Array.isArray(v)
+            ? `[${k}]=[${v.join(",")}]`
+            : typeof v === "object"
+                ? `[${k}]${go(v)}`
+                : `[${k}]=${v}`);
     return go(obj)
         .map((x) => `${rootKey}${x}`)
         .join("&");
