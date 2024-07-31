@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
-import careBearSchema from "../../fixtures/care-bears.schema.json";
-import { createJSONAPIStore } from "../../../src/jsonapi-store.js";
-import { makeRequest } from "../../helpers.js";
+import careBearSchema from "../fixtures/care-bears.schema.json";
+import { createJSONAPIStore } from "../../src/jsonapi-store.js";
+import { makeRequest } from "../helpers.js";
 
 const store = createJSONAPIStore(careBearSchema, {
 	baseURL: "http://127.0.0.1",

@@ -105,7 +105,7 @@ export function parseRequest(schema: Schema, params) {
 
 		return {
 			...(path.length === 0 ? { type } : {}),
-			...(id ? { id } : {}),
+			...(path.length === 0 && id ? { id } : {}),
 			select,
 			...(Object.keys(relevantFilters).length > 0
 				? { where: castFilters }
