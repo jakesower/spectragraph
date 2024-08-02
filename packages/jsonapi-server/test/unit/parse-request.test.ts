@@ -156,6 +156,27 @@ describe("requests with no subqueries", () => {
 				order: [{ yearIntroduced: "desc" }, { name: "asc" }],
 			});
 		});
+
+		it("sorts on an valid field when a nested resource is requested", () => {
+			const query = parseRequest(careBearSchema as Schema, {
+				type: "bears",
+				sort: "yearIntroduced",
+				include: "home",
+			});
+
+			expect(query).toStrictEqual({
+				type: "bears",
+				select: [
+					...Object.keys(careBearSchema.resources.bears.attributes),
+					{
+						home: {
+							select: Object.keys(careBearSchema.resources.homes.attributes),
+						},
+					},
+				],
+				order: [{ yearIntroduced: "asc" }],
+			});
+		});
 	});
 
 	describe("pagination", () => {

@@ -85,18 +85,19 @@ export function parseRequest(schema: Schema, params) {
 			})),
 		];
 
-		const order = sort
-			? sort.split(",").map((field) => {
-					const parsedField = field[0] === "-" ? field.slice(1) : field;
-					if (!Object.keys(resDef.attributes).includes(parsedField)) {
-						throw new Error(
-							`${parsedField} is not a valid attribute of ${type}`,
-						);
-					}
+		const order =
+			sort && path.length === 0
+				? sort.split(",").map((field) => {
+						const parsedField = field[0] === "-" ? field.slice(1) : field;
+						if (!Object.keys(resDef.attributes).includes(parsedField)) {
+							throw new Error(
+								`${parsedField} is not a valid attribute of ${type}`,
+							);
+						}
 
-					return { [parsedField]: field[0] === "-" ? "desc" : "asc" };
-			  })
-			: null;
+						return { [parsedField]: field[0] === "-" ? "desc" : "asc" };
+				  })
+				: null;
 
 		const limit = page?.size ? Number(page.size) : null;
 		const offset = page?.number

@@ -61,7 +61,7 @@ export function parseRequest(schema, params) {
                 [related]: go(resDef.relationships[related].type, [...path, related]),
             })),
         ];
-        const order = sort
+        const order = sort && path.length === 0
             ? sort.split(",").map((field) => {
                 const parsedField = field[0] === "-" ? field.slice(1) : field;
                 if (!Object.keys(resDef.attributes).includes(parsedField)) {
