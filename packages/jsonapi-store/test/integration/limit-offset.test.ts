@@ -10,7 +10,7 @@ const store = createJSONAPIStore(careBearSchema, {
 
 describe("limit/offset", () => {
 	it("fetches a single resource", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: { name: "name" },
 			limit: 1,
@@ -20,7 +20,7 @@ describe("limit/offset", () => {
 	});
 
 	it("limits after sorting", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
@@ -34,7 +34,7 @@ describe("limit/offset", () => {
 	});
 
 	it("limits after sorting with 1", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
@@ -45,7 +45,7 @@ describe("limit/offset", () => {
 	});
 
 	it("limits with an offset", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: ["name"],
 			order: { name: "asc" },
@@ -60,7 +60,7 @@ describe("limit/offset", () => {
 	});
 
 	it("allows for offset only", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
@@ -75,7 +75,7 @@ describe("limit/offset", () => {
 	});
 
 	it("allows for limit + offset to exceed size of data", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
@@ -90,7 +90,7 @@ describe("limit/offset", () => {
 	});
 
 	it("returns nothing when the offset has surpassed the data size", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
@@ -102,7 +102,7 @@ describe("limit/offset", () => {
 	});
 
 	it("allows a zero offset", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
@@ -119,7 +119,7 @@ describe("limit/offset", () => {
 
 	it("errors for a bad limit", async () => {
 		await expect(async () => {
-			await store.get({
+			await store.query({
 				type: "bears",
 				select: ["id"],
 				limit: -1,
@@ -129,7 +129,7 @@ describe("limit/offset", () => {
 
 	it("errors for a bad offset", async () => {
 		await expect(async () => {
-			await store.get({
+			await store.query({
 				type: "bears",
 				select: ["id"],
 				limit: 3,

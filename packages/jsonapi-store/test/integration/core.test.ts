@@ -9,7 +9,7 @@ const store = createJSONAPIStore(careBearSchema, {
 });
 
 it("fetches a single resource", async () => {
-	const result = await store.get({
+	const result = await store.query({
 		type: "bears",
 		id: "1",
 		select: ["name"],
@@ -19,7 +19,7 @@ it("fetches a single resource", async () => {
 });
 
 it("fetches a single resource with its id", async () => {
-	const result = await store.get({
+	const result = await store.query({
 		type: "bears",
 		id: "1",
 		select: {
@@ -32,7 +32,7 @@ it("fetches a single resource with its id", async () => {
 });
 
 it("fetches a single resource without its id", async () => {
-	const result = await store.get({
+	const result = await store.query({
 		type: "bears",
 		id: "1",
 		select: {
@@ -44,14 +44,14 @@ it("fetches a single resource without its id", async () => {
 });
 
 it("fetches multiple resources", async () => {
-	const result = await store.get({ type: "bears", select: ["id"] });
+	const result = await store.query({ type: "bears", select: ["id"] });
 	const expected = ["1", "2", "3", "5"].map((id) => ({ id }));
 
 	expect(result).toEqual(expected);
 });
 
 it("fetches a property from multiple resources", async () => {
-	const result = await store.get({ type: "bears", select: { name: "name" } });
+	const result = await store.query({ type: "bears", select: { name: "name" } });
 	const expected = [
 		"Tenderheart Bear",
 		"Cheer Bear",
@@ -63,7 +63,7 @@ it("fetches a property from multiple resources", async () => {
 });
 
 it("fetches null for a nonexistent resource", async () => {
-	const result = await store.get({ type: "bears", id: "6", select: ["id"] });
+	const result = await store.query({ type: "bears", id: "6", select: ["id"] });
 
 	expect(result).toEqual(null);
 });
@@ -77,7 +77,7 @@ it("fetches a single resource with a many-to-one relationship", async () => {
 		},
 	} as const;
 
-	const result = await store.get(q);
+	const result = await store.query(q);
 
 	expect(result).toEqual({
 		home: { id: "1" },
@@ -91,7 +91,7 @@ it("fetches a single resource with a one-to-many relationship", async () => {
 		select: { residents: { select: { id: "id" } } },
 	} as const;
 
-	const result = await store.get(q);
+	const result = await store.query(q);
 
 	expect(result).toEqual({
 		residents: [{ id: "1" }, { id: "2" }, { id: "3" }],
@@ -105,7 +105,7 @@ it("fetches a single resource with a one-to-many relationship and an implicit re
 		select: { residents: { select: ["id"] } },
 	} as const;
 
-	const result = await store.get(q);
+	const result = await store.query(q);
 
 	expect(result).toEqual({
 		residents: [{ id: "1" }, { id: "2" }, { id: "3" }],
@@ -113,7 +113,7 @@ it("fetches a single resource with a one-to-many relationship and an implicit re
 });
 
 it("fetches a single resource with a subset of props", async () => {
-	const result = await store.get({
+	const result = await store.query({
 		type: "bears",
 		id: "1",
 		select: { id: "id", name: "name", furColor: "furColor" },
@@ -127,7 +127,7 @@ it("fetches a single resource with a subset of props", async () => {
 });
 
 it("fetches a single resource with a renamed prop", async () => {
-	const result = await store.get({
+	const result = await store.query({
 		type: "bears",
 		id: "1",
 		select: { id: "id", color: "furColor" },
@@ -143,13 +143,13 @@ it("fetches a single resource with a subset of props on a relationship", async (
 		select: { home: { select: { caringMeter: "caringMeter" } } },
 	} as const;
 
-	const result = await store.get(q);
+	const result = await store.query(q);
 
 	expect(result).toEqual({ home: { caringMeter: 1 } });
 });
 
 it("uses explicitly set id fields", async () => {
-	const result = await store.get({
+	const result = await store.query({
 		type: "powers",
 		id: "careBearStare",
 		select: ["powerId"],
@@ -159,7 +159,7 @@ it("uses explicitly set id fields", async () => {
 });
 
 it("fetches a single resource with many-to-many relationship", async () => {
-	const result = await store.get({
+	const result = await store.query({
 		type: "bears",
 		id: "1",
 		select: { powers: { select: ["powerId"] } },
@@ -169,7 +169,7 @@ it("fetches a single resource with many-to-many relationship", async () => {
 });
 
 it("fetches multiple subqueries of various types", async () => {
-	const result = await store.get({
+	const result = await store.query({
 		type: "bears",
 		id: "1",
 		select: {
@@ -191,7 +191,7 @@ it("fetches multiple subqueries of various types", async () => {
 });
 
 it("handles subqueries between the same type", async () => {
-	const result = await store.get({
+	const result = await store.query({
 		type: "bears",
 		select: {
 			id: "id",
@@ -208,7 +208,7 @@ it("handles subqueries between the same type", async () => {
 });
 
 it("merges select when resource has different select from different parts of the query tree", async () => {
-	const result = await store.get({
+	const result = await store.query({
 		type: "bears",
 		select: {
 			id: "id",
@@ -226,12 +226,12 @@ it("merges select when resource has different select from different parts of the
 
 it("fails validation for invalid types", async () => {
 	expect(async () => {
-		await store.get({ type: "bearz", id: "1" });
+		await store.query({ type: "bearz", id: "1" });
 	}).rejects.toThrowError();
 });
 
 it("fails validation for invalid top level props", async () => {
 	await expect(async () => {
-		await store.get({ type: "bears", id: "1", select: { koopa: {} } });
+		await store.query({ type: "bears", id: "1", select: { koopa: {} } });
 	}).rejects.toThrowError();
 });

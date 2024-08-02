@@ -13,7 +13,7 @@ const store = createSQLiteStore(careBearSchema, db, careBearConfig);
 
 describe("order tests", async () => {
 	it("sorts on a numeric field", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: { name: "name", yearIntroduced: "yearIntroduced" },
 			order: { yearIntroduced: "desc" },
@@ -28,7 +28,7 @@ describe("order tests", async () => {
 	});
 
 	it("sorts on a string field", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: { name: "name", yearIntroduced: "yearIntroduced" },
 			order: { name: "asc" },
@@ -43,7 +43,7 @@ describe("order tests", async () => {
 	});
 
 	it("sorts on a numerical and a string field", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: { name: "name", yearIntroduced: "yearIntroduced" },
 			order: [{ yearIntroduced: "desc" }, { name: "asc" }],

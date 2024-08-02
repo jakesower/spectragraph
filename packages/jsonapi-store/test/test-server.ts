@@ -1,6 +1,6 @@
 import { Schema, createMemoryStore } from "data-prism";
 import { createServer } from "@data-prism/jsonapi-server";
-import careBearSchema from "./fixtures/care-bears.schema.json" assert { type: "json" };
+import careBearSchema from "./fixtures/care-bears.schema.json" with { type: "json" };
 import { careBearData } from "./fixtures/care-bear-data.js"; // eslint-disable-line
 
 createServer(
