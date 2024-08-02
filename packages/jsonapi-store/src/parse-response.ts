@@ -2,6 +2,8 @@ import { Schema, queryGraph } from "data-prism";
 import { mapValues } from "lodash-es";
 
 export function parseResponse(schema: Schema, query, response) {
+	if (response.data === null) return null;
+
 	const graph = mapValues(schema.resources, () => ({}));
 	const dataArray = Array.isArray(response.data)
 		? response.data

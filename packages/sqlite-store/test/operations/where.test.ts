@@ -13,7 +13,7 @@ const store = createSQLiteStore(careBearSchema, db, careBearConfig);
 
 describe("where clauses", () => {
 	it("filters on a property equality constraint", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: ["id", "name"],
 			where: { name: "Cheer Bear" },
@@ -23,7 +23,7 @@ describe("where clauses", () => {
 	});
 
 	it("filters on a property that is not returned from properties", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: ["id"],
 			where: { name: { $eq: "Cheer Bear" } },
@@ -33,7 +33,7 @@ describe("where clauses", () => {
 	});
 
 	it("filters on multiple property equality where", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "homes",
 			select: ["id"],
 			where: {
@@ -46,7 +46,7 @@ describe("where clauses", () => {
 	});
 
 	it("filters using $eq operator", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: ["id"],
 			where: {
@@ -58,7 +58,7 @@ describe("where clauses", () => {
 	});
 
 	it("filters using $gt operator", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: ["id"],
 			where: {
@@ -70,7 +70,7 @@ describe("where clauses", () => {
 	});
 
 	it("filters using $lt operator", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: ["id"],
 			where: {
@@ -82,7 +82,7 @@ describe("where clauses", () => {
 	});
 
 	it("filters using $lte operator", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: ["id"],
 			where: {
@@ -94,7 +94,7 @@ describe("where clauses", () => {
 	});
 
 	it("filters using $gte operator", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: ["id"],
 			where: {
@@ -106,7 +106,7 @@ describe("where clauses", () => {
 	});
 
 	it("filters using $in 1", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: ["id"],
 			where: {
@@ -118,7 +118,7 @@ describe("where clauses", () => {
 	});
 
 	it("filters using $in 2", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: ["id"],
 			where: {
@@ -130,7 +130,7 @@ describe("where clauses", () => {
 	});
 
 	it("filters using $ne operator", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "bears",
 			select: ["id"],
 			where: {
@@ -142,7 +142,7 @@ describe("where clauses", () => {
 	});
 
 	it("filters related resources", async () => {
-		const result = await store.get({
+		const result = await store.query({
 			type: "powers",
 			id: "careBearStare",
 			select: {
@@ -164,7 +164,7 @@ describe("where clauses", () => {
 
 	describe.skip("where expressions", () => {
 		it("filters using an $or operation", async () => {
-			const result = await store.get({
+			const result = await store.query({
 				type: "bears",
 				select: {
 					id: "id",
@@ -178,7 +178,7 @@ describe("where clauses", () => {
 		});
 
 		it("filters using an $or and $and operation", async () => {
-			const result = await store.get({
+			const result = await store.query({
 				type: "bears",
 				select: {
 					id: "id",
@@ -195,7 +195,7 @@ describe("where clauses", () => {
 		});
 
 		it("filters using an $or and $not operation", async () => {
-			const result = await store.get({
+			const result = await store.query({
 				type: "bears",
 				select: {
 					id: "id",
