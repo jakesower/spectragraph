@@ -79,7 +79,7 @@ export function ensureValidQuery<S extends Schema>(
 			(p) => typeof p === "string" && !p.includes("."),
 		);
 		const invalidShallowProps = difference(shallowPropValues, [
-			resDef.idField,
+			resDef.idAttribute,
 			...Object.keys({ ...resDef.attributes, ...resDef.relationships }),
 		]);
 

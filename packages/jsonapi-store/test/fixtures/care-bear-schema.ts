@@ -3,7 +3,7 @@ export const careBearSchema = {
 		"https://raw.githubusercontent.com/jakesower/data-prism/main/schemas/data-prism-schema.1.0.schema.json",
 	resources: {
 		bears: {
-			idField: "id",
+			idAttribute: "id",
 			attributes: {
 				id: { type: "string" },
 				name: { type: "string" },
@@ -30,7 +30,7 @@ export const careBearSchema = {
 			},
 		},
 		homes: {
-			idField: "id",
+			idAttribute: "id",
 			attributes: {
 				id: { type: "string" },
 				name: { type: "string" },
@@ -47,7 +47,7 @@ export const careBearSchema = {
 			},
 		},
 		powers: {
-			idField: "powerId",
+			idAttribute: "powerId",
 			attributes: {
 				powerId: { type: "string" },
 				name: { type: "string" },

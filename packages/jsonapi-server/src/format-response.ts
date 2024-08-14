@@ -11,12 +11,12 @@ export function formatResponse(schema, query, result) {
 	const data = applyOrMap(result, (res) => {
 		const resSchema = schema.resources[query.type];
 		const normalized = normalizeResource(query.type, res, schema);
-		dataIds.add(res[resSchema.idField ?? "id"]);
+		dataIds.add(res[resSchema.idAttribute ?? "id"]);
 
 		return {
 			type: query.type,
-			id: res[resSchema.idField ?? "id"],
-			attributes: omit(normalized.attributes, [resSchema.idField ?? "id"]),
+			id: res[resSchema.idAttribute ?? "id"],
+			attributes: omit(normalized.attributes, [resSchema.idAttribute ?? "id"]),
 			relationships: mapValues(normalized.relationships, (rel) => ({
 				data: rel,
 			})),
@@ -48,7 +48,7 @@ export function formatResponse(schema, query, result) {
 			included.push({
 				type,
 				id,
-				attributes: omit(res.attributes, relDef.idField ?? "id"),
+				attributes: omit(res.attributes, relDef.idAttribute ?? "id"),
 				relationships: mapValues(res.relationships, (rel) => ({ data: rel })),
 			});
 		});

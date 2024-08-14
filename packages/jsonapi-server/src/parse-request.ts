@@ -76,7 +76,7 @@ export function parseRequest(schema: Schema, params) {
 			...(fields?.[type]
 				? uniq([
 						...fields?.[type]?.split(","),
-						resDef.idField ?? "id",
+						resDef.idAttribute ?? "id",
 						...Object.keys(parsedFilters ?? {}),
 				  ])
 				: Object.keys(resDef.attributes)),

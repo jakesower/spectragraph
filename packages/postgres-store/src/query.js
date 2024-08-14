@@ -1,12 +1,16 @@
-import { mapValues, omit } from "lodash-es";
+import { mapValues, omit, snakeCase } from "lodash-es";
 import { mapSchemalessQuery, queryGraph } from "data-prism";
 import { buildSql, composeClauses } from "./helpers/sql.js";
 import { runQuery } from "./operations/operations.js";
 import { flattenQuery } from "./helpers/query-helpers.ts";
-import { castValToDb } from "./helpers/sql.js";
 import { varsExpressionEngine } from "./helpers/sql-expressions.js";
 
-export function get(query, context) {
+function replaceQuestionMarksWithNumbers(inputString) {
+	let counter = 1;
+	return inputString.replace(/\?/g, () => `$${counter++}`);
+}
+
+export async function query(query, context) {
 	const { schema, config, rootClauses = [] } = context;
 	const { db, resources } = config;
 
@@ -17,7 +21,7 @@ export function get(query, context) {
 		from: rootTable,
 	};
 
-	return runQuery(query, context, (queryModifiers) => {
+	return runQuery(query, context, async (queryModifiers) => {
 		const composedModifiers = composeClauses([
 			initModifiers,
 			...rootClauses,
@@ -29,13 +33,13 @@ export function get(query, context) {
 			selectAttributeMap[attr] = idx;
 		});
 
-		const sql = buildSql(composedModifiers);
-		const vars = varsExpressionEngine
-			.evaluate({ $and: composedModifiers.vars })
-			.map(castValToDb);
+		const sql = replaceQuestionMarksWithNumbers(buildSql(composedModifiers));
+		const vars = varsExpressionEngine.evaluate({
+			$and: composedModifiers.vars,
+		});
 
-		const statement = db.prepare(sql).raw();
-		const allResults = statement.all(vars) ?? null;
+		const allResults =
+			(await db.query({ rowMode: "array", text: sql }, vars))?.rows ?? null;
 
 		const dataGraph = mapValues(schema.resources, () => ({}));
 		const flatQuery = flattenQuery(schema, query);
@@ -54,7 +58,7 @@ export function get(query, context) {
 
 				const pathStr =
 					queryPart.path.length > 0 ? `$${queryPart.path.join("$")}` : "";
-				const idPath = `${rootTable}${pathStr}.${idAttribute}`;
+				const idPath = `${rootTable}${pathStr}.${snakeCase(idAttribute)}`;
 				const idIdx = selectAttributeMap[idPath];
 
 				return (result) => {
@@ -67,7 +71,9 @@ export function get(query, context) {
 								: "";
 						const parentIdAttribute =
 							config.resources[parentType].idAttribute ?? "id";
-						const parentIdPath = `${rootTable}${parentPathStr}.${parentIdAttribute}`;
+						const parentIdPath = `${rootTable}${parentPathStr}.${snakeCase(
+							parentIdAttribute,
+						)}`;
 						const parentIdIdx = selectAttributeMap[parentIdPath];
 						const parentId = result[parentIdIdx];
 
@@ -109,7 +115,7 @@ export function get(query, context) {
 
 					if (attributes.length > 0) {
 						attributes.forEach((attr) => {
-							const fullAttrPath = `${rootTable}${pathStr}.${attr}`;
+							const fullAttrPath = `${rootTable}${pathStr}.${snakeCase(attr)}`;
 							const resultIdx = selectAttributeMap[fullAttrPath];
 
 							dataGraph[type][id].attributes[attr] = result[resultIdx];

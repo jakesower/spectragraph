@@ -9,7 +9,7 @@ A schema is the first consideration for an application using Data Prism. They de
   "$schema": "https://raw.githubusercontent.com/jakesower/data-prism/main/schemas/data-prism-schema.1.0.schema.json",
   "resources": {
     "bears": {
-      "idField": "id",
+      "idAttribute": "id",
       "properties": {
         "name": {
           "type": "string"
@@ -43,7 +43,7 @@ A schema is the first consideration for an application using Data Prism. They de
       }
     },
     "homes": {
-      "idField": "id",
+      "idAttribute": "id",
       "properties": {
         "name": {
           "type": "string"
@@ -70,7 +70,7 @@ A schema is the first consideration for an application using Data Prism. They de
       }
     },
     "powers": {
-      "idField": "powerId",
+      "idAttribute": "powerId",
       "properties": {
         "name": {
           "type": "string"

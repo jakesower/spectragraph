@@ -1,6 +1,6 @@
 import { preQueryRelationships } from "./relationships.js";
 import { flattenQuery } from "../helpers/query-helpers.ts";
-import { uniq } from "lodash-es";
+import { snakeCase, uniq } from "lodash-es";
 import { whereExpressionEngine } from "../helpers/sql-expressions.js";
 
 const hasToManyRelationship = (schema, query) => {
@@ -19,7 +19,10 @@ const operations = {
 		preQuery: {
 			apply: (id, { config, query }) => {
 				const { table, idAttribute = "id" } = config.resources[query.type];
-				return { where: [`${table}.${idAttribute} = ?`], vars: [id] };
+				return {
+					where: [`${table}.${snakeCase(idAttribute)} = ?`],
+					vars: [id],
+				};
 			},
 		},
 		postQuery: {
@@ -48,10 +51,10 @@ const operations = {
 
 						if (whereExpressionEngine.isExpression(propValOrExpr)) {
 							const [operation, args] = Object.entries(propValOrExpr)[0];
-							return { [operation]: [`${table}.${propKey}`, args] };
+							return { [operation]: [`${table}.${snakeCase(propKey)}`, args] };
 						}
 
-						return { $eq: [`${table}.${propKey}`, propValOrExpr] };
+						return { $eq: [`${table}.${snakeCase(propKey)}`, propValOrExpr] };
 					},
 				);
 
@@ -83,7 +86,7 @@ const operations = {
 		preQuery: {
 			apply: (limit, { query, queryPath, schema }) => {
 				if (limit < 0) {
-					throw new Error("`offset` must be at least 0");
+					throw new Error("`limit` must be at least 0");
 				}
 
 				return queryPath.length > 0 || hasToManyRelationship(schema, query)
@@ -100,7 +103,7 @@ const operations = {
 				}
 
 				if (!query.limit) {
-					return [{ limit: -1, offset }];
+					return [{ offset }];
 				}
 				return [];
 			},
@@ -121,7 +124,7 @@ const operations = {
 
 				return {
 					select: uniq([idAttribute, ...attributeProps]).map(
-						(col) => `${table}.${col}`,
+						(col) => `${table}.${snakeCase(col)}`,
 					),
 					...relationshipsModifiers,
 				};
@@ -165,7 +168,11 @@ const gatherPreOperations = (query, context) => {
 				? [preQueryRelationships(argContext)]
 				: [];
 
-		return [{ select: [`${table}.${idAttribute}`] }, ...operationParts, ...refPart];
+		return [
+			{ select: [`${table}.${snakeCase(idAttribute)}`] },
+			...operationParts,
+			...refPart,
+		];
 	});
 
 	return queryParts;

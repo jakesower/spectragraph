@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/jakesower/data-prism/main/schemas/data-prism-schema.1.0.schema.json",
   "resources": {
     "bears": {
-      "idField": "id",
+      "idAttribute": "id",
       "properties": {
         "name": {
           "type": "string"
@@ -36,7 +36,7 @@
       }
     },
     "homes": {
-      "idField": "id",
+      "idAttribute": "id",
       "properties": {
         "name": {
           "type": "string"
@@ -60,7 +60,7 @@
       }
     },
     "powers": {
-      "idField": "powerId",
+      "idAttribute": "powerId",
       "properties": {
         "name": {
           "type": "string"

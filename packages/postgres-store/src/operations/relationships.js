@@ -1,4 +1,4 @@
-import { last } from "lodash-es";
+import { last, snakeCase } from "lodash-es";
 
 function makeRelBuilders(schema) {
 	return {
@@ -62,10 +62,10 @@ function makeRelBuilders(schema) {
 					foreignTableAlias,
 				} = params;
 
-				const localIdCol = localConfig.idAttribute ?? "id";
+				const localIdCol = snakeCase(localConfig.idAttribute ?? "id");
 
 				const foreignTable = foreignConfig.table;
-				const foreignIdCol = foreignConfig.idAttribute ?? "id";
+				const foreignIdCol = snakeCase(foreignConfig.idAttribute ?? "id");
 
 				const joinTableName = `${localQueryTableName}$$${relName}`;
 				const { joinTable, localJoinColumn, foreignJoinColumn } =
