@@ -1,4 +1,4 @@
-import { Query, RootQuery, Schema } from "@data-prism/core";
+import { Query, RootQuery, Schema } from "data-prism";
 import { partition, pick } from "lodash-es";
 
 type QueryBreakdown<S extends Schema> = {
@@ -10,9 +10,9 @@ type QueryBreakdown<S extends Schema> = {
 
 export function flattenQuery<S extends Schema>(
 	schema: S,
-	rootQuery: RootQuery<S>,
+	rootQuery: RootQuery,
 ): QueryBreakdown<S> {
-	const go = (query: Query<S>, type, path, parent = null, parentRelationship = null) => {
+	const go = (query: Query, type, path, parent = null, parentRelationship = null) => {
 		const resDef = schema.resources[type];
 		const [attributesEntries, relationshipsEntries] = partition(
 			Object.entries(query.select ?? {}),
@@ -39,7 +39,7 @@ export function flattenQuery<S extends Schema>(
 			level,
 			...relationshipKeys.flatMap((relKey) => {
 				const relDef = resDef.relationships[relKey];
-				const subquery = query.select[relKey] as Query<S>;
+				const subquery = query.select[relKey] as Query;
 
 				return go(subquery, relDef.type, [...path, relKey], level, relKey);
 			}),
