@@ -8,7 +8,7 @@ type ResourceMappers = {
 type GraphMappers = {
     [k: string]: ResourceMappers;
 };
-export declare function flattenResource(resourceId: any, resource: any, idField?: string): any;
+export declare function flattenResource(resourceId: any, resource: any, idAttribute?: string): any;
 export declare function normalizeResource(resourceType: string, resource: {
     [k: string]: unknown;
 }, schema: Schema, graphMappers?: GraphMappers): NormalResource;

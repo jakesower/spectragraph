@@ -18,7 +18,7 @@ type LooseSchemaRelationship = {
 };
 
 type LooseSchemaResource = {
-	idField?: string;
+	idAttribute?: string;
 	attributes: { [k: string]: LooseSchemaAttribute };
 	relationships: { [k: string]: LooseSchemaRelationship };
 };
@@ -50,7 +50,7 @@ type SchemaRelationship = {
 };
 
 type SchemaResource = {
-	idField?: string;
+	idAttribute?: string;
 	attributes: { [k: string]: SchemaAttribute };
 	relationships: { [k: string]: SchemaRelationship };
 };
@@ -97,7 +97,7 @@ export function compileSchema<S extends Schema>(schema: S): CompiledSchema<S> {
 	return {
 		...schema,
 		resources: mapValues(schema.resources, (resDef) => ({
-			idField: "id",
+			idAttribute: "id",
 			attributes: {},
 			relationships: {},
 			...resDef,

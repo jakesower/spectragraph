@@ -57,7 +57,10 @@ function prepData(resources) {
 			Object.entries(res.relationships).forEach(([relName, relVal]) => {
 				Object.defineProperty(val, relName, {
 					get() {
-						const dereffed = applyOrMap(relVal, (rel: Ref) => data[rel.type][rel.id]);
+						const dereffed = applyOrMap(
+							relVal,
+							(rel: Ref) => data[rel.type][rel.id],
+						);
 						Object.defineProperty(this, relName, {
 							value: dereffed,
 							writable: false,
@@ -78,7 +81,10 @@ function prepData(resources) {
 	return data;
 }
 
-function runQuery<Q extends CompiledRootQuery>(rootQuery: Q, data: object): Result {
+function runQuery<Q extends CompiledRootQuery>(
+	rootQuery: Q,
+	data: object,
+): Result {
 	const go = (query) => {
 		if (query.id && !data[query.type][query.id]) return null;
 
@@ -121,12 +127,18 @@ function runQuery<Q extends CompiledRootQuery>(rootQuery: Q, data: object): Resu
 								? result[RAW].relationships[propQuery]
 								: propQuery
 										.split(".")
-										.reduce((out, path) => (out === null ? null : out?.[path]), result);
+										.reduce(
+											(out, path) => (out === null ? null : out?.[path]),
+											result,
+										);
 					}
 
 					// expression
 					if (defaultExpressionEngine.isExpression(propQuery)) {
-						return createExpressionProjector(propQuery, defaultExpressionEngine);
+						return createExpressionProjector(
+							propQuery,
+							defaultExpressionEngine,
+						);
 					}
 
 					// subquery

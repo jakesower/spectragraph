@@ -62,10 +62,10 @@ function makeRelBuilders(schema) {
 					foreignTableAlias,
 				} = params;
 
-				const localIdCol = localConfig.idField ?? "id";
+				const localIdCol = localConfig.idAttribute ?? "id";
 
 				const foreignTable = foreignConfig.table;
-				const foreignIdCol = foreignConfig.idField ?? "id";
+				const foreignIdCol = foreignConfig.idAttribute ?? "id";
 
 				const joinTableName = `${localQueryTableName}$$${relName}`;
 				const { joinTable, localJoinColumn, foreignJoinColumn } =

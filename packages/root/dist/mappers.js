@@ -1,9 +1,9 @@
 import { mapValues, pickBy } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
-export function flattenResource(resourceId, resource, idField = "id") {
+export function flattenResource(resourceId, resource, idAttribute = "id") {
     const relationships = mapValues(resource.relationships, (_, relName) => applyOrMap(resource.relationships[relName], ({ id }) => id));
     return {
-        [idField]: resourceId,
+        [idAttribute]: resourceId,
         ...resource.attributes,
         ...relationships,
     };
@@ -24,7 +24,7 @@ export function normalizeResource(resourceType, resource, schema, graphMappers =
         const relResSchema = schema.resources[relSchema.type];
         const mapper = resourceMappers[rel];
         const emptyRel = relSchema.cardinality === "many" ? [] : null;
-        const relIdField = relMapper.id ?? relResSchema.idField ?? "id";
+        const relIdField = relMapper.id ?? relResSchema.idAttribute ?? "id";
         const relVal = typeof mapper === "function"
             ? mapper(resource)
             : mapper
@@ -53,8 +53,8 @@ export function createGraphFromTrees(rootResourceType, rootResources, schema, gr
     const go = (resourceType, resource) => {
         const resourceSchema = schema.resources[resourceType];
         const resourceMappers = graphMappers[resourceType] ?? {};
-        const idField = resourceMappers.id ?? resourceSchema.idField ?? "id";
-        const resourceId = resource[idField];
+        const idAttribute = resourceMappers.id ?? resourceSchema.idAttribute ?? "id";
+        const resourceId = resource[idAttribute];
         output[resourceType][resourceId] = mergeResources(normalizeResource(resourceType, resource, schema, graphMappers), output[resourceType][resourceId]);
         Object.entries(resourceSchema.relationships).forEach(([relName, relSchema]) => {
             const mapper = resourceMappers[relName];

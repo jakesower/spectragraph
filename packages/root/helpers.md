@@ -352,7 +352,7 @@ It's typically best to run this as a final step before using the graph for queri
 ### `flattenResource`
 
 ```javascript
-flattenResource(resourceId, resource, (idField = "id"));
+flattenResource(resourceId, resource, (idAttribute = "id"));
 ```
 
 This is an inverse function for `normalizeResource`.

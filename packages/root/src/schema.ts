@@ -23,7 +23,7 @@ type SchemaRelationship = {
 };
 
 type SchemaResource = {
-	idField?: string;
+	idAttribute?: string;
 	attributes: { [k: string]: SchemaAttribute };
 	relationships: { [k: string]: SchemaRelationship };
 };

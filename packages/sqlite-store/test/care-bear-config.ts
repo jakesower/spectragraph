@@ -20,7 +20,7 @@ export const careBearConfig = {
 		},
 		powers: {
 			table: "powers",
-			idField: "powerId",
+			idAttribute: "powerId",
 			joins: {
 				wielders: {
 					joinTable: "bears_powers",

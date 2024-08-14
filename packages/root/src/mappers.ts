@@ -7,13 +7,13 @@ type Mapper = string | ((res: any) => unknown); // eslint-disable-line
 type ResourceMappers = { [k: string]: Mapper; id?: string };
 type GraphMappers = { [k: string]: ResourceMappers };
 
-export function flattenResource(resourceId, resource, idField = "id") {
+export function flattenResource(resourceId, resource, idAttribute = "id") {
 	const relationships = mapValues(resource.relationships, (_, relName) =>
 		applyOrMap(resource.relationships[relName], ({ id }) => id),
 	);
 
 	return {
-		[idField]: resourceId,
+		[idAttribute]: resourceId,
 		...resource.attributes,
 		...relationships,
 	};
@@ -43,7 +43,7 @@ export function normalizeResource(
 		const relResSchema = schema.resources[relSchema.type];
 		const mapper = resourceMappers[rel];
 		const emptyRel = relSchema.cardinality === "many" ? [] : null;
-		const relIdField = relMapper.id ?? relResSchema.idField ?? "id";
+		const relIdField = relMapper.id ?? relResSchema.idAttribute ?? "id";
 
 		const relVal =
 			typeof mapper === "function"
@@ -87,8 +87,8 @@ export function createGraphFromTrees(
 		const resourceSchema = schema.resources[resourceType];
 		const resourceMappers = graphMappers[resourceType] ?? {};
 
-		const idField = resourceMappers.id ?? resourceSchema.idField ?? "id";
-		const resourceId = resource[idField];
+		const idAttribute = resourceMappers.id ?? resourceSchema.idAttribute ?? "id";
+		const resourceId = resource[idAttribute];
 
 		output[resourceType][resourceId] = mergeResources(
 			normalizeResource(resourceType, resource, schema, graphMappers),

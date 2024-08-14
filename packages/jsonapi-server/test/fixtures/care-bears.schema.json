@@ -1,7 +1,7 @@
 {
 	"resources": {
 		"bears": {
-			"idField": "id",
+			"idAttribute": "id",
 			"attributes": {
 				"id": { "type": "string" },
 				"name": { "type": "string" },
@@ -28,7 +28,7 @@
 			}
 		},
 		"homes": {
-			"idField": "id",
+			"idAttribute": "id",
 			"attributes": {
 				"id": { "type": "string" },
 				"name": { "type": "string" },
@@ -45,7 +45,7 @@
 			}
 		},
 		"powers": {
-			"idField": "powerId",
+			"idAttribute": "powerId",
 			"attributes": {
 				"powerId": { "type": "string" },
 				"name": { "type": "string" },

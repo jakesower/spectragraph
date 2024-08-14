@@ -14,7 +14,7 @@ type SchemaRelationship = {
     inverse?: string;
 };
 type SchemaResource = {
-    idField?: string;
+    idAttribute?: string;
     attributes: {
         [k: string]: SchemaAttribute;
     };

@@ -12,7 +12,7 @@ export function parseResponse(schema, query, response) {
         graph[datum.type][datum.id] = {
             ...datum,
             attributes: {
-                [resSchema.idField ?? "id"]: datum.id,
+                [resSchema.idAttribute ?? "id"]: datum.id,
                 ...datum.attributes,
             },
             relationships: mapValues(datum.relationships ?? {}, (r) => r.data),

@@ -28,7 +28,7 @@ type SchemaRelationship = {
 };
 
 type SchemaResource = {
-	idField?: string;
+	idAttribute?: string;
 	attributes: { [k: string]: SchemaAttribute };
 	relationships: { [k: string]: SchemaRelationship };
 };
@@ -58,10 +58,10 @@ export function canonicalizeResource(
 		const id = mappers.id ? resource[mappers.id] : resource.id;
 	});
 
-	const idField = mappers.id ?? "id";
+	const idAttribute = mappers.id ?? "id";
 
 	return {
-		id: resource[idField],
+		id: resource[idAttribute],
 		type: resourceType,
 		attributes,
 		relationships,

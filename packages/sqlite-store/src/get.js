@@ -45,7 +45,7 @@ export function get(query, context) {
 				const { parent, parentQuery, parentRelationship, attributes, type } =
 					queryPart;
 				const queryPartConfig = config.resources[type];
-				const { idField = "id" } = queryPartConfig;
+				const { idAttribute = "id" } = queryPartConfig;
 
 				const parentType = parent?.type;
 				const parentRelDef =
@@ -54,7 +54,7 @@ export function get(query, context) {
 
 				const pathStr =
 					queryPart.path.length > 0 ? `$${queryPart.path.join("$")}` : "";
-				const idPath = `${rootTable}${pathStr}.${idField}`;
+				const idPath = `${rootTable}${pathStr}.${idAttribute}`;
 				const idIdx = selectAttributeMap[idPath];
 
 				return (result) => {
@@ -66,14 +66,14 @@ export function get(query, context) {
 								? `$${queryPart.path.slice(0, -1).join("$")}`
 								: "";
 						const parentIdAttribute =
-							config.resources[parentType].idField ?? "id";
+							config.resources[parentType].idAttribute ?? "id";
 						const parentIdPath = `${rootTable}${parentPathStr}.${parentIdAttribute}`;
 						const parentIdIdx = selectAttributeMap[parentIdPath];
 						const parentId = result[parentIdIdx];
 
 						if (!dataGraph[parentType][parentId]) {
 							dataGraph[parentType][parentId] = {
-								[idField]: parentId,
+								[idAttribute]: parentId,
 								id: parentId,
 								type: parentType,
 							};
