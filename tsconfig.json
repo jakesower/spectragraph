@@ -19,8 +19,14 @@
 			"@data-prism/expressions": [
 				"./packages/expressions"
 			],
+			"@data-prism/jsonapi-store": [
+				"./packages/jsonapi-store"
+			],
 			"@data-prism/memory-store": [
 				"./packages/memory-store"
+			],
+			"@data-prism/postgres-store": [
+				"./packages/postgres-store"
 			],
 			"@data-prism/sqlite-store": [
 				"./packages/sqlite-store"

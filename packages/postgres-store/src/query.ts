@@ -2,7 +2,7 @@ import { mapValues, omit, snakeCase } from "lodash-es";
 import { mapSchemalessQuery, queryGraph } from "data-prism";
 import { buildSql, composeClauses } from "./helpers/sql.js";
 import { runQuery } from "./operations/operations.js";
-import { flattenQuery } from "./helpers/query-helpers.ts";
+import { flattenQuery } from "./helpers/query-helpers.js";
 import { varsExpressionEngine } from "./helpers/sql-expressions.js";
 
 function replaceQuestionMarksWithNumbers(inputString) {
@@ -51,7 +51,7 @@ export async function query(query, context) {
 				const queryPartConfig = config.resources[type];
 				const { idAttribute = "id" } = queryPartConfig;
 
-				const parentType = parent?.type;
+				const parentType = (parent as any)?.type;
 				const parentRelDef =
 					parentQuery &&
 					schema.resources[parentType].relationships[parentRelationship];
