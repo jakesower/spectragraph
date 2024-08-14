@@ -114,7 +114,7 @@ export const preQueryRelationships = (context) => {
 	const parentPath = queryPath.slice(0, -1);
 	const tablePath = [rootTable, ...queryPath];
 	const parentTablePath = [rootTable, ...parentPath];
-	const relName = last(queryPath);
+	const relName: string = last(queryPath);
 
 	const relBuilders = makeRelBuilders(schema);
 	const localQueryTableName = parentTablePath.join("$");

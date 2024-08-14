@@ -1,24 +1,6 @@
 import { createExpressionEngine } from "@data-prism/expressions";
 import { mapValues } from "lodash-es";
 
-export let whereExpressionEngine;
-
-const extractWhere = (where, table) =>
-	Object.entries(where).map(([propKey, propValOrExpr]) => {
-		if (whereExpressionEngine.isExpression(where)) {
-			const [operation, args] = Object.entries(where)[0];
-			return whereExpressionEngine.evaluate(where);
-		}
-
-		if (whereExpressionEngine.isExpression(propValOrExpr)) {
-			const [operation, args] = Object.entries(propValOrExpr)[0];
-			console.log("hi", { [operation]: [`${table}.${propKey}`, args] });
-			return { [operation]: [`${table}.${propKey}`, args] };
-		}
-
-		return { $eq: [`${table}.${propKey}`, propValOrExpr] };
-	});
-
 const sqlExpressions = {
 	$and: {
 		name: "and",
@@ -67,7 +49,8 @@ const sqlExpressions = {
 			`${params[0]} NOT IN (${params[1].map(() => "?").join(",")})`,
 		vars: (params) => params[1],
 	},
-	$or: { // TODO
+	$or: {
+		// TODO
 		name: "or",
 		controlsEvaluation: true,
 		where: (params, evaluate) => {
@@ -79,9 +62,25 @@ const sqlExpressions = {
 	},
 };
 
-whereExpressionEngine = createExpressionEngine(
+export const whereExpressionEngine = createExpressionEngine(
 	mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.where })),
 );
+
+const extractWhere = (where, table) =>
+	Object.entries(where).map(([propKey, propValOrExpr]) => {
+		if (whereExpressionEngine.isExpression(where)) {
+			const [operation, args] = Object.entries(where)[0];
+			return whereExpressionEngine.evaluate(where);
+		}
+
+		if (whereExpressionEngine.isExpression(propValOrExpr as object)) {
+			const [operation, args] = Object.entries(propValOrExpr)[0];
+			console.log("hi", { [operation]: [`${table}.${propKey}`, args] });
+			return { [operation]: [`${table}.${propKey}`, args] };
+		}
+
+		return { $eq: [`${table}.${propKey}`, propValOrExpr] };
+	});
 
 export const varsExpressionEngine = createExpressionEngine(
 	mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.vars })),

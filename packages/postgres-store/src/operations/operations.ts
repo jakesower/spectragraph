@@ -1,5 +1,5 @@
 import { preQueryRelationships } from "./relationships.js";
-import { flattenQuery } from "../helpers/query-helpers.ts";
+import { flattenQuery } from "../helpers/query-helpers.js";
 import { snakeCase, uniq } from "lodash-es";
 import { whereExpressionEngine } from "../helpers/sql-expressions.js";
 
@@ -49,7 +49,7 @@ const operations = {
 							return whereExpressionEngine.evaluate(where);
 						}
 
-						if (whereExpressionEngine.isExpression(propValOrExpr)) {
+						if (whereExpressionEngine.isExpression(propValOrExpr as object)) {
 							const [operation, args] = Object.entries(propValOrExpr)[0];
 							return { [operation]: [`${table}.${snakeCase(propKey)}`, args] };
 						}
