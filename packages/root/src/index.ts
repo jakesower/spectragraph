@@ -1,4 +1,5 @@
 export type { Schema } from "./schema.js";
+export type { Query, RootQuery } from "./query.js";
 export { linkInverses, createEmptyGraph, mergeGraphs, Graph } from "./graph.js";
 export {
 	flattenResource,
