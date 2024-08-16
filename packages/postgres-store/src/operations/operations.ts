@@ -2,6 +2,7 @@ import { preQueryRelationships } from "./relationships.js";
 import { flattenQuery } from "../helpers/query-helpers.js";
 import { snakeCase, uniq } from "lodash-es";
 import { whereExpressionEngine } from "../helpers/sql-expressions.js";
+import { normalizeQuery } from "data-prism";
 
 const hasToManyRelationship = (schema, query) => {
 	const flatQueries = flattenQuery(schema, query);
@@ -17,8 +18,10 @@ const hasToManyRelationship = (schema, query) => {
 const operations = {
 	id: {
 		preQuery: {
-			apply: (id, { config, query }) => {
-				const { table, idAttribute = "id" } = config.resources[query.type];
+			apply: (id, { config, schema, query }) => {
+				const { idAttribute = "id" } = schema.resources[query.type];
+				const { table } = config.resources[query.type];
+
 				return {
 					where: [`${table}.${snakeCase(idAttribute)} = ?`],
 					vars: [id],
@@ -112,9 +115,9 @@ const operations = {
 	select: {
 		preQuery: {
 			apply: (select, context) => {
-				const { config, flatQuery, table } = context;
+				const { schema, flatQuery, table } = context;
 				const { type } = flatQuery;
-				const { idAttribute = "id" } = config.resources[type];
+				const { idAttribute = "id" } = schema.resources[type];
 
 				const attributeProps = Object.values(select).filter(
 					(p) => typeof p === "string",
@@ -140,18 +143,20 @@ const gatherPreOperations = (query, context) => {
 
 	const flatQueries = flattenQuery(schema, query);
 	const queryParts = flatQueries.flatMap((flatQuery) => {
-		const table = [query.type, ...flatQuery.path].join("$");
+		const table = [config.resources[query.type].table, ...flatQuery.path].join(
+			"$",
+		);
 		const argContext = {
 			...context,
 			flatQuery,
 			query: flatQuery.query,
 			queryPath: flatQuery.path,
-			table: [query.type, ...flatQuery.path].join("$"),
+			table,
 			rootQuery: query,
 		};
 
-		const partConfig = config.resources[flatQuery.type];
-		const { idAttribute = "id" } = partConfig;
+		const partSchema = schema.resources[flatQuery.type];
+		const { idAttribute = "id" } = partSchema;
 
 		const operationParts = Object.entries(flatQuery.query).flatMap(
 			([operationKey, operationArg]) => {

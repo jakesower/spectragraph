@@ -141,4 +141,12 @@ export const careBearData = {
 			},
 		},
 	},
+	companions: {
+		1: {
+			attributes: {
+				name: "Brave Heart Lion",
+				relationships: {},
+			},
+		},
+	},
 };
