@@ -4,7 +4,10 @@ export const careBearConfig = {
 			table: "bears",
 			idType: "varchar",
 			joins: {
-				bestFriend: { localColumn: "best_friend_id", localColumnType: "varchar" },
+				bestFriend: {
+					localColumn: "best_friend_id",
+					localColumnType: "varchar",
+				},
 				home: { localColumn: "home_id", localColumnType: "varchar" },
 				powers: {
 					joinTable: "bears_powers",
@@ -26,8 +29,8 @@ export const careBearConfig = {
 			},
 		},
 		powers: {
-			table: "powers",
-			idAttribute: "powerId",
+			table: "power", // non-standard
+			// idAttribute: "powerId",
 			idType: "varchar",
 			joins: {
 				wielders: {
@@ -38,6 +41,10 @@ export const careBearConfig = {
 					foreignColumnType: "varchar",
 				},
 			},
+		},
+		companions: {
+			table: "companion",
+			idType: "varchar",
 		},
 	},
 } as const;

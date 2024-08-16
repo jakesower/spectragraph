@@ -1,19 +1,10 @@
 import { expect, it } from "vitest";
-import { Client } from "pg";
+import { db } from "./global-setup.js";
 import { createPostgresStore } from "../src/postgres-store.js";
 import careBearSchema from "./fixtures/care-bears.schema.json";
 import { careBearConfig } from "./care-bear-config.js";
 
-const db = new Client({
-	user: "postgres",
-	host: "localhost",
-	database: "dp_test",
-	password: "password",
-	port: 5432,
-});
-
 await db.connect();
-
 const store = createPostgresStore(careBearSchema, { ...careBearConfig, db });
 
 it("fetches a single resource", async () => {
@@ -160,10 +151,30 @@ it("uses explicitly set id fields", async () => {
 	const result = await store.query({
 		type: "powers",
 		id: "careBearStare",
-		select: ["powerId"],
+		select: ["powerId", "name"],
 	});
 
-	expect(result).toEqual({ powerId: "careBearStare" });
+	expect(result).toEqual({ powerId: "careBearStare", name: "Care Bear Stare" });
+});
+
+it("uses explicitly set id fields without fetching the ID", async () => {
+	const result = await store.query({
+		type: "powers",
+		id: "careBearStare",
+		select: ["name"],
+	});
+
+	expect(result).toEqual({ name: "Care Bear Stare" });
+});
+
+it("uses explicitly set id fields without fetching the ID when the ID is not an attribute", async () => {
+	const result = await store.query({
+		type: "companions",
+		id: "1",
+		select: ["name"],
+	});
+
+	expect(result).toEqual({ name: "Brave Heart Lion" });
 });
 
 it("fetches a single resource with many-to-many relationship", async () => {

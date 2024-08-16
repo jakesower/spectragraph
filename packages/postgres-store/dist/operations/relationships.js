@@ -3,36 +3,34 @@ function makeRelBuilders(schema) {
     return {
         one: {
             one(params) {
-                const { foreignConfig, foreignTableAlias, localConfig, localQueryTableName, relName, } = params;
+                const { foreignConfig, foreignTableAlias, localConfig, localQueryTableName, relName, foreignIdCol, } = params;
                 const { localColumn } = localConfig.joins[relName];
                 const foreignTable = foreignConfig.table;
                 return [
-                    `LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${localQueryTableName}.${localColumn} = ${foreignTableAlias}.id`,
+                    `LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${localQueryTableName}.${localColumn} = ${foreignTableAlias}.${foreignIdCol}`,
                 ];
             },
             many(params) {
-                const { foreignConfig, localConfig, localQueryTableName, relName, foreignTableAlias, } = params;
+                const { foreignConfig, localIdCol, localConfig, localQueryTableName, relName, foreignTableAlias, } = params;
                 const foreignTable = foreignConfig.table;
                 const foreignJoinColumn = localConfig.joins[relName].foreignColumn;
                 return [
-                    `LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${localQueryTableName}.id = ${foreignTableAlias}.${foreignJoinColumn}`,
+                    `LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${localQueryTableName}.${localIdCol} = ${foreignTableAlias}.${foreignJoinColumn}`,
                 ];
             },
         },
         many: {
             one(params) {
-                const { localConfig, localQueryTableName, relName, foreignConfig, foreignTableAlias, } = params;
+                const { localConfig, localQueryTableName, relName, foreignResSchema, foreignConfig, foreignTableAlias, foreignIdCol, } = params;
                 const localJoinColumn = localConfig.joins[relName].localColumn;
                 const foreignTable = foreignConfig.table;
                 return [
-                    `LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${localQueryTableName}.${localJoinColumn} = ${foreignTableAlias}.id`,
+                    `LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${localQueryTableName}.${localJoinColumn} = ${foreignTableAlias}.${foreignIdCol}`,
                 ];
             },
             many(params) {
-                const { foreignConfig, localConfig, localQueryTableName, relName, foreignTableAlias, } = params;
-                const localIdCol = snakeCase(localConfig.idAttribute ?? "id");
+                const { foreignConfig, localConfig, localQueryTableName, relName, foreignTableAlias, localIdCol, foreignIdCol, } = params;
                 const foreignTable = foreignConfig.table;
-                const foreignIdCol = snakeCase(foreignConfig.idAttribute ?? "id");
                 const joinTableName = `${localQueryTableName}$$${relName}`;
                 const { joinTable, localJoinColumn, foreignJoinColumn } = localConfig.joins[relName];
                 return [
@@ -42,15 +40,15 @@ function makeRelBuilders(schema) {
             },
         },
         none: {
-            // one({ localResDef, localTableAlias, relName, path }) {
+            // one({ localResSchema, localTableAlias, relName, path }) {
             //   // TODO
             // },
-            many({ localResDef, localQueryTableName, relName, foreignTableAlias }) {
-                const localRelDef = localResDef.properties[relName];
+            many({ localResSchema, localQueryTableName, relName, foreignTableAlias, }) {
+                const localRelDef = localResSchema.properties[relName];
                 const localJoinColumn = localRelDef.store.join.joinColumn;
-                const foreignResDef = schema.resources[localRelDef.relatedType];
-                const foreignTable = foreignResDef.store.table;
-                const foreignRelDef = foreignResDef?.properties?.[localRelDef.inverse];
+                const foreignResSchema = schema.resources[localRelDef.relatedType];
+                const foreignTable = foreignResSchema.store.table;
+                const foreignRelDef = foreignResSchema?.properties?.[localRelDef.inverse];
                 const foreignJoinColumn = foreignRelDef
                     ? foreignRelDef.store.join.joinColumn
                     : localRelDef.store.join.foreignJoinColumn;
@@ -77,22 +75,26 @@ export const preQueryRelationships = (context) => {
     const relBuilders = makeRelBuilders(schema);
     const localQueryTableName = parentTablePath.join("$");
     const localConfig = config.resources[parent.type];
-    const localResDef = schema.resources[parent.type];
-    const localRelDef = localResDef.relationships[relName];
+    const localResSchema = schema.resources[parent.type];
+    const localIdCol = snakeCase(localResSchema.idAttribute ?? "id");
+    const localRelDef = localResSchema.relationships[relName];
     const foreignConfig = config.resources[localRelDef.type];
-    const foreignResDef = schema.resources[localRelDef.type];
-    const foreignRelDef = foreignResDef.relationships[localRelDef.inverse];
+    const foreignResSchema = schema.resources[localRelDef.type];
+    const foreignIdCol = snakeCase(foreignResSchema.idAttribute ?? "id");
+    const foreignRelDef = foreignResSchema.relationships[localRelDef.inverse];
     const foreignTableAlias = tablePath.join("$");
     const localResCardinality = localRelDef.cardinality;
     const foreignResCardinality = foreignRelDef?.cardinality ?? "none";
     const builderArgs = {
         localConfig,
         localRelDef,
-        localResDef,
+        localResSchema,
         localQueryTableName,
+        localIdCol,
         relName,
         foreignConfig,
         foreignTableAlias,
+        foreignIdCol,
     };
     const join = relBuilders[foreignResCardinality][localResCardinality](builderArgs);
     return { join };

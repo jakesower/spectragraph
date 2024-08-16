@@ -30,7 +30,6 @@ export const careBearSchema = {
 			},
 		},
 		homes: {
-			idAttribute: "id",
 			attributes: {
 				id: { type: "string" },
 				name: { type: "string" },
@@ -61,6 +60,13 @@ export const careBearSchema = {
 					inverse: "powers",
 				},
 			},
+		},
+		companions: {
+			idAttribute: "companionId",
+			attributes: {
+				name: { type: "string" },
+			},
+			relationships: {},
 		},
 	},
 } as const;

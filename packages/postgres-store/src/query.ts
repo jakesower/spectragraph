@@ -48,8 +48,8 @@ export async function query(query, context) {
 			const extractors = flatQuery.flatMap((queryPart) => {
 				const { parent, parentQuery, parentRelationship, attributes, type } =
 					queryPart;
-				const queryPartConfig = config.resources[type];
-				const { idAttribute = "id" } = queryPartConfig;
+				const schemaPartConfig = schema.resources[type];
+				const { idAttribute = "id" } = schemaPartConfig;
 
 				const parentType = (parent as any)?.type;
 				const parentRelDef =
@@ -65,12 +65,12 @@ export async function query(query, context) {
 					const id = result[idIdx];
 
 					if (parentQuery) {
+						const parentResSchema = schema.resources[parentType];
 						const parentPathStr =
 							queryPart.path.length > 1
 								? `$${queryPart.path.slice(0, -1).join("$")}`
 								: "";
-						const parentIdAttribute =
-							config.resources[parentType].idAttribute ?? "id";
+						const parentIdAttribute = parentResSchema.idAttribute ?? "id";
 						const parentIdPath = `${rootTable}${parentPathStr}.${snakeCase(
 							parentIdAttribute,
 						)}`;

@@ -1,11 +1,11 @@
 {
 	"name": "@data-prism/postgres-store",
-	"version": "0.0.2",
+	"version": "0.0.5",
 	"type": "module",
-	"main": "./dist/src/postgres-store.js",
-	"types": "./dist/src/postgres-store.d.ts",
+	"main": "./dist/postgres-store.js",
+	"types": "./dist/postgres-store.d.ts",
 	"exports": {
-		".": "./dist/src/postgres-store.js"
+		".": "./dist/postgres-store.js"
 	},
 	"scripts": {
 		"build": "tsc -p ./tsconfig.json",

@@ -1,19 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { Client } from "pg";
+import { db } from "../global-setup.js";
 import { createPostgresStore } from "../../src/postgres-store.js";
 import careBearSchema from "../fixtures/care-bears.schema.json";
 import { careBearConfig } from "../care-bear-config.js";
 
-const db = new Client({
-	user: "postgres",
-	host: "localhost",
-	database: "dp_test",
-	password: "password",
-	port: 5432,
-});
-
 await db.connect();
-
 const store = createPostgresStore(careBearSchema, { ...careBearConfig, db });
 
 describe("where clauses", () => {

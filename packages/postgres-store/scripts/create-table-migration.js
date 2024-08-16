@@ -11,4 +11,4 @@ if (!schemaPath || !configPath) {
 const schema = JSON.parse(readFileSync(schemaPath, { encoding: "utf8" }));
 const config = JSON.parse(readFileSync(configPath, { encoding: "utf8" }));
 
-console.log(createTablesSQL(schema, config).join("\n"));
+console.log(createTablesSQL(schema, config));

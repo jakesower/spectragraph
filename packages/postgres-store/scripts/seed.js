@@ -2,7 +2,10 @@ import { applyOrMap } from "@data-prism/utils";
 import { groupBy, snakeCase, uniqBy } from "lodash-es";
 
 const defaultColumnTypes = {
+	array: "json",
 	boolean: "boolean",
+	date: "date",
+	datetime: "timestamp",
 	integer: "integer",
 	number: "real",
 	object: "json",
@@ -14,7 +17,8 @@ export function createTablesSQL(schema, config) {
 
 	Object.entries(schema.resources).forEach(([resType, resDef]) => {
 		const resConfig = config.resources[resType];
-		const { idAttribute = "id", table } = resConfig;
+		const { table } = resConfig;
+		const { idAttribute = "id" } = resDef;
 
 		const idCol = {
 			name: snakeCase(idAttribute),
@@ -24,9 +28,13 @@ export function createTablesSQL(schema, config) {
 			.filter(([attrName]) => attrName !== idAttribute)
 			.map(([attrName, attrDef]) => ({
 				name: snakeCase(attrName),
-				type: defaultColumnTypes[attrDef.type],
+				type:
+					resConfig.columns?.[attrName]?.type ??
+					(attrDef.format && defaultColumnTypes[attrDef.format]
+						? defaultColumnTypes[attrDef.format]
+						: defaultColumnTypes[attrDef.type]),
 			}));
-		const joinCols = Object.values(resConfig.joins)
+		const joinCols = Object.values(resConfig.joins ?? {})
 			.filter((j) => j.localColumn)
 			.map((j) => ({ name: j.localColumn, type: j.localColumnType ?? "uuid" }));
 
@@ -43,7 +51,7 @@ export function createTablesSQL(schema, config) {
 
 	const joinTableConfigs = Object.values(config.resources).flatMap(
 		(resConfig) =>
-			Object.values(resConfig.joins).filter(
+			Object.values(resConfig.joins ?? {}).filter(
 				(resJoinConfig) => resJoinConfig.joinTable,
 			),
 	);
@@ -66,11 +74,12 @@ export function createTablesSQL(schema, config) {
 export async function seed(db, schema, config, seedData) {
 	await Promise.all(
 		Object.entries(seedData).flatMap(([resType, resources]) => {
-			const { table } = config.resources[resType];
 			const resConfig = config.resources[resType];
 			const resSchema = schema.resources[resType];
 
-			const idAttribute = resConfig.idAttribute ?? "id";
+			const { table } = resConfig;
+			const idAttribute = resSchema.idAttribute ?? "id";
+
 			const attributes = Object.entries(resSchema.attributes)
 				.filter(([attrName]) => attrName !== idAttribute)
 				.map(([attrName]) => ({
@@ -78,7 +87,7 @@ export async function seed(db, schema, config, seedData) {
 					value: (res) => res.attributes[attrName],
 				}));
 
-			const joins = Object.entries(resConfig.joins)
+			const joins = Object.entries(resConfig.joins ?? {})
 				.filter(([_, j]) => j.localColumn)
 				.map(([joinAttr, j]) => ({
 					column: j.localColumn,
@@ -108,7 +117,7 @@ export async function seed(db, schema, config, seedData) {
 
 	const allJoinTableConfigs = Object.entries(config.resources).flatMap(
 		([resType, resConfig]) =>
-			Object.entries(resConfig.joins)
+			Object.entries(resConfig.joins ?? {})
 				.filter(([_, resJoinConfig]) => resJoinConfig.joinTable)
 				.map(([relName, join]) => ({
 					table: join.joinTable,
@@ -141,7 +150,7 @@ export async function reset(db, schema, config, seedData) {
 	await Promise.all(
 		Object.values(config.resources).map((resConfig) => {
 			const table = resConfig.table;
-			const joinTables = Object.values(resConfig.joins)
+			const joinTables = Object.values(resConfig.joins ?? {})
 				.map((j) => j.joinTable)
 				.filter(Boolean);
 
