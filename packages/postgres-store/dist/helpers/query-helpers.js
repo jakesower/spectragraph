@@ -2,8 +2,9 @@ import { partition, pick } from "lodash-es";
 export function flattenQuery(schema, rootQuery) {
     const go = (query, type, path, parent = null, parentRelationship = null) => {
         const resDef = schema.resources[type];
+        const { idAttribute = "id" } = resDef;
         const [attributesEntries, relationshipsEntries] = partition(Object.entries(query.select ?? {}), ([, propVal]) => typeof propVal === "string" &&
-            (propVal in resDef.attributes || propVal === "id"));
+            (propVal in resDef.attributes || propVal === idAttribute));
         const attributes = attributesEntries.map((pe) => pe[1]);
         const relationshipKeys = relationshipsEntries.map((pe) => pe[0]);
         const level = {

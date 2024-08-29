@@ -114,8 +114,8 @@ function makeRelBuilders(schema) {
 }
 
 export const preQueryRelationships = (context) => {
-	const { config, flatQuery, queryPath, rootQuery, schema } = context;
-	const { parent } = flatQuery;
+	const { config, queryInfo, rootQuery, schema } = context;
+	const { parent, path: queryPath } = queryInfo;
 	const rootTable = config.resources[rootQuery.type].table;
 
 	if (queryPath.length === 0) return {};

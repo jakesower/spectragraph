@@ -2,13 +2,13 @@ import express from "express";
 import { formatResponse } from "./format-response.js";
 import { parseRequest } from "./parse-request.js";
 export function applySchemaRoutes(schema, store, app) {
-    const handleRequest = (type) => (req, res) => {
+    const handleRequest = (type) => async (req, res) => {
         const query = parseRequest(schema, {
             ...req.query,
             type,
             id: req.params.id,
         });
-        const result = store.query(query);
+        const result = await store.query(query);
         const response = formatResponse(schema, query, result);
         res.json(response);
     };
