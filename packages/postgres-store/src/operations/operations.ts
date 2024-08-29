@@ -1,17 +1,19 @@
 import { preQueryRelationships } from "./relationships.js";
-import { flattenQuery } from "../helpers/query-helpers.js";
+import { flattenQuery, someQuery } from "../helpers/query-helpers.js";
 import { snakeCase, uniq } from "lodash-es";
 import { whereExpressionEngine } from "../helpers/sql-expressions.js";
-import { normalizeQuery } from "data-prism";
 
 const hasToManyRelationship = (schema, query) => {
-	const flatQueries = flattenQuery(schema, query);
-
-	return flatQueries.some((flatQuery) =>
-		Object.keys(flatQuery.relationships).some(
-			(relKey) =>
-				schema.resources[query.type].attributes[relKey].cardinality === "many",
-		),
+	return someQuery(
+		schema,
+		query,
+		(acc, _, info) =>
+			acc ||
+			Object.keys(info.relationships).some(
+				(relName) =>
+					schema.resources[info.type].relationships[relName].cardinality ===
+					"many",
+			),
 	);
 };
 
@@ -63,7 +65,7 @@ const operations = {
 
 				const expr = { $and: propExprs };
 
-				return { where: [expr], vars: [expr] };
+				return [{ where: [expr], vars: [expr] }];
 			},
 		},
 	},

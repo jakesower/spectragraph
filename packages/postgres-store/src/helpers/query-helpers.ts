@@ -25,11 +25,12 @@ export function flattenQuery<S extends Schema>(
 		parentRelationship = null,
 	) => {
 		const resDef = schema.resources[type];
+		const { idAttribute = "id" } = resDef;
 		const [attributesEntries, relationshipsEntries] = partition(
 			Object.entries(query.select ?? {}),
 			([, propVal]) =>
 				typeof propVal === "string" &&
-				(propVal in resDef.attributes || propVal === "id"),
+				(propVal in resDef.attributes || propVal === idAttribute),
 		);
 
 		const attributes = attributesEntries.map((pe) => pe[1]);
@@ -59,4 +60,23 @@ export function flattenQuery<S extends Schema>(
 	};
 
 	return go(rootQuery, rootQuery.type, []);
+}
+
+export function flatMapQuery(schema, query: RootQuery, fn) {
+	return flattenQuery(schema, query).flatMap((info) => fn(info.query, info));
+}
+
+export function forEachQuery(schema, query: RootQuery, fn) {
+	return flattenQuery(schema, query).forEach((info) => fn(info.query, info));
+}
+
+export function reduceQuery(schema, query: RootQuery, fn, initVal) {
+	return flattenQuery(schema, query).reduce(
+		(acc, q) => fn(acc, q.query, q),
+		initVal,
+	);
+}
+
+export function someQuery(schema, query: RootQuery, fn) {
+	return flattenQuery(schema, query).some((q) => fn(q.query, q));
 }

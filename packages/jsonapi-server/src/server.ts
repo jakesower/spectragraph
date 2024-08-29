@@ -4,13 +4,13 @@ import { formatResponse } from "./format-response.js";
 import { parseRequest } from "./parse-request.js";
 
 export function applySchemaRoutes(schema: Schema, store, app) {
-	const handleRequest = (type) => (req, res) => {
+	const handleRequest = (type) => async (req, res) => {
 		const query = parseRequest(schema, {
 			...req.query,
 			type,
 			id: req.params.id,
 		});
-		const result = store.query(query);
+		const result = await store.query(query);
 		const response = formatResponse(schema, query, result);
 		res.json(response);
 	};
