@@ -58,7 +58,9 @@ export function extractGraph(rawResults, selectClause, context) {
 					if (
 						!parent.relationships[parentRelationship].some((r) => r.id === id)
 					) {
-						parent.relationships[parentRelationship].push({ type, id });
+						if (id !== null) {
+							parent.relationships[parentRelationship].push({ type, id });
+						}
 					}
 				}
 			}

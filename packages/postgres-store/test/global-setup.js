@@ -14,5 +14,6 @@ export const db = new Client({
 
 export default async function setup() {
 	await db.connect();
+	await db.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
 	await reset(db, careBearSchema, careBearConfig, careBearData);
 }

@@ -1,7 +1,7 @@
 import { snakeCase, uniq } from "lodash-es";
 import { whereExpressionEngine } from "./helpers/sql-expressions";
 import { forEachQuery, someQuery } from "./helpers/query-helpers";
-import { preQueryRelationships } from "./operations/relationships";
+import { preQueryRelationships } from "./relationships";
 import { RootQuery } from "data-prism";
 import { StoreContext } from "./query";
 

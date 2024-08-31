@@ -187,6 +187,16 @@ it("fetches a single resource with many-to-many relationship", async () => {
 	expect(result).toEqual({ powers: [{ powerId: "careBearStare" }] });
 });
 
+it("fetches a single resource with many-to-many relationship when it has no related resources", async () => {
+	const result = await store.query({
+		type: "powers",
+		id: "transform",
+		select: { name: "name", wielders: { select: ["name"] } },
+	});
+
+	expect(result).toEqual({ name: "Transform", wielders: [] });
+});
+
 it("fetches multiple subqueries of various types", async () => {
 	const result = await store.query({
 		type: "bears",
