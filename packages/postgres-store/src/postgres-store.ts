@@ -1,11 +1,15 @@
 import { normalizeQuery } from "data-prism";
 import { query as getQuery } from "./query.js";
 import { create } from "./create.js";
+import { deleteResource } from "./delete.js";
 
 export function createPostgresStore(schema, config) {
 	return {
 		create: async (resource) => {
 			return create(resource, { config, schema });
+		},
+		delete: async (resource) => {
+			return deleteResource(resource, { config, schema });
 		},
 		query: async (query) => {
 			const normalized = normalizeQuery(query);

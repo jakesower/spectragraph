@@ -2,10 +2,13 @@ import { expect, it } from "vitest";
 import { db } from "./global-setup.js";
 import { createPostgresStore } from "../src/postgres-store.js";
 import careBearSchema from "./fixtures/care-bears.schema.json";
+import { careBearData } from "./fixtures/care-bear-data.js";
 import { careBearConfig } from "./care-bear-config.js";
+import { reset } from "../scripts/seed.js";
 
 await db.connect();
 const store = createPostgresStore(careBearSchema, { ...careBearConfig, db });
+await reset(db, careBearSchema, careBearConfig, careBearData);
 
 it("fetches a single resource", async () => {
 	const result = await store.query({

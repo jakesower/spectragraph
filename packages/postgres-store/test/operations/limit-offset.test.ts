@@ -3,9 +3,13 @@ import { db } from "../global-setup.js";
 import { createPostgresStore } from "../../src/postgres-store.js";
 import careBearSchema from "../fixtures/care-bears.schema.json";
 import { careBearConfig } from "../care-bear-config.js";
+import { reset } from "../../scripts/seed.js";
+import { careBearData } from "../fixtures/care-bear-data.js";
 
 await db.connect();
 const store = createPostgresStore(careBearSchema, { ...careBearConfig, db });
+await reset(db, careBearSchema, careBearConfig, careBearData);
+
 
 describe("limit/offset", () => {
 	it("fetches a single resource", async () => {
