@@ -28,6 +28,13 @@ it("creates a single resource with only attributes", async () => {
 });
 
 it("creates a single resource with a local relationship", async () => {
+	const createdHome = await store.create({
+		type: "homes",
+		attributes: {
+			name: "Joke-a-Lot",
+		},
+	});
+
 	const created = await store.create({
 		type: "bears",
 		attributes: {
@@ -37,7 +44,7 @@ it("creates a single resource with a local relationship", async () => {
 			furColor: "orange, pink, purple, blue",
 		},
 		relationships: {
-			home: { type: "homes", id: "1" },
+			home: { type: "homes", id: createdHome.id },
 		},
 	});
 
@@ -49,7 +56,7 @@ it("creates a single resource with a local relationship", async () => {
 
 	expect(result).toEqual({
 		name: "Dare to Care Bear",
-		home: { name: "Care-a-Lot" },
+		home: { name: "Joke-a-Lot" },
 	});
 });
 
@@ -122,7 +129,7 @@ it("removes foreign relationships that are no longer present in the base resourc
 		},
 	});
 
-	await store.create({
+	const createdBear = await store.create({
 		type: "bears",
 		attributes: {
 			name: "Always There Bear",
@@ -234,7 +241,7 @@ it("keeps many-to-many foreign relationships that belong to a second resource", 
 		},
 	});
 
-	await store.create({
+	const createdBear = await store.create({
 		type: "bears",
 		attributes: {
 			name: "Always There Bear",
@@ -257,7 +264,7 @@ it("keeps many-to-many foreign relationships that belong to a second resource", 
 		wielders: [{ name: "Oopsy Bear" }, { name: "Always There Bear" }],
 	});
 
-	await store.create({
+	const createdPower2 = await store.create({
 		type: "powers",
 		attributes: {
 			name: "Fly",
