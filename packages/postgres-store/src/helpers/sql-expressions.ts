@@ -66,22 +66,6 @@ export const whereExpressionEngine = createExpressionEngine(
 	mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.where })),
 );
 
-const extractWhere = (where, table) =>
-	Object.entries(where).map(([propKey, propValOrExpr]) => {
-		if (whereExpressionEngine.isExpression(where)) {
-			const [operation, args] = Object.entries(where)[0];
-			return whereExpressionEngine.evaluate(where);
-		}
-
-		if (whereExpressionEngine.isExpression(propValOrExpr as object)) {
-			const [operation, args] = Object.entries(propValOrExpr)[0];
-			console.log("hi", { [operation]: [`${table}.${propKey}`, args] });
-			return { [operation]: [`${table}.${propKey}`, args] };
-		}
-
-		return { $eq: [`${table}.${propKey}`, propValOrExpr] };
-	});
-
 export const varsExpressionEngine = createExpressionEngine(
 	mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.vars })),
 );

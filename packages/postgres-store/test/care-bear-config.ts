@@ -2,7 +2,7 @@ export const careBearConfig = {
 	resources: {
 		bears: {
 			table: "bears",
-			idType: "varchar",
+			idType: "varchar NOT NULL DEFAULT uuid_generate_v4()",
 			joins: {
 				bestFriend: {
 					localColumn: "best_friend_id",
@@ -19,7 +19,7 @@ export const careBearConfig = {
 		},
 		homes: {
 			table: "homes",
-			idType: "varchar",
+			idType: "varchar NOT NULL DEFAULT uuid_generate_v4()",
 			joins: {
 				residents: {
 					foreignTable: "bears",
@@ -31,7 +31,7 @@ export const careBearConfig = {
 		powers: {
 			table: "power", // non-standard
 			// idAttribute: "powerId",
-			idType: "varchar",
+			idType: "varchar NOT NULL DEFAULT uuid_generate_v4()",
 			joins: {
 				wielders: {
 					joinTable: "bears_powers",

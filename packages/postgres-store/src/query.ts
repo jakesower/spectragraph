@@ -9,7 +9,6 @@ export type StoreContext = {
 	schema: Schema;
 	query: RootQuery;
 	config: any;
-	db: any;
 };
 
 type SqlClauses = {
