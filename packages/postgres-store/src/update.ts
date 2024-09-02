@@ -1,6 +1,6 @@
 import { camelCase, pick, pickBy, snakeCase } from "lodash-es";
 
-export async function create(resource, context) {
+export async function update(resource, context) {
 	const { config, schema } = context;
 
 	const { db } = config;
@@ -11,8 +11,10 @@ export async function create(resource, context) {
 	const resSchema = schema.resources[resource.type];
 	const { idAttribute = "id" } = resSchema;
 
-	const attributeColumns = Object.keys(resource.attributes).map(snakeCase);
-	const attributePlaceholders = Object.keys(resource.attributes).map(
+	const attributeColumns = Object.keys(resource.attributes ?? {}).map(
+		snakeCase,
+	);
+	const attributePlaceholders = Object.keys(resource.attributes ?? {}).map(
 		(_, idx) => `$${idx + 1}`,
 	);
 
@@ -24,31 +26,39 @@ export async function create(resource, context) {
 	const relationshipColumns = Object.keys(localRelationships).map(
 		(r) => resConfig.joins[r].localColumn,
 	);
-	const relationshipPlaceholders = Object.keys(localRelationships).map(
-		(r) => resConfig.joins[r].localColumn,
-	);
 
-	const columns = [...attributeColumns, ...relationshipColumns].join(", ");
-	const placeholders = [...attributePlaceholders, ...relationshipPlaceholders]
-		.map((_, idx) => `$${idx + 1}`)
+	const columns = [...attributeColumns, ...relationshipColumns];
+	const columnsWithPlaceholders = columns
+		.map((col, idx) => `${col} = $${idx + 1}`)
 		.join(", ");
+
 	const vars = [
-		...Object.values(resource.attributes),
+		...Object.values(resource.attributes ?? {}),
 		...Object.values(localRelationships).map((r) => r.id),
 	];
 
-	const sql = `
-    INSERT INTO ${table}
-      (${columns})
-    VALUES
-      (${placeholders})
-		RETURNING *
-  `;
+	const updated = {};
+	let firstResult;
+	if (columnsWithPlaceholders.length > 0) {
+		const sql = `
+			UPDATE ${table}
+				SET ${columnsWithPlaceholders}
+			WHERE ${snakeCase(idAttribute)} = $${columns.length + 1}
+			RETURNING *
+		`;
 
-	const { rows } = await db.query(sql, vars);
-	const created = {};
-	Object.entries(rows[0]).forEach(([k, v]) => {
-		created[camelCase(k)] = v;
+		const { rows } = await db.query(sql, [...vars, resource.id]);
+		firstResult = rows[0];
+	} else {
+		const { rows } = await db.query(
+			`SELECT * FROM ${table} WHERE ${snakeCase(idAttribute)} = $1`,
+			[resource.id],
+		);
+		firstResult = rows[0];
+	}
+
+	Object.entries(firstResult).forEach(([k, v]) => {
+		updated[camelCase(k)] = v;
 	});
 
 	// handle to-one foreign columns
@@ -81,7 +91,7 @@ export async function create(resource, context) {
 				SET ${foreignColumn} = $1
 				WHERE ${foreignIdAttribute} = ANY ($2)
 			`,
-				[created[idAttribute], val.map((v) => v.id)],
+				[updated[idAttribute], val.map((v) => v.id)],
 			);
 		}),
 	);
@@ -104,7 +114,7 @@ export async function create(resource, context) {
 							(${localJoinColumn}, ${foreignJoinColumn})
 							VALUES ($1, $2)
 			`,
-						[created[idAttribute], v.id],
+						[updated[idAttribute], v.id],
 					),
 				),
 			);
@@ -113,8 +123,8 @@ export async function create(resource, context) {
 
 	return {
 		type: resource.type,
-		id: created[idAttribute],
-		attributes: pick(created, Object.keys(resSchema.attributes)),
+		id: updated[idAttribute],
+		attributes: pick(updated, Object.keys(resSchema.attributes)),
 		relationships: resource.relationships ?? {},
 	};
 }
