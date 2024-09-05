@@ -33,7 +33,7 @@ export const SQL_CLAUSE_CONFIG: {
 } = {
 	select: {
 		...defaultClause,
-		toSql: (val) => `SELECT ${val.join(", ")}`,
+		toSql: (val) => `SELECT ${val.map((v) => v.sql).join(", ")}`,
 	},
 	vars: {
 		...defaultClause,
