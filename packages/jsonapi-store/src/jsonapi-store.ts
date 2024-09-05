@@ -27,5 +27,6 @@ export function createJSONAPIStore(schema, config) {
 				throw err;
 			}
 		},
+		async create(resource) {},
 	};
 }
