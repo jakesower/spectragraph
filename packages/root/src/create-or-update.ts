@@ -1,26 +1,13 @@
-import { v4 as uuidv4 } from "uuid";
-import { mapValues } from "lodash-es";
 import { NormalResource, Ref } from "./graph";
 
 // WARNING: MUTATES storeGraph
-export function create(resource, context) {
+export function createOrUpdate(resource: NormalResource, context) {
 	const { schema, storeGraph } = context;
-	const { id, type } = resource;
+	const { type } = resource;
 
 	const resSchema = schema.resources[resource.type];
-	const normalRes: NormalResource = {
-		attributes: resource.attributes ?? {},
-		relationships: mapValues(
-			resSchema.relationships,
-			(rel, relName) =>
-				resource.relationships?.[relName] ??
-				(rel.cardinality === "one" ? null : []),
-		),
-		id: id ?? uuidv4(),
-		type,
-	};
 
-	Object.entries(normalRes.relationships).forEach(([relName, related]) => {
+	Object.entries(resource.relationships).forEach(([relName, related]) => {
 		const relSchema = resSchema.relationships[relName];
 		const { inverse, type: relType } = relSchema;
 		if (inverse) {
@@ -51,23 +38,29 @@ export function create(resource, context) {
 
 					storeGraph[relType][ref.id].relationships[inverse] = {
 						type: resource.type,
-						id: normalRes.id,
+						id: resource.id,
 					};
 				});
 			} else {
 				refs.forEach((ref) => {
-					(
+					const isRedundantRef = (
 						(storeGraph[relType][ref.id].relationships[inverse] as Ref[]) ?? []
-					).push({
-						type: resource.type,
-						id: normalRes.id,
-					});
+					).some((r) => r.id === resource.id);
+					if (!isRedundantRef) {
+						(
+							(storeGraph[relType][ref.id].relationships[inverse] as Ref[]) ??
+							[]
+						).push({
+							type: resource.type,
+							id: resource.id,
+						});
+					}
 				});
 			}
 		}
 	});
 
-	storeGraph[normalRes.type][normalRes.id] = normalRes;
+	storeGraph[resource.type][resource.id] = resource;
 
-	return normalRes;
+	return resource;
 }

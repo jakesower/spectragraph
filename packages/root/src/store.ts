@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from "uuid";
 import { Schema } from "./schema.js";
 import {
 	createQueryGraph,
@@ -5,8 +6,10 @@ import {
 	linkInverses,
 	mergeGraphs,
 } from "./graph.js";
-import { create as createAction } from "./create.js";
 import { createGraphFromTrees } from "./mappers.js";
+import { createOrUpdate } from "./create-or-update.js";
+import { mapValues } from "lodash-es";
+import { deleteAction } from "./delete.js";
 export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 
 export type Ref = {
@@ -36,10 +39,54 @@ export function createMemoryStore(schema: Schema, initialData: Graph = {}) {
 		return queryGraph.query(query);
 	};
 
+	// WARNING: MUTATES storeGraph
 	const create = (resource) => {
+		const { id, type } = resource;
+		const resSchema = schema.resources[resource.type];
+		const normalRes: NormalResource = {
+			attributes: resource.attributes ?? {},
+			relationships: mapValues(
+				resSchema.relationships,
+				(rel, relName) =>
+					resource.relationships?.[relName] ??
+					(rel.cardinality === "one" ? null : []),
+			),
+			id: id ?? uuidv4(),
+			type,
+		};
+
+		queryGraph = null;
+		return createOrUpdate(normalRes, { schema, storeGraph });
+	};
+
+	// WARNING: MUTATES storeGraph
+	const update = (resource) => {
+		const resSchema = schema.resources[resource.type];
+		const existingRes = storeGraph[resource.type][resource.id];
+
+		const normalRes: NormalResource = {
+			...resource,
+			attributes: mapValues(
+				resSchema.attributes,
+				(_, attrName) =>
+					resource.attributes?.[attrName] ?? existingRes.attributes[attrName],
+			),
+			relationships: mapValues(
+				resSchema.relationships,
+				(rel, relName) =>
+					resource.relationships?.[relName] ??
+					(rel.cardinality === "one" ? null : []),
+			),
+		};
+
 		// WARNING: MUTATES storeGraph
 		queryGraph = null;
-		return createAction(resource, { schema, storeGraph });
+		return createOrUpdate(normalRes, { schema, storeGraph });
+	};
+
+	const delete_ = (resource) => {
+		queryGraph = null;
+		return deleteAction(resource, { schema, storeGraph });
 	};
 
 	const merge = (graph: Graph) => {
@@ -72,6 +119,8 @@ export function createMemoryStore(schema: Schema, initialData: Graph = {}) {
 	return {
 		linkInverses: linkStoreInverses,
 		create,
+		update,
+		delete: delete_,
 		merge,
 		mergeTree,
 		mergeTrees,

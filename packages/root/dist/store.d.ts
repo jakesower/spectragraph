@@ -21,6 +21,9 @@ export type Graph = {
 };
 export declare function createMemoryStore(schema: Schema, initialData?: Graph): {
     linkInverses: () => void;
+    create: (resource: any) => import("./graph.js").NormalResource;
+    update: (resource: any) => import("./graph.js").NormalResource;
+    delete: (resource: any) => import("./graph.js").NormalResource;
     merge: (graph: Graph) => void;
     mergeTree: (resourceType: string, tree: {
         [k: string]: unknown;

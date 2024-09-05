@@ -12,18 +12,23 @@ function prepData(resources) {
     Object.entries(resources).forEach(([resType, ressOfType]) => {
         data[resType] = {};
         Object.entries(ressOfType).forEach(([resId, res]) => {
+            const defaultedRes = {
+                attributes: {},
+                relationships: {},
+                ...res,
+            };
             const val = {};
             val[TYPE] = resType;
             val[ID] = resId;
             val[RAW] = {
-                ...res,
+                ...defaultedRes,
                 id: resId,
                 resType: resType,
             };
-            Object.entries(res.attributes).forEach(([attrName, attrVal]) => {
+            Object.entries(res.attributes ?? {}).forEach(([attrName, attrVal]) => {
                 val[attrName] = attrVal;
             });
-            Object.entries(res.relationships).forEach(([relName, relVal]) => {
+            Object.entries(res.relationships ?? {}).forEach(([relName, relVal]) => {
                 Object.defineProperty(val, relName, {
                     get() {
                         const dereffed = applyOrMap(relVal, (rel) => data[rel.type][rel.id]);
