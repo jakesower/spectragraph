@@ -1,12 +1,17 @@
 import { RootQuery } from "../query.js";
 import { Graph } from "../graph.js";
-export type Result = {
-    [k: string]: unknown;
-};
+export type Result =
+	| {
+			[k: string]: unknown;
+	  }
+	| { [k: string]: unknown }[];
 type QueryGraph = {
-    query: <Q extends RootQuery>(query: Q) => Result;
+	query: <Q extends RootQuery>(query: Q) => Result;
 };
 export declare function createQueryGraph(graph: Graph): QueryGraph;
-export declare function queryGraph<Q extends RootQuery>(graph: Graph, query: Q): Result;
+export declare function queryGraph<Q extends RootQuery>(
+	graph: Graph,
+	query: Q,
+): Result;
 export {};
 //# sourceMappingURL=query-graph.d.ts.map

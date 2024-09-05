@@ -29,3 +29,15 @@ export function flattenQuery(schema, rootQuery) {
     };
     return go(rootQuery, rootQuery.type, []);
 }
+export function flatMapQuery(schema, query, fn) {
+    return flattenQuery(schema, query).flatMap((info) => fn(info.query, info));
+}
+export function forEachQuery(schema, query, fn) {
+    return flattenQuery(schema, query).forEach((info) => fn(info.query, info));
+}
+export function reduceQuery(schema, query, fn, initVal) {
+    return flattenQuery(schema, query).reduce((acc, q) => fn(acc, q.query, q), initVal);
+}
+export function someQuery(schema, query, fn) {
+    return flattenQuery(schema, query).some((q) => fn(q.query, q));
+}

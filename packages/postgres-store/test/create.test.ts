@@ -129,7 +129,7 @@ it("removes foreign relationships that are no longer present in the base resourc
 		},
 	});
 
-	const createdBear = await store.create({
+	await store.create({
 		type: "bears",
 		attributes: {
 			name: "Always There Bear",
@@ -241,7 +241,7 @@ it("keeps many-to-many foreign relationships that belong to a second resource", 
 		},
 	});
 
-	const createdBear = await store.create({
+	await store.create({
 		type: "bears",
 		attributes: {
 			name: "Always There Bear",

@@ -3,6 +3,11 @@ export const careBearConfig = {
 		bears: {
 			table: "bears",
 			idType: "varchar NOT NULL DEFAULT uuid_generate_v4()",
+			columns: {
+				name: {
+					select: (table, col) => `${table}.${col}::text`,
+				},
+			},
 			joins: {
 				bestFriend: {
 					localColumn: "best_friend_id",

@@ -13,7 +13,11 @@ export async function create(resource, context) {
 
 	const attributeColumns = Object.keys(resource.attributes).map(snakeCase);
 	const attributePlaceholders = Object.keys(resource.attributes).map(
-		(_, idx) => `$${idx + 1}`,
+		(key, idx) => {
+			const placeholder =
+				resConfig.columns?.[key]?.placeholder ?? ((idx) => `$${idx}`);
+			return placeholder(idx + 1);
+		},
 	);
 
 	const localRelationships = pickBy(
@@ -24,14 +28,15 @@ export async function create(resource, context) {
 	const relationshipColumns = Object.keys(localRelationships).map(
 		(r) => resConfig.joins[r].localColumn,
 	);
-	const relationshipPlaceholders = Object.keys(localRelationships).map(
-		(r) => resConfig.joins[r].localColumn,
-	);
+	const relationshipPlaceholders = Object.keys(localRelationships)
+		.map((r) => resConfig.joins[r].localColumn)
+		.map((_, idx) => `$${idx + attributePlaceholders.length + 1}`);
 
 	const columns = [...attributeColumns, ...relationshipColumns].join(", ");
-	const placeholders = [...attributePlaceholders, ...relationshipPlaceholders]
-		.map((_, idx) => `$${idx + 1}`)
-		.join(", ");
+	const placeholders = [
+		...attributePlaceholders,
+		...relationshipPlaceholders,
+	].join(", ");
 	const vars = [
 		...Object.values(resource.attributes),
 		...Object.values(localRelationships).map((r) => r.id),

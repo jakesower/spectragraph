@@ -1,9 +1,9 @@
 import { snakeCase, uniq } from "lodash-es";
-import { whereExpressionEngine } from "./helpers/sql-expressions";
-import { forEachQuery, someQuery } from "./helpers/query-helpers";
-import { preQueryRelationships } from "./relationships";
+import { whereExpressionEngine } from "./helpers/sql-expressions.js";
+import { forEachQuery, someQuery } from "./helpers/query-helpers.js";
+import { preQueryRelationships } from "./relationships.js";
 import { RootQuery } from "data-prism";
-import { StoreContext } from "./query";
+import { StoreContext } from "./query.js";
 
 const hasToManyRelationship = (schema, query) => {
 	return someQuery(schema, query, (_, info) =>
@@ -79,9 +79,10 @@ const QUERY_CLAUSE_EXTRACTORS = {
 		return [];
 	},
 	select: (select, context) => {
-		const { schema, table, queryInfo } = context;
+		const { config, schema, table, queryInfo } = context;
 		const { type } = queryInfo;
 		const { idAttribute = "id" } = schema.resources[type];
+		const resConfig = config.resources[type];
 
 		const attributeProps = Object.values(select).filter(
 			(p) => typeof p === "string",
@@ -90,9 +91,14 @@ const QUERY_CLAUSE_EXTRACTORS = {
 		const relationshipsModifiers = preQueryRelationships(context);
 
 		return {
-			select: uniq([idAttribute, ...attributeProps]).map(
-				(col) => `${table}.${snakeCase(col)}`,
-			),
+			select: uniq([idAttribute, ...attributeProps]).map((col) => {
+				const selectFn = resConfig.columns?.[col]?.select;
+				const value = `${table}.${snakeCase(col)}`;
+				return {
+					value,
+					sql: selectFn ? selectFn(table, col) : value,
+				};
+			}),
 			...relationshipsModifiers,
 		};
 	},

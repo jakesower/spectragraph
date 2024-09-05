@@ -14,7 +14,7 @@ export function extractGraph(rawResults, selectClause, context) {
 
 		const selectAttributeMap = {};
 		selectClause.forEach((attr, idx) => {
-			selectAttributeMap[attr] = idx;
+			selectAttributeMap[attr.value] = idx;
 		});
 
 		const parentType = (parent as any)?.type;
