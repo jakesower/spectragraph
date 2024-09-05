@@ -31,6 +31,7 @@
 	"dependencies": {
 		"@data-prism/expressions": "^0.0.9",
 		"@data-prism/utils": "^0.0.5",
-		"lodash-es": "^4.17.21"
+		"lodash-es": "^4.17.21",
+		"uuid": "^10.0.0"
 	}
 }

@@ -5,6 +5,7 @@ import {
 	linkInverses,
 	mergeGraphs,
 } from "./graph.js";
+import { create as createAction } from "./create.js";
 import { createGraphFromTrees } from "./mappers.js";
 export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 
@@ -33,6 +34,12 @@ export function createMemoryStore(schema: Schema, initialData: Graph = {}) {
 	const runQuery = (query) => {
 		if (!queryGraph) queryGraph = createQueryGraph(storeGraph);
 		return queryGraph.query(query);
+	};
+
+	const create = (resource) => {
+		// WARNING: MUTATES storeGraph
+		queryGraph = null;
+		return createAction(resource, { schema, storeGraph });
 	};
 
 	const merge = (graph: Graph) => {
@@ -64,6 +71,7 @@ export function createMemoryStore(schema: Schema, initialData: Graph = {}) {
 
 	return {
 		linkInverses: linkStoreInverses,
+		create,
 		merge,
 		mergeTree,
 		mergeTrees,

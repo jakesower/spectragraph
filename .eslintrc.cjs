@@ -3,10 +3,9 @@ module.exports = {
 		es2022: true,
 		node: true,
 	},
-	plugins: ["solid", "@typescript-eslint"],
+	plugins: ["@typescript-eslint"],
 	extends: [
 		"eslint:recommended",
-		"plugin:solid/recommended",
 		"plugin:@typescript-eslint/recommended",
 		"prettier",
 	],
@@ -37,7 +36,7 @@ module.exports = {
 			"error",
 			"tab",
 			{
-				flatTernaryExpressions: true,
+				flatTernaryExpressions: false,
 			},
 		],
 		"max-classes-per-file": "off",
