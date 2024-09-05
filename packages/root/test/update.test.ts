@@ -1,11 +1,8 @@
 import { expect, it } from "vitest";
-import { db } from "./global-setup.js";
-import { createPostgresStore } from "../src/postgres-store.js";
-import careBearSchema from "./fixtures/care-bears.schema.json";
-import { careBearConfig } from "./care-bear-config.js";
+import { careBearSchema } from "./fixtures/care-bear-schema.js";
+import { createMemoryStore } from "../src";
 
-await db.connect();
-const store = createPostgresStore(careBearSchema, { ...careBearConfig, db });
+const store = createMemoryStore(careBearSchema);
 
 it("updates a single resource with only attributes", async () => {
 	const created = await store.create({
