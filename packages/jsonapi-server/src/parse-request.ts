@@ -58,7 +58,9 @@ export function parseRequest(schema: Schema, params) {
 				if (defaultExpressionEngine.isExpression(parsed)) {
 					return castFilterValue(attrType, parsed);
 				}
-			} catch {}
+			} catch {
+				// noop
+			}
 
 			return castFilterValue(attrType, param);
 		});

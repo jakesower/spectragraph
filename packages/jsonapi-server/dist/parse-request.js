@@ -41,7 +41,9 @@ export function parseRequest(schema, params) {
                     return castFilterValue(attrType, parsed);
                 }
             }
-            catch { }
+            catch {
+                // noop
+            }
             return castFilterValue(attrType, param);
         });
         const included = parsedInclude

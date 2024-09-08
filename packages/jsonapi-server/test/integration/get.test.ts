@@ -3,14 +3,14 @@ import careBearSchema from "../fixtures/care-bears.schema.json";
 import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
 import { parseRequest } from "../../src/parse-request.js";
 import { Schema } from "data-prism";
-import { makeRequest } from "../helpers";
-import { mapValues, omit, pick } from "lodash-es";
+import { api, makeRequest } from "../helpers.js";
+import { omit, pick } from "lodash-es";
 
 const tenderheart = careBearData.bears[1];
 
 describe("requests with no subqueries", () => {
 	it("fetches a single resource", async () => {
-		expect(await makeRequest("/bears/1")).toStrictEqual({
+		expect(await api.get("/bears/1")).toStrictEqual({
 			data: {
 				type: "bears",
 				id: "1",

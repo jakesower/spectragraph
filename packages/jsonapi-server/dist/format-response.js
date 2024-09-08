@@ -2,6 +2,8 @@ import { applyOrMap } from "@data-prism/utils";
 import { createGraphFromTrees, normalizeQuery, normalizeResource, } from "data-prism";
 import { mapValues, omit } from "lodash-es";
 export function formatResponse(schema, query, result) {
+    if (result === null)
+        return { data: null };
     const dataIds = new Set();
     const data = applyOrMap(result, (res) => {
         const resSchema = schema.resources[query.type];
@@ -23,7 +25,7 @@ export function formatResponse(schema, query, result) {
     }
     const graph = createGraphFromTrees(query.type, Array.isArray(result) ? result : [result], schema);
     const included = [];
-    Object.entries(graph).map(([type, ress]) => {
+    Object.entries(graph).forEach(([type, ress]) => {
         const relDef = schema.resources[type];
         Object.entries(ress).forEach(([id, res]) => {
             if (type === query.type && dataIds.has(id))

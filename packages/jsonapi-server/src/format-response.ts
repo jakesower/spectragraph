@@ -7,6 +7,8 @@ import {
 import { mapValues, omit } from "lodash-es";
 
 export function formatResponse(schema, query, result) {
+	if (result === null) return { data: null };
+
 	const dataIds = new Set();
 	const data = applyOrMap(result, (res) => {
 		const resSchema = schema.resources[query.type];
@@ -39,7 +41,7 @@ export function formatResponse(schema, query, result) {
 	);
 
 	const included = [];
-	Object.entries(graph).map(([type, ress]) => {
+	Object.entries(graph).forEach(([type, ress]) => {
 		const relDef = schema.resources[type];
 
 		Object.entries(ress).forEach(([id, res]) => {

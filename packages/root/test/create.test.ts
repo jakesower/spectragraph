@@ -18,10 +18,10 @@ it("creates a single resource with only attributes", async () => {
 	const result = await store.query({
 		type: "bears",
 		id: created.id,
-		select: ["name"],
+		select: ["id", "name"],
 	});
 
-	expect(result).toEqual({ name: "Champ Bear" });
+	expect(result).toEqual({ id: created.id, name: "Champ Bear" });
 });
 
 it("creates a single resource with a local relationship", async () => {
@@ -173,7 +173,7 @@ it("removes foreign relationships that are no longer present in the base resourc
 	});
 });
 
-it.skip("creates a single resource with a many-to-many relationship", async () => {
+it("creates a single resource with a many-to-many relationship", async () => {
 	const createdBear = await store.create({
 		type: "bears",
 		attributes: {

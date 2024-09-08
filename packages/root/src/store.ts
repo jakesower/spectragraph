@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import { mapValues } from "lodash-es";
 import { Schema } from "./schema.js";
 import {
 	createQueryGraph,
@@ -8,7 +9,6 @@ import {
 } from "./graph.js";
 import { createGraphFromTrees } from "./mappers.js";
 import { createOrUpdate } from "./create-or-update.js";
-import { mapValues } from "lodash-es";
 import { deleteAction } from "./delete.js";
 export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 
@@ -43,15 +43,18 @@ export function createMemoryStore(schema: Schema, initialData: Graph = {}) {
 	const create = (resource) => {
 		const { id, type } = resource;
 		const resSchema = schema.resources[resource.type];
+		const { idAttribute = "id" } = resSchema;
+		const newId = id ?? uuidv4();
+
 		const normalRes: NormalResource = {
-			attributes: resource.attributes ?? {},
+			attributes: { ...(resource.attributes ?? {}), [idAttribute]: newId },
 			relationships: mapValues(
 				resSchema.relationships,
 				(rel, relName) =>
 					resource.relationships?.[relName] ??
 					(rel.cardinality === "one" ? null : []),
 			),
-			id: id ?? uuidv4(),
+			id: newId,
 			type,
 		};
 
