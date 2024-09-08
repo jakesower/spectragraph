@@ -89,6 +89,9 @@ it("deletes a single resource with a foreign to-one relationship", async () => {
 			caringMeter: 0.95,
 			isInClouds: true,
 		},
+		relationships: {
+			residents: [{ type: "bears", id: createdBear.id }],
+		},
 	});
 
 	await store.delete({

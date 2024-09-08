@@ -1,10 +1,28 @@
 import http from "http";
+import axios from "axios";
 
-export function makeRequest(path) {
+export const rawApi = axios.create({ baseURL: "http://127.0.0.1:3000" });
+
+export const api = {
+	get(path, options = {}) {
+		return rawApi.get(path, options).then((x) => x.data);
+	},
+	post(path, body, options = {}) {
+		return rawApi.post(path, body, options).then((x) => x.data);
+	},
+	patch(path, body, options = {}) {
+		return rawApi.patch(path, body, options).then((x) => x.data);
+	},
+	delete(path, options = {}) {
+		return rawApi.delete(path, options).then((x) => x.data);
+	},
+};
+
+export function makeRequest(path, method = "GET") {
 	const options = {
 		host: "127.0.0.1",
 		port: 3000,
-		method: "GET",
+		method,
 		path: encodeURI(path),
 	};
 
