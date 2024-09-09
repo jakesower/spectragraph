@@ -16,6 +16,9 @@
 		"incremental": true,
 		"skipLibCheck": true, // TODO: pull this out once lodash works
 		"paths": {
+			"data-prism": [
+				"./packages/root"
+			],
 			"@data-prism/expressions": [
 				"./packages/expressions"
 			],

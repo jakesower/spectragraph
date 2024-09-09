@@ -10,6 +10,12 @@
 		{
 			"path": "../expressions"
 		},
+		{
+			"path": "../root"
+		},
+		{
+			"path": "../jsonapi-server"
+		}
 	],
 	"include": [
 		"./src/**/*"

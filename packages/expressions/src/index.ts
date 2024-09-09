@@ -34,6 +34,7 @@ export function createExpressionEngine(definitions: object): ExpressionEngine {
 		const expressionKeys = new Set(Object.keys(allDefinitions));
 
 		return (
+			val !== null &&
 			typeof val === "object" &&
 			!Array.isArray(val) &&
 			Object.keys(val).length === 1 &&

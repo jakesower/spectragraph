@@ -16,7 +16,7 @@
 	"keywords": [],
 	"author": "Jake Sower",
 	"devDependencies": {
-		"@data-prism/jsonapi-server": "^0.0.3",
+		"@data-prism/jsonapi-server": "^0.0.6",
 		"@typescript-eslint/eslint-plugin": "^5.59.8",
 		"@typescript-eslint/parser": "^5.59.8",
 		"ajv": "^8.16.0",

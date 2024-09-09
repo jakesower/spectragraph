@@ -20,6 +20,17 @@ describe("requests with no subqueries", () => {
 		});
 	});
 
+	it("fetches a single resource with a differing idAttribute", async () => {
+		expect(await api.get("/powers/careBearStare")).toStrictEqual({
+			data: {
+				type: "powers",
+				id: "careBearStare",
+				attributes: omit(careBearData.powers.careBearStare.attributes, ["powerId"]),
+				relationships: {},
+			},
+		});
+	});
+
 	it("multiple resources", async () => {
 		const request = "/bears";
 

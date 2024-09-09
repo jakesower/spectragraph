@@ -31,6 +31,19 @@ it("fetches a single resource with its id", async () => {
 	expect(result).toEqual({ id: "1", name: "Tenderheart Bear" });
 });
 
+it("fetches a single resource with a non id named id", async () => {
+	const result = await store.query({
+		type: "powers",
+		id: "careBearStare",
+		select: {
+			powerId: "powerId",
+			name: "name",
+		},
+	});
+
+	expect(result).toEqual({ powerId: "careBearStare", name: "Care Bear Stare" });
+});
+
 it("fetches a single resource without its id", async () => {
 	const result = await store.query({
 		type: "bears",
