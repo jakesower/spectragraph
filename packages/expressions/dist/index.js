@@ -8,7 +8,8 @@ export function createExpressionEngine(definitions) {
     const allDefinitions = { ...coreDefinitions, ...definitions }; // mutated later
     const isExpression = (val) => {
         const expressionKeys = new Set(Object.keys(allDefinitions));
-        return (typeof val === "object" &&
+        return (val !== null &&
+            typeof val === "object" &&
             !Array.isArray(val) &&
             Object.keys(val).length === 1 &&
             expressionKeys.has(Object.keys(val)[0]));
