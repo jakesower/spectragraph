@@ -14,9 +14,6 @@ export async function update(resource, context) {
 	const attributeColumns = Object.keys(resource.attributes ?? {}).map(
 		snakeCase,
 	);
-	const attributePlaceholders = Object.keys(resource.attributes ?? {}).map(
-		(_, idx) => `$${idx + 1}`,
-	);
 
 	const localRelationships = pickBy(
 		resource.relationships ?? {},

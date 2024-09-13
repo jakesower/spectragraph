@@ -44,11 +44,11 @@ function makeRelBuilders(schema) {
             //   // TODO
             // },
             many({ localResSchema, localQueryTableName, relName, foreignTableAlias, }) {
-                const localRelDef = localResSchema.properties[relName];
+                const localRelDef = localResSchema.attributes[relName];
                 const localJoinColumn = localRelDef.store.join.joinColumn;
                 const foreignResSchema = schema.resources[localRelDef.relatedType];
                 const foreignTable = foreignResSchema.store.table;
-                const foreignRelDef = foreignResSchema?.properties?.[localRelDef.inverse];
+                const foreignRelDef = foreignResSchema?.attributes?.[localRelDef.inverse];
                 const foreignJoinColumn = foreignRelDef
                     ? foreignRelDef.store.join.joinColumn
                     : localRelDef.store.join.foreignJoinColumn;

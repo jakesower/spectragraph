@@ -1,6 +1,8 @@
 export const careBearData = {
 	bears: {
 		1: {
+			type: "bears",
+			id: "1",
 			attributes: {
 				id: "1",
 				name: "Tenderheart Bear",

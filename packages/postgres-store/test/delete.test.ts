@@ -3,9 +3,13 @@ import { db } from "./global-setup.js";
 import { createPostgresStore } from "../src/postgres-store.js";
 import careBearSchema from "./fixtures/care-bears.schema.json";
 import { careBearConfig } from "./care-bear-config.js";
+import { Schema } from "data-prism";
 
 await db.connect();
-const store = createPostgresStore(careBearSchema, { ...careBearConfig, db });
+const store = createPostgresStore(careBearSchema as Schema, {
+	...careBearConfig,
+	db,
+});
 
 it("deletes a single resource", async () => {
 	const created = await store.create({

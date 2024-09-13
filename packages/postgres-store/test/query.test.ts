@@ -5,9 +5,13 @@ import careBearSchema from "./fixtures/care-bears.schema.json";
 import { careBearData } from "./fixtures/care-bear-data.js";
 import { careBearConfig } from "./care-bear-config.js";
 import { reset } from "../scripts/seed.js";
+import { Schema } from "data-prism";
 
 await db.connect();
-const store = createPostgresStore(careBearSchema, { ...careBearConfig, db });
+const store = createPostgresStore(careBearSchema as Schema, {
+	...careBearConfig,
+	db,
+});
 await reset(db, careBearSchema, careBearConfig, careBearData);
 
 it("fetches a single resource", async () => {

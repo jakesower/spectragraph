@@ -7,7 +7,6 @@ export async function update(resource, context) {
     const resSchema = schema.resources[resource.type];
     const { idAttribute = "id" } = resSchema;
     const attributeColumns = Object.keys(resource.attributes ?? {}).map(snakeCase);
-    const attributePlaceholders = Object.keys(resource.attributes ?? {}).map((_, idx) => `$${idx + 1}`);
     const localRelationships = pickBy(resource.relationships ?? {}, (_, k) => joins[k].localColumn);
     const relationshipColumns = Object.keys(localRelationships).map((r) => resConfig.joins[r].localColumn);
     const columns = [...attributeColumns, ...relationshipColumns];

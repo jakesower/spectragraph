@@ -54,7 +54,7 @@ export const SQL_CLAUSE_CONFIG = {
         toSql: (val) => (val > 0 ? `OFFSET ${val}` : ""),
     },
 };
-function replacePlaceholders(inputString) {
+export function replacePlaceholders(inputString) {
     let counter = 1;
     return inputString.replace(/\?/g, () => `$${counter++}`);
 }
