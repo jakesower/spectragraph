@@ -83,7 +83,7 @@ export const SQL_CLAUSE_CONFIG: {
 	},
 };
 
-function replacePlaceholders(inputString) {
+export function replacePlaceholders(inputString) {
 	let counter = 1;
 	return inputString.replace(/\?/g, () => `$${counter++}`);
 }

@@ -3,9 +3,13 @@ import { db } from "./global-setup.js";
 import { createPostgresStore } from "../src/postgres-store.js";
 import careBearSchema from "./fixtures/care-bears.schema.json";
 import { careBearConfig } from "./care-bear-config.js";
+import { Schema } from "data-prism";
 
 await db.connect();
-const store = createPostgresStore(careBearSchema, { ...careBearConfig, db });
+const store = createPostgresStore(careBearSchema as Schema, {
+	...careBearConfig,
+	db,
+});
 
 it("updates a single resource with only attributes", async () => {
 	const created = await store.create({
@@ -126,9 +130,14 @@ it("updates a single resource with a local relationship redundantly", async () =
 			furColor: "orange, pink, purple, blue",
 		},
 		relationships: {
-			type: "homes",
-			id: createdHome.id,
+			home: { type: "homes", id: createdHome.id },
 		},
+	});
+
+	await store.update({
+		type: "bears",
+		id: created.id,
+		attributes: { name: "Dare to Care Bear" },
 	});
 
 	await store.update({
