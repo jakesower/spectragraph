@@ -91,10 +91,10 @@ function runQuery<Q extends NormalRootQuery>(
 					query.where,
 					defaultExpressionEngine,
 				);
-				console.log(whereExpression);
-				return results.filter((result) =>
-					defaultExpressionEngine.apply(whereExpression, result),
-				);
+
+				return results.filter((result) => {
+					return defaultExpressionEngine.apply(whereExpression, result);
+				});
 			},
 			order(results: unknown[]): unknown[] {
 				const order = Array.isArray(query.order) ? query.order : [query.order];

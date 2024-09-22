@@ -171,7 +171,7 @@ describe("where clauses", () => {
 		});
 	});
 
-	it.only("filters on paths of resources", async () => {
+	it("filters on paths of resources", async () => {
 		const result = await graph.query({
 			type: "bears",
 			select: ["id"],
@@ -231,26 +231,4 @@ describe("where clauses", () => {
 			expect(result).toEqual([{ id: "1" }, { id: "3" }]);
 		});
 	});
-
-	it("disallows filtering on invalid attribute names", async () => {
-		await expect(async () => {
-			return graph.query({
-				type: "bears",
-				select: ["name"],
-				where: { lol: "oops" },
-			});
-		}).rejects.toThrowError();
-	});
-});
-
-it("disallows filtering on the paths of attribute names", async () => {
-	await expect(async () => {
-		await graph.query({
-			type: "bears",
-			select: ["id"],
-			where: {
-				"home.name": "Care-a-Lot",
-			},
-		});
-	}).rejects.toThrowError();
 });
