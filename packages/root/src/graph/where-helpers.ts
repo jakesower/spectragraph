@@ -13,15 +13,7 @@ export function buildWhereExpression(whereClause: object, expressionEngine) {
 	const whereExpressions = Object.entries(whereClause).map(
 		([propPath, propVal]) => ({
 			$pipe: [
-				{
-					$ifThenElse: {
-						if: { $pipe: [{ $get: propPath }, { $eq: null }] },
-						then: null,
-						else: {
-							$pipe: [{ $ensurePath: propPath }, { $get: propPath }],
-						},
-					},
-				},
+				{ $get: propPath },
 				expressionEngine.isExpression(propVal) ? propVal : { $eq: propVal },
 			],
 		}),
