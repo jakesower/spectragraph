@@ -1,7 +1,12 @@
 import { defaultExpressionEngine } from "@data-prism/expressions";
 import { mapValues, orderBy } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
-import { NormalRootQuery, RootQuery, normalizeQuery } from "../query.js";
+import {
+	NormalRootQuery,
+	RootQuery,
+	ensureValidQuery,
+	normalizeQuery,
+} from "../query.js";
 import { buildWhereExpression } from "./where-helpers.js";
 import { createExpressionProjector } from "./select-helpers.js";
 import { Graph, Ref } from "../graph.js";
@@ -86,6 +91,7 @@ function runQuery<Q extends NormalRootQuery>(
 					query.where,
 					defaultExpressionEngine,
 				);
+				console.log(whereExpression);
 				return results.filter((result) =>
 					defaultExpressionEngine.apply(whereExpression, result),
 				);
@@ -94,6 +100,14 @@ function runQuery<Q extends NormalRootQuery>(
 				const order = Array.isArray(query.order) ? query.order : [query.order];
 				const properties = order.flatMap((o) => Object.keys(o));
 				const dirs = order.flatMap((o) => Object.values(o));
+
+				const first = results[0] as { [k: string]: unknown };
+				if (first && properties.some((p) => !(p in first))) {
+					const missing = properties.find((p) => !(p in first));
+					throw new Error(
+						`invalid "order" clause: '${missing} is not a valid attribute`,
+					);
+				}
 
 				return orderBy(results, properties, dirs);
 			},
@@ -113,15 +127,25 @@ function runQuery<Q extends NormalRootQuery>(
 					// possibilities: (1) property (2) expression (3) subquery
 					if (typeof propQuery === "string") {
 						// nested / shallow property
+						const extractPath = (curValue, path) => {
+							if (curValue === null) return null;
+							if (path.length === 0) return curValue;
+
+							const [head, ...tail] = path;
+
+							if (head === "$")
+								return curValue.map((v) => extractPath(v, tail));
+
+							if (!(head in curValue))
+								throw new Error(`${propQuery} is an invalid attribute or path`);
+
+							return extractPath(curValue?.[head], tail);
+						};
+
 						return (result) =>
 							propQuery in result[RAW].relationships
 								? result[RAW].relationships[propQuery]
-								: propQuery
-										.split(".")
-										.reduce(
-											(out, path) => (out === null ? null : out?.[path]),
-											result,
-										);
+								: extractPath(result, propQuery.split("."));
 					}
 
 					// expression
@@ -149,9 +173,9 @@ function runQuery<Q extends NormalRootQuery>(
 												query.type
 											}.${query.id}. ${propName}: ${JSON.stringify(
 												result[propName],
-											)}. Check that all of the refs in ${query.type}.${
-												query.id
-											} are valid.`,
+											)}. Check that all of the relationship refs in ${
+												query.type
+											}.${query.id} are valid.`,
 										);
 									}
 
@@ -166,7 +190,7 @@ function runQuery<Q extends NormalRootQuery>(
 									query.id
 								}. ${propName}: ${JSON.stringify(
 									result[RAW].relationships[propName],
-								)}. Check that all of the refs in ${query.type}.${
+								)}. Check that all of the relationship refs in ${query.type}.${
 									query.id
 								} are valid.`,
 							);
@@ -200,6 +224,7 @@ function runQuery<Q extends NormalRootQuery>(
 		return query.id ? processed[0] : processed;
 	};
 
+	ensureValidQuery(rootQuery);
 	return go(rootQuery);
 }
 

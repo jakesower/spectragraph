@@ -1,6 +1,6 @@
 {
 	"name": "@data-prism/postgres-store",
-	"version": "0.0.9",
+	"version": "0.0.10",
 	"type": "module",
 	"main": "./dist/postgres-store.js",
 	"types": "./dist/postgres-store.d.ts",

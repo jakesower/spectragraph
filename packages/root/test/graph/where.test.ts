@@ -1,11 +1,12 @@
 import { expect, it, describe } from "vitest";
 import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
 import { createQueryGraph } from "../../src/graph.js";
+import { defaultExpressionEngine } from "@data-prism/expressions";
 
 const graph = createQueryGraph(careBearData);
 
 describe("where clauses", () => {
-	it("filters on a property equality constraint", async () => {
+	it("filters on an implicit property equality constraint", async () => {
 		const result = await graph.query({
 			type: "bears",
 			select: ["id", "name"],
@@ -170,6 +171,18 @@ describe("where clauses", () => {
 		});
 	});
 
+	it.only("filters on paths of resources", async () => {
+		const result = await graph.query({
+			type: "bears",
+			select: ["id"],
+			where: {
+				"home.name": "Care-a-Lot",
+			},
+		});
+
+		expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
+	});
+
 	describe("where expressions", () => {
 		it("filters using an $or operation", async () => {
 			const result = await graph.query({
@@ -218,4 +231,26 @@ describe("where clauses", () => {
 			expect(result).toEqual([{ id: "1" }, { id: "3" }]);
 		});
 	});
+
+	it("disallows filtering on invalid attribute names", async () => {
+		await expect(async () => {
+			return graph.query({
+				type: "bears",
+				select: ["name"],
+				where: { lol: "oops" },
+			});
+		}).rejects.toThrowError();
+	});
+});
+
+it("disallows filtering on the paths of attribute names", async () => {
+	await expect(async () => {
+		await graph.query({
+			type: "bears",
+			select: ["id"],
+			where: {
+				"home.name": "Care-a-Lot",
+			},
+		});
+	}).rejects.toThrowError();
 });

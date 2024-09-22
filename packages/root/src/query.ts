@@ -296,3 +296,7 @@ export function reduceQuery<S extends Schema, T>(
 
 	return go(normalizeQuery(query), initInfo, init);
 }
+
+export function ensureValidQuery(rootQuery: RootQuery): void {
+	if (!rootQuery.type) throw new Error("queries must have a `type`");
+}

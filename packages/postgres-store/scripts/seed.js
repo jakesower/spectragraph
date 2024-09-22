@@ -162,6 +162,14 @@ export async function reset(db, schema, config, seedData) {
 		}),
 	);
 
+	try {
+		await db.query("DROP SCHEMA home CASCADE");
+	} catch {
+		// noop
+	}
+
+	await db.query("CREATE SCHEMA home");
+
 	const createSQL = createTablesSQL(schema, config);
 	await db.query(createSQL);
 
