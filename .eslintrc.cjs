@@ -3,10 +3,13 @@ module.exports = {
 		es2022: true,
 		node: true,
 	},
-	plugins: ["@typescript-eslint"],
+	plugins: ["solid", "@typescript-eslint"],
 	extends: [
 		"eslint:recommended",
+		"plugin:solid/recommended",
 		"plugin:@typescript-eslint/recommended",
+		"plugin:import/errors",
+		"plugin:import/typescript",
 		"prettier",
 	],
 	parser: "@typescript-eslint/parser",
@@ -27,18 +30,11 @@ module.exports = {
 				functions: "always-multiline",
 			},
 		],
-		curly: ["error", "multi-line"],
+		curly: ["error", "multi-or-nest"],
 		eqeqeq: ["error", "always", { null: "ignore" }],
 		"func-names": "off",
 		"function-paren-newline": "off",
 		"import/prefer-default-export": "off",
-		indent: [
-			"error",
-			"tab",
-			{
-				flatTernaryExpressions: false,
-			},
-		],
 		"max-classes-per-file": "off",
 		"max-len": [
 			"error",
@@ -63,6 +59,18 @@ module.exports = {
 		//   // memberSyntaxOrder: false,
 		// }],
 		"sort-vars": "error",
+		"import/extensions": [
+			"error",
+			"ignorePackages",
+			{
+				js: "never",
+				ts: "never",
+			},
+		],
 	},
-	settings: {},
+	settings: {
+		"import/resolver": {
+			typescript: true,
+		},
+	},
 };

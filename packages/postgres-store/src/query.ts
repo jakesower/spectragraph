@@ -95,7 +95,7 @@ export async function query(query, context: StoreContext) {
 
 	const initSqlClauses = {
 		...mapValues(SQL_CLAUSE_CONFIG, (c) => c.initVal),
-		from: config.resources[query.type].table,
+		from: `${config.resources[query.type].table} AS ${query.type}` as any,
 	} as SqlClauses;
 
 	const sqlClauses = clauseBreakdown.reduce(

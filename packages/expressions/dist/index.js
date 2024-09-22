@@ -27,7 +27,7 @@ export function createExpressionEngine(definitions) {
             const expressionDefinition = allDefinitions[expressionName];
             // some operations need to control the flow of evaluation
             if (expressionDefinition.controlsEvaluation) {
-                return expressionDefinition.apply(expressionParams, arg, apply);
+                return expressionDefinition.apply(expressionParams, arg, apply, isExpression);
             }
             // with evaluated children
             const evaluatedParams = step(expressionParams);
@@ -50,9 +50,8 @@ export function createExpressionEngine(definitions) {
                 return expression[expressionName];
             // some operations need to control the flow of evaluation
             const expressionDefinition = definitions[expressionName];
-            if (expressionDefinition.controlsEvaluation) {
+            if (expressionDefinition.controlsEvaluation)
                 return expressionDefinition.evaluate(expressionArgs, evaluate);
-            }
             // with evaluated children
             const evaluatedArgs = go(expressionArgs);
             return expressionDefinition.evaluate(evaluatedArgs);
@@ -63,9 +62,8 @@ export function createExpressionEngine(definitions) {
         apply,
         evaluate,
         compile: (expression) => {
-            if (!isExpression(expression)) {
+            if (!isExpression(expression))
                 throw new Error("only expressions may be compiled");
-            }
             return (arg) => apply(expression, arg);
         },
         isExpression,

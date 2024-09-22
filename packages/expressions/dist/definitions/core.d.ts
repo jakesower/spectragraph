@@ -11,9 +11,17 @@ export declare const coreDefinitions: {
         name: string;
         apply: (_: any, arg: any) => any;
     };
+    readonly $ensurePath: {
+        name: string;
+        apply: (params: any, arg: any) => any;
+    };
     readonly $get: {
         name: string;
         apply: (params: any, arg: any) => any;
+    };
+    readonly $ifThenElse: {
+        name: string;
+        apply: (params: any, arg: any, apply: any, isExpression: any) => any;
         controlsEvaluation: boolean;
     };
     readonly $literal: {
@@ -21,9 +29,13 @@ export declare const coreDefinitions: {
         apply: (params: any) => any;
         controlsEvaluation: boolean;
     };
+    readonly $log: {
+        name: string;
+        apply: (_: any, arg: any) => any;
+    };
     readonly $pipe: {
         name: string;
-        apply: (params: any, arg: any, apply: any) => any;
+        apply: (params: any, arg: any, apply: any, isExpression: any) => any;
         controlsEvaluation: boolean;
     };
     readonly $prop: {

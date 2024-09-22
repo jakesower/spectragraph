@@ -48,8 +48,8 @@ export function createExpressionEngine(definitions: object): ExpressionEngine {
 				return Array.isArray(expression)
 					? expression.map(step)
 					: typeof expression === "object"
-						? mapValues(expression, step)
-						: expression;
+					? mapValues(expression, step)
+					: expression;
 			}
 
 			const [expressionName, expressionParams] = Object.entries(expression)[0];
@@ -57,7 +57,12 @@ export function createExpressionEngine(definitions: object): ExpressionEngine {
 
 			// some operations need to control the flow of evaluation
 			if (expressionDefinition.controlsEvaluation) {
-				return expressionDefinition.apply(expressionParams, arg, apply);
+				return expressionDefinition.apply(
+					expressionParams,
+					arg,
+					apply,
+					isExpression,
+				);
 			}
 
 			// with evaluated children
@@ -74,8 +79,8 @@ export function createExpressionEngine(definitions: object): ExpressionEngine {
 				return Array.isArray(expression)
 					? expression.map(go)
 					: typeof expression === "object"
-						? mapValues(expression, go)
-						: expression;
+					? mapValues(expression, go)
+					: expression;
 			}
 
 			const [expressionName, expressionArgs] = Object.entries(expression)[0];
@@ -85,9 +90,8 @@ export function createExpressionEngine(definitions: object): ExpressionEngine {
 
 			// some operations need to control the flow of evaluation
 			const expressionDefinition = definitions[expressionName] as any;
-			if (expressionDefinition.controlsEvaluation) {
+			if (expressionDefinition.controlsEvaluation)
 				return expressionDefinition.evaluate(expressionArgs, evaluate);
-			}
 
 			// with evaluated children
 			const evaluatedArgs = go(expressionArgs);
@@ -101,9 +105,8 @@ export function createExpressionEngine(definitions: object): ExpressionEngine {
 		apply,
 		evaluate,
 		compile: (expression) => {
-			if (!isExpression(expression)) {
+			if (!isExpression(expression))
 				throw new Error("only expressions may be compiled");
-			}
 
 			return (arg) => apply(expression, arg);
 		},
@@ -119,4 +122,5 @@ export const defaultExpressions = {
 	...iterativeDefinitions,
 };
 
-export const defaultExpressionEngine = createExpressionEngine(defaultExpressions);
+export const defaultExpressionEngine =
+	createExpressionEngine(defaultExpressions);

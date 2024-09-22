@@ -1,9 +1,8 @@
 import { mapValues, snakeCase } from "lodash-es";
 import { flatMapQuery } from "./helpers/query-helpers.js";
 export function extractGraph(rawResults, selectClause, context) {
-    const { config, schema, query: rootQuery } = context;
+    const { schema, query: rootQuery } = context;
     const graph = mapValues(schema.resources, () => ({}));
-    const rootTable = config.resources[rootQuery.type].table;
     const extractors = flatMapQuery(schema, rootQuery, (_, info) => {
         const { parent, parentQuery, parentRelationship, attributes, type } = info;
         const resConfig = schema.resources[type];
@@ -16,7 +15,7 @@ export function extractGraph(rawResults, selectClause, context) {
         const parentRelDef = parentQuery &&
             schema.resources[parentType].relationships[parentRelationship];
         const pathStr = info.path.length > 0 ? `$${info.path.join("$")}` : "";
-        const idPath = `${rootTable}${pathStr}.${snakeCase(idAttribute)}`;
+        const idPath = `${rootQuery.type}${pathStr}.${snakeCase(idAttribute)}`;
         const idIdx = selectAttributeMap[idPath];
         return (result) => {
             const id = result[idIdx];
@@ -24,7 +23,7 @@ export function extractGraph(rawResults, selectClause, context) {
                 const parentResSchema = schema.resources[parentType];
                 const parentPathStr = info.path.length > 1 ? `$${info.path.slice(0, -1).join("$")}` : "";
                 const parentIdAttribute = parentResSchema.idAttribute ?? "id";
-                const parentIdPath = `${rootTable}${parentPathStr}.${snakeCase(parentIdAttribute)}`;
+                const parentIdPath = `${rootQuery.type}${parentPathStr}.${snakeCase(parentIdAttribute)}`;
                 const parentIdIdx = selectAttributeMap[parentIdPath];
                 const parentId = result[parentIdIdx];
                 if (!graph[parentType][parentId]) {
@@ -58,7 +57,7 @@ export function extractGraph(rawResults, selectClause, context) {
             };
             if (attributes.length > 0) {
                 attributes.forEach((attr) => {
-                    const fullAttrPath = `${rootTable}${pathStr}.${snakeCase(attr)}`;
+                    const fullAttrPath = `${rootQuery.type}${pathStr}.${snakeCase(attr)}`;
                     const resultIdx = selectAttributeMap[fullAttrPath];
                     graph[type][id].attributes[attr] = result[resultIdx];
                 });

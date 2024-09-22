@@ -23,11 +23,10 @@ export const careBearConfig = {
 			},
 		},
 		homes: {
-			table: "homes",
+			table: "home.homes",
 			idType: "varchar NOT NULL DEFAULT uuid_generate_v4()",
 			joins: {
 				residents: {
-					foreignTable: "bears",
 					foreignColumn: "home_id",
 					foreignColumnType: "varchar",
 				},
@@ -35,7 +34,7 @@ export const careBearConfig = {
 		},
 		powers: {
 			table: "power", // non-standard
-			// idAttribute: "powerId",
+			idAttribute: "powerId",
 			idType: "varchar NOT NULL DEFAULT uuid_generate_v4()",
 			joins: {
 				wielders: {

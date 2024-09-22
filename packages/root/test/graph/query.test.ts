@@ -1,6 +1,7 @@
 import { expect, it, describe } from "vitest";
 import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
 import { createQueryGraph, queryGraph } from "../../src/graph.js";
+import { RootQuery } from "../../src/query.js";
 
 const graph = createQueryGraph(careBearData);
 
@@ -104,6 +105,125 @@ describe("queryTree core", () => {
 		});
 
 		expect(result).toEqual(null);
+	});
+
+	it("allows for selecting paths", async () => {
+		const result = graph.query({
+			type: "bears",
+			id: "1",
+			select: { id: "id", homeName: "home.name", home: { select: ["name"] } },
+		});
+
+		expect(result).toEqual({
+			id: "1",
+			homeName: "Care-a-Lot",
+			home: { name: "Care-a-Lot" },
+		});
+	});
+
+	it("allows for selecting without selecting the attribute in the related resource", async () => {
+		const result = graph.query({
+			type: "bears",
+			id: "1",
+			select: { id: "id", homeName: "home.name", home: { select: ["id"] } },
+		});
+
+		expect(result).toEqual({
+			id: "1",
+			homeName: "Care-a-Lot",
+			home: { id: "1" },
+		});
+	});
+
+	it("allows for selecting without selecting the related resource", async () => {
+		const result = graph.query({
+			type: "bears",
+			id: "1",
+			select: { id: "id", homeName: "home.name" },
+		});
+
+		expect(result).toEqual({
+			id: "1",
+			homeName: "Care-a-Lot",
+		});
+	});
+
+	it("allows for selecting nested paths", async () => {
+		const result = graph.query({
+			type: "bears",
+			id: "2",
+			select: { id: "id", bestFriendHomeName: "bestFriend.home.name" },
+		});
+
+		expect(result).toEqual({
+			id: "2",
+			bestFriendHomeName: "Care-a-Lot",
+		});
+	});
+
+	it("returns null for missing relationships in the path", async () => {
+		const result = graph.query({
+			type: "bears",
+			id: "1",
+			select: { id: "id", bestFriendHomeName: "bestFriend.home.name" },
+		});
+
+		expect(result).toEqual({
+			id: "1",
+			bestFriendHomeName: null,
+		});
+	});
+
+	it("walks to-many paths", async () => {
+		const result = graph.query({
+			type: "homes",
+			id: "1",
+			select: { name: "name", residentNames: "residents.$.name" },
+		});
+
+		expect(result).toEqual({
+			name: "Care-a-Lot",
+			residentNames: ["Tenderheart Bear", "Cheer Bear", "Wish Bear"],
+		});
+	});
+
+	it("walks nested to-many paths", async () => {
+		const result = graph.query({
+			type: "homes",
+			id: "1",
+			select: { name: "name", bestFriendNames: "residents.$.bestFriend.name" },
+		});
+
+		expect(result).toEqual({
+			name: "Care-a-Lot",
+			bestFriendNames: [null, "Wish Bear", "Cheer Bear"],
+		});
+	});
+
+	it("disallows invalid attribute names", async () => {
+		await expect(async () => {
+			graph.query({
+				type: "bears",
+				select: ["lol"],
+			});
+		}).rejects.toThrowError();
+	});
+
+	it("disallows invalid attribute paths", async () => {
+		await expect(async () => {
+			graph.query({
+				type: "bears",
+				select: [{ homeSize: "home.size" }],
+			});
+		}).rejects.toThrowError();
+	});
+
+	it("disallows queries with no 'type'", async () => {
+		await expect(async () => {
+			graph.query({
+				select: ["name"],
+			} as unknown as RootQuery);
+		}).rejects.toThrowError();
 	});
 
 	it("fetches a single resource with a many-to-one relationship", async () => {
@@ -239,16 +359,6 @@ describe("queryTree core", () => {
 			{ id: "3", bestFriend: { type: "bears", id: "2" } },
 			{ id: "5", bestFriend: null },
 		]);
-	});
-
-	it("returns undefined values for missing top level props", async () => {
-		const result = await graph.query({
-			type: "bears",
-			id: "1",
-			select: ["koopa"],
-		});
-
-		expect(result).toEqual({ koopa: undefined });
 	});
 
 	it("errors out on undefined resources", async () => {

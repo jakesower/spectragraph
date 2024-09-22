@@ -64,7 +64,7 @@ export async function query(query, context) {
     const clauseBreakdown = parseQuery(query, context);
     const initSqlClauses = {
         ...mapValues(SQL_CLAUSE_CONFIG, (c) => c.initVal),
-        from: config.resources[query.type].table,
+        from: `${config.resources[query.type].table} AS ${query.type}`,
     };
     const sqlClauses = clauseBreakdown.reduce((acc, clause) => ({
         ...acc,

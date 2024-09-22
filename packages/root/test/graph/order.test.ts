@@ -80,4 +80,14 @@ describe("order tests", async () => {
 			{ name: "Wish Bear", yearIntroduced: 1982, home: { name: "Care-a-Lot" } },
 		]);
 	});
+
+	it("disallows sorting on invalid attribute names", async () => {
+		await expect(async () => {
+			return graph.query({
+				type: "bears",
+				select: ["name"],
+				order: { lol: "asc" },
+			});
+		}).rejects.toThrowError();
+	});
 });

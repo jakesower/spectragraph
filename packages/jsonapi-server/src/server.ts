@@ -1,40 +1,43 @@
 import express from "express";
 import { Schema } from "data-prism";
-import { formatResponse } from "./format-response.js";
-import { parseRequest } from "./parse-request.js";
 import { create } from "./create.js";
 import { update } from "./update.js";
 import { deleteHandler } from "./delete.js";
-
-export function applySchemaRoutes(schema: Schema, store, app) {
-	const handleRequest = (type) => async (req, res) => {
-		try {
-			const query = parseRequest(schema, {
-				...req.query,
-				type,
-				id: req.params.id,
-			});
-			const result = await store.query(query);
-			const response = formatResponse(schema, query, result);
-			res.json(response);
-		} catch {
-			res.statusCode = 500;
-			res.send("something went wrong");
-		}
-	};
-
-	Object.keys(schema.resources).forEach((type) => {
-		app.get(`/${type}`, handleRequest(type));
-		app.get(`/${type}/:id`, handleRequest(type));
-		app.post(`/${type}`, create(store));
-		app.patch(`/${type}/:id`, update(store));
-		app.delete(`/${type}/:id`, deleteHandler(type, store));
-	});
-}
+import { get } from "./get.js";
 
 type Options = {
 	port?: number;
 };
+
+type Server = {
+	getAllHandler: (type: string) => (req: any, res: any) => Promise<void>;
+	getOneHandler: (type: string) => (req: any, res: any) => Promise<void>;
+	createHandler: (type: string) => (req: any, res: any) => Promise<void>;
+	updateHandler: (type: string) => (req: any, res: any) => Promise<void>;
+	deleteHandler: (type: string) => (req: any, res: any) => Promise<void>;
+};
+
+export function createJSONAPIHandlers(schema: Schema, store): Server {
+	return {
+		getAllHandler: (type) => get(schema, store, type),
+		getOneHandler: (type) => get(schema, store, type),
+		createHandler: () => create(store),
+		updateHandler: () => update(store),
+		deleteHandler: (type) => deleteHandler(type, store),
+	};
+}
+
+export function applySchemaRoutes(schema: Schema, store, app) {
+	const server = createJSONAPIHandlers(schema, store);
+
+	Object.keys(schema.resources).forEach((type) => {
+		app.get(`/${type}`, server.getAllHandler(type));
+		app.get(`/${type}/:id`, server.getOneHandler(type));
+		app.post(`/${type}`, server.createHandler(type));
+		app.patch(`/${type}/:id`, server.updateHandler(type));
+		app.delete(`/${type}/:id`, server.deleteHandler(type));
+	});
+}
 
 export function createServer(schema, store, options: Options = {}) {
 	const app = express();

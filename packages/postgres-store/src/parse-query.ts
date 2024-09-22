@@ -16,14 +16,13 @@ const hasToManyRelationship = (schema, query) => {
 };
 
 const QUERY_CLAUSE_EXTRACTORS = {
-	id: (id, { config, queryInfo, schema }) => {
+	id: (id, { queryInfo, schema }) => {
 		if (!id) return {};
 
 		const { idAttribute = "id" } = schema.resources[queryInfo.type];
-		const { table } = config.resources[queryInfo.type];
 
 		return {
-			where: [`${table}.${snakeCase(idAttribute)} = ?`],
+			where: [`${queryInfo.type}.${snakeCase(idAttribute)} = ?`],
 			vars: [id],
 		};
 	},
@@ -108,13 +107,11 @@ export function parseQuery(
 	query: RootQuery,
 	context: StoreContext,
 ): { [k: string]: object }[] {
-	const { config, schema } = context;
-	const rootTable = config.resources[query.type].table;
-
+	const { schema } = context;
 	const clauses = [];
 
 	forEachQuery(schema, query, (subquery, queryInfo) => {
-		const table = [rootTable, ...queryInfo.path].join("$");
+		const table = [query.type, ...queryInfo.path].join("$");
 
 		Object.entries(subquery).forEach(([key, val]) => {
 			if (QUERY_CLAUSE_EXTRACTORS[key]) {

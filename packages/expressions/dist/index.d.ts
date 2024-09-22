@@ -170,9 +170,17 @@ export declare const defaultExpressions: {
         name: string;
         apply: (_: any, arg: any) => any;
     };
+    $ensurePath: {
+        name: string;
+        apply: (params: any, arg: any) => any;
+    };
     $get: {
         name: string;
         apply: (params: any, arg: any) => any;
+    };
+    $ifThenElse: {
+        name: string;
+        apply: (params: any, arg: any, apply: any, isExpression: any) => any;
         controlsEvaluation: boolean;
     };
     $literal: {
@@ -180,9 +188,13 @@ export declare const defaultExpressions: {
         apply: (params: any) => any;
         controlsEvaluation: boolean;
     };
+    $log: {
+        name: string;
+        apply: (_: any, arg: any) => any;
+    };
     $pipe: {
         name: string;
-        apply: (params: any, arg: any, apply: any) => any;
+        apply: (params: any, arg: any, apply: any, isExpression: any) => any;
         controlsEvaluation: boolean;
     };
     $prop: {

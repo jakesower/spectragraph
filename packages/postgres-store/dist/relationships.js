@@ -21,7 +21,7 @@ function makeRelBuilders(schema) {
         },
         many: {
             one(params) {
-                const { localConfig, localQueryTableName, relName, foreignResSchema, foreignConfig, foreignTableAlias, foreignIdCol, } = params;
+                const { localConfig, localQueryTableName, relName, foreignConfig, foreignTableAlias, foreignIdCol, } = params;
                 const localJoinColumn = localConfig.joins[relName].localColumn;
                 const foreignTable = foreignConfig.table;
                 return [
@@ -65,12 +65,11 @@ function makeRelBuilders(schema) {
 export const preQueryRelationships = (context) => {
     const { config, queryInfo, rootQuery, schema } = context;
     const { parent, path: queryPath } = queryInfo;
-    const rootTable = config.resources[rootQuery.type].table;
     if (queryPath.length === 0)
         return {};
     const parentPath = queryPath.slice(0, -1);
-    const tablePath = [rootTable, ...queryPath];
-    const parentTablePath = [rootTable, ...parentPath];
+    const tablePath = [rootQuery.type, ...queryPath];
+    const parentTablePath = [rootQuery.type, ...parentPath];
     const relName = last(queryPath);
     const relBuilders = makeRelBuilders(schema);
     const localQueryTableName = parentTablePath.join("$");

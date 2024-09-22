@@ -39,7 +39,7 @@ export async function create(resource, context) {
 	].join(", ");
 	const vars = [
 		...Object.values(resource.attributes),
-		...Object.values(localRelationships).map((r) => r.id),
+		...Object.values(localRelationships).map((r) => r?.id ?? null),
 	];
 
 	const sql = `

@@ -2,10 +2,8 @@ import { mapValues, snakeCase } from "lodash-es";
 import { flatMapQuery } from "./helpers/query-helpers.js";
 
 export function extractGraph(rawResults, selectClause, context) {
-	const { config, schema, query: rootQuery } = context;
-
+	const { schema, query: rootQuery } = context;
 	const graph = mapValues(schema.resources, () => ({}));
-	const rootTable = config.resources[rootQuery.type].table;
 
 	const extractors = flatMapQuery(schema, rootQuery, (_, info) => {
 		const { parent, parentQuery, parentRelationship, attributes, type } = info;
@@ -23,7 +21,7 @@ export function extractGraph(rawResults, selectClause, context) {
 			schema.resources[parentType].relationships[parentRelationship];
 
 		const pathStr = info.path.length > 0 ? `$${info.path.join("$")}` : "";
-		const idPath = `${rootTable}${pathStr}.${snakeCase(idAttribute)}`;
+		const idPath = `${rootQuery.type}${pathStr}.${snakeCase(idAttribute)}`;
 		const idIdx = selectAttributeMap[idPath];
 
 		return (result) => {
@@ -34,7 +32,7 @@ export function extractGraph(rawResults, selectClause, context) {
 				const parentPathStr =
 					info.path.length > 1 ? `$${info.path.slice(0, -1).join("$")}` : "";
 				const parentIdAttribute = parentResSchema.idAttribute ?? "id";
-				const parentIdPath = `${rootTable}${parentPathStr}.${snakeCase(
+				const parentIdPath = `${rootQuery.type}${parentPathStr}.${snakeCase(
 					parentIdAttribute,
 				)}`;
 				const parentIdIdx = selectAttributeMap[parentIdPath];
@@ -45,6 +43,8 @@ export function extractGraph(rawResults, selectClause, context) {
 						[idAttribute]: parentId,
 						id: parentId,
 						type: parentType,
+						attributes: {},
+						relationships: {},
 					};
 				}
 				const parent = graph[parentType][parentId];
@@ -76,10 +76,14 @@ export function extractGraph(rawResults, selectClause, context) {
 
 			if (attributes.length > 0) {
 				attributes.forEach((attr) => {
-					const fullAttrPath = `${rootTable}${pathStr}.${snakeCase(attr)}`;
+					const fullAttrPath = `${rootQuery.type}${pathStr}.${snakeCase(attr)}`;
 					const resultIdx = selectAttributeMap[fullAttrPath];
 
-					graph[type][id].attributes[attr] = result[resultIdx];
+					graph[type][id].attributes[attr] = ["array", "object"].includes(
+						resConfig.attributes[attr].type,
+					)
+						? JSON.parse(result[resultIdx])
+						: result[resultIdx];
 				});
 			} else {
 				graph[type][id].id = id;
