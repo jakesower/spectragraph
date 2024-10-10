@@ -75,7 +75,10 @@ export const careBearData = {
 			attributes: {
 				id: "1",
 				name: "Care-a-Lot",
-				location: "Kingdom of Caring",
+				location: {
+					type: "Point",
+					coordinates: [-119.557320248, 46.820255868],
+				},
 				caringMeter: 1,
 				isInClouds: true,
 			},
@@ -93,7 +96,7 @@ export const careBearData = {
 			attributes: {
 				id: "2",
 				name: "Forest of Feelings",
-				location: "Kingdom of Caring",
+				location: { type: "Point", coordinates: [119, -46] },
 				caringMeter: 1,
 				isInClouds: false,
 			},
@@ -107,7 +110,7 @@ export const careBearData = {
 			attributes: {
 				id: "3",
 				name: "Earth",
-				location: "Earth",
+				location: { type: "Point", coordinates: [0, 0] },
 				caringMeter: 0.5,
 				isInClouds: false,
 			},

@@ -1,12 +1,7 @@
 import { defaultExpressionEngine } from "@data-prism/expressions";
 import { mapValues, orderBy } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
-import {
-	NormalRootQuery,
-	RootQuery,
-	ensureValidQuery,
-	normalizeQuery,
-} from "../query.js";
+import { NormalRootQuery, RootQuery, normalizeQuery } from "../query.js";
 import { buildWhereExpression } from "./where-helpers.js";
 import { createExpressionProjector } from "./select-helpers.js";
 import { Graph, Ref } from "../graph.js";
@@ -224,7 +219,6 @@ function runQuery<Q extends NormalRootQuery>(
 		return query.id ? processed[0] : processed;
 	};
 
-	ensureValidQuery(rootQuery);
 	return go(rootQuery);
 }
 

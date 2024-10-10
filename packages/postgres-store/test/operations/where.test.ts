@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
+import { Schema } from "data-prism";
 import { db } from "../global-setup.js";
 import { createPostgresStore } from "../../src/postgres-store.js";
 import careBearSchema from "../fixtures/care-bears.schema.json";
-import { careBearConfig } from "../care-bear-config.js";
+import { careBearConfig } from "../fixtures/care-bear-config.js";
 import { careBearData } from "../fixtures/care-bear-data.js";
 import { reset } from "../../scripts/seed.js";
 
 await db.connect();
-const store = createPostgresStore(careBearSchema, { ...careBearConfig, db });
+const store = createPostgresStore(careBearSchema as Schema, {
+	...careBearConfig,
+	db,
+});
 await reset(db, careBearSchema, careBearConfig, careBearData);
 
 describe("where clauses", () => {
@@ -42,6 +46,10 @@ describe("where clauses", () => {
 		});
 
 		expect(result).toEqual([{ id: "2" }]);
+	});
+
+	it("filters on a to-one relationship", () => {
+		expect(false).toBe(true);
 	});
 
 	it("filters using $eq operator", async () => {
@@ -161,8 +169,8 @@ describe("where clauses", () => {
 		});
 	});
 
-	describe.skip("where expressions", () => {
-		it("filters using an $or operation", async () => {
+	describe("where expressions", () => {
+		it.skip("filters using an $or operation", async () => {
 			const result = await store.query({
 				type: "bears",
 				select: {
@@ -176,7 +184,7 @@ describe("where clauses", () => {
 			expect(result).toEqual([{ id: "2" }, { id: "5" }]);
 		});
 
-		it("filters using an $or and $and operation", async () => {
+		it.skip("filters using an $or and $and operation", async () => {
 			const result = await store.query({
 				type: "bears",
 				select: {
@@ -193,7 +201,7 @@ describe("where clauses", () => {
 			expect(result).toEqual([{ id: "5" }]);
 		});
 
-		it("filters using an $or and $not operation", async () => {
+		it.skip("filters using an $or and $not operation", async () => {
 			const result = await store.query({
 				type: "bears",
 				select: {

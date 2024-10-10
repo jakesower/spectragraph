@@ -1,7 +1,7 @@
 import { expect, it, describe } from "vitest";
-import { careBearData } from "./fixtures/care-bear-data.js"; // eslint-disable-line
-import { careBearSchema } from "./fixtures/care-bear-schema.js";
-import { createMemoryStore } from "../src/store.js";
+import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
+import { careBearSchema } from "../fixtures/care-bear-schema.js";
+import { createMemoryStore } from "../../src/store.js";
 
 const singleBearWithHomeTree = {
 	id: "bear-abc-123",

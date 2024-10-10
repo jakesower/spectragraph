@@ -1,4 +1,9 @@
-import { normalizeQuery, RootQuery, Schema } from "data-prism";
+import {
+	ensureValidQuery,
+	normalizeQuery,
+	RootQuery,
+	Schema,
+} from "data-prism";
 import { query as getQuery } from "./query.js";
 import { create } from "./create.js";
 import { deleteResource } from "./delete.js";
@@ -94,6 +99,7 @@ export function createPostgresStore(
 			return deleteResource(resource, { config, schema });
 		},
 		async query(query) {
+			ensureValidQuery(schema, query);
 			const normalized = normalizeQuery(query);
 
 			return getQuery(normalized, {

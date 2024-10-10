@@ -1,5 +1,5 @@
-import { formatResponse } from "./format-response";
-import { parseRequest } from "./parse-request";
+import { formatResponse } from "./format-response.js";
+import { parseRequest } from "./parse-request.js";
 
 export function get(schema, store, type) {
 	return async (req, res) => {

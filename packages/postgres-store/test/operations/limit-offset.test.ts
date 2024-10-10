@@ -2,14 +2,17 @@ import { describe, expect, it } from "vitest";
 import { db } from "../global-setup.js";
 import { createPostgresStore } from "../../src/postgres-store.js";
 import careBearSchema from "../fixtures/care-bears.schema.json";
-import { careBearConfig } from "../care-bear-config.js";
+import { careBearConfig } from "../fixtures/care-bear-config.js";
 import { reset } from "../../scripts/seed.js";
 import { careBearData } from "../fixtures/care-bear-data.js";
+import { Schema } from "data-prism";
 
 await db.connect();
-const store = createPostgresStore(careBearSchema, { ...careBearConfig, db });
+const store = createPostgresStore(careBearSchema as Schema, {
+	...careBearConfig,
+	db,
+});
 await reset(db, careBearSchema, careBearConfig, careBearData);
-
 
 describe("limit/offset", () => {
 	it("fetches a single resource", async () => {
@@ -89,6 +92,42 @@ describe("limit/offset", () => {
 		expect(result).toEqual([
 			{ name: "Tenderheart Bear" },
 			{ name: "Wish Bear" },
+		]);
+	});
+
+	it("allows for limit + offset when a to-one join is present", async () => {
+		const result = await store.query({
+			type: "bears",
+			select: { name: "name", home: { select: ["name"] } },
+			order: { name: "asc" },
+			limit: 2,
+			offset: 1,
+		});
+
+		expect(result).toEqual([
+			{ name: "Smart Heart Bear", home: null },
+			{ name: "Tenderheart Bear", home: { name: "Care-a-Lot" } },
+		]);
+	});
+
+	it("allows for limit + offset when a to-many join is present", async () => {
+		const result = await store.query({
+			type: "homes",
+			select: { name: "name", residents: { select: ["name"] } },
+			order: { name: "asc" },
+			limit: 2,
+		});
+
+		expect(result).toEqual([
+			{
+				name: "Care-a-Lot",
+				residents: [
+					{ name: "Tenderheart Bear" },
+					{ name: "Cheer Bear" },
+					{ name: "Wish Bear" },
+				],
+			},
+			{ name: "Earth", residents: [] },
 		]);
 	});
 

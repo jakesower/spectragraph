@@ -1,15 +1,15 @@
 import { expect, it } from "vitest";
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
+import { Schema, createMemoryStore } from "data-prism";
 import careBearSchema from "../fixtures/care-bears.schema.json";
 import jsonApiSchema from "../fixtures/json-api-schema.json";
 import { formatResponse } from "../../src/format-response";
 import {
 	allBearsResult,
 	allBearsResponse,
-} from "../fixtures/formatted-care-bear-data.js";
+} from "../fixtures/formatted-care-bear-data";
 import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
-import { Schema, createMemoryStore } from "data-prism";
 
 const store = createMemoryStore(careBearSchema as Schema, careBearData);
 

@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { db } from "./global-setup.js";
 import { createPostgresStore } from "../src/postgres-store.js";
 import careBearSchema from "./fixtures/care-bears.schema.json";
-import { careBearConfig } from "./care-bear-config.js";
+import { careBearConfig } from "./fixtures/care-bear-config.js";
 import { Schema } from "data-prism";
 
 await db.connect();
@@ -89,7 +89,6 @@ it("deletes a single resource with a foreign to-one relationship", async () => {
 		type: "homes",
 		attributes: {
 			name: "Hall of Hearts",
-			location: "Hall of Hearts",
 			caringMeter: 0.95,
 			isInClouds: true,
 		},

@@ -6,11 +6,17 @@ const defaultColumnTypes = {
 	boolean: "boolean",
 	date: "date",
 	datetime: "timestamp",
+	geography: "geometry",
 	integer: "integer",
 	number: "real",
 	object: "json",
 	string: "text",
 };
+
+function replacePlaceholders(inputString) {
+	let counter = 1;
+	return inputString.replace(/\?/g, () => `$${counter++}`);
+}
 
 export function createTablesSQL(schema, config) {
 	const output = [];
@@ -28,11 +34,12 @@ export function createTablesSQL(schema, config) {
 			.filter(([attrName]) => attrName !== idAttribute)
 			.map(([attrName, attrDef]) => ({
 				name: snakeCase(attrName),
-				type:
-					resConfig.columns?.[attrName]?.type ??
-					(attrDef.format && defaultColumnTypes[attrDef.format]
-						? defaultColumnTypes[attrDef.format]
-						: defaultColumnTypes[attrDef.type]),
+				type: resConfig.columns?.[attrName]?.geometry
+					? "geometry"
+					: (resConfig.columns?.[attrName]?.type ??
+						(attrDef.format && defaultColumnTypes[attrDef.format]
+							? defaultColumnTypes[attrDef.format]
+							: defaultColumnTypes[attrDef.type])),
 			}));
 		const joinCols = Object.values(resConfig.joins ?? {})
 			.filter((j) => j.localColumn)
@@ -82,8 +89,10 @@ export async function seed(db, schema, config, seedData) {
 
 			const attributes = Object.entries(resSchema.attributes)
 				.filter(([attrName]) => attrName !== idAttribute)
-				.map(([attrName]) => ({
+				.map(([attrName, attrSchema]) => ({
 					column: snakeCase(attrName),
+					placeholder:
+						attrSchema.format === "geography" ? "ST_GeomFromGeoJSON(?)" : "?",
 					value: (res) => res.attributes[attrName],
 				}));
 
@@ -94,12 +103,17 @@ export async function seed(db, schema, config, seedData) {
 					value: (res) =>
 						applyOrMap(res.relationships[joinAttr], ({ id }) => id),
 				}));
+			const joinPlaceholders = joins.map(() => "?");
 
 			const nonIdColumns = [...attributes, ...joins];
 
-			const placeholders = [idAttribute, ...attributes, ...joins]
-				.map((_, idx) => `$${idx + 1}`)
-				.join(", ");
+			const placeholders = replacePlaceholders(
+				[
+					"?",
+					...attributes.map((a) => a.placeholder),
+					...joinPlaceholders,
+				].join(", "),
+			);
 			const colNames = nonIdColumns.map((c) => c.column).join(", ");
 
 			const sql = `INSERT INTO ${table} (${snakeCase(

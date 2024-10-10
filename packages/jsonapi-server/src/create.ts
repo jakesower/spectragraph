@@ -1,7 +1,29 @@
 import { mapValues } from "lodash-es";
+import { validateRequest } from "./validate-request";
+import { Schema } from "data-prism";
 
-export function create(store) {
+type Ref = { type: string; id: string };
+export type CreateRequest = {
+	data: {
+		type: string;
+		id?: string;
+		attributes?: { [k: string]: unknown };
+		relationships?: {
+			[k: string]: Ref | Ref[];
+		};
+	};
+};
+
+export function create(schema: Schema, store) {
 	return async (req, res) => {
+		const body: CreateRequest = req.body;
+		const validationErrors = validateRequest(schema, body);
+		if (validationErrors) {
+			res.statusCode = 400;
+			res.send({ errors: validationErrors });
+			return;
+		}
+
 		try {
 			const { data: resource } = req.body;
 			const normalized = {

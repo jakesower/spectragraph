@@ -297,6 +297,33 @@ export function reduceQuery<S extends Schema, T>(
 	return go(normalizeQuery(query), initInfo, init);
 }
 
-export function ensureValidQuery(rootQuery: RootQuery): void {
-	if (!rootQuery.type) throw new Error("queries must have a `type`");
+export function ensureValidQuery(schema, query: RootQuery): void {
+	if (!query.type) throw new Error("root queries must have a `type`");
+
+	const hasValidPath = (curType, remainingPath) => {
+		if (remainingPath.length === 0) return true;
+
+		const [head, ...tail] = remainingPath;
+		if (tail.length === 0) return head in schema.resources[curType].attributes;
+
+		const rel = schema.resources[curType].relationships[head];
+		if (!rel) return false;
+
+		return hasValidPath(rel.type, tail);
+	};
+
+	forEachQuery(schema, query, (subquery, info) => {
+		Object.entries(subquery.where ?? {}).forEach(([whereKey, whereVal]) => {
+			// TODO: Distribute $and, $or, and $not
+
+			if (
+				!defaultExpressionEngine.isExpression({ [whereKey]: whereVal }) &&
+				!hasValidPath(info.type, whereKey.split("."))
+			) {
+				throw new Error(
+					`"${whereKey}" is not a valid attribute or path to filter on for the "${info.type}" resource type`,
+				);
+			}
+		});
+	});
 }
