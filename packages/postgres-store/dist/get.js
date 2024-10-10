@@ -47,11 +47,11 @@ export async function getOne(type, id, context) {
         ]
         : [];
     const cols = [
-        ...attrNames,
-        ...localRelationships.map(([_, r]) => r.localColumn),
-    ]
-        .map(snakeCase)
-        .join(", ");
+        ...attrNames.map((attrName) => resSchema.attributes[attrName]?.format === "geography"
+            ? `ST_AsGeoJSON(${snakeCase(attrName)})`
+            : snakeCase(attrName)),
+        ...localRelationships.map(([_, r]) => snakeCase(r.localColumn)),
+    ].join(", ");
     const localQuery = db.query({
         rowMode: "array",
         text: `SELECT ${cols} FROM ${table} WHERE ${snakeCase(idAttribute)} = $1`,
@@ -62,7 +62,11 @@ export async function getOne(type, id, context) {
     if (!row)
         return null;
     attrNames.forEach((attr, idx) => {
-        output.attributes[attr] = row[idx];
+        output.attributes[attr] =
+            typeof row[idx] === "string" &&
+                ["array", "object"].includes(resSchema.attributes[attr].type)
+                ? JSON.parse(row[idx])
+                : row[idx];
     });
     if (includeRelationships) {
         localRelationships.forEach(([relName], idx) => {
@@ -89,11 +93,11 @@ export async function getAll(type, context) {
     const localRelationships = Object.entries(joins).filter(([_, j]) => "localColumn" in j);
     const cols = [
         snakeCase(resSchema.idAttribute ?? "id"),
-        ...attrNames,
-        ...localRelationships.map(([_, r]) => r.localColumn),
-    ]
-        .map(snakeCase)
-        .join(", ");
+        ...attrNames.map((attrName) => resSchema.attributes[attrName]?.format === "geography"
+            ? `ST_AsGeoJSON(${snakeCase(attrName)})`
+            : snakeCase(attrName)),
+        ...localRelationships.map(([_, r]) => snakeCase(r.localColumn)),
+    ].join(", ");
     const localQuery = db.query({
         rowMode: "array",
         text: `SELECT ${cols} FROM ${table}`,
@@ -105,7 +109,11 @@ export async function getAll(type, context) {
             resource.relationships = mapValues(resSchema.relationships, (rel) => rel.cardinality === "one" ? null : []);
         }
         attrNames.forEach((attr, idx) => {
-            resource.attributes[attr] = row[idx + 1];
+            resource.attributes[attr] =
+                typeof row[idx + 1] === "string" &&
+                    ["array", "object"].includes(resSchema.attributes[attr].type)
+                    ? JSON.parse(row[idx + 1])
+                    : row[idx + 1];
         });
         if (includeRelationships) {
             localRelationships.forEach(([relName], idx) => {

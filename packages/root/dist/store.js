@@ -4,6 +4,7 @@ import { createQueryGraph, createEmptyGraph, linkInverses, mergeGraphs, } from "
 import { createGraphFromTrees } from "./mappers.js";
 import { createOrUpdate } from "./create-or-update.js";
 import { deleteAction } from "./delete.js";
+import { ensureValidQuery } from "./query.js";
 export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 export function createMemoryStore(schema, initialData = {}) {
     let queryGraph;
@@ -11,6 +12,7 @@ export function createMemoryStore(schema, initialData = {}) {
     const runQuery = (query) => {
         if (!queryGraph)
             queryGraph = createQueryGraph(storeGraph);
+        ensureValidQuery(schema, query);
         return queryGraph.query(query);
     };
     // WARNING: MUTATES storeGraph

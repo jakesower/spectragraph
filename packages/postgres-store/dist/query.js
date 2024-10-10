@@ -1,5 +1,5 @@
 import { mapValues, omit, snakeCase, uniq } from "lodash-es";
-import { mapSchemalessQuery, queryGraph } from "data-prism";
+import { mapSchemalessQuery, normalizeQuery, queryGraph, } from "data-prism";
 import { varsExpressionEngine } from "./helpers/sql-expressions.js";
 import { parseQuery } from "./parse-query.js";
 import { extractGraph } from "./extract-graph.js";
@@ -59,7 +59,7 @@ export function replacePlaceholders(inputString) {
     return inputString.replace(/\?/g, () => `$${counter++}`);
 }
 export async function query(query, context) {
-    const { config } = context;
+    const { config, schema } = context;
     const { db } = config;
     const clauseBreakdown = parseQuery(query, context);
     const initSqlClauses = {
@@ -78,7 +78,11 @@ export async function query(query, context) {
         $and: sqlClauses.vars,
     });
     const allResults = (await db.query({ rowMode: "array", text: sql }, vars))?.rows ?? null;
+    const hasToManyJoin = Object.keys(normalizeQuery(query).select).some((k) => schema.resources[query.type].relationships[k]?.cardinality === "many");
+    const handledClauses = hasToManyJoin
+        ? ["where"]
+        : ["limit", "offset", "where"];
     const graph = extractGraph(allResults, sqlClauses.select, context);
-    const strippedQuery = mapSchemalessQuery(query, (q) => omit(q, ["limit", "offset", "where"]));
+    const strippedQuery = mapSchemalessQuery(query, (q) => omit(q, handledClauses));
     return queryGraph(graph, strippedQuery);
 }

@@ -1,7 +1,6 @@
 import { expect, it, describe } from "vitest";
 import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
 import { createQueryGraph } from "../../src/graph.js";
-import { defaultExpressionEngine } from "@data-prism/expressions";
 
 const graph = createQueryGraph(careBearData);
 

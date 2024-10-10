@@ -1,5 +1,12 @@
-import { expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import Ajv from "ajv";
+import addFormats from "ajv-formats";
+import jsonApiSchema from "../fixtures/json-api-schema.json";
 import { api } from "../helpers.js";
+
+const ajv = new Ajv();
+addFormats(ajv);
+const validateResponse = ajv.compile(jsonApiSchema);
 
 it("creates a single resource", async () => {
 	const champBear = {
@@ -489,5 +496,70 @@ it("keeps many-to-many foreign relationships that belong to a second resource", 
 				relationships: {},
 			},
 		],
+	});
+});
+
+describe.only("invalid requests", () => {
+	it("should reject create requests that are empty", async () => {
+		try {
+			await api.post("/bears", {});
+		} catch (err) {
+			validateResponse(err.response.data);
+
+			expect(err.status).toEqual(400);
+			expect(validateResponse(err.response.data)).toBe(true);
+			err.response.data.errors.forEach((err) => {
+				expect(err).toMatchObject({ status: "400", title: "Invalid request" });
+			});
+		}
+	});
+
+	it("should reject create requests that have no type", async () => {
+		try {
+			await api.post("/bears", {
+				data: {
+					attributes: {
+						name: "Champ Bear",
+						yearIntroduced: 1984,
+						bellyBadge: "yellow trophy with red star",
+						furColor: "cerulean",
+					},
+				},
+			});
+		} catch (err) {
+			validateResponse(err.response.data);
+
+			expect(err.status).toEqual(400);
+			expect(validateResponse(err.response.data)).toBe(true);
+			err.response.data.errors.forEach((err) => {
+				expect(err).toMatchObject({ status: "400", title: "Invalid request" });
+			});
+		}
+	});
+
+	it("should reject create requests that have an invalid type", async () => {
+		try {
+			await api.post("/bears", {
+				data: {
+					type: "chickens",
+					attributes: {
+						name: "Champ Bear",
+						yearIntroduced: 1984,
+						bellyBadge: "yellow trophy with red star",
+						furColor: "cerulean",
+					},
+				},
+			});
+		} catch (err) {
+			validateResponse(err.response.data);
+			console.log(err.response.data.errors);
+
+			expect(err.status).toEqual(400);
+			expect(validateResponse(err.response.data)).toBe(true);
+			expect(err.response.data.errors[0]).toMatchObject({
+				status: "400",
+				title: "Invalid resource",
+			});
+		}
 	});
 });

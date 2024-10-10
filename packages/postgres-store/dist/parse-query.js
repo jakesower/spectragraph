@@ -66,15 +66,21 @@ const QUERY_CLAUSE_EXTRACTORS = {
         const { type } = queryInfo;
         const { idAttribute = "id" } = schema.resources[type];
         const resConfig = config.resources[type];
+        const resSchema = schema.resources[type];
         const attributeProps = Object.values(select).filter((p) => typeof p === "string");
         const relationshipsModifiers = preQueryRelationships(context);
         return {
             select: uniq([idAttribute, ...attributeProps]).map((col) => {
                 const selectFn = resConfig.columns?.[col]?.select;
+                const geography = resSchema.attributes[col]?.format === "geography";
                 const value = `${table}.${snakeCase(col)}`;
                 return {
                     value,
-                    sql: selectFn ? selectFn(table, col) : value,
+                    sql: selectFn
+                        ? selectFn(table, col)
+                        : geography
+                            ? `ST_AsGeoJSON(${value})`
+                            : value,
                 };
             }),
             ...relationshipsModifiers,

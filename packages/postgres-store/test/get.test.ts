@@ -3,7 +3,7 @@ import { db } from "./global-setup.js";
 import { createPostgresStore } from "../src/postgres-store.js";
 import careBearSchema from "./fixtures/care-bears.schema.json";
 import { careBearData } from "./fixtures/care-bear-data.js";
-import { careBearConfig } from "./care-bear-config.js";
+import { careBearConfig } from "./fixtures/care-bear-config.js";
 import { reset } from "../scripts/seed.js";
 import { Schema } from "data-prism";
 import { omit } from "lodash-es";

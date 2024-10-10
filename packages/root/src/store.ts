@@ -10,6 +10,7 @@ import {
 import { createGraphFromTrees } from "./mappers.js";
 import { createOrUpdate } from "./create-or-update.js";
 import { deleteAction } from "./delete.js";
+import { ensureValidQuery, forEachQuery } from "./query.js";
 export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 
 export type Ref = {
@@ -36,6 +37,8 @@ export function createMemoryStore(schema: Schema, initialData: Graph = {}) {
 
 	const runQuery = (query) => {
 		if (!queryGraph) queryGraph = createQueryGraph(storeGraph);
+
+		ensureValidQuery(schema, query);
 		return queryGraph.query(query);
 	};
 

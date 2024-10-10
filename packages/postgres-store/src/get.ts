@@ -83,15 +83,17 @@ export async function getOne(
 						id: r[0],
 					}));
 				}),
-		  ]
+			]
 		: [];
 
 	const cols = [
-		...attrNames,
-		...localRelationships.map(([_, r]) => r.localColumn),
-	]
-		.map(snakeCase)
-		.join(", ");
+		...attrNames.map((attrName) =>
+			resSchema.attributes[attrName]?.format === "geography"
+				? `ST_AsGeoJSON(${snakeCase(attrName)})`
+				: snakeCase(attrName),
+		),
+		...localRelationships.map(([_, r]) => snakeCase(r.localColumn)),
+	].join(", ");
 	const localQuery = db.query(
 		{
 			rowMode: "array",
@@ -107,7 +109,11 @@ export async function getOne(
 	if (!row) return null;
 
 	attrNames.forEach((attr, idx) => {
-		output.attributes[attr] = row[idx];
+		output.attributes[attr] =
+			typeof row[idx] === "string" &&
+			["array", "object"].includes(resSchema.attributes[attr].type)
+				? JSON.parse(row[idx])
+				: row[idx];
 	});
 
 	if (includeRelationships) {
@@ -117,7 +123,7 @@ export async function getOne(
 				? {
 						type: resSchema.relationships[relName].type,
 						id,
-				  }
+					}
 				: null;
 		});
 	}
@@ -147,11 +153,13 @@ export async function getAll(
 
 	const cols = [
 		snakeCase(resSchema.idAttribute ?? "id"),
-		...attrNames,
-		...localRelationships.map(([_, r]) => r.localColumn),
-	]
-		.map(snakeCase)
-		.join(", ");
+		...attrNames.map((attrName) =>
+			resSchema.attributes[attrName]?.format === "geography"
+				? `ST_AsGeoJSON(${snakeCase(attrName)})`
+				: snakeCase(attrName),
+		),
+		...localRelationships.map(([_, r]) => snakeCase(r.localColumn)),
+	].join(", ");
 	const localQuery = db.query({
 		rowMode: "array",
 		text: `SELECT ${cols} FROM ${table}`,
@@ -168,7 +176,11 @@ export async function getAll(
 		}
 
 		attrNames.forEach((attr, idx) => {
-			resource.attributes[attr] = row[idx + 1];
+			resource.attributes[attr] =
+				typeof row[idx + 1] === "string" &&
+				["array", "object"].includes(resSchema.attributes[attr].type)
+					? JSON.parse(row[idx + 1])
+					: row[idx + 1];
 		});
 
 		if (includeRelationships) {
@@ -178,7 +190,7 @@ export async function getAll(
 					? {
 							type: resSchema.relationships[relName].type,
 							id,
-					  }
+						}
 					: null;
 			});
 		}

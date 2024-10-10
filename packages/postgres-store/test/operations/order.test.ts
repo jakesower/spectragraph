@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { db } from "../global-setup.js";
 import { createPostgresStore } from "../../src/postgres-store.js";
 import careBearSchema from "../fixtures/care-bears.schema.json";
-import { careBearConfig } from "../care-bear-config.js";
+import { careBearConfig } from "../fixtures/care-bear-config.js";
 import { careBearData } from "../fixtures/care-bear-data.js";
 import { reset } from "../../scripts/seed.js";
 

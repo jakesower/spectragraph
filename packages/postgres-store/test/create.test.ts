@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { db } from "./global-setup.js";
 import { createPostgresStore } from "../src/postgres-store.js";
 import careBearSchema from "./fixtures/care-bears.schema.json";
-import { careBearConfig } from "./care-bear-config.js";
+import { careBearConfig } from "./fixtures/care-bear-config.js";
 import { Schema } from "data-prism";
 
 await db.connect();
@@ -29,6 +29,33 @@ it("creates a single resource with only attributes", async () => {
 	});
 
 	expect(result).toEqual({ name: "Champ Bear" });
+});
+
+it("creates a single resource with only attributes, including a geometry attribute", async () => {
+	const created = await store.create({
+		type: "homes",
+		attributes: {
+			name: "Zanzibar",
+			location: {
+				type: "Point",
+				coordinates: [39, 6],
+			},
+		},
+	});
+
+	const result = await store.query({
+		type: "homes",
+		id: created.id,
+		select: ["name", "location"],
+	});
+
+	expect(result).toEqual({
+		name: "Zanzibar",
+		location: {
+			type: "Point",
+			coordinates: [39, 6],
+		},
+	});
 });
 
 it("creates a single resource with a local relationship", async () => {
@@ -79,7 +106,6 @@ it("creates a single resource with a foreign to-one relationship", async () => {
 		type: "homes",
 		attributes: {
 			name: "Hall of Hearts",
-			location: "Hall of Hearts",
 			caringMeter: 0.95,
 			isInClouds: true,
 		},
@@ -114,7 +140,6 @@ it("removes foreign relationships that are no longer present in the base resourc
 		type: "homes",
 		attributes: {
 			name: "Paradise Valley",
-			location: "Earth",
 			caringMeter: 0.9,
 			isInClouds: false,
 		},
@@ -160,7 +185,6 @@ it("removes foreign relationships that are no longer present in the base resourc
 		type: "homes",
 		attributes: {
 			name: "No Heart's Castle",
-			location: "Gloomy Gulch Trail",
 			caringMeter: 0,
 			isInClouds: true,
 		},
@@ -268,7 +292,7 @@ it("keeps many-to-many foreign relationships that belong to a second resource", 
 		wielders: [{ name: "Oopsy Bear" }, { name: "Always There Bear" }],
 	});
 
-	const createdPower2 = await store.create({
+	await store.create({
 		type: "powers",
 		attributes: {
 			name: "Fly",

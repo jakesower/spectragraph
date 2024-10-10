@@ -53,5 +53,6 @@ export declare function reduceSchemalessQuery(query: any, fn: any, init: any): a
 export declare function forEachQuery<S extends Schema>(schema: S, query: RootQuery, fn: (subquery: Query, info: SchemaQueryInfo<S>) => unknown): void;
 export declare function mapQuery<S extends Schema>(schema: S, query: RootQuery, fn: (subquery: Query, info: SchemaQueryInfo<S>) => unknown): any;
 export declare function reduceQuery<S extends Schema, T>(schema: S, query: RootQuery, fn: (acc: T, subquery: Query, info: SchemaQueryInfo<S>) => T, init: T): any;
+export declare function ensureValidQuery(schema: any, query: RootQuery): void;
 export {};
 //# sourceMappingURL=query.d.ts.map

@@ -31,7 +31,7 @@
 			"attributes": {
 				"id": { "type": "string" },
 				"name": { "type": "string" },
-				"location": { "type": "string" },
+				"location": { "type": "object", "format": "geography" },
 				"caringMeter": { "type": "number" },
 				"isInClouds": { "type": "boolean" }
 			},

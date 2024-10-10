@@ -1,3 +1,4 @@
+export { ensureValidQuery } from "./query.js";
 export { linkInverses, createEmptyGraph, mergeGraphs } from "./graph.js";
 export { flattenResource, normalizeResource, createGraphFromTrees, } from "./mappers.js";
 export { normalizeQuery } from "./query.js";

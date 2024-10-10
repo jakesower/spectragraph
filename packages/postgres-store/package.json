@@ -1,6 +1,6 @@
 {
 	"name": "@data-prism/postgres-store",
-	"version": "0.0.10",
+	"version": "0.0.12",
 	"type": "module",
 	"main": "./dist/postgres-store.js",
 	"types": "./dist/postgres-store.d.ts",
@@ -30,9 +30,9 @@
 	},
 	"private": false,
 	"dependencies": {
-		"@data-prism/expressions": "^0.0.9",
+		"@data-prism/expressions": "^0.0.12",
 		"@data-prism/utils": "0.0.6",
-		"data-prism": "0.0.19",
+		"data-prism": "0.0.20",
 		"lodash-es": "^4.17.21",
 		"pg": "^8.12.0"
 	}

@@ -3,9 +3,9 @@ import { db } from "./global-setup.js";
 import { createPostgresStore } from "../src/postgres-store.js";
 import careBearSchema from "./fixtures/care-bears.schema.json";
 import { careBearData } from "./fixtures/care-bear-data.js";
-import { careBearConfig } from "./care-bear-config.js";
+import { careBearConfig } from "./fixtures/care-bear-config.js";
 import { reset } from "../scripts/seed.js";
-import { Schema } from "data-prism";
+import { RootQuery, Schema } from "data-prism";
 
 await db.connect();
 const store = createPostgresStore(careBearSchema as Schema, {
@@ -47,6 +47,23 @@ it("fetches a single resource without its id", async () => {
 	});
 
 	expect(result).toEqual({ name: "Tenderheart Bear" });
+});
+
+it("fetches a single resource with a geography column", async () => {
+	const result = await store.query({
+		type: "homes",
+		id: "1",
+		select: {
+			location: "location",
+		},
+	});
+
+	expect(result).toEqual({
+		location: {
+			type: "Point",
+			coordinates: [-119.557320248, 46.820255868],
+		},
+	});
 });
 
 it("fetches multiple resources", async () => {
@@ -94,12 +111,13 @@ it("fetches a single resource with a one-to-many relationship", async () => {
 	const q = {
 		type: "homes",
 		id: "1",
-		select: { residents: { select: { id: "id" } } },
+		select: { name: "name", residents: { select: { id: "id" } } },
 	} as const;
 
 	const result = await store.query(q);
 
 	expect(result).toEqual({
+		name: "Care-a-Lot",
 		residents: [{ id: "1" }, { id: "2" }, { id: "3" }],
 	});
 });
@@ -243,18 +261,32 @@ it("handles subqueries between the same type", async () => {
 	]);
 });
 
-it.todo(
-	"merges select when resource has different select from different parts of the query tree",
-);
+it("fails validation for invalid types", async () => {
+	expect(async () => {
+		await store.query({ type: "bearz", id: "1" } as unknown as RootQuery);
+	}).rejects.toThrowError();
+});
 
-// it.skip("fails validation for invalid types", async () => {
-// 	expect(async () => {
-// 		await store.query({ type: "bearz", id: "1" });
-// 	}).rejects.toThrowError();
-// });
-
-it.skip("fails validation for invalid top level props", async () => {
+it("fails validation for invalid top level props", async () => {
 	await expect(async () => {
 		await store.query({ type: "bears", id: "1", select: { koopa: {} } });
 	}).rejects.toThrowError();
 });
+
+it("disallows invalid attribute names", async () => {
+	await expect(async () => {
+		await store.query({
+			type: "bears",
+			select: ["lol"],
+		});
+	}).rejects.toThrowError();
+});
+
+// it("disallows invalid attribute paths", async () => {
+// 	await expect(async () => {
+// 		store.query({
+// 			type: "bears",
+// 			select: [{ homeSize: "home.size" }],
+// 		});
+// 	}).rejects.toThrowError();
+// });

@@ -58,12 +58,19 @@ function runQuery(rootQuery, data) {
                 if (Object.keys(query.where).length === 0)
                     return results;
                 const whereExpression = buildWhereExpression(query.where, defaultExpressionEngine);
-                return results.filter((result) => defaultExpressionEngine.apply(whereExpression, result));
+                return results.filter((result) => {
+                    return defaultExpressionEngine.apply(whereExpression, result);
+                });
             },
             order(results) {
                 const order = Array.isArray(query.order) ? query.order : [query.order];
                 const properties = order.flatMap((o) => Object.keys(o));
                 const dirs = order.flatMap((o) => Object.values(o));
+                const first = results[0];
+                if (first && properties.some((p) => !(p in first))) {
+                    const missing = properties.find((p) => !(p in first));
+                    throw new Error(`invalid "order" clause: '${missing} is not a valid attribute`);
+                }
                 return orderBy(results, properties, dirs);
             },
             limit(results) {
@@ -83,11 +90,21 @@ function runQuery(rootQuery, data) {
                     // possibilities: (1) property (2) expression (3) subquery
                     if (typeof propQuery === "string") {
                         // nested / shallow property
+                        const extractPath = (curValue, path) => {
+                            if (curValue === null)
+                                return null;
+                            if (path.length === 0)
+                                return curValue;
+                            const [head, ...tail] = path;
+                            if (head === "$")
+                                return curValue.map((v) => extractPath(v, tail));
+                            if (!(head in curValue))
+                                throw new Error(`${propQuery} is an invalid attribute or path`);
+                            return extractPath(curValue?.[head], tail);
+                        };
                         return (result) => propQuery in result[RAW].relationships
                             ? result[RAW].relationships[propQuery]
-                            : propQuery
-                                .split(".")
-                                .reduce((out, path) => (out === null ? null : out?.[path]), result);
+                            : extractPath(result, propQuery.split("."));
                     }
                     // expression
                     if (defaultExpressionEngine.isExpression(propQuery)) {
@@ -102,14 +119,14 @@ function runQuery(rootQuery, data) {
                             return result[propName]
                                 .map((r) => {
                                 if (r === undefined) {
-                                    throw new Error(`A related resource was not found on resource ${query.type}.${query.id}. ${propName}: ${JSON.stringify(result[propName])}. Check that all of the refs in ${query.type}.${query.id} are valid.`);
+                                    throw new Error(`A related resource was not found on resource ${query.type}.${query.id}. ${propName}: ${JSON.stringify(result[propName])}. Check that all of the relationship refs in ${query.type}.${query.id} are valid.`);
                                 }
                                 return go({ ...propQuery, type: r[TYPE], id: r[ID] });
                             })
                                 .filter(Boolean);
                         }
                         if (result[propName] === undefined) {
-                            throw new Error(`A related resource was not found on resource ${query.type}.${query.id}. ${propName}: ${JSON.stringify(result[RAW].relationships[propName])}. Check that all of the refs in ${query.type}.${query.id} are valid.`);
+                            throw new Error(`A related resource was not found on resource ${query.type}.${query.id}. ${propName}: ${JSON.stringify(result[RAW].relationships[propName])}. Check that all of the relationship refs in ${query.type}.${query.id} are valid.`);
                         }
                         if (result[propName] === null)
                             return null;

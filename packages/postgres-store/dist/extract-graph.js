@@ -31,6 +31,8 @@ export function extractGraph(rawResults, selectClause, context) {
                         [idAttribute]: parentId,
                         id: parentId,
                         type: parentType,
+                        attributes: {},
+                        relationships: {},
                     };
                 }
                 const parent = graph[parentType][parentId];
@@ -59,7 +61,9 @@ export function extractGraph(rawResults, selectClause, context) {
                 attributes.forEach((attr) => {
                     const fullAttrPath = `${rootQuery.type}${pathStr}.${snakeCase(attr)}`;
                     const resultIdx = selectAttributeMap[fullAttrPath];
-                    graph[type][id].attributes[attr] = result[resultIdx];
+                    graph[type][id].attributes[attr] = ["array", "object"].includes(resConfig.attributes[attr].type)
+                        ? JSON.parse(result[resultIdx])
+                        : result[resultIdx];
                 });
             }
             else {
