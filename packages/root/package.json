@@ -31,6 +31,8 @@
 	"dependencies": {
 		"@data-prism/expressions": "^0.0.12",
 		"@data-prism/utils": "^0.0.5",
+		"ajv": "^8.17.1",
+		"ajv-formats": "^3.0.1",
 		"lodash-es": "^4.17.21",
 		"uuid": "^10.0.0"
 	}
