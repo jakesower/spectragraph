@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
 import { careBearSchema } from "./fixtures/care-bear-schema.js";
-import { createMemoryStore } from "../src";
+import { createMemoryStore, Schema } from "../src/index.js";
 
-const store = createMemoryStore(careBearSchema);
+const store = createMemoryStore(careBearSchema as Schema);
 
 it("creates a single resource with only attributes", async () => {
 	const created = await store.create({

@@ -8,7 +8,7 @@ import { formatResponse } from "../../src/format-response";
 import {
 	allBearsResult,
 	allBearsResponse,
-} from "../fixtures/formatted-care-bear-data";
+} from "../fixtures/formatted-care-bear-data.js";
 import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
 
 const store = createMemoryStore(careBearSchema as Schema, careBearData);

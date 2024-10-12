@@ -20,6 +20,7 @@ type SchemaRelationship = {
 	type: string;
 	cardinality: "one" | "many";
 	inverse?: string;
+	required?: boolean;
 };
 
 type SchemaResource = {
