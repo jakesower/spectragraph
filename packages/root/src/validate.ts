@@ -3,6 +3,7 @@ import addFormats from "ajv-formats";
 import { Schema } from "./schema.js";
 import { mapValues, omit } from "lodash-es";
 import { Ref } from "./graph.js";
+import { NormalResourceTree } from "./memory-store.js";
 
 type CreateResource = {
 	type: string;
@@ -23,15 +24,6 @@ type UpdateResource = {
 };
 
 type DeleteResource = Ref;
-
-type NormalResourceTree = {
-	type: string;
-	id?: number | string;
-	attributes?: { [k: string]: unknown };
-	relationships?: {
-		[k: string]: NormalResourceTree | NormalResourceTree[] | Ref | Ref[] | null;
-	};
-};
 
 export const defaultValidator = new Ajv();
 addFormats(defaultValidator);
@@ -250,7 +242,7 @@ export function validateResourceTree(
 	if (!validateBasis(resource)) return validateBasis.errors;
 
 	const toOneRefOfType = (type, required) => ({
-		oneOf: [
+		anyOf: [
 			...(required ? [] : [{ type: "null" }]),
 			{
 				type: "object",
@@ -285,6 +277,7 @@ export function validateResourceTree(
 			additionalProperties: false,
 			properties: {
 				type: { const: resName },
+				new: { type: "boolean", const: true },
 				attributes: {
 					type: "object",
 					required: Object.keys(resSchema.attributes).filter(
@@ -318,6 +311,8 @@ export function validateResourceTree(
 			additionalProperties: false,
 			properties: {
 				type: { const: resName },
+				id: { type: "string" },
+				new: { type: "boolean", const: false },
 				attributes: {
 					type: "object",
 					additionalProperties: false,

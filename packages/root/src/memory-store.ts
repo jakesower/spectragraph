@@ -16,8 +16,10 @@ import {
 	defaultValidator,
 	validateCreateResource,
 	validateDeleteResource,
+	validateResourceTree,
 	validateUpdateResource,
 } from "./validate.js";
+import { applyOrMap } from "@data-prism/utils";
 export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 
 export type Ref = {
@@ -28,8 +30,19 @@ export type Ref = {
 export type NormalResource = {
 	id?: number | string;
 	type?: string;
+	new?: boolean;
 	attributes: { [k: string]: unknown };
 	relationships: { [k: string]: Ref | Ref[] | null };
+};
+
+export type NormalResourceTree = {
+	type: string;
+	id?: number | string;
+	new?: boolean;
+	attributes?: { [k: string]: unknown };
+	relationships?: {
+		[k: string]: NormalResourceTree | NormalResourceTree[] | Ref | Ref[] | null;
+	};
 };
 
 export type Graph = {
@@ -139,6 +152,94 @@ export function createMemoryStore(
 		mergeTrees(resourceType, [tree], mappers);
 	};
 
+	const splice = (resource: NormalResourceTree): void => {
+		const errors = validateResourceTree(schema, resource, validator);
+		if (errors.length > 0)
+			throw new Error("invalid resource", { cause: errors });
+
+		const expectedExistingResources = (res: NormalResourceTree): Ref[] => {
+			const related = Object.values(res.relationships ?? {}).flatMap((rel) =>
+				rel
+					? Array.isArray(rel)
+						? rel.flatMap((r) =>
+								("attributes" in r || "relationships" in r) && "id" in r
+									? expectedExistingResources(r as NormalResourceTree)
+									: (rel as unknown as Ref),
+							)
+						: "attributes" in rel || "relationships" in rel
+							? expectedExistingResources(rel as NormalResourceTree)
+							: (rel as unknown as Ref)
+					: null,
+			);
+
+			return res.new || !res.id
+				? related
+				: [{ type: res.type, id: res.id }, ...related];
+		};
+
+		const missing = expectedExistingResources(resource)
+			.filter((ref) => ref && ref.id)
+			.find(({ type, id }) => !storeGraph[type][id]);
+		if (missing) {
+			throw new Error(
+				`expected { type: "${missing.type}", id: "${missing.id}" } to already exist in the graph`,
+			);
+		}
+
+		const go = (
+			res: NormalResourceTree,
+			parent: NormalResourceTree = null,
+			parentRelSchema = null,
+		): void => {
+			const resSchema = schema.resources[res.type];
+			const resCopy = structuredClone(res);
+			const { inverse } = parentRelSchema;
+
+			if (parent && inverse) {
+				const relSchema = resSchema.relationships[inverse];
+				resCopy.relationships = resCopy.relationships ?? {};
+				if (
+					relSchema.cardinality === "many" &&
+					(
+						(resCopy.relationships[inverse] ?? []) as
+							| Ref[]
+							| NormalResourceTree[]
+					).some((r) => r.id === res.id)
+				) {
+					resCopy.relationships[inverse] = [
+						...(resCopy.relationships[inverse] as Ref[] | NormalResourceTree[]),
+						{ type: parent.type, id: parent.id },
+					];
+				} else if (relSchema.cardinality === "one") {
+					const existing = storeGraph[parent.type][parent.id];
+					const existingRef = existing?.relationships?.[inverse] as Ref;
+
+					if (existingRef && existingRef.id !== parent.id) {
+						update({
+							...existing,
+							relationships: { ...existing.relationships, [inverse]: null },
+						});
+					}
+
+					resCopy.relationships[inverse] = { type: parent.type, id: parent.id };
+				}
+			}
+
+			const saved =
+				resource.new || !resource.id ? create(resource) : update(resource);
+
+			Object.entries(saved.relationships).forEach(([relName, rel]) => {
+				const relSchema = resSchema.relationships[relName];
+				const step = (relRes) =>
+					relRes.attributes || relRes.relationships
+						? go(relRes, resource, relSchema)
+						: relRes;
+
+				applyOrMap(rel, step);
+			});
+		};
+	};
+
 	const linkStoreInverses = () => {
 		queryGraph = null;
 		storeGraph = linkInverses(storeGraph, schema);
@@ -153,5 +254,6 @@ export function createMemoryStore(
 		mergeTree,
 		mergeTrees,
 		query: runQuery,
+		splice,
 	};
 }
