@@ -44,11 +44,12 @@ export function createOrUpdate(resource: NormalResource, context) {
 			} else {
 				refs.forEach((ref) => {
 					const isRedundantRef = (
-						(storeGraph[relType][ref.id].relationships[inverse] as Ref[]) ?? []
+						(storeGraph[ref.type][ref.id].relationships[inverse] as Ref[]) ?? []
 					).some((r) => r.id === resource.id);
+
 					if (!isRedundantRef) {
 						(
-							(storeGraph[relType][ref.id].relationships[inverse] as Ref[]) ??
+							(storeGraph[ref.type][ref.id].relationships[inverse] as Ref[]) ??
 							[]
 						).push({
 							type: resource.type,

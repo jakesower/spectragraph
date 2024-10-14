@@ -1,4 +1,5 @@
 {
+	"$schema": "https://raw.githubusercontent.com/jakesower/data-prism/refs/heads/main/schemas/data-prism-schema.1.0.alpha2.schema.json",
 	"resources": {
 		"bears": {
 			"idAttribute": "id",
@@ -31,7 +32,10 @@
 			"attributes": {
 				"id": { "type": "string" },
 				"name": { "type": "string" },
-				"location": { "type": "object", "data-prism:geojson": true },
+				"location": {
+					"type": "object",
+					"$ref": "https://jakesower.com/schemas/geojson.schema.json#/definitions/Point"
+				},
 				"caringMeter": { "type": "number" },
 				"isInClouds": { "type": "boolean" }
 			},

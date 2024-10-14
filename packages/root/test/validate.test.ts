@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import { soccerSchema as rawSoccerSchema } from "./fixtures/soccer-schema.js";
 import { Schema } from "../src/index.js";
 import {
+	createValidator,
 	validateCreateResource,
 	validateDeleteResource,
 	validateResourceTree,
 	validateUpdateResource,
 } from "../src/validate.js";
+import geojsonSchema from "../schemas/geojson.schema.json";
 
 const soccerSchema = rawSoccerSchema as Schema;
 
@@ -18,6 +20,14 @@ describe("create validation", () => {
 
 	it("fails validation on an invalid type", () => {
 		const result = validateCreateResource(soccerSchema, { type: "foo" });
+		expect(result.length).toBeGreaterThan(0);
+	});
+
+	it("fails validation with a nonexistant attribute", () => {
+		const result = validateCreateResource(soccerSchema, {
+			type: "fields",
+			attributes: { chicken: "butt" },
+		});
 		expect(result.length).toBeGreaterThan(0);
 	});
 
@@ -592,26 +602,40 @@ describe("resource tree validation", () => {
 });
 
 describe("custom keywords", () => {
+	const locationSchema = structuredClone(soccerSchema);
+	locationSchema.resources.fields.attributes.location = {
+		type: "object",
+		$ref: "https://example.com/schemas/geojson.schema.json#/definitions/Point",
+	};
+
+	const validator = createValidator();
+	validator.addSchema(geojsonSchema);
+
 	it("passes with valid geojson", () => {
-		const result = validateCreateResource(soccerSchema, {
-			type: "fields",
-			attributes: {
-				location: { type: "Point", coordinates: [102.0, 0.5] },
+		const result = validateCreateResource(
+			locationSchema,
+			{
+				type: "fields",
+				attributes: {
+					location: { type: "Point", coordinates: [102.0, 0.5] },
+				},
 			},
-		});
+			validator,
+		);
 		expect(result.length).toEqual(0);
 	});
 
 	it("fails with invalid geojson", () => {
-		const result = validateCreateResource(soccerSchema, {
-			type: "fields",
-			attributes: {
-				location: {
-					type: "Feature",
-					geometry: { type: "Point", coordinates: [-120, 0, "chicken butt"] },
+		const result = validateCreateResource(
+			locationSchema,
+			{
+				type: "fields",
+				attributes: {
+					location: { type: "Point", coordinates: [-120, 0, "chicken butt"] },
 				},
 			},
-		});
+			validator,
+		);
 		expect(result.length).toBeGreaterThan(0);
 	});
 });

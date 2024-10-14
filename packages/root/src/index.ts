@@ -22,7 +22,7 @@ export {
 	mapSchemalessQuery,
 	reduceSchemalessQuery,
 } from "./query.js";
-export { createMemoryStore } from "./store.js";
+export { createMemoryStore } from "./memory-store.js";
 export {
 	validateCreateResource,
 	validateDeleteResource,

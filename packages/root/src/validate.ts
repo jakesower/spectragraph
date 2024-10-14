@@ -1,10 +1,8 @@
 import Ajv, { ErrorObject } from "ajv";
 import addFormats from "ajv-formats";
-import * as geojsonValidate from "geojson-validation";
 import { Schema } from "./schema.js";
 import { mapValues, omit } from "lodash-es";
 import { Ref } from "./graph.js";
-import geojsonSchema from "../schemas/geojson.schema.json";
 
 type CreateResource = {
 	type: string;
@@ -35,15 +33,22 @@ type NormalResourceTree = {
 	};
 };
 
-const ajv = new Ajv();
-addFormats(ajv);
-ajv.addSchema(geojsonSchema);
+export const defaultValidator = new Ajv();
+addFormats(defaultValidator);
+
+export const createValidator = () => {
+	const ajv = new Ajv();
+	addFormats(ajv);
+
+	return ajv;
+};
 
 export function validateCreateResource(
 	schema: Schema,
 	resource: CreateResource,
+	validator: Ajv = defaultValidator,
 ): ErrorObject[] {
-	const validateBasis = ajv.compile({
+	const validateBasis = validator.compile({
 		type: "object",
 		required: ["type"],
 		properties: {
@@ -76,6 +81,7 @@ export function validateCreateResource(
 				required: Object.keys(resSchema.attributes).filter(
 					(k) => resSchema.attributes[k].required,
 				),
+				additionalProperties: false,
 				properties: mapValues(resSchema.attributes, (a) =>
 					omit(a, ["required"]),
 				),
@@ -85,6 +91,7 @@ export function validateCreateResource(
 				required: Object.keys(resSchema.relationships).filter(
 					(k) => resSchema.relationships[k].required,
 				),
+				additionalProperties: false,
 				properties: mapValues(resSchema.relationships, (relSchema) =>
 					relSchema.cardinality === "one"
 						? relSchema.required
@@ -125,7 +132,7 @@ export function validateCreateResource(
 		},
 	};
 
-	const validate = ajv.compile(validationSchema);
+	const validate = validator.compile(validationSchema);
 	if (!validate(resource)) return validate.errors;
 
 	return [];
@@ -134,8 +141,9 @@ export function validateCreateResource(
 export function validateUpdateResource(
 	schema: Schema,
 	resource: UpdateResource,
+	validator: Ajv = defaultValidator,
 ): ErrorObject[] {
-	const validateBasis = ajv.compile({
+	const validateBasis = validator.compile({
 		type: "object",
 		required: ["type", "id"],
 		properties: {
@@ -154,12 +162,14 @@ export function validateUpdateResource(
 			id: { type: "string" },
 			attributes: {
 				type: "object",
+				additionalProperties: false,
 				properties: mapValues(resSchema.attributes, (a) =>
 					omit(a, ["required"]),
 				),
 			},
 			relationships: {
 				type: "object",
+				additionalProperties: false,
 				properties: mapValues(resSchema.relationships, (relSchema) =>
 					relSchema.cardinality === "one"
 						? relSchema.required
@@ -200,7 +210,7 @@ export function validateUpdateResource(
 		},
 	};
 
-	const validate = ajv.compile(validationSchema);
+	const validate = validator.compile(validationSchema);
 	if (!validate(resource)) return validate.errors;
 
 	return [];
@@ -209,8 +219,9 @@ export function validateUpdateResource(
 export function validateDeleteResource(
 	schema: Schema,
 	resource: DeleteResource,
+	validator: Ajv = defaultValidator,
 ): ErrorObject[] {
-	const validateBasis = ajv.compile({
+	const validateBasis = validator.compile({
 		type: "object",
 		required: ["type", "id"],
 		properties: {
@@ -226,6 +237,7 @@ export function validateDeleteResource(
 export function validateResourceTree(
 	schema: Schema,
 	resource: NormalResourceTree,
+	validator: Ajv = defaultValidator,
 ): ErrorObject[] {
 	const basisSchema = {
 		type: "object",
@@ -234,7 +246,7 @@ export function validateResourceTree(
 			type: { enum: Object.keys(schema.resources) },
 		},
 	};
-	const validateBasis = ajv.compile(basisSchema);
+	const validateBasis = validator.compile(basisSchema);
 	if (!validateBasis(resource)) return validateBasis.errors;
 
 	const toOneRefOfType = (type, required) => ({
@@ -278,6 +290,7 @@ export function validateResourceTree(
 					required: Object.keys(resSchema.attributes).filter(
 						(k) => resSchema.attributes[k].required,
 					),
+					additionalProperties: false,
 					properties: mapValues(resSchema.attributes, (a) =>
 						omit(a, ["required"]),
 					),
@@ -287,6 +300,7 @@ export function validateResourceTree(
 					required: Object.keys(resSchema.relationships).filter(
 						(k) => resSchema.relationships[k].required,
 					),
+					additionalProperties: false,
 					properties: mapValues(resSchema.relationships, (relSchema) =>
 						relSchema.cardinality === "one"
 							? relSchema.required
@@ -306,12 +320,14 @@ export function validateResourceTree(
 				type: { const: resName },
 				attributes: {
 					type: "object",
+					additionalProperties: false,
 					properties: mapValues(resSchema.attributes, (a) =>
 						omit(a, ["required"]),
 					),
 				},
 				relationships: {
 					type: "object",
+					additionalProperties: false,
 					properties: mapValues(resSchema.relationships, (relSchema) =>
 						relSchema.cardinality === "one"
 							? relSchema.required
@@ -331,7 +347,7 @@ export function validateResourceTree(
 		definitions,
 	};
 
-	const validate = ajv.compile(validationSchema);
+	const validate = validator.compile(validationSchema);
 	if (!validate(resource)) return validate.errors;
 
 	return [];
