@@ -42,6 +42,28 @@ it("updates a single resource with only attributes", async () => {
 	});
 });
 
+it("fails to update a single resource with an invalid attribute", async () => {
+	const created = await store.create({
+		type: "bears",
+		attributes: {
+			name: "Champ Bear",
+			yearIntroduced: 1984,
+			bellyBadge: "yellow trophy with red heart stamp",
+			furColor: "cerulean",
+		},
+	});
+
+	expect(
+		store.update({
+			type: "bears",
+			id: created.id,
+			attributes: {
+				bellyBadge: 1999,
+			},
+		}),
+	).rejects.toThrowError();
+});
+
 it("updates a single resource with only attributes, including a geometry attribute", async () => {
 	const created = await store.create({
 		type: "homes",
@@ -108,7 +130,6 @@ it("updates a single resource with only attributes, including a geometry attribu
 			coordinates: [39, 6],
 		},
 	});
-
 
 	await store.update({
 		type: "homes",

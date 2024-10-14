@@ -1,6 +1,6 @@
 {
 	"name": "data-prism",
-	"version": "0.0.20",
+	"version": "0.0.25",
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
@@ -33,6 +33,7 @@
 		"@data-prism/utils": "^0.0.5",
 		"ajv": "^8.17.1",
 		"ajv-formats": "^3.0.1",
+		"geojson-validation": "^1.0.2",
 		"lodash-es": "^4.17.21",
 		"uuid": "^10.0.0"
 	}

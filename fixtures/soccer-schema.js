@@ -5,6 +5,7 @@ export const soccerSchema = {
 		fields: {
 			attributes: {
 				name: { type: "string", pattern: "^[A-Z][A-Za-z0-9 ]+" },
+				location: { $ref: "https://jakesower.com/schemas/geojson.schema.json#/definitions/Point" },
 			},
 			relationships: {
 				teams: {

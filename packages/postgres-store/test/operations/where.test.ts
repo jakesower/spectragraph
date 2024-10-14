@@ -48,9 +48,7 @@ describe("where clauses", () => {
 		expect(result).toEqual([{ id: "2" }]);
 	});
 
-	it("filters on a to-one relationship", () => {
-		expect(false).toBe(true);
-	});
+	it.todo("filters on a to-one relationship");
 
 	it("filters using $eq operator", async () => {
 		const result = await store.query({
