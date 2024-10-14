@@ -1,6 +1,6 @@
 {
 	"$schema": "http://json-schema.org/draft-07/schema#",
-	"$id": "https://jakesower.com/schemas/geojson.schema.json",
+	"$id": "https://example.com/schemas/geojson.schema.json",
 	"title": "GeoJSON",
 	"definitions": {
 		"Point": {

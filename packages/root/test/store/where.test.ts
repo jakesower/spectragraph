@@ -1,7 +1,7 @@
 import { expect, it, describe } from "vitest";
 import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
 import { careBearSchema } from "../fixtures/care-bear-schema.js";
-import { createMemoryStore } from "../../src/store.js";
+import { createMemoryStore } from "../../src/memory-store.js";
 
 const store = createMemoryStore(careBearSchema, careBearData);
 

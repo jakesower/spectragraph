@@ -1,15 +1,15 @@
 export const soccerSchema = {
+	$comment: "this schema is meant to be suitable for validation tests",
 	$schema:
 		"https://raw.githubusercontent.com/jakesower/data-prism/main/schemas/data-prism-schema.1.0.schema.json",
 	resources: {
 		fields: {
 			attributes: {
 				name: { type: "string", pattern: "^[A-Z][A-Za-z0-9 ]+" },
-				location: { $ref: "https://jakesower.com/schemas/geojson.schema.json#/definitions/Point" },
 			},
 			relationships: {
 				teams: {
-					type: "fields",
+					type: "teams",
 					cardinality: "many",
 					inverse: "homeField",
 				},

@@ -1,3 +1,4 @@
+import Ajv from "ajv";
 import { v4 as uuidv4 } from "uuid";
 import { mapValues } from "lodash-es";
 import { Schema } from "./schema.js";
@@ -10,7 +11,13 @@ import {
 import { createGraphFromTrees } from "./mappers.js";
 import { createOrUpdate } from "./create-or-update.js";
 import { deleteAction } from "./delete.js";
-import { ensureValidQuery, forEachQuery } from "./query.js";
+import { ensureValidQuery } from "./query.js";
+import {
+	defaultValidator,
+	validateCreateResource,
+	validateDeleteResource,
+	validateUpdateResource,
+} from "./validate.js";
 export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 
 export type Ref = {
@@ -31,7 +38,17 @@ export type Graph = {
 	};
 };
 
-export function createMemoryStore(schema: Schema, initialData: Graph = {}) {
+export type MemoryStoreConfig = {
+	initialData?: Graph;
+	validator?: Ajv;
+};
+
+export function createMemoryStore(
+	schema: Schema,
+	config: MemoryStoreConfig = {},
+) {
+	const { initialData = {}, validator = defaultValidator } = config;
+
 	let queryGraph;
 	let storeGraph = mergeGraphs(createEmptyGraph(schema), initialData);
 
@@ -48,6 +65,10 @@ export function createMemoryStore(schema: Schema, initialData: Graph = {}) {
 		const resSchema = schema.resources[resource.type];
 		const { idAttribute = "id" } = resSchema;
 		const newId = id ?? uuidv4();
+
+		const errors = validateCreateResource(schema, resource, validator);
+		if (errors.length > 0)
+			throw new Error("invalid resource", { cause: errors });
 
 		const normalRes: NormalResource = {
 			attributes: { ...(resource.attributes ?? {}), [idAttribute]: newId },
@@ -67,22 +88,19 @@ export function createMemoryStore(schema: Schema, initialData: Graph = {}) {
 
 	// WARNING: MUTATES storeGraph
 	const update = (resource) => {
-		const resSchema = schema.resources[resource.type];
+		const errors = validateUpdateResource(schema, resource, validator);
+		if (errors.length > 0)
+			throw new Error("invalid resource", { cause: errors });
+
 		const existingRes = storeGraph[resource.type][resource.id];
 
 		const normalRes: NormalResource = {
 			...resource,
-			attributes: mapValues(
-				resSchema.attributes,
-				(_, attrName) =>
-					resource.attributes?.[attrName] ?? existingRes.attributes[attrName],
-			),
-			relationships: mapValues(
-				resSchema.relationships,
-				(rel, relName) =>
-					resource.relationships?.[relName] ??
-					(rel.cardinality === "one" ? null : []),
-			),
+			attributes: { ...existingRes.attributes, ...resource.attributes },
+			relationships: {
+				...existingRes.relationships,
+				...resource.relationships,
+			},
 		};
 
 		// WARNING: MUTATES storeGraph
@@ -91,6 +109,10 @@ export function createMemoryStore(schema: Schema, initialData: Graph = {}) {
 	};
 
 	const delete_ = (resource) => {
+		const errors = validateDeleteResource(schema, resource, validator);
+		if (errors.length > 0)
+			throw new Error("invalid resource", { cause: errors });
+
 		queryGraph = null;
 		return deleteAction(resource, { schema, storeGraph });
 	};
