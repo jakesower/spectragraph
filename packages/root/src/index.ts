@@ -24,6 +24,7 @@ export {
 } from "./query.js";
 export { createMemoryStore } from "./memory-store.js";
 export {
+	createValidator,
 	validateCreateResource,
 	validateDeleteResource,
 	validateResourceTree,
