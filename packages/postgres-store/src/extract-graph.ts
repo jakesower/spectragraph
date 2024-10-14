@@ -79,11 +79,7 @@ export function extractGraph(rawResults, selectClause, context) {
 					const fullAttrPath = `${rootQuery.type}${pathStr}.${snakeCase(attr)}`;
 					const resultIdx = selectAttributeMap[fullAttrPath];
 
-					graph[type][id].attributes[attr] = ["array", "object"].includes(
-						resConfig.attributes[attr].type,
-					)
-						? JSON.parse(result[resultIdx])
-						: result[resultIdx];
+					graph[type][id].attributes[attr] = result[resultIdx];
 				});
 			} else {
 				graph[type][id].id = id;

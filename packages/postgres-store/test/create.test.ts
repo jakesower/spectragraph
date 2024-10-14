@@ -31,6 +31,15 @@ it("creates a single resource with only attributes", async () => {
 	expect(result).toEqual({ name: "Champ Bear" });
 });
 
+it("fails to create a single resource with an invalid attribute", async () => {
+	expect(
+		store.create({
+			type: "bears",
+			attributes: { name: 1999 },
+		}),
+	).rejects.toThrowError();
+});
+
 it("creates a single resource with only attributes, including a geometry attribute", async () => {
 	const created = await store.create({
 		type: "homes",
@@ -56,6 +65,21 @@ it("creates a single resource with only attributes, including a geometry attribu
 			coordinates: [39, 6],
 		},
 	});
+});
+
+it("fails to create a single resource with an invalid geometry attribute", async () => {
+	expect(
+		store.create({
+			type: "homes",
+			attributes: {
+				name: "Zanzibar",
+				location: {
+					type: "Point",
+					coordinates: [39, 6, "chicken butt"],
+				},
+			},
+		}),
+	).rejects.toThrowError();
 });
 
 it("creates a single resource with a local relationship", async () => {

@@ -590,3 +590,28 @@ describe("resource tree validation", () => {
 		});
 	});
 });
+
+describe("custom keywords", () => {
+	it("passes with valid geojson", () => {
+		const result = validateCreateResource(soccerSchema, {
+			type: "fields",
+			attributes: {
+				location: { type: "Point", coordinates: [102.0, 0.5] },
+			},
+		});
+		expect(result.length).toEqual(0);
+	});
+
+	it("fails with invalid geojson", () => {
+		const result = validateCreateResource(soccerSchema, {
+			type: "fields",
+			attributes: {
+				location: {
+					type: "Feature",
+					geometry: { type: "Point", coordinates: [-120, 0, "chicken butt"] },
+				},
+			},
+		});
+		expect(result.length).toBeGreaterThan(0);
+	});
+});

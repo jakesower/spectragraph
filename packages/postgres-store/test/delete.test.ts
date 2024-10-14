@@ -36,6 +36,10 @@ it("deletes a single resource", async () => {
 	expect(result).toEqual(null);
 });
 
+it("fails to delete an invalid resource", async () => {
+	expect(store.delete({ type: "bears" } as any)).rejects.toThrowError();
+});
+
 it("deletes a single resource with a local relationship", async () => {
 	const createdHome = await store.create({
 		type: "homes",

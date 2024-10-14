@@ -1,8 +1,12 @@
 import {
 	ensureValidQuery,
 	normalizeQuery,
+	Ref,
 	RootQuery,
 	Schema,
+	validateCreateResource,
+	validateDeleteResource,
+	validateUpdateResource,
 } from "data-prism";
 import { query as getQuery } from "./query.js";
 import { create } from "./create.js";
@@ -14,21 +18,21 @@ import { Client } from "pg";
 export type Resource = {
 	type: string;
 	id: any;
-	attributes: object;
-	relationships?: object;
+	attributes: { [k: string]: unknown };
+	relationships: { [k: string]: Ref | Ref[] };
 };
 
 type CreateResource = {
 	type: string;
-	attributes?: object;
-	relationships?: object;
+	attributes?: { [k: string]: unknown };
+	relationships?: { [k: string]: Ref | Ref[] };
 };
 
 type UpdateResource = {
 	type: string;
 	id: any;
-	attributes?: object;
-	relationships?: object;
+	attributes?: { [k: string]: unknown };
+	relationships?: { [k: string]: Ref | Ref[] };
 };
 
 type DeleteResource = {
@@ -90,12 +94,24 @@ export function createPostgresStore(
 			return getOne(type, id, { config, options, schema });
 		},
 		async create(resource) {
+			const errors = validateCreateResource(schema, resource);
+			if (errors.length > 0)
+				throw new Error("invalid query", { cause: errors });
+
 			return create(resource, { config, schema });
 		},
 		async update(resource) {
+			const errors = validateUpdateResource(schema, resource);
+			if (errors.length > 0)
+				throw new Error("invalid query", { cause: errors });
+
 			return update(resource, { config, schema });
 		},
 		async delete(resource) {
+			const errors = validateDeleteResource(schema, resource);
+			if (errors.length > 0)
+				throw new Error("invalid query", { cause: errors });
+
 			return deleteResource(resource, { config, schema });
 		},
 		async query(query) {

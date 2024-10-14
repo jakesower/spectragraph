@@ -1,8 +1,10 @@
 import Ajv, { ErrorObject } from "ajv";
 import addFormats from "ajv-formats";
+import * as geojsonValidate from "geojson-validation";
 import { Schema } from "./schema.js";
 import { mapValues, omit } from "lodash-es";
 import { Ref } from "./graph.js";
+import geojsonSchema from "../schemas/geojson.schema.json";
 
 type CreateResource = {
 	type: string;
@@ -35,6 +37,7 @@ type NormalResourceTree = {
 
 const ajv = new Ajv();
 addFormats(ajv);
+ajv.addSchema(geojsonSchema);
 
 export function validateCreateResource(
 	schema: Schema,
