@@ -22,7 +22,7 @@ export type BaseRootQuery<S extends Schema> = Query<S> & {
 
 export type MultiRootQuery<S extends Schema> = BaseRootQuery<S> & { id?: never };
 export type SingleRootQuery<S extends Schema> = BaseRootQuery<S> & {
-	id: string | number;
+	id: string;
 };
 export type RootQuery<S extends Schema> = MultiRootQuery<S> | SingleRootQuery<S>;
 

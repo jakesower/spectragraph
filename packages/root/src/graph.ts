@@ -1,11 +1,12 @@
 import { mapValues } from "lodash-es";
 import { Schema } from "./schema.js";
 import { applyOrMap } from "@data-prism/utils";
+import { Graph } from "./memory-store.js";
 export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 
 export type Ref = {
 	type: string;
-	id: string | number;
+	id: string;
 };
 
 export type NormalResource = {
@@ -13,12 +14,6 @@ export type NormalResource = {
 	type?: string;
 	attributes: { [k: string]: unknown };
 	relationships: { [k: string]: Ref | Ref[] | null };
-};
-
-export type Graph = {
-	[k: string]: {
-		[k: string | number]: NormalResource;
-	};
 };
 
 export function createEmptyGraph(schema: Schema): Graph {

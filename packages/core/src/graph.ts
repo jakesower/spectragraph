@@ -7,7 +7,7 @@ import { applyOrMap } from "@data-prism/utils";
 
 type Ref = {
 	type: string;
-	id: string | number;
+	id: string;
 }
 
 type CanonicalGraph = {

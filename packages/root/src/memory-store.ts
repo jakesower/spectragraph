@@ -11,24 +11,23 @@ import {
 import { createGraphFromTrees } from "./mappers.js";
 import { createOrUpdate } from "./create-or-update.js";
 import { deleteAction } from "./delete.js";
-import { ensureValidQuery } from "./query.js";
+import { ensureValidQuery, RootQuery } from "./query.js";
 import {
 	defaultValidator,
 	validateCreateResource,
 	validateDeleteResource,
-	validateResourceTree,
 	validateUpdateResource,
 } from "./validate.js";
-import { applyOrMap } from "@data-prism/utils";
+import { splice } from "./splice.js";
 export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 
 export type Ref = {
 	type: string;
-	id: string | number;
+	id: string;
 };
 
 export type NormalResource = {
-	id?: number | string;
+	id?: string;
 	type?: string;
 	new?: boolean;
 	attributes: { [k: string]: unknown };
@@ -37,7 +36,7 @@ export type NormalResource = {
 
 export type NormalResourceTree = {
 	type: string;
-	id?: number | string;
+	id?: string;
 	new?: boolean;
 	attributes?: { [k: string]: unknown };
 	relationships?: {
@@ -47,7 +46,7 @@ export type NormalResourceTree = {
 
 export type Graph = {
 	[k: string]: {
-		[k: string | number]: NormalResource;
+		[k: string]: NormalResource;
 	};
 };
 
@@ -56,10 +55,52 @@ export type MemoryStoreConfig = {
 	validator?: Ajv;
 };
 
+type CreateResource =
+	| {
+			type: string;
+			attributes?: { [k: string]: unknown };
+			relationships?: { [k: string]: Ref | Ref[] };
+	  }
+	| {
+			type: string;
+			id: string;
+			new: true;
+			attributes?: { [k: string]: unknown };
+			relationships?: { [k: string]: Ref | Ref[] };
+	  };
+
+type UpdateResource = {
+	type: string;
+	id: string;
+	new?: false;
+	attributes?: { [k: string]: unknown };
+	relationships?: { [k: string]: Ref | Ref[] };
+};
+
+type DeleteResource = {
+	type: string;
+	id: string;
+	attributes?: { [k: string]: unknown };
+	relationships?: { [k: string]: Ref | Ref[] };
+};
+
+export type MemoryStore = {
+	linkInverses: () => void;
+	getOne: (type: string, id: string) => NormalResource;
+	create: (resource: CreateResource) => NormalResource;
+	update: (resource: UpdateResource) => NormalResource;
+	delete: (resource: DeleteResource) => DeleteResource;
+	merge: (graph: Graph) => void;
+	mergeTree: (resourceType: string, tree: any, mappers?: any) => void;
+	mergeTrees: (resourceType: string, trees: any[], mappers?: any) => void;
+	query: (query: RootQuery) => any;
+	splice: (resource: NormalResourceTree) => NormalResourceTree;
+};
+
 export function createMemoryStore(
 	schema: Schema,
 	config: MemoryStoreConfig = {},
-) {
+): MemoryStore {
 	const { initialData = {}, validator = defaultValidator } = config;
 
 	let queryGraph;
@@ -100,7 +141,7 @@ export function createMemoryStore(
 	};
 
 	// WARNING: MUTATES storeGraph
-	const update = (resource) => {
+	const update = (resource: UpdateResource) => {
 		const errors = validateUpdateResource(schema, resource, validator);
 		if (errors.length > 0)
 			throw new Error("invalid resource", { cause: errors });
@@ -152,94 +193,6 @@ export function createMemoryStore(
 		mergeTrees(resourceType, [tree], mappers);
 	};
 
-	const splice = (resource: NormalResourceTree): void => {
-		const errors = validateResourceTree(schema, resource, validator);
-		if (errors.length > 0)
-			throw new Error("invalid resource", { cause: errors });
-
-		const expectedExistingResources = (res: NormalResourceTree): Ref[] => {
-			const related = Object.values(res.relationships ?? {}).flatMap((rel) =>
-				rel
-					? Array.isArray(rel)
-						? rel.flatMap((r) =>
-								("attributes" in r || "relationships" in r) && "id" in r
-									? expectedExistingResources(r as NormalResourceTree)
-									: (rel as unknown as Ref),
-							)
-						: "attributes" in rel || "relationships" in rel
-							? expectedExistingResources(rel as NormalResourceTree)
-							: (rel as unknown as Ref)
-					: null,
-			);
-
-			return res.new || !res.id
-				? related
-				: [{ type: res.type, id: res.id }, ...related];
-		};
-
-		const missing = expectedExistingResources(resource)
-			.filter((ref) => ref && ref.id)
-			.find(({ type, id }) => !storeGraph[type][id]);
-		if (missing) {
-			throw new Error(
-				`expected { type: "${missing.type}", id: "${missing.id}" } to already exist in the graph`,
-			);
-		}
-
-		const go = (
-			res: NormalResourceTree,
-			parent: NormalResourceTree = null,
-			parentRelSchema = null,
-		): void => {
-			const resSchema = schema.resources[res.type];
-			const resCopy = structuredClone(res);
-			const { inverse } = parentRelSchema;
-
-			if (parent && inverse) {
-				const relSchema = resSchema.relationships[inverse];
-				resCopy.relationships = resCopy.relationships ?? {};
-				if (
-					relSchema.cardinality === "many" &&
-					(
-						(resCopy.relationships[inverse] ?? []) as
-							| Ref[]
-							| NormalResourceTree[]
-					).some((r) => r.id === res.id)
-				) {
-					resCopy.relationships[inverse] = [
-						...(resCopy.relationships[inverse] as Ref[] | NormalResourceTree[]),
-						{ type: parent.type, id: parent.id },
-					];
-				} else if (relSchema.cardinality === "one") {
-					const existing = storeGraph[parent.type][parent.id];
-					const existingRef = existing?.relationships?.[inverse] as Ref;
-
-					if (existingRef && existingRef.id !== parent.id) {
-						update({
-							...existing,
-							relationships: { ...existing.relationships, [inverse]: null },
-						});
-					}
-
-					resCopy.relationships[inverse] = { type: parent.type, id: parent.id };
-				}
-			}
-
-			const saved =
-				resource.new || !resource.id ? create(resource) : update(resource);
-
-			Object.entries(saved.relationships).forEach(([relName, rel]) => {
-				const relSchema = resSchema.relationships[relName];
-				const step = (relRes) =>
-					relRes.attributes || relRes.relationships
-						? go(relRes, resource, relSchema)
-						: relRes;
-
-				applyOrMap(rel, step);
-			});
-		};
-	};
-
 	const linkStoreInverses = () => {
 		queryGraph = null;
 		storeGraph = linkInverses(storeGraph, schema);
@@ -247,6 +200,9 @@ export function createMemoryStore(
 
 	return {
 		linkInverses: linkStoreInverses,
+		getOne(type: string, id: string): NormalResource {
+			return storeGraph[type][id] ?? null;
+		},
 		create,
 		update,
 		delete: delete_,
@@ -254,6 +210,8 @@ export function createMemoryStore(
 		mergeTree,
 		mergeTrees,
 		query: runQuery,
-		splice,
+		splice(resource) {
+			return splice(schema, resource, validator, this);
+		},
 	};
 }
