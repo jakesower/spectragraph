@@ -3,9 +3,14 @@ import { Schema } from "../../src/schema.js";
 import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
 import { careBearSchema } from "../fixtures/care-bear-schema.js";
 import { soccerSchema as rawSoccerSchema } from "../fixtures/soccer-schema.js";
-import { createMemoryStore } from "../../src/memory-store.js";
+import {
+	createMemoryStore,
+	NormalResourceTree,
+} from "../../src/memory-store.js";
 import { createValidator } from "../../src/validate.js";
 import geojsonSchema from "../../schemas/geojson.schema.json";
+
+const soccerSchema = rawSoccerSchema as Schema;
 
 const singleBearWithHomeTree = {
 	id: "bear-abc-123",
@@ -161,8 +166,6 @@ describe("queryTree core", () => {
 	});
 });
 
-const soccerSchema = rawSoccerSchema as Schema;
-
 describe("create validation", () => {
 	it("fails validation on an empty object", () => {
 		const store = createMemoryStore(soccerSchema, {
@@ -190,7 +193,7 @@ describe("create validation", () => {
 		).toThrowError();
 	});
 
-	it("passes validation on an object with only a type and nothing required", () => {
+	it("works on an object with only a type and nothing required", () => {
 		const store = createMemoryStore(soccerSchema, {
 			initialData: createSoccerGraph(),
 		});
@@ -204,7 +207,7 @@ describe("create validation", () => {
 		expect(() => store.create({ type: "teams" })).toThrowError();
 	});
 
-	it("passes validation with an valid type", () => {
+	it("works with an valid type", () => {
 		const store = createMemoryStore(soccerSchema, {
 			initialData: createSoccerGraph(),
 		});
@@ -267,7 +270,7 @@ describe("create validation", () => {
 		).toThrowError();
 	});
 
-	it("passes validation with a null, non-required relationship", () => {
+	it("works with a null, non-required relationship", () => {
 		const store = createMemoryStore(soccerSchema, {
 			initialData: createSoccerGraph(),
 		});
@@ -282,7 +285,7 @@ describe("create validation", () => {
 		).not.toThrowError();
 	});
 
-	it("passes validation with a valid relationship", () => {
+	it("works with a valid relationship", () => {
 		const store = createMemoryStore(soccerSchema, {
 			initialData: createSoccerGraph(),
 		});
@@ -371,7 +374,7 @@ describe("update validation", () => {
 		).toThrowError();
 	});
 
-	it("passes validation on an object with only a type and at least one required attribute", () => {
+	it("works on an object with only a type and at least one required attribute", () => {
 		const store = createMemoryStore(soccerSchema, {
 			initialData: createSoccerGraph(),
 		});
@@ -383,7 +386,7 @@ describe("update validation", () => {
 		).not.toThrowError();
 	});
 
-	it("passes validation with an valid type", () => {
+	it("works with an valid type", () => {
 		const store = createMemoryStore(soccerSchema, {
 			initialData: createSoccerGraph(),
 		});
@@ -451,7 +454,7 @@ describe("update validation", () => {
 		).toThrowError();
 	});
 
-	it("passes validation with a null, non-required relationship", () => {
+	it("works with a null, non-required relationship", () => {
 		const store = createMemoryStore(soccerSchema, {
 			initialData: createSoccerGraph(),
 		});
@@ -467,7 +470,7 @@ describe("update validation", () => {
 		).not.toThrowError();
 	});
 
-	it("passes validation with a valid relationship", () => {
+	it("works with a valid relationship", () => {
 		const store = createMemoryStore(soccerSchema, {
 			initialData: createSoccerGraph(),
 		});
@@ -483,7 +486,7 @@ describe("update validation", () => {
 		).not.toThrowError();
 	});
 
-	it("passes validation with a missing required relationship", () => {
+	it("works with a missing required relationship", () => {
 		const store = createMemoryStore(soccerSchema, {
 			initialData: createSoccerGraph(),
 		});
@@ -537,7 +540,7 @@ describe("delete validation", () => {
 		).toThrowError();
 	});
 
-	it("passes validation on an object with only a type and at least one required attribute", () => {
+	it("works on an object with only a type and at least one required attribute", () => {
 		const store = createMemoryStore(soccerSchema, {
 			initialData: createSoccerGraph(),
 		});
@@ -561,7 +564,7 @@ describe("splice", () => {
 			expect(() => store.splice({ type: "foo" })).toThrowError();
 		});
 
-		it("passes validation on an object with only a type and nothing required", () => {
+		it("works on an object with only a type and nothing required", () => {
 			const store = createMemoryStore(soccerSchema, {
 				initialData: createSoccerGraph(),
 			});
@@ -575,16 +578,16 @@ describe("splice", () => {
 			expect(() => store.splice({ type: "teams" })).toThrowError();
 		});
 
-		it("passes validation with an valid type", () => {
+		it("works and assigns an ID with an valid type", () => {
 			const store = createMemoryStore(soccerSchema, {
 				initialData: createSoccerGraph(),
 			});
-			expect(() =>
-				store.splice({
-					type: "fields",
-					attributes: { name: "Tempe Elementary B" },
-				}),
-			).not.toThrowError();
+			const result = store.splice({
+				type: "fields",
+				attributes: { name: "Tempe Elementary B" },
+			});
+
+			expect(result.id).not.toEqual(null);
 		});
 
 		it("fails validation with an invalid type", () => {
@@ -638,42 +641,106 @@ describe("splice", () => {
 			).toThrowError();
 		});
 
-		it("passes validation with a null, non-required relationship", () => {
+		it("works with a null, non-required relationship", () => {
 			const store = createMemoryStore(soccerSchema, {
 				initialData: createSoccerGraph(),
 			});
 
-			expect(() =>
-				store.splice({
-					type: "games",
-					attributes: { homeScore: 5, awayScore: 1 },
-					relationships: {
-						homeTeam: null,
-					},
-				}),
-			).not.toThrowError();
+			const result = store.splice({
+				type: "games",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: null,
+				},
+			});
+
+			expect(result.id).not.toEqual(null);
+			expect(result).toMatchObject({
+				type: "games",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: null,
+				},
+			});
 		});
 
-		it("passes validation with a valid relationship", () => {
+		it("works with a valid new relationship", () => {
 			const store = createMemoryStore(soccerSchema, {
 				initialData: createSoccerGraph(),
 			});
 
-			expect(() =>
-				store.splice({
-					type: "games",
-					attributes: { homeScore: 5, awayScore: 1 },
-					relationships: {
-						homeTeam: {
-							type: "teams",
-							id: "1",
-							attributes: {
-								name: "Arizona Bay FC",
-							},
+			const result = store.splice({
+				type: "games",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: {
+						type: "teams",
+						attributes: {
+							name: "Arizona Bay FC",
+						},
+						relationships: {
+							homeField: { type: "fields", id: "1" },
 						},
 					},
-				}),
-			).not.toThrowError();
+				},
+			});
+
+			expect(result.id).not.toEqual(null);
+			expect(
+				(result.relationships.homeTeam as NormalResourceTree).id,
+			).not.toEqual(null);
+			expect(result).toMatchObject({
+				type: "games",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: {
+						type: "teams",
+						attributes: {
+							name: "Arizona Bay FC",
+						},
+						relationships: {
+							homeField: { type: "fields", id: "1" },
+						},
+					},
+				},
+			});
+		});
+
+		it("works with a valid existing relationship", () => {
+			const store = createMemoryStore(soccerSchema, {
+				initialData: createSoccerGraph(),
+			});
+
+			const result = store.splice({
+				type: "games",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: {
+						type: "teams",
+						id: "1",
+						attributes: {
+							name: "Arizona Bay FC",
+						},
+					},
+				},
+			});
+
+			expect(result.id).not.toEqual(null);
+			expect(result).toMatchObject({
+				type: "games",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: {
+						type: "teams",
+						id: "1",
+						attributes: {
+							name: "Arizona Bay FC",
+						},
+					},
+				},
+			});
+
+			expect(store.getOne("teams", "1")).not.toEqual(null);
 		});
 
 		it("fails validation with a missing required relationship", () => {
@@ -717,20 +784,31 @@ describe("splice", () => {
 		});
 	});
 
-	describe("without an id", () => {
-		it("passes validation on an object with only a type and at least one required attribute", () => {
+	describe("with an id", () => {
+		it("works on an object with only a type and at least one required attribute", () => {
 			const store = createMemoryStore(soccerSchema, {
 				initialData: createSoccerGraph(),
 			});
-			expect(() =>
-				store.splice({
-					type: "teams",
-					id: "1",
-				}),
-			).not.toThrowError();
+			const result = store.splice({
+				type: "teams",
+				id: "1",
+			});
+
+			expect(result).toEqual({
+				type: "teams",
+				id: "1",
+				attributes: {
+					name: "Arizona Bay FC",
+				},
+				relationships: {
+					homeGames: [],
+					awayGames: [],
+					homeField: { type: "fields", id: "1" },
+				},
+			});
 		});
 
-		it("passes validation with a valid type", () => {
+		it("works with a valid type", () => {
 			const store = createMemoryStore(soccerSchema, {
 				initialData: createSoccerGraph(),
 			});
@@ -743,16 +821,23 @@ describe("splice", () => {
 			).not.toThrowError();
 		});
 
-		it("passes validation with a valid type and a missing required attribute", () => {
+		it("works with a valid type and a missing required attribute", () => {
 			const store = createMemoryStore(soccerSchema, {
 				initialData: createSoccerGraph(),
 			});
-			expect(() =>
-				store.splice({
-					type: "fields",
-					id: "1",
-				}),
-			).not.toThrowError();
+			const result = store.splice({
+				type: "fields",
+				id: "1",
+			});
+
+			expect(result).toEqual({
+				type: "fields",
+				id: "1",
+				attributes: {
+					name: "Beachside Park A",
+				},
+				relationships: { teams: [{ type: "teams", id: "1" }] },
+			});
 		});
 
 		it("fails validation with an invalid type", () => {
@@ -810,53 +895,84 @@ describe("splice", () => {
 			).toThrowError();
 		});
 
-		it("passes validation with a null, non-required relationship", () => {
+		it("works with a null, non-required relationship", () => {
 			const store = createMemoryStore(soccerSchema, {
 				initialData: createSoccerGraph(),
 			});
-			expect(() =>
-				store.splice({
-					type: "games",
-					id: "1",
-					attributes: { homeScore: 5, awayScore: 1 },
-					relationships: {
-						homeTeam: null,
-					},
-				}),
-			).not.toThrowError();
+			const result = store.splice({
+				type: "games",
+				id: "1",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: null,
+				},
+			});
+
+			expect(result).toEqual({
+				type: "games",
+				id: "1",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: null,
+					awayTeam: null,
+					referee: null,
+				},
+			});
 		});
 
-		it("passes validation with a valid relationship", () => {
+		it("works with a valid relationship", () => {
 			const store = createMemoryStore(soccerSchema, {
 				initialData: createSoccerGraph(),
 			});
-			expect(() =>
-				store.splice({
-					type: "games",
-					id: "1",
-					attributes: { homeScore: 5, awayScore: 1 },
-					relationships: {
-						homeTeam: {
-							type: "teams",
-							id: "1",
-							attributes: { name: "Scottsdale Surf" },
+			const result = store.splice({
+				type: "games",
+				id: "1",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: {
+						type: "teams",
+						id: "1",
+						attributes: { name: "Scottsdale Surf" },
+					},
+				},
+			});
+
+			expect(result).toEqual({
+				type: "games",
+				id: "1",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: {
+						type: "teams",
+						id: "1",
+						attributes: { name: "Scottsdale Surf" },
+						relationships: {
+							homeGames: [],
+							awayGames: [],
+							homeField: { type: "fields", id: "1" },
 						},
 					},
-				}),
-			).not.toThrowError();
+					awayTeam: null,
+					referee: null,
+				},
+			});
 		});
 
-		it("passes validation with a missing required relationship", () => {
+		it("works with a missing required relationship", () => {
 			const store = createMemoryStore(soccerSchema, {
 				initialData: createSoccerGraph(),
 			});
-			expect(() =>
-				store.splice({
-					type: "teams",
-					id: "1",
-					attributes: { name: "Tempe Wave" },
-				}),
-			).not.toThrowError();
+			const result = store.splice({
+				type: "teams",
+				id: "1",
+				attributes: { name: "Tempe Wave" },
+			});
+
+			expect(result).toMatchObject({
+				type: "teams",
+				id: "1",
+				attributes: { name: "Tempe Wave" },
+			});
 		});
 
 		it("fails validation with a null, required relationship", () => {
@@ -875,24 +991,36 @@ describe("splice", () => {
 	});
 
 	describe("with nested resources", () => {
-		it("passes validation with a valid nested create relationship", () => {
+		it("works with a valid nested create relationship", () => {
 			const store = createMemoryStore(soccerSchema, {
 				initialData: createSoccerGraph(),
 			});
-			expect(() =>
-				store.splice({
-					type: "games",
-					attributes: { homeScore: 5, awayScore: 1 },
-					relationships: {
-						referee: {
-							type: "referees",
-							attributes: {
-								name: "Serafina Pekkala",
-							},
+			const result = store.splice({
+				type: "games",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					referee: {
+						type: "referees",
+						attributes: {
+							name: "Serafina Pekkala",
 						},
 					},
-				}),
-			).not.toThrowError();
+				},
+			});
+
+			expect((result.relationships.referee as any).id).not.toEqual(null);
+			expect(result).toMatchObject({
+				type: "games",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					referee: {
+						type: "referees",
+						attributes: {
+							name: "Serafina Pekkala",
+						},
+					},
+				},
+			});
 		});
 
 		it("fails validation with a valid nested create relationship and missing attribute", () => {
@@ -912,75 +1040,109 @@ describe("splice", () => {
 			).toThrowError();
 		});
 
-		it("passes validation with a valid nested update relationship", () => {
+		it("works with a valid nested update relationship", () => {
 			const store = createMemoryStore(soccerSchema, {
 				initialData: createSoccerGraph(),
 			});
-			expect(() =>
-				store.splice({
-					type: "games",
-					attributes: { homeScore: 5, awayScore: 1 },
-					relationships: {
-						referee: {
-							type: "referees",
-							id: "1",
-						},
+			const result = store.splice({
+				type: "games",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					referee: {
+						type: "referees",
+						id: "1",
 					},
-				}),
-			).not.toThrowError();
+				},
+			});
+
+			expect(result).toMatchObject({
+				type: "games",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: null,
+					awayTeam: null,
+					referee: {
+						type: "referees",
+						id: "1",
+					},
+				},
+			});
 		});
 
-		it("passes validation with a doubly nested resource", () => {
+		it("works with a doubly nested resource", () => {
 			const store = createMemoryStore(soccerSchema, {
 				initialData: createSoccerGraph(),
 			});
 
-			expect(() =>
-				store.splice({
-					type: "games",
-					attributes: { homeScore: 5, awayScore: 1 },
-					relationships: {
-						homeTeam: {
-							type: "teams",
-							attributes: { name: "Scottsdale Surf" },
-							relationships: {
-								homeField: {
-									type: "fields",
-								},
+			const result = store.splice({
+				type: "games",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: {
+						type: "teams",
+						attributes: { name: "Scottsdale Surf" },
+						relationships: {
+							homeField: {
+								type: "fields",
 							},
 						},
 					},
-				}),
-			).not.toThrowError();
-		});
-
-		it("passes validation with a nested resource with a ref", () => {
-			const store = createMemoryStore(soccerSchema, {
-				initialData: createSoccerGraph(),
+				},
 			});
-			expect(() =>
-				store.splice({
-					type: "games",
-					attributes: { homeScore: 5, awayScore: 1 },
-					relationships: {
-						homeTeam: {
-							type: "teams",
-							attributes: { name: "Scottsdale Surf" },
-							relationships: {
-								homeField: {
-									type: "fields",
-									id: "1",
-								},
+
+			expect(result).toMatchObject({
+				type: "games",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: {
+						type: "teams",
+						attributes: { name: "Scottsdale Surf" },
+						relationships: {
+							homeField: {
+								type: "fields",
 							},
 						},
 					},
-				}),
-			).not.toThrowError();
+				},
+			});
+		});
+
+		it("works with a nested resource with a ref", () => {
+			const store = createMemoryStore(soccerSchema, {
+				initialData: createSoccerGraph(),
+			});
+			const result = store.splice({
+				type: "games",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: {
+						type: "teams",
+						attributes: { name: "Scottsdale Surf" },
+						relationships: {
+							homeField: { type: "fields", id: "1" },
+						},
+					},
+				},
+			});
+
+			expect(result).toMatchObject({
+				type: "games",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: {
+						type: "teams",
+						attributes: { name: "Scottsdale Surf" },
+						relationships: {
+							homeField: { type: "fields", id: "1" },
+						},
+					},
+				},
+			});
 		});
 	});
 });
 
-describe("custom keywords", () => {
+describe("custom schemas", () => {
 	const locationSchema = structuredClone(soccerSchema);
 	locationSchema.resources.fields.attributes.location = {
 		type: "object",

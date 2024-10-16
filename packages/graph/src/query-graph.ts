@@ -11,7 +11,7 @@ export type Result = {
 
 type Ref = {
 	type: string;
-	id: string | number;
+	id: string;
 };
 
 export type CanonicalResource = {
@@ -23,7 +23,7 @@ export type CanonicalResource = {
 
 export type CanonicalResources = {
 	[k: string]: {
-		[k: string | number]: CanonicalResource;
+		[k: string]: CanonicalResource;
 	};
 };
 
