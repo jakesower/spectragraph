@@ -1,8 +1,9 @@
 import { Schema } from "./schema.js";
+import { Graph } from "./memory-store.js";
 export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 export type Ref = {
     type: string;
-    id: string | number;
+    id: string;
 };
 export type NormalResource = {
     id?: number | string;
@@ -12,11 +13,6 @@ export type NormalResource = {
     };
     relationships: {
         [k: string]: Ref | Ref[] | null;
-    };
-};
-export type Graph = {
-    [k: string]: {
-        [k: string | number]: NormalResource;
     };
 };
 export declare function createEmptyGraph(schema: Schema): Graph;

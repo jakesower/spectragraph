@@ -10,7 +10,7 @@ export type Ref = {
 };
 
 export type NormalResource = {
-	id?: number | string;
+	id?: string;
 	type?: string;
 	attributes: { [k: string]: unknown };
 	relationships: { [k: string]: Ref | Ref[] | null };

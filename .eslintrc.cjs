@@ -3,10 +3,9 @@ module.exports = {
 		es2022: true,
 		node: true,
 	},
-	plugins: ["solid", "@typescript-eslint"],
+	plugins: ["@typescript-eslint"],
 	extends: [
 		"eslint:recommended",
-		"plugin:solid/recommended",
 		"plugin:@typescript-eslint/recommended",
 		"plugin:import/errors",
 		"plugin:import/typescript",

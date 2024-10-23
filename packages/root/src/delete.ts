@@ -1,7 +1,14 @@
 import { NormalResource, Ref } from "./graph";
 
+export type DeleteResource = {
+	type: string;
+	id: string;
+	attributes?: { [k: string]: unknown };
+	relationships?: { [k: string]: Ref | Ref[] };
+};
+
 // WARNING: MUTATES storeGraph
-export function deleteAction(resource: NormalResource, context) {
+export function deleteAction(resource: DeleteResource, context) {
 	const { schema, storeGraph } = context;
 	const { type, id } = resource;
 	const resSchema = schema.resources[resource.type];

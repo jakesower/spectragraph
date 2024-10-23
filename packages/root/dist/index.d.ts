@@ -6,5 +6,5 @@ export { normalizeQuery } from "./query.js";
 export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 export { forEachQuery, mapQuery, reduceQuery, forEachSchemalessQuery, mapSchemalessQuery, reduceSchemalessQuery, } from "./query.js";
 export { createMemoryStore } from "./memory-store.js";
-export { validateCreateResource, validateDeleteResource, validateResourceTree, validateUpdateResource, } from "./validate.js";
+export { createValidator, validateCreateResource, validateDeleteResource, validateResourceTree, validateUpdateResource, } from "./validate.js";
 //# sourceMappingURL=index.d.ts.map
