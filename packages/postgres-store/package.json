@@ -15,12 +15,6 @@
 	"author": "Jake Sower",
 	"devDependencies": {
 		"@types/pg": "^8.11.9",
-		"@typescript-eslint/eslint-plugin": "^8.5.0",
-		"@typescript-eslint/parser": "^8.5.0",
-		"eslint": "^9.10.0",
-		"eslint-config-prettier": "^9.1.0",
-		"eslint-config-standard": "^17.1.0",
-		"prettier": "^3.3.3",
 		"typescript": "^5.6.2",
 		"typescript-eslint": "^8.5.0",
 		"vitest": "^2.0.5"
@@ -32,6 +26,7 @@
 	"dependencies": {
 		"@data-prism/expressions": "^0.0.12",
 		"@data-prism/utils": "0.0.6",
+		"ajv": "^8.17.1",
 		"data-prism": "0.0.25",
 		"lodash-es": "^4.17.21",
 		"pg": "^8.12.0"

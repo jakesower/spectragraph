@@ -4,5 +4,13 @@
 	"workspaces": [
 		"packages/*"
 	],
-	"devDependencies": {}
+	"version": "1.0.0",
+	"devDependencies": {
+		"@typescript-eslint/eslint-plugin": "^8.11.0",
+		"@typescript-eslint/parser": "^8.11.0",
+		"eslint": "^8.57.1",
+		"eslint-config-prettier": "^9.1.0",
+		"eslint-config-standard": "^17.1.0",
+		"prettier": "^3.3.3"
+	}
 }

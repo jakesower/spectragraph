@@ -1,11 +1,11 @@
-import Ajv from "ajv";
+import { Ajv } from "ajv";
 import { v4 as uuidv4 } from "uuid";
-import { mapValues, pick } from "lodash-es";
+import { validateResourceTree } from "./validate";
+import { MemoryStore, NormalResourceTree } from "./memory-store";
+import { createEmptyGraph, Ref } from "./graph";
+import { Schema } from "./schema";
 import { applyOrMap } from "@data-prism/utils";
-import { validateResourceTree } from "./validate.js";
-import { MemoryStore, NormalResourceTree } from "./memory-store.js";
-import { createEmptyGraph, Ref } from "./graph.js";
-import { Schema } from "./schema.js";
+import { mapValues, pick } from "lodash-es";
 
 export function splice(
 	schema: Schema,

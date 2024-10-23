@@ -10,7 +10,7 @@ import {
 } from "./graph.js";
 import { createGraphFromTrees } from "./mappers.js";
 import { createOrUpdate } from "./create-or-update.js";
-import { deleteAction } from "./delete.js";
+import { deleteAction, DeleteResource } from "./delete.js";
 import { ensureValidQuery, RootQuery } from "./query.js";
 import {
 	defaultValidator,
@@ -77,24 +77,20 @@ type UpdateResource = {
 	relationships?: { [k: string]: Ref | Ref[] };
 };
 
-type DeleteResource = {
-	type: string;
-	id: string;
-	attributes?: { [k: string]: unknown };
-	relationships?: { [k: string]: Ref | Ref[] };
-};
-
-export type MemoryStore = {
-	linkInverses: () => void;
+export type Store = {
 	getOne: (type: string, id: string) => NormalResource;
 	create: (resource: CreateResource) => NormalResource;
 	update: (resource: UpdateResource) => NormalResource;
 	delete: (resource: DeleteResource) => DeleteResource;
+	query: (query: RootQuery) => any;
+	splice: (resource: NormalResourceTree) => NormalResourceTree;
+};
+
+export type MemoryStore = Store & {
+	linkInverses: () => void;
 	merge: (graph: Graph) => void;
 	mergeTree: (resourceType: string, tree: any, mappers?: any) => void;
 	mergeTrees: (resourceType: string, trees: any[], mappers?: any) => void;
-	query: (query: RootQuery) => any;
-	splice: (resource: NormalResourceTree) => NormalResourceTree;
 };
 
 export function createMemoryStore(
@@ -162,7 +158,7 @@ export function createMemoryStore(
 		return createOrUpdate(normalRes, { schema, storeGraph });
 	};
 
-	const delete_ = (resource) => {
+	const delete_ = (resource: DeleteResource) => {
 		const errors = validateDeleteResource(schema, resource, validator);
 		if (errors.length > 0)
 			throw new Error("invalid resource", { cause: errors });
