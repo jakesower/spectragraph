@@ -4,7 +4,7 @@ export {
 	linkInverses,
 	createEmptyGraph,
 	mergeGraphs,
-	Graph,
+	NormalResource,
 	Ref,
 } from "./graph.js";
 export {
@@ -22,7 +22,7 @@ export {
 	mapSchemalessQuery,
 	reduceSchemalessQuery,
 } from "./query.js";
-export { createMemoryStore } from "./memory-store.js";
+export { createMemoryStore, NormalResourceTree } from "./memory-store.js";
 export {
 	createValidator,
 	validateCreateResource,

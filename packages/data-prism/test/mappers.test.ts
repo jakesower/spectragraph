@@ -1,6 +1,6 @@
 import { expect, it, describe } from "vitest";
 import { careBearData } from "./fixtures/care-bear-data.js"; // eslint-disable-line
-import { careBearSchema } from "./fixtures/care-bear-schema.js";
+import rawCareBearSchema from "./fixtures/care-bears.schema.json";
 import {
 	normalizeResource,
 	createGraphFromTrees,
@@ -8,6 +8,9 @@ import {
 } from "../src/mappers.js";
 import { flatCareBearData } from "./fixtures/care-bear-data-flat.js"; // eslint-disable-line
 import { omit, pick } from "lodash-es";
+import { Schema } from "../src/schema.js";
+
+const careBearSchema = rawCareBearSchema as Schema;
 
 describe("flattenResource", () => {
 	it("flattens a resource", () => {
@@ -319,7 +322,7 @@ describe("createGraphFromTrees", () => {
 });
 
 describe("the zoo", () => {
-	it.only("deals with a weird doubly nested resource (2024-06-21)", () => {
+	it("deals with a weird doubly nested resource (2024-06-21)", () => {
 		const resource = {
 			id: "1",
 			name: "Care-a-Lot",
@@ -464,6 +467,8 @@ describe("the zoo", () => {
 		expect(graph).toStrictEqual({
 			bears: {
 				"1": {
+					type: "bears",
+					id: "1",
 					attributes: {
 						id: "1",
 						name: "Tenderheart Bear",
@@ -474,6 +479,8 @@ describe("the zoo", () => {
 					relationships: { powers: careBearData.bears[1].relationships.powers },
 				},
 				"2": {
+					type: "bears",
+					id: "2",
 					attributes: {
 						id: "2",
 						name: "Cheer Bear",
@@ -484,6 +491,8 @@ describe("the zoo", () => {
 					relationships: { powers: careBearData.bears[2].relationships.powers },
 				},
 				"3": {
+					type: "bears",
+					id: "3",
 					attributes: {
 						id: "3",
 						name: "Wish Bear",
@@ -496,6 +505,8 @@ describe("the zoo", () => {
 			},
 			homes: {
 				"1": {
+					type: "homes",
+					id: "1",
 					attributes: {
 						id: "1",
 						name: "Care-a-Lot",
@@ -523,6 +534,8 @@ describe("the zoo", () => {
 			},
 			powers: {
 				careBearStare: {
+					type: "powers",
+					id: "careBearStare",
 					attributes: {
 						powerId: "careBearStare",
 						name: "Care Bear Stare",
@@ -547,6 +560,8 @@ describe("the zoo", () => {
 					},
 				},
 				makeWish: {
+					type: "powers",
+					id: "makeWish",
 					attributes: {
 						powerId: "makeWish",
 						name: "Make a Wish",

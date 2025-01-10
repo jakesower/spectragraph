@@ -1,9 +1,11 @@
-import Ajv, { ErrorObject } from "ajv";
+import Ajv, { ErrorObject, Schema as AjvSchema } from "ajv";
 import addFormats from "ajv-formats";
 import { Schema } from "./schema.js";
 import { mapValues, omit } from "lodash-es";
 import { Ref } from "./graph.js";
 import { NormalResourceTree } from "./memory-store.js";
+import { columnTypeModifiers } from "./lib/column-type-modifiers.js";
+import { geoJSONSchema } from "../schemas/geojson.schema.js";
 
 type CreateResource = {
 	type: string;
@@ -26,11 +28,17 @@ type UpdateResource = {
 type DeleteResource = Ref;
 
 export const defaultValidator = new Ajv();
+defaultValidator.addSchema(geoJSONSchema);
 addFormats(defaultValidator);
 
-export const createValidator = () => {
+export const createValidator = ({ schemas = [] } = {}) => {
 	const ajv = new Ajv();
 	addFormats(ajv);
+
+	schemas.forEach((schema) => ajv.addSchema(schema));
+	if (!("https://data-prism.dev/schemas/geojson.schema.json" in ajv.schemas)) {
+		ajv.addSchema(geoJSONSchema);
+	}
 
 	return ajv;
 };
@@ -74,9 +82,15 @@ export function validateCreateResource(
 					(k) => resSchema.attributes[k].required,
 				),
 				additionalProperties: false,
-				properties: mapValues(resSchema.attributes, (a) =>
-					omit(a, ["required"]),
-				),
+				properties: mapValues(resSchema.attributes, (a) => ({
+					...omit(a, ["required", "subType"]),
+					...(columnTypeModifiers[a.type]?.subTypes?.[a.subType]
+						?.schemaProperties
+						? columnTypeModifiers[a.type].subTypes[a.subType].schemaProperties
+						: columnTypeModifiers[a.type]?.schemaProperties
+							? columnTypeModifiers[a.type].schemaProperties
+							: {}),
+				})),
 			},
 			relationships: {
 				type: "object",
@@ -125,7 +139,21 @@ export function validateCreateResource(
 	};
 
 	const validate = validator.compile(validationSchema);
-	if (!validate(resource)) return validate.errors;
+	const castResource = {
+		...resource,
+		attributes: mapValues(resource.attributes, (v, k) => {
+			const attrSchema = resSchema.attributes[k];
+			const { castForValidation } =
+				columnTypeModifiers[attrSchema?.type]?.subTypes?.[attrSchema.subType] ??
+				columnTypeModifiers[attrSchema?.type] ??
+				{};
+
+			return castForValidation ? castForValidation(v) : v;
+		}),
+	};
+
+	validate(castResource);
+	if (!validate(castResource)) return validate.errors;
 
 	return [];
 }
@@ -155,9 +183,15 @@ export function validateUpdateResource(
 			attributes: {
 				type: "object",
 				additionalProperties: false,
-				properties: mapValues(resSchema.attributes, (a) =>
-					omit(a, ["required"]),
-				),
+				properties: mapValues(resSchema.attributes, (a) => ({
+					...omit(a, ["required", "subType"]),
+					...(columnTypeModifiers[a.type]?.subTypes?.[a.subType]
+						?.schemaProperties
+						? columnTypeModifiers[a.type].subTypes[a.subType].schemaProperties
+						: columnTypeModifiers[a.type]?.schemaProperties
+							? columnTypeModifiers[a.type].schemaProperties
+							: {}),
+				})),
 			},
 			relationships: {
 				type: "object",
@@ -203,7 +237,20 @@ export function validateUpdateResource(
 	};
 
 	const validate = validator.compile(validationSchema);
-	if (!validate(resource)) return validate.errors;
+	const castResource = {
+		...resource,
+		attributes: mapValues(resource.attributes, (v, k) => {
+			const attrSchema = resSchema.attributes[k];
+			const { castForValidation } =
+				columnTypeModifiers[attrSchema?.type]?.subTypes?.[attrSchema.subType] ??
+				columnTypeModifiers[attrSchema?.type] ??
+				{};
+
+			return castForValidation ? castForValidation(v) : v;
+		}),
+	};
+
+	if (!validate(castResource)) return validate.errors;
 
 	return [];
 }
@@ -231,7 +278,7 @@ export function validateResourceTree(
 	resource: NormalResourceTree,
 	validator: Ajv = defaultValidator,
 ): ErrorObject[] {
-	const basisSchema = {
+	const basisSchema: AjvSchema = {
 		type: "object",
 		required: ["type"],
 		properties: {
@@ -259,6 +306,8 @@ export function validateResourceTree(
 		items: toOneRefOfType(type, true),
 	});
 
+	const resSchema = schema.resources[resource.type];
+
 	const definitions = { create: {}, update: {} };
 	Object.entries(schema.resources).forEach(([resName, resSchema]) => {
 		const hasRequiredAttributes = Object.keys(resSchema.attributes).some(
@@ -284,9 +333,15 @@ export function validateResourceTree(
 						(k) => resSchema.attributes[k].required,
 					),
 					additionalProperties: false,
-					properties: mapValues(resSchema.attributes, (a) =>
-						omit(a, ["required"]),
-					),
+					properties: mapValues(resSchema.attributes, (a) => ({
+						...omit(a, ["required", "subType"]),
+						...(columnTypeModifiers[a.type]?.subTypes?.[a.subType]
+							?.schemaProperties
+							? columnTypeModifiers[a.type].subTypes[a.subType].schemaProperties
+							: columnTypeModifiers[a.type]?.schemaProperties
+								? columnTypeModifiers[a.type].schemaProperties
+								: {}),
+					})),
 				},
 				relationships: {
 					type: "object",
@@ -316,9 +371,15 @@ export function validateResourceTree(
 				attributes: {
 					type: "object",
 					additionalProperties: false,
-					properties: mapValues(resSchema.attributes, (a) =>
-						omit(a, ["required"]),
-					),
+					properties: mapValues(resSchema.attributes, (a) => ({
+						...omit(a, ["required", "subType"]),
+						...(columnTypeModifiers[a.type]?.subTypes?.[a.subType]
+							?.schemaProperties
+							? columnTypeModifiers[a.type].subTypes[a.subType].schemaProperties
+							: columnTypeModifiers[a.type]?.schemaProperties
+								? columnTypeModifiers[a.type].schemaProperties
+								: {}),
+					})),
 				},
 				relationships: {
 					type: "object",
@@ -343,7 +404,20 @@ export function validateResourceTree(
 	};
 
 	const validate = validator.compile(validationSchema);
-	if (!validate(resource)) return validate.errors;
+	const castResource = {
+		...resource,
+		attributes: mapValues(resource.attributes, (v, k) => {
+			const attrSchema = resSchema.attributes[k];
+			const { castForValidation } =
+				columnTypeModifiers[attrSchema?.type]?.subTypes?.[attrSchema.subType] ??
+				columnTypeModifiers[attrSchema?.type] ??
+				{};
+
+			return castForValidation ? castForValidation(v) : v;
+		}),
+	};
+
+	if (!validate(castResource)) return validate.errors;
 
 	return [];
 }

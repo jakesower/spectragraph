@@ -29,7 +29,7 @@ it("gets a resource without including relationships", async () => {
 	const result = await store.getOne("bears", "1", {
 		includeRelationships: false,
 	});
-	expect(result).toEqual(omit(careBearData.bears[1], "relationships"));
+	expect(result).toEqual({ ...careBearData.bears[1], relationships: {} });
 });
 
 it("gets all resources with a to-one and many-to-many relationships", async () => {

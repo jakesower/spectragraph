@@ -2,7 +2,6 @@ import { Schema } from "data-prism";
 import { defaultExpressionEngine } from "@data-prism/expressions";
 import JSON5 from "json5";
 import { mapValues, pickBy, uniq } from "lodash-es";
-import { validateRequest } from "./validate-request";
 
 const casters = {
 	boolean: (x) => x === "true",

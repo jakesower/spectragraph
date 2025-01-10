@@ -1,8 +1,12 @@
 import { expect, it, describe } from "vitest";
-import { careBearData } from "./fixtures/care-bear-data.js"; // eslint-disable-line
-import { Graph, linkInverses, mergeGraphs } from "../src/graph.js";
-import { careBearSchema } from "./fixtures/care-bear-schema.js";
 import { mapValues, omit, pick } from "lodash-es";
+import { careBearData as rawCareBearData } from "./fixtures/care-bear-data.js"; // eslint-disable-line
+import { Graph, linkInverses, mergeGraphs } from "../src/graph.js";
+import { Schema } from "../src/schema.js";
+import rawCareBearSchema from "./fixtures/care-bears.schema.json";
+
+const careBearData = rawCareBearData as any;
+const careBearSchema = rawCareBearSchema as Schema;
 
 describe("linkInverses", () => {
 	it("doesn't change anything for an already linked graph", () => {

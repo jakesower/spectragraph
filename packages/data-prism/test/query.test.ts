@@ -12,7 +12,7 @@ import {
 	reduceQuery,
 	reduceSchemalessQuery,
 } from "../src/query.js";
-import { careBearSchema } from "./fixtures/care-bear-schema.js";
+import careBearSchema from "./fixtures/care-bears.schema.json";
 
 const query1: RootQuery = {
 	type: "bears",

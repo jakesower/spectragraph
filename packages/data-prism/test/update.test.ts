@@ -1,20 +1,10 @@
 import { expect, it } from "vitest";
-import { createValidator, Schema } from "data-prism";
 import { randomBytes } from "node:crypto";
-import { db } from "./global-setup.js";
-import { createPostgresStore } from "../src/postgres-store.js";
-import careBearSchema from "./fixtures/care-bears.schema.json";
-import { careBearConfig } from "./fixtures/care-bear-config.js";
-import geojsonSchema from "../../../schemas/geojson.schema.json";
+import { createMemoryStore, Schema } from "../src";
+import rawCareBearSchema from "./fixtures/care-bears.schema.json";
 
-await db.connect();
-
-const validator = createValidator({ schemas: [geojsonSchema] });
-const store = createPostgresStore(careBearSchema as Schema, {
-	...careBearConfig,
-	db,
-	validator,
-});
+const careBearSchema = rawCareBearSchema as Schema;
+const store = createMemoryStore(careBearSchema);
 
 it("updates a single resource with only attributes", async () => {
 	const created = await store.create({
@@ -75,15 +65,15 @@ it("fails to update a single resource with an invalid attribute", async () => {
 		},
 	});
 
-	expect(
-		store.update({
+	expect(async () => {
+		await store.update({
 			type: "bears",
 			id: created.id,
 			attributes: {
 				bellyBadge: 1999,
 			},
-		}),
-	).rejects.toThrowError();
+		});
+	}).rejects.toThrowError();
 });
 
 it("updates a single resource with only attributes, including a geometry attribute", async () => {
@@ -118,6 +108,28 @@ it("updates a single resource with only attributes, including a geometry attribu
 			coordinates: [39, 6],
 		},
 	});
+});
+
+it("fails to update a single resource with an geometry attribute subType", async () => {
+	const created = await store.create({
+		type: "homes",
+		attributes: {
+			name: "Zanzibar",
+		},
+	});
+
+	expect(async () => {
+		await store.update({
+			type: "homes",
+			id: created.id,
+			attributes: {
+				location: {
+					type: "Polygon",
+					coordinates: [39, 6],
+				},
+			},
+		});
+	}).rejects.toThrowError();
 });
 
 it("updates a single resource with only attributes, including a geometry attribute, with the geometry attribute coming from a get request", async () => {

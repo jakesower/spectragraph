@@ -1,14 +1,14 @@
 import { expect, it, describe } from "vitest";
 import { Schema } from "../../src/schema.js";
 import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
-import { careBearSchema } from "../fixtures/care-bear-schema.js";
+import careBearSchema from "../fixtures/care-bears.schema.json";
 import { soccerSchema as rawSoccerSchema } from "../fixtures/soccer-schema.js";
 import {
 	createMemoryStore,
 	NormalResourceTree,
 } from "../../src/memory-store.js";
 import { createValidator } from "../../src/validate.js";
-import geojsonSchema from "../../schemas/geojson.schema.json";
+import geojsonSchema from "../../schemas/geojson.schema.js/index.js";
 
 const soccerSchema = rawSoccerSchema as Schema;
 
@@ -36,48 +36,49 @@ const barePowersTrees = [
 	{ powerId: "power-ijk-456", name: "Something Else" },
 ];
 
-const createSoccerGraph = () => ({
-	fields: {
-		1: {
-			attributes: {
-				name: "Beachside Park A",
-			},
-			relationships: {
-				teams: [{ type: "teams", id: "1" }],
-			},
-		},
-	},
-	games: {
-		1: {
-			attributes: { homeScore: 0, awayScore: 1 },
-			relationships: {
-				homeTeam: null,
-				awayTeam: null,
-				referee: null,
+const createSoccerGraph = () =>
+	({
+		fields: {
+			1: {
+				attributes: {
+					name: "Beachside Park A",
+				},
+				relationships: {
+					teams: [{ type: "teams", id: "1" }],
+				},
 			},
 		},
-	},
-	referees: {
-		1: {
-			attributes: { name: "The Enforcer" },
-			relationships: {
-				games: [],
+		games: {
+			1: {
+				attributes: { homeScore: 0, awayScore: 1 },
+				relationships: {
+					homeTeam: null,
+					awayTeam: null,
+					referee: null,
+				},
 			},
 		},
-	},
-	teams: {
-		1: {
-			attributes: {
-				name: "Arizona Bay FC",
-			},
-			relationships: {
-				homeGames: [],
-				awayGames: [],
-				homeField: { type: "fields", id: "1" },
+		referees: {
+			1: {
+				attributes: { name: "The Enforcer" },
+				relationships: {
+					games: [],
+				},
 			},
 		},
-	},
-});
+		teams: {
+			1: {
+				attributes: {
+					name: "Arizona Bay FC",
+				},
+				relationships: {
+					homeGames: [],
+					awayGames: [],
+					homeField: { type: "fields", id: "1" },
+				},
+			},
+		},
+	}) as any;
 
 describe("queryTree core", () => {
 	it("fetches appropriately on an empty store", async () => {
@@ -920,7 +921,7 @@ describe("splice", () => {
 			});
 		});
 
-		it("works with a valid relationship", () => {
+		it("works with a valid relationship, completing the inverse", () => {
 			const store = createMemoryStore(soccerSchema, {
 				initialData: createSoccerGraph(),
 			});
@@ -947,7 +948,7 @@ describe("splice", () => {
 						id: "1",
 						attributes: { name: "Scottsdale Surf" },
 						relationships: {
-							homeGames: [],
+							homeGames: [{ type: "games", id: "1" }],
 							awayGames: [],
 							homeField: { type: "fields", id: "1" },
 						},
@@ -1008,7 +1009,7 @@ describe("splice", () => {
 				},
 			});
 
-			expect((result.relationships.referee as any).id).not.toEqual(null);
+			expect((result.relationships?.referee as any).id).not.toEqual(null);
 			expect(result).toMatchObject({
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
@@ -1143,17 +1144,38 @@ describe("splice", () => {
 });
 
 describe("custom schemas", () => {
-	const locationSchema = structuredClone(soccerSchema);
-	locationSchema.resources.fields.attributes.location = {
-		type: "object",
-		$ref: "https://example.com/schemas/geojson.schema.json#/definitions/Point",
+	const customSchema = structuredClone(soccerSchema);
+	customSchema.resources.fields.attributes = {
+		...customSchema.resources.fields.attributes,
+		location: {
+			type: "object",
+			$ref: "https://data-prism.dev/schemas/geojson.schema.json#/definitions/Point",
+		},
+		constructedAt: {
+			type: "date-time",
+		},
+		contactEmail: {
+			type: "email",
+		},
+		timeActive: {
+			type: "duration",
+		},
+		website: {
+			type: "uri",
+		},
+		websitePath: {
+			type: "uri-reference",
+		},
 	};
 
-	const validator = createValidator();
-	validator.addSchema(geojsonSchema);
-
 	it("passes with valid geojson", () => {
-		const store = createMemoryStore(locationSchema, { validator });
+		const store = createMemoryStore(customSchema);
+		store.create({
+			type: "fields",
+			attributes: {
+				location: { type: "Point", coordinates: [102.0, 0.5] },
+			},
+		});
 		expect(() =>
 			store.create({
 				type: "fields",
@@ -1165,7 +1187,7 @@ describe("custom schemas", () => {
 	});
 
 	it("fails with invalid geojson", () => {
-		const store = createMemoryStore(locationSchema, { validator });
+		const store = createMemoryStore(customSchema);
 		expect(() =>
 			store.create({
 				type: "fields",
@@ -1174,5 +1196,119 @@ describe("custom schemas", () => {
 				},
 			}),
 		).toThrowError();
+	});
+
+	it("passes with a valid datetime", () => {
+		const store = createMemoryStore(customSchema);
+		expect(() =>
+			store.create({
+				type: "fields",
+				attributes: {
+					constructedAt: new Date(),
+				},
+			}),
+		).not.toThrowError();
+	});
+
+	it("fails with invalid datetime", () => {
+		const store = createMemoryStore(customSchema);
+		expect(() =>
+			store.create({
+				type: "fields",
+				attributes: {
+					constructedAt: "never",
+				},
+			}),
+		).toThrowError();
+	});
+
+	it("passes with a valid duration", () => {
+		const store = createMemoryStore(customSchema);
+		expect(() =>
+			store.create({
+				type: "fields",
+				attributes: {
+					timeActive: "P3Y6M4DT12H30M5S",
+				},
+			}),
+		).not.toThrowError();
+	});
+
+	it("fails with invalid duration", () => {
+		const store = createMemoryStore(customSchema);
+		expect(() =>
+			store.create({
+				type: "fields",
+				attributes: {
+					timeActive: "never",
+				},
+			}),
+		).toThrowError();
+	});
+
+	describe("uri", () => {
+		it("passes with a valid uri", () => {
+			const store = createMemoryStore(customSchema);
+			expect(() =>
+				store.create({
+					type: "fields",
+					attributes: {
+						website: "https://example.com/team",
+					},
+				}),
+			).not.toThrowError();
+		});
+
+		it("fails with invalid uri", () => {
+			const store = createMemoryStore(customSchema);
+			expect(() =>
+				store.create({
+					type: "fields",
+					attributes: {
+						website: "never",
+					},
+				}),
+			).toThrowError();
+		});
+	});
+
+	describe("uri-reference", () => {
+		it("passes with a valid uri reference", () => {
+			const store = createMemoryStore(customSchema);
+			expect(() =>
+				store.create({
+					type: "fields",
+					attributes: {
+						websitePath: "../gear",
+					},
+				}),
+			).not.toThrowError();
+		});
+	});
+
+	describe("email", () => {
+		it("passes with a valid email", () => {
+			const store = createMemoryStore(customSchema);
+			expect(() =>
+				store.create({
+					type: "fields",
+					attributes: {
+						contactEmail: "jen@example.com",
+					},
+				}),
+			).not.toThrowError();
+		});
+
+		it("fails with invalid uri", () => {
+			const store = createMemoryStore(customSchema);
+			expect(() =>
+				store.create({
+					type: "fields",
+					attributes: {
+						contactEmail: "some guy",
+					},
+				}),
+			).toThrowError();
+		});
 	});
 });

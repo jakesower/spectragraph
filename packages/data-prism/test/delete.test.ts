@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
-import { careBearSchema } from "./fixtures/care-bear-schema.js";
-import { createMemoryStore } from "../src";
+import careBearSchema from "./fixtures/care-bears.schema.json";
+import { createMemoryStore, Schema } from "../src";
 
-const store = createMemoryStore(careBearSchema);
+const store = createMemoryStore(careBearSchema as Schema);
 
 it("deletes a single resource", async () => {
 	const created = await store.create({
@@ -82,7 +82,6 @@ it("deletes a single resource with a foreign to-one relationship", async () => {
 		type: "homes",
 		attributes: {
 			name: "Hall of Hearts",
-			location: "Hall of Hearts",
 			caringMeter: 0.95,
 			isInClouds: true,
 		},

@@ -1,10 +1,89 @@
-# Queryable Graphs
+# Data Prism
+
+Data prism is a library with working with data graphs. It uses a user-provided schema to power various graph operations include fetching, creating, updating, deleting and querying resources.
+
+## Schema
+
+The schema is a document of vital information that the library makes extensive use of. A well thought out and written schema is worth its weight in gold.
+
+### Schema Structure
+
+```
+{
+  resources: {
+    [resourceType]: {
+      idAttribute?: "id",
+      attributes: {
+        [attr1]: { type: "boolean" },
+        [attr2]: { type: "string", pattern: "^someregex.*$" }
+      },
+      relationships: {
+        [rel1]: {
+          type: "otherResourceType",
+          cardinality: "many",
+          inverse: "referenceBackToThisResource"
+        }
+      }
+    }
+  }
+}
+```
+
+### Data Types
+
+There are various data types that determine how data is cast and validated. Some of these data types have subtypes that provide further precision.
+
+#### Basic Types
+
+- `array`
+- `boolean`
+- `integer`
+- `null`
+- `number`
+- `object`
+
+#### Additional Types (see [AJV Guide](https://ajv.js.org/guide/formats.html))
+
+- `date`
+- `time`
+- `date-time`
+- `duration` - [RFC3339](https://tools.ietf.org/html/rfc3339#appendix-A)
+- `uri`
+- `uri-reference` - [RFC6570](https://datatracker.ietf.org/doc/rfc6570/)
+- `url` - (deprecated)
+- `email`
+- `hostname`
+- `ipv4`
+- `ipv6`
+- `regex`
+- `uuid` - [RFC4122](https://datatracker.ietf.org/doc/rfc4122/)
+- `json-pointer` - [RFC6901](https://datatracker.ietf.org/doc/rfc6901/)
+- `relative-json-pointer` - according to [this draft](http://tools.ietf.org/html/draft-luff-relative-json-pointer-00)
+
+#### GeoJSON Types
+
+- `geojson` - including subtypes:
+  - `point`
+  - `line-string`
+  - `polygon`
+  - `multi-point`
+  - `multi-line-string`
+  - `multi-polygon`
+  - `geometry-collection`
+  - `feature`
+  - `feature-collection`
+
+This borrows a great deal from AJV formats. However, it is important to note that rather than being formats, the options are elevated to actual types. Data Prism will do the work of transforming the Data Prism schema into a JSON Schema.
+
+Other JSON Schema properties are available to be added to any attribute definition.
+
+## Graph Queries
 
 This library exposes the ability to query graphs to receive result trees using a robust query language. In addition it provides a suite of utility functions to help wrangle data into appropriate formats and interact with data structures effectively. See [helper functions](./helpers.md).
 
 This document focuses on constructing queries as this is the most common and use case for the library that requires a fair bit of explaination.
 
-## Resource Data
+### Resource Data
 
 Resource data is a representation of the graph of data to be queried on. It should be presented in _normal form_, which looks like this:
 
@@ -30,14 +109,14 @@ Resource data is a representation of the graph of data to be queried on. It shou
 
 Some effort may be required to get resources into this form, but it is designed to be as straightforward as possible. Having structure like this allows the query engine to make good assumptions about the data and allows it to execute many of the more powerful query features.
 
-## Queries
+### Queries
 
 Queries are what make the library useful. They aim to match the format of data you want as the output for your tree as best as they can. There are many types of things you can do within a query. Here's a small example first:
 
 ```json
 {
-  "type": "resource type",
-  "select": ["attribute1", "attribute2"]
+	"type": "resource type",
+	"select": ["attribute1", "attribute2"]
 }
 ```
 
@@ -45,26 +124,24 @@ Here's the overall structure. Notice that it can be represented in JSON. Also, t
 
 ```json
 {
-  "type": "[resource type]",
-  "id": "[resource id]",
-  "select": [
-    "attribute1",
-    "relationship ref1",
-    {
-      "relationship 2": {
-        "subquery": "goes here"
-      },
-      "some sum": { "$sum": "numeric field" }
-    }
-  ],
-  "where": {
-    "some": "criterion"
-  },
-  "order": [
-    { "some field": "asc" }
-  ],
-  "limit": 5,
-  "offset": 3
+	"type": "[resource type]",
+	"id": "[resource id]",
+	"select": [
+		"attribute1",
+		"relationship ref1",
+		{
+			"relationship 2": {
+				"subquery": "goes here"
+			},
+			"some sum": { "$sum": "numeric field" }
+		}
+	],
+	"where": {
+		"some": "criterion"
+	},
+	"order": [{ "some field": "asc" }],
+	"limit": 5,
+	"offset": 3
 }
 ```
 
@@ -79,15 +156,15 @@ There's are a lot of options and power in there. Let's try to break it down acro
 
 The guts and focus of most queries are going to be on what gets selected. We'll start there with the different types of things.
 
-### `type`
+#### `type`
 
 The `type` of an attribute determines which type of resource is being queried at the root level. It's required.
 
-### `id`
+#### `id`
 
 An `id` attribute targets the query to a specific resource. With it, you'll get a single resource; without it, you'll get a collection of resources. If the ID isn't found in the graph, you'll get a result of `null`.
 
-### `select`
+#### `select`
 
 `select` can be either an array or an object.
 
@@ -101,7 +178,7 @@ If it's an object, the object can be of one of three types:
 
 A couple of examples:
 
-#### Select an Attribute
+##### Select an Attribute
 
 ```json
 { "type": "teams", "select": ["name"] }
@@ -110,15 +187,12 @@ A couple of examples:
 Might return:
 
 ```json
-[
-  { "name": "Arizona Bay FC" },
-  { "name": "Scottsdale Surf" }
-]
+[{ "name": "Arizona Bay FC" }, { "name": "Scottsdale Surf" }]
 ```
 
 In this example we select the name from each team in our resources.
 
-#### Rename an Attribute
+##### Rename an Attribute
 
 ```json
 { "type": "teams", "select": { "nombre": "name" } }
@@ -127,15 +201,12 @@ In this example we select the name from each team in our resources.
 Might return:
 
 ```json
-[
-  { "nombre": "Arizona Bay FC" },
-  { "nombre": "Scottsdale Surf" }
-]
+[{ "nombre": "Arizona Bay FC" }, { "nombre": "Scottsdale Surf" }]
 ```
 
 Here we rename the "name" attribute to "nombre". You may have noticed that `{ "select": ["name"] }` is equivalent to `{ "select": { "name": "name" } }`.
 
-#### Run a Subquery
+##### Run a Subquery
 
 ```json
 {
@@ -154,11 +225,8 @@ Might return:
 
 ```json
 {
-  "name": "Arizona Bay FC",
-  "matches": [
-    { "field": "Phoenix Park 1" },
-    { "field": "Mesa Elementary B" }
-  ]
+	"name": "Arizona Bay FC",
+	"matches": [{ "field": "Phoenix Park 1" }, { "field": "Mesa Elementary B" }]
 }
 ```
 
@@ -166,37 +234,37 @@ Here we add an `id` key, meaning that we'll get a single resource back. Addition
 
 ```json
 {
-  "attribute": {
-    "name": "Arizona Bay FC"
-  },
-  "relationships": {
-    "matches": [
-      { "type": "matches", "id": 1 },
-      { "type": "matches", "id": 2 }
-    ]
-  }
+	"attribute": {
+		"name": "Arizona Bay FC"
+	},
+	"relationships": {
+		"matches": [
+			{ "type": "matches", "id": 1 },
+			{ "type": "matches", "id": 2 }
+		]
+	}
 }
 ```
 
 This is one reason why the normal form for resources is important: we can traverse the resource to elsewhere in the graph.
 
-#### Conclusion
+##### Conclusion
 
 We've seen the basics of querying. Expressions will be discussed later, but any data can be fetched without them. Hopefully you've noticed that the results of the queries closely line up with what's in the `select` field, including the nested subqueries. For more examples, you can check out the test suite.
 
-### `where`
+#### `where`
 
 The `where` property allows you to filter the result based on either properties, expressions, or property expressions. We'll leave the full expressions for later, but touch on the property expressions a little bit here because they're an integral part of some results and hopefully don't introduce too much complexity.
 
-#### Equality
+##### Equality
 
 ```json
 {
-  "type": "matches",
-  "select": ["field", "ageGroup"],
-  "where": {
-    "field": "Phoenix Park 1"
-  }
+	"type": "matches",
+	"select": ["field", "ageGroup"],
+	"where": {
+		"field": "Phoenix Park 1"
+	}
 }
 ```
 
@@ -204,22 +272,22 @@ Might give us:
 
 ```json
 [
-  { "field": "Phoenix Park 1", "ageGroup": 11 },
-  { "field": "Phoenix Park 1", "ageGroup": 14 }
+	{ "field": "Phoenix Park 1", "ageGroup": 11 },
+	{ "field": "Phoenix Park 1", "ageGroup": 14 }
 ]
 ```
 
 The `where` clause has whittled the results down to just the matches with the correct field name.
 
-#### Numeric Comparison
+##### Numeric Comparison
 
 ```json
 {
-  "type": "matches",
-  "select": ["field", "ageGroup"],
-  "where": {
-    "ageGroup": { "$gt": 11 }
-  }
+	"type": "matches",
+	"select": ["field", "ageGroup"],
+	"where": {
+		"ageGroup": { "$gt": 11 }
+	}
 }
 ```
 
@@ -234,19 +302,16 @@ Might give us:
 
 `{ "$gt": 11 }` is an expression that does a "greater than" comparison for its filtering. I'll document these at some point.
 
-### `order`
+#### `order`
 
 The `order` clause sorts results. It takes an array of field/direction pairs and sorts by them in order. If the first sorting is equal the second is applied, etc.
 
 ```json
 {
-  "order": [
-    { "ageGroup": "desc" },
-    { "field": "asc" }
-  ]
+	"order": [{ "ageGroup": "desc" }, { "field": "asc" }]
 }
 ```
 
-### `limit` and `offset`
+#### `limit` and `offset`
 
 These two properties work in tandem to reduce a list of results to a particular size. `[1, 2, 3, 4]` with limit 2, offset 1 would be `[2, 3]` for example. This pattern is well documented within the SQL world.

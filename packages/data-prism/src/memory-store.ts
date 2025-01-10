@@ -7,6 +7,8 @@ import {
 	createEmptyGraph,
 	linkInverses,
 	mergeGraphs,
+	Graph,
+	NormalResource,
 } from "./graph.js";
 import { createGraphFromTrees } from "./mappers.js";
 import { createOrUpdate } from "./create-or-update.js";
@@ -26,27 +28,12 @@ export type Ref = {
 	id: string;
 };
 
-export type NormalResource = {
-	id?: string;
-	type?: string;
-	new?: boolean;
-	attributes: { [k: string]: unknown };
-	relationships: { [k: string]: Ref | Ref[] | null };
-};
-
 export type NormalResourceTree = {
 	type: string;
 	id?: string;
-	new?: boolean;
 	attributes?: { [k: string]: unknown };
 	relationships?: {
 		[k: string]: NormalResourceTree | NormalResourceTree[] | Ref | Ref[] | null;
-	};
-};
-
-export type Graph = {
-	[k: string]: {
-		[k: string]: NormalResource;
 	};
 };
 
@@ -59,28 +46,28 @@ type CreateResource =
 	| {
 			type: string;
 			attributes?: { [k: string]: unknown };
-			relationships?: { [k: string]: Ref | Ref[] };
+			relationships?: { [k: string]: Ref | Ref[] | null };
 	  }
 	| {
 			type: string;
 			id: string;
 			new: true;
 			attributes?: { [k: string]: unknown };
-			relationships?: { [k: string]: Ref | Ref[] };
+			relationships?: { [k: string]: Ref | Ref[] | null };
 	  };
 
 type UpdateResource = {
 	type: string;
 	id: string;
-	new?: false;
 	attributes?: { [k: string]: unknown };
-	relationships?: { [k: string]: Ref | Ref[] };
+	relationships?: { [k: string]: Ref | Ref[] | null };
 };
 
 export type Store = {
 	getOne: (type: string, id: string) => NormalResource;
 	create: (resource: CreateResource) => NormalResource;
 	update: (resource: UpdateResource) => NormalResource;
+	upsert: (resource: CreateResource | UpdateResource) => NormalResource;
 	delete: (resource: DeleteResource) => DeleteResource;
 	query: (query: RootQuery) => any;
 	splice: (resource: NormalResourceTree) => NormalResourceTree;
@@ -158,6 +145,12 @@ export function createMemoryStore(
 		return createOrUpdate(normalRes, { schema, storeGraph });
 	};
 
+	const upsert = (resource: CreateResource | UpdateResource) => {
+		return "id" in resource && storeGraph[resource.type][resource.id]
+			? update(resource)
+			: create(resource);
+	};
+
 	const delete_ = (resource: DeleteResource) => {
 		const errors = validateDeleteResource(schema, resource, validator);
 		if (errors.length > 0)
@@ -201,13 +194,15 @@ export function createMemoryStore(
 		},
 		create,
 		update,
+		upsert,
 		delete: delete_,
 		merge,
 		mergeTree,
 		mergeTrees,
 		query: runQuery,
 		splice(resource) {
-			return splice(schema, resource, validator, this);
+			queryGraph = null;
+			return splice(resource, { schema, validator, store: this, storeGraph });
 		},
 	};
 }

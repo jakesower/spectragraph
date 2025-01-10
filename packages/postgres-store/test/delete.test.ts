@@ -1,14 +1,18 @@
 import { expect, it } from "vitest";
+import { createValidator, Schema } from "data-prism";
 import { db } from "./global-setup.js";
 import { createPostgresStore } from "../src/postgres-store.js";
 import careBearSchema from "./fixtures/care-bears.schema.json";
 import { careBearConfig } from "./fixtures/care-bear-config.js";
-import { Schema } from "data-prism";
+import geojsonSchema from "../../../schemas/geojson.schema.json";
 
 await db.connect();
+
+const validator = createValidator({ schemas: [geojsonSchema] });
 const store = createPostgresStore(careBearSchema as Schema, {
 	...careBearConfig,
 	db,
+	validator,
 });
 
 it("deletes a single resource", async () => {

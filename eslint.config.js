@@ -1,4 +1,4 @@
-module.exports = {
+export default {
 	env: {
 		es2022: true,
 		node: true,
@@ -63,7 +63,7 @@ module.exports = {
 			"ignorePackages",
 			{
 				js: "always",
-				ts: "never",
+				ts: "always",
 			},
 		],
 	},

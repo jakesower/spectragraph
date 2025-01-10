@@ -1,4 +1,5 @@
 import {
+	createValidator,
 	ensureValidQuery,
 	normalizeQuery,
 	Ref,
@@ -6,14 +7,18 @@ import {
 	Schema,
 	validateCreateResource,
 	validateDeleteResource,
+	validateResourceTree,
 	validateUpdateResource,
 } from "data-prism";
+import { Client } from "pg";
+import Ajv from "ajv";
 import { query as getQuery } from "./query.js";
 import { create } from "./create.js";
 import { deleteResource } from "./delete.js";
 import { update } from "./update.js";
 import { getAll, getOne, GetOptions } from "./get.js";
-import { Client } from "pg";
+import { upsert } from "./upsert.js";
+// import { splice } from "./splice.js";
 
 export type Resource = {
 	type: string;
@@ -24,6 +29,7 @@ export type Resource = {
 
 type CreateResource = {
 	type: string;
+	id?: string;
 	attributes?: { [k: string]: unknown };
 	relationships?: { [k: string]: Ref | Ref[] };
 };
@@ -66,6 +72,7 @@ export type Config = {
 			};
 		};
 	};
+	validator?: Ajv;
 };
 
 export type Context = {
@@ -73,19 +80,23 @@ export type Context = {
 	schema: Schema;
 };
 
-type PostgresStore = {
+export type PostgresStore = {
 	getAll: (type: string, options?: GetOptions) => Promise<Resource[]>;
 	getOne: (type: string, id: string, options?: GetOptions) => Promise<Resource>;
 	create: (resource: CreateResource) => Promise<Resource>;
 	update: (resource: UpdateResource) => Promise<Resource>;
+	upsert: (resource: CreateResource | UpdateResource) => Promise<Resource>;
 	delete: (resource: DeleteResource) => Promise<DeleteResource>;
 	query: (query: RootQuery) => Promise<any>;
+	// splice: (resource: NormalResourceTree) => NormalResourceTree;
 };
 
 export function createPostgresStore(
 	schema: Schema,
 	config: Config,
 ): PostgresStore {
+	const { validator = createValidator() } = config;
+
 	return {
 		async getAll(type, options = {}) {
 			return getAll(type, { config, options, schema });
@@ -94,21 +105,28 @@ export function createPostgresStore(
 			return getOne(type, id, { config, options, schema });
 		},
 		async create(resource) {
-			const errors = validateCreateResource(schema, resource);
+			const errors = validateCreateResource(schema, resource, validator);
 			if (errors.length > 0)
 				throw new Error("invalid query", { cause: errors });
 
 			return create(resource, { config, schema });
 		},
 		async update(resource) {
-			const errors = validateUpdateResource(schema, resource);
+			const errors = validateUpdateResource(schema, resource, validator);
 			if (errors.length > 0)
 				throw new Error("invalid query", { cause: errors });
 
 			return update(resource, { config, schema });
 		},
+		async upsert(resource) {
+			const errors = validateResourceTree(schema, resource, validator);
+			if (errors.length > 0)
+				throw new Error("invalid query", { cause: errors });
+
+			return upsert(resource, { config, schema });
+		},
 		async delete(resource) {
-			const errors = validateDeleteResource(schema, resource);
+			const errors = validateDeleteResource(schema, resource, validator);
 			if (errors.length > 0)
 				throw new Error("invalid query", { cause: errors });
 
@@ -124,5 +142,13 @@ export function createPostgresStore(
 				query: normalized,
 			});
 		},
+		// splice(resource) {
+		// 	return splice(resource, {
+		// 		schema,
+		// 		config,
+		// 		store: this,
+		// 		validator,
+		// 	});
+		// },
 	};
 }

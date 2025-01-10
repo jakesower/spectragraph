@@ -1,5 +1,6 @@
 import { mapValues, snakeCase } from "lodash-es";
 import { flatMapQuery } from "./helpers/query-helpers.js";
+import { columnTypeModifiers } from "./column-type-modifiers.js";
 
 export function extractGraph(rawResults, selectClause, context) {
 	const { schema, query: rootQuery } = context;
@@ -7,8 +8,8 @@ export function extractGraph(rawResults, selectClause, context) {
 
 	const extractors = flatMapQuery(schema, rootQuery, (_, info) => {
 		const { parent, parentQuery, parentRelationship, attributes, type } = info;
-		const resConfig = schema.resources[type];
-		const { idAttribute = "id" } = resConfig;
+		const resSchema = schema.resources[type];
+		const { idAttribute = "id" } = resSchema;
 
 		const selectAttributeMap = {};
 		selectClause.forEach((attr, idx) => {
@@ -78,8 +79,11 @@ export function extractGraph(rawResults, selectClause, context) {
 				attributes.forEach((attr) => {
 					const fullAttrPath = `${rootQuery.type}${pathStr}.${snakeCase(attr)}`;
 					const resultIdx = selectAttributeMap[fullAttrPath];
+					const attrType = resSchema.attributes[attr]?.type;
 
-					graph[type][id].attributes[attr] = result[resultIdx];
+					graph[type][id].attributes[attr] = columnTypeModifiers[attrType]
+						? columnTypeModifiers[attrType].extract(result[resultIdx])
+						: result[resultIdx];
 				});
 			} else {
 				graph[type][id].id = id;

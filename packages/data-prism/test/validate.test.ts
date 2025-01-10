@@ -8,7 +8,7 @@ import {
 	validateResourceTree,
 	validateUpdateResource,
 } from "../src/validate.js";
-import geojsonSchema from "../schemas/geojson.schema.json";
+import geojsonSchema from "../schemas/geojson.schema.js/index.js";
 
 const soccerSchema = rawSoccerSchema as Schema;
 
@@ -602,40 +602,56 @@ describe("resource tree validation", () => {
 });
 
 describe("custom keywords", () => {
-	const locationSchema = structuredClone(soccerSchema);
-	locationSchema.resources.fields.attributes.location = {
-		type: "object",
-		$ref: "https://example.com/schemas/geojson.schema.json#/definitions/Point",
+	const customSchema = structuredClone(soccerSchema);
+	customSchema.resources.fields.attributes = {
+		...customSchema.resources.fields.attributes,
+		location: {
+			type: "object",
+			$ref: "https://data-prism.dev/schemas/geojson.schema.json#/definitions/Point",
+		},
+		constructedAt: {
+			type: "date-time",
+		},
 	};
 
-	const validator = createValidator();
-	validator.addSchema(geojsonSchema);
-
 	it("passes with valid geojson", () => {
-		const result = validateCreateResource(
-			locationSchema,
-			{
-				type: "fields",
-				attributes: {
-					location: { type: "Point", coordinates: [102.0, 0.5] },
-				},
+		const result = validateCreateResource(customSchema, {
+			type: "fields",
+			attributes: {
+				location: { type: "Point", coordinates: [102.0, 0.5] },
 			},
-			validator,
-		);
+		});
 		expect(result.length).toEqual(0);
 	});
 
 	it("fails with invalid geojson", () => {
-		const result = validateCreateResource(
-			locationSchema,
-			{
-				type: "fields",
-				attributes: {
-					location: { type: "Point", coordinates: [-120, 0, "chicken butt"] },
-				},
+		const result = validateCreateResource(customSchema, {
+			type: "fields",
+			attributes: {
+				location: { type: "Point", coordinates: [-120, 0, "chicken butt"] },
 			},
-			validator,
-		);
+		});
+		expect(result.length).toBeGreaterThan(0);
+	});
+
+	it("passes with a valid datetime", () => {
+		const result = validateCreateResource(customSchema, {
+			type: "fields",
+			attributes: {
+				location: { type: "Point", coordinates: [102.0, 0.5] },
+				constructedAt: new Date(),
+			},
+		});
+		expect(result.length).toEqual(0);
+	});
+
+	it("fails with invalid datetime", () => {
+		const result = validateCreateResource(customSchema, {
+			type: "fields",
+			attributes: {
+				constructedAt: "invalid",
+			},
+		});
 		expect(result.length).toBeGreaterThan(0);
 	});
 });

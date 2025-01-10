@@ -62,6 +62,8 @@ export function normalizeResource(
 	});
 
 	return {
+		type: resourceType,
+		id: resource[resSchema.idAttribute ?? "id"] as string,
 		attributes: pickBy(attributes, (a) => a !== undefined),
 		relationships: pickBy(relationships, (r) => r !== undefined),
 	};
@@ -87,7 +89,8 @@ export function createGraphFromTrees(
 		const resourceSchema = schema.resources[resourceType];
 		const resourceMappers = graphMappers[resourceType] ?? {};
 
-		const idAttribute = resourceMappers.id ?? resourceSchema.idAttribute ?? "id";
+		const idAttribute =
+			resourceMappers.id ?? resourceSchema.idAttribute ?? "id";
 		const resourceId = resource[idAttribute];
 
 		output[resourceType][resourceId] = mergeResources(

@@ -17,6 +17,8 @@ export const careBearData = {
 			},
 		},
 		2: {
+			type: "bears",
+			id: "2",
 			attributes: {
 				id: "2",
 				name: "Cheer Bear",
@@ -31,6 +33,8 @@ export const careBearData = {
 			},
 		},
 		3: {
+			type: "bears",
+			id: "3",
 			attributes: {
 				id: "3",
 				name: "Wish Bear",
@@ -48,6 +52,8 @@ export const careBearData = {
 			},
 		},
 		5: {
+			type: "bears",
+			id: "5",
 			attributes: {
 				id: "5",
 				name: "Smart Heart Bear",
@@ -64,6 +70,8 @@ export const careBearData = {
 	},
 	homes: {
 		1: {
+			type: "homes",
+			id: "1",
 			attributes: {
 				id: "1",
 				name: "Care-a-Lot",
@@ -80,6 +88,8 @@ export const careBearData = {
 			},
 		},
 		2: {
+			type: "homes",
+			id: "2",
 			attributes: {
 				id: "2",
 				name: "Forest of Feelings",
@@ -92,6 +102,8 @@ export const careBearData = {
 			},
 		},
 		3: {
+			type: "homes",
+			id: "3",
 			attributes: {
 				id: "3",
 				name: "Earth",
@@ -106,6 +118,8 @@ export const careBearData = {
 	},
 	powers: {
 		careBearStare: {
+			type: "powers",
+			id: "careBearStare",
 			attributes: {
 				powerId: "careBearStare",
 				name: "Care Bear Stare",
@@ -121,6 +135,8 @@ export const careBearData = {
 			},
 		},
 		makeWish: {
+			type: "powers",
+			id: "makeWish",
 			attributes: {
 				powerId: "makeWish",
 				name: "Make a Wish",
@@ -132,6 +148,8 @@ export const careBearData = {
 			},
 		},
 		transform: {
+			type: "powers",
+			id: "transform",
 			attributes: {
 				powerId: "transform",
 				name: "Transform",

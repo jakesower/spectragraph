@@ -2,7 +2,7 @@ import { expect, it, describe } from "vitest";
 import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
 import { createQueryGraph } from "../../src/graph.js";
 
-const graph = createQueryGraph(careBearData);
+const graph = createQueryGraph(careBearData as any);
 
 describe("select expressions", () => {
 	it("projects a field to a literal expression", async () => {

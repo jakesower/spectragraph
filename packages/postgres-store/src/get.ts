@@ -1,11 +1,12 @@
-import { mapValues, omit, snakeCase } from "lodash-es";
+import { mapValues, snakeCase } from "lodash-es";
 import {
 	Context,
 	ForeignJoin,
 	LocalJoin,
 	ManyToManyJoin,
 	Resource,
-} from "./postgres-store";
+} from "./postgres-store.js";
+import { columnTypeModifiers } from "./column-type-modifiers.js";
 
 export type GetOptions = {
 	includeRelationships?: boolean;
@@ -88,8 +89,10 @@ export async function getOne(
 
 	const cols = [
 		...attrNames.map((attrName) =>
-			resSchema.attributes[attrName]?.format === "geography"
-				? `ST_AsGeoJSON(${snakeCase(attrName)})`
+			columnTypeModifiers[resSchema.attributes[attrName].type]
+				? columnTypeModifiers[resSchema.attributes[attrName].type].select(
+						snakeCase(attrName),
+					)
 				: snakeCase(attrName),
 		),
 		...localRelationships.map(([_, r]) => snakeCase(r.localColumn)),
@@ -109,10 +112,11 @@ export async function getOne(
 	if (!row) return null;
 
 	attrNames.forEach((attr, idx) => {
+		const attrType = resSchema.attributes[attr].type;
+
 		output.attributes[attr] =
-			typeof row[idx] === "string" &&
-			["array", "object"].includes(resSchema.attributes[attr].type)
-				? JSON.parse(row[idx])
+			typeof row[idx] === "string" && columnTypeModifiers[attrType]
+				? columnTypeModifiers[attrType].extract(row[idx])
 				: row[idx];
 	});
 
@@ -128,7 +132,7 @@ export async function getOne(
 		});
 	}
 
-	return includeRelationships ? output : omit(output, "relationships");
+	return output;
 }
 
 export async function getAll(
@@ -154,8 +158,10 @@ export async function getAll(
 	const cols = [
 		snakeCase(resSchema.idAttribute ?? "id"),
 		...attrNames.map((attrName) =>
-			resSchema.attributes[attrName]?.format === "geography"
-				? `ST_AsGeoJSON(${snakeCase(attrName)})`
+			columnTypeModifiers[resSchema.attributes[attrName].type]
+				? columnTypeModifiers[resSchema.attributes[attrName].type].select(
+						snakeCase(attrName),
+					)
 				: snakeCase(attrName),
 		),
 		...localRelationships.map(([_, r]) => snakeCase(r.localColumn)),
@@ -176,10 +182,11 @@ export async function getAll(
 		}
 
 		attrNames.forEach((attr, idx) => {
+			const attrType = resSchema.attributes[attr].type;
+
 			resource.attributes[attr] =
-				typeof row[idx + 1] === "string" &&
-				["array", "object"].includes(resSchema.attributes[attr].type)
-					? JSON.parse(row[idx + 1])
+				typeof row[idx + 1] === "string" && columnTypeModifiers[attrType]
+					? columnTypeModifiers[attrType].extract(row[idx + 1])
 					: row[idx + 1];
 		});
 
