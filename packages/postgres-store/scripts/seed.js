@@ -6,7 +6,7 @@ const defaultColumnTypes = {
 	boolean: "boolean",
 	date: "date",
 	datetime: "timestamp",
-	geography: "geometry",
+	geojson: "geometry",
 	integer: "integer",
 	number: "real",
 	object: "json",
@@ -34,12 +34,11 @@ export function createTablesSQL(schema, config) {
 			.filter(([attrName]) => attrName !== idAttribute)
 			.map(([attrName, attrDef]) => ({
 				name: snakeCase(attrName),
-				type: resConfig.columns?.[attrName]?.geometry
-					? "geometry"
-					: (resConfig.columns?.[attrName]?.type ??
-						(attrDef.format && defaultColumnTypes[attrDef.format]
-							? defaultColumnTypes[attrDef.format]
-							: defaultColumnTypes[attrDef.type])),
+				type:
+					resConfig.columns?.[attrName]?.type ??
+					(attrDef.format && defaultColumnTypes[attrDef.format]
+						? defaultColumnTypes[attrDef.format]
+						: defaultColumnTypes[attrDef.type]),
 			}));
 		const joinCols = Object.values(resConfig.joins ?? {})
 			.filter((j) => j.localColumn)
@@ -92,7 +91,7 @@ export async function seed(db, schema, config, seedData) {
 				.map(([attrName, attrSchema]) => ({
 					column: snakeCase(attrName),
 					placeholder:
-						attrSchema.format === "geography" ? "ST_GeomFromGeoJSON(?)" : "?",
+						attrSchema.type === "geography" ? "ST_GeomFromGeoJSON(?)" : "?",
 					value: (res) => res.attributes[attrName],
 				}));
 

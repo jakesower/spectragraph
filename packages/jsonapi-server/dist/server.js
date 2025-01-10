@@ -7,7 +7,7 @@ export function createJSONAPIHandlers(schema, store) {
     return {
         getAllHandler: (type) => get(schema, store, type),
         getOneHandler: (type) => get(schema, store, type),
-        createHandler: () => create(store),
+        createHandler: () => create(schema, store),
         updateHandler: () => update(store),
         deleteHandler: (type) => deleteHandler(type, store),
     };

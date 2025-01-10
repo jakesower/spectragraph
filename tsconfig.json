@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"composite": true,
 		"target": "ES2022",
-		"module": "ES2022",
+		"module": "ESNext",
 		"moduleResolution": "node",
 		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true,
@@ -17,7 +17,7 @@
 		"skipLibCheck": true, // TODO: pull this out once lodash works
 		"paths": {
 			"data-prism": [
-				"./packages/root"
+				"./packages/data-prism"
 			],
 			"@data-prism/expressions": [
 				"./packages/expressions"

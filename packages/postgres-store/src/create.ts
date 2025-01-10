@@ -1,4 +1,5 @@
 import { camelCase, pick, pickBy, snakeCase } from "lodash-es";
+import { replacePlaceholders } from "./query.js";
 
 export async function create(resource, context) {
 	const { config, schema } = context;
@@ -12,13 +13,6 @@ export async function create(resource, context) {
 	const { idAttribute = "id" } = resSchema;
 
 	const attributeColumns = Object.keys(resource.attributes).map(snakeCase);
-	const attributePlaceholders = Object.keys(resource.attributes).map(
-		(key, idx) => {
-			const placeholder =
-				resConfig.columns?.[key]?.placeholder ?? ((idx) => `$${idx}`);
-			return placeholder(idx + 1);
-		},
-	);
 
 	const localRelationships = pickBy(
 		resource.relationships ?? {},
@@ -28,23 +22,25 @@ export async function create(resource, context) {
 	const relationshipColumns = Object.keys(localRelationships).map(
 		(r) => resConfig.joins[r].localColumn,
 	);
-	const relationshipPlaceholders = Object.keys(localRelationships)
-		.map((r) => resConfig.joins[r].localColumn)
-		.map((_, idx) => `$${idx + attributePlaceholders.length + 1}`);
 
-	const columns = [...attributeColumns, ...relationshipColumns].join(", ");
-	const placeholders = [
-		...attributePlaceholders,
-		...relationshipPlaceholders,
-	].join(", ");
+	const idColumns = resource.id ? [snakeCase(idAttribute)] : [];
+	const idVars = resource.id ? [resource.id] : [];
+
+	const columns = [
+		...attributeColumns,
+		...relationshipColumns,
+		...idColumns,
+	];
+	const placeholders = replacePlaceholders(columns.map(() => "?").join(", "));
 	const vars = [
 		...Object.values(resource.attributes),
 		...Object.values(localRelationships).map((r) => r?.id ?? null),
+		...idVars,
 	];
 
 	const sql = `
     INSERT INTO ${table}
-      (${columns})
+      (${columns.join(", ")})
     VALUES
       (${placeholders})
 		RETURNING *
@@ -108,6 +104,7 @@ export async function create(resource, context) {
 							INSERT INTO ${joinTable}
 							(${localJoinColumn}, ${foreignJoinColumn})
 							VALUES ($1, $2)
+							ON CONFLICT DO NOTHING
 			`,
 						[created[idAttribute], v.id],
 					),

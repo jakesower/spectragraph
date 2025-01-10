@@ -32,7 +32,7 @@
 			"attributes": {
 				"id": { "type": "string" },
 				"name": { "type": "string" },
-				"location": { "type": "string" },
+				"location": { "type": "geojson", "subType": "point" },
 				"caringMeter": { "type": "number" },
 				"isInClouds": { "type": "boolean" }
 			},

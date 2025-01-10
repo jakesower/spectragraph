@@ -1,22 +1,36 @@
-import { RootQuery, Schema } from "data-prism";
-import { GetOptions } from "./get.js";
+import { Ref, RootQuery, Schema } from "data-prism";
 import { Client } from "pg";
+import Ajv from "ajv";
+import { GetOptions } from "./get.js";
 export type Resource = {
     type: string;
     id: any;
-    attributes: object;
-    relationships?: object;
+    attributes: {
+        [k: string]: unknown;
+    };
+    relationships: {
+        [k: string]: Ref | Ref[];
+    };
 };
 type CreateResource = {
     type: string;
-    attributes?: object;
-    relationships?: object;
+    id?: string;
+    attributes?: {
+        [k: string]: unknown;
+    };
+    relationships?: {
+        [k: string]: Ref | Ref[];
+    };
 };
 type UpdateResource = {
     type: string;
     id: any;
-    attributes?: object;
-    relationships?: object;
+    attributes?: {
+        [k: string]: unknown;
+    };
+    relationships?: {
+        [k: string]: Ref | Ref[];
+    };
 };
 type DeleteResource = {
     type: string;
@@ -53,16 +67,18 @@ export type Config = {
             };
         };
     };
+    validator?: Ajv;
 };
 export type Context = {
     config: Config;
     schema: Schema;
 };
-type PostgresStore = {
+export type PostgresStore = {
     getAll: (type: string, options?: GetOptions) => Promise<Resource[]>;
     getOne: (type: string, id: string, options?: GetOptions) => Promise<Resource>;
     create: (resource: CreateResource) => Promise<Resource>;
     update: (resource: UpdateResource) => Promise<Resource>;
+    upsert: (resource: CreateResource | UpdateResource) => Promise<Resource>;
     delete: (resource: DeleteResource) => Promise<DeleteResource>;
     query: (query: RootQuery) => Promise<any>;
 };

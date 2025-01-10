@@ -1,11 +1,13 @@
 import { expect, it } from "vitest";
+import { Schema } from "data-prism";
+import { randomBytes } from "node:crypto";
 import { db } from "./global-setup.js";
 import { createPostgresStore } from "../src/postgres-store.js";
 import careBearSchema from "./fixtures/care-bears.schema.json";
 import { careBearConfig } from "./fixtures/care-bear-config.js";
-import { Schema } from "data-prism";
 
 await db.connect();
+
 const store = createPostgresStore(careBearSchema as Schema, {
 	...careBearConfig,
 	db,
@@ -38,6 +40,44 @@ it("fails to create a single resource with an invalid attribute", async () => {
 			attributes: { name: 1999 },
 		}),
 	).rejects.toThrowError();
+});
+
+it("creates a single resource with an ID given", async () => {
+	const id = randomBytes(20).toString("hex");
+
+	await store.create({
+		type: "bears",
+		id,
+		attributes: {
+			name: "Watchful Bear",
+			yearIntroduced: 2019,
+			bellyBadge: "star with swirls",
+			furColor: "pastel green",
+		},
+	});
+
+	const result = await store.query({
+		type: "bears",
+		id,
+		select: ["name"],
+	});
+
+	expect(result).toEqual({ name: "Watchful Bear" });
+});
+
+it("fails to create a single resource with an existing ID given", async () => {
+	await expect(async () => {
+		await store.create({
+			type: "bears",
+			id: "1",
+			attributes: {
+				name: "Watchful Bear",
+				yearIntroduced: 2019,
+				bellyBadge: "star with swirls",
+				furColor: "pastel green",
+			},
+		});
+	}).rejects.toThrowError();
 });
 
 it("creates a single resource with only attributes, including a geometry attribute", async () => {

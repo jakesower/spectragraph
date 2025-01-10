@@ -32,14 +32,12 @@ export function parseRequest(schema, params) {
         });
         const castFilters = mapValues(parsedFilters, (param, key) => {
             const attrType = resDef.attributes[key].type;
-            if (defaultExpressionEngine.isExpression(param)) {
+            if (defaultExpressionEngine.isExpression(param))
                 return castFilterValue(attrType, param);
-            }
             try {
                 const parsed = JSON5.parse(param);
-                if (defaultExpressionEngine.isExpression(parsed)) {
+                if (defaultExpressionEngine.isExpression(parsed))
                     return castFilterValue(attrType, parsed);
-                }
             }
             catch {
                 // noop
@@ -54,7 +52,7 @@ export function parseRequest(schema, params) {
         const select = [
             ...(fields?.[type]
                 ? uniq([
-                    ...fields?.[type]?.split(","),
+                    ...fields[type].split(","),
                     resDef.idAttribute ?? "id",
                     ...Object.keys(parsedFilters ?? {}),
                 ])

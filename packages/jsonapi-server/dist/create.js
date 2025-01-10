@@ -1,6 +1,14 @@
 import { mapValues } from "lodash-es";
-export function create(store) {
+import { validateRequest } from "./validate-request.js";
+export function create(schema, store) {
     return async (req, res) => {
+        const body = req.body;
+        const validationErrors = validateRequest(schema, body);
+        if (validationErrors) {
+            res.statusCode = 400;
+            res.send({ errors: validationErrors });
+            return;
+        }
         try {
             const { data: resource } = req.body;
             const normalized = {

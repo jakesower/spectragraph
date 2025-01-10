@@ -1,9 +1,10 @@
 import { snakeCase, uniq } from "lodash-es";
+import { RootQuery } from "data-prism";
 import { whereExpressionEngine } from "./helpers/sql-expressions.js";
 import { forEachQuery, someQuery } from "./helpers/query-helpers.js";
 import { preQueryRelationships } from "./relationships.js";
-import { RootQuery } from "data-prism";
 import { StoreContext } from "./query.js";
+import { columnTypeModifiers } from "./column-type-modifiers.js";
 
 const hasToManyRelationship = (schema, query) => {
 	return someQuery(schema, query, (_, info) =>
@@ -78,10 +79,9 @@ const QUERY_CLAUSE_EXTRACTORS = {
 		return [];
 	},
 	select: (select, context) => {
-		const { config, schema, table, queryInfo } = context;
+		const { schema, table, queryInfo } = context;
 		const { type } = queryInfo;
 		const { idAttribute = "id" } = schema.resources[type];
-		const resConfig = config.resources[type];
 		const resSchema = schema.resources[type];
 
 		const attributeProps = Object.values(select).filter(
@@ -92,16 +92,14 @@ const QUERY_CLAUSE_EXTRACTORS = {
 
 		return {
 			select: uniq([idAttribute, ...attributeProps]).map((col) => {
-				const selectFn = resConfig.columns?.[col]?.select;
-				const geography = resSchema.attributes[col]?.format === "geography";
+				const attrSchema = resSchema.attributes[col];
 				const value = `${table}.${snakeCase(col)}`;
 
 				return {
 					value,
-					sql: selectFn
-						? selectFn(table, col)
-						: geography
-							? `ST_AsGeoJSON(${value})`
+					sql:
+						attrSchema && columnTypeModifiers[attrSchema.type]
+							? columnTypeModifiers[attrSchema.type].select(value)
 							: value,
 				};
 			}),

@@ -1,14 +1,19 @@
 import { expect, it } from "vitest";
+import { createValidator, Schema } from "data-prism";
+import { randomBytes } from "node:crypto";
 import { db } from "./global-setup.js";
 import { createPostgresStore } from "../src/postgres-store.js";
 import careBearSchema from "./fixtures/care-bears.schema.json";
 import { careBearConfig } from "./fixtures/care-bear-config.js";
-import { Schema } from "data-prism";
+import geojsonSchema from "../../../schemas/geojson.schema.json";
 
 await db.connect();
+
+const validator = createValidator({ schemas: [geojsonSchema] });
 const store = createPostgresStore(careBearSchema as Schema, {
 	...careBearConfig,
 	db,
+	validator,
 });
 
 it("updates a single resource with only attributes", async () => {
@@ -40,6 +45,23 @@ it("updates a single resource with only attributes", async () => {
 		name: "Champ Bear",
 		bellyBadge: "yellow trophy with red star stamp",
 	});
+});
+
+it("fails to update a single resource with a nonexistant ID", async () => {
+	const id = randomBytes(20).toString("hex");
+
+	expect(async () => {
+		await store.update({
+			type: "bears",
+			id,
+			attributes: {
+				name: "Watchful Bear",
+				yearIntroduced: 2019,
+				bellyBadge: "star with swirls",
+				furColor: "pastel green",
+			},
+		});
+	}).rejects.toThrowError();
 });
 
 it("fails to update a single resource with an invalid attribute", async () => {

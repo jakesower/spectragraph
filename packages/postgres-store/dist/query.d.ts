@@ -12,5 +12,5 @@ export declare const SQL_CLAUSE_CONFIG: {
     };
 };
 export declare function replacePlaceholders(inputString: any): any;
-export declare function query(query: RootQuery, context: StoreContext): Promise<import("../../root/dist/graph/query-graph.js").Result>;
+export declare function query(query: RootQuery, context: StoreContext): Promise<import("../../data-prism/dist/graph/query-graph.js").Result>;
 //# sourceMappingURL=query.d.ts.map

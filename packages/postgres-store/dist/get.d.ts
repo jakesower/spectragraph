@@ -1,4 +1,4 @@
-import { Context, Resource } from "./postgres-store";
+import { Context, Resource } from "./postgres-store.js";
 export type GetOptions = {
     includeRelationships?: boolean;
 };
