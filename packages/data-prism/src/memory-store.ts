@@ -1,7 +1,7 @@
 import Ajv from "ajv";
 import { v4 as uuidv4 } from "uuid";
 import { mapValues } from "lodash-es";
-import { Schema } from "./schema.js";
+import { Schema, ensureValidSchema } from "./schema.js";
 import {
 	createQueryGraph,
 	createEmptyGraph,
@@ -85,6 +85,8 @@ export function createMemoryStore(
 	config: MemoryStoreConfig = {},
 ): MemoryStore {
 	const { initialData = {}, validator = defaultValidator } = config;
+
+	ensureValidSchema(schema);
 
 	let queryGraph;
 	let storeGraph = mergeGraphs(createEmptyGraph(schema), initialData);

@@ -1,5 +1,5 @@
 import { mapValues } from "lodash-es";
-import { Schema } from "./schema.js";
+import { ensureValidSchema, Schema } from "./schema.js";
 import { applyOrMap } from "@data-prism/utils";
 export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 
@@ -22,12 +22,8 @@ export type Graph = {
 };
 
 export function createEmptyGraph(schema: Schema): Graph {
+	ensureValidSchema(schema);
 	return mapValues(schema.resources, () => ({}));
-}
-
-export function emptyGraph(schema: Schema): Graph {
-	console.warn("`emptyGraph` is deprecated in favor of `createEmptyGraphh`");
-	return createEmptyGraph(schema);
 }
 
 export function linkInverses(graph: Graph, schema: Schema): Graph {

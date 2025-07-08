@@ -1,7 +1,8 @@
 import { defaultExpressionEngine } from "@data-prism/expressions";
 import { mapValues, orderBy } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
-import { NormalRootQuery, RootQuery, normalizeQuery } from "../query.js";
+import { NormalRootQuery, RootQuery } from "../query.js";
+import { normalizeSchemalessQuery } from "../schemaless-query.js";
 import { buildWhereExpression } from "./where-helpers.js";
 import { createExpressionProjector } from "./select-helpers.js";
 import { Graph, Ref } from "../graph.js";
@@ -132,7 +133,7 @@ function runQuery<Q extends NormalRootQuery>(
 								return curValue.map((v) => extractPath(v, tail));
 
 							if (!(head in curValue))
-								throw new Error(`${propQuery} is an invalid attribute or path`);
+								return undefined;
 
 							return extractPath(curValue?.[head], tail);
 						};
@@ -155,7 +156,7 @@ function runQuery<Q extends NormalRootQuery>(
 					return (result) => {
 						if (result[propName] === undefined) {
 							throw new Error(
-								`The "${propName}" relationship is undefined on a resource of type "${query.type}". You probably constructed your graph wrong. Try linking the inverses (via "linkInverses") and check your schema to make sure all inverses have been defined correctly there.`,
+								`The "${propName}" relationship is undefined on a resource of type "${query.type}". You probably have an invalid schema or constructed your graph wrong. Try linking the inverses (via "linkInverses"), check your schema to make sure all inverses have been defined correctly there, and make sure all resources have been loaded into the graph.`,
 							);
 						}
 
@@ -227,7 +228,7 @@ export function createQueryGraph(graph: Graph): QueryGraph {
 
 	return {
 		query<Q extends RootQuery>(query: Q): Result {
-			const compiled = normalizeQuery(query);
+			const compiled = normalizeSchemalessQuery(query);
 			return runQuery(compiled, data) as Result;
 		},
 	};

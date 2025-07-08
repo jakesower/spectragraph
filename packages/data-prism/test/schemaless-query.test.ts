@@ -3,18 +3,14 @@
 import { expect, it, describe } from "vitest";
 import { omit } from "lodash-es";
 import {
-	RootQuery,
-	forEachQuery,
-	mapQuery,
-	normalizeQuery,
-	reduceQuery,
-} from "../src/query.js";
-import rawCareBearSchema from "./fixtures/care-bears.schema.json";
-import { Schema } from "../src/index.js";
+	RootSchemalessQuery,
+	forEachSchemalessQuery,
+	mapSchemalessQuery,
+	normalizeSchemalessQuery,
+	reduceSchemalessQuery,
+} from "../src/schemaless-query.js";
 
-const careBearSchema = rawCareBearSchema as Schema;
-
-const query1: RootQuery = {
+const query1: RootSchemalessQuery = {
 	type: "bears",
 	select: [
 		"id",
@@ -35,18 +31,18 @@ const query1: RootQuery = {
 	limit: 3,
 };
 
-const normalQuery1 = normalizeQuery(careBearSchema, query1);
+const normalQuery1 = normalizeSchemalessQuery(query1);
 
-describe("forEachQuery", () => {
+describe("forEachSchemalessQuery", () => {
 	it("doesn't mutate the query", () => {
 		const result = structuredClone(query1);
-		forEachQuery(careBearSchema, query1, () => {}); // eslint-disable-line
+		forEachSchemalessQuery(query1, () => {}); // eslint-disable-line
 		expect(result).toEqual(query1);
 	});
 
 	it("visits each subquery", () => {
 		const visited = [] as any[];
-		forEachQuery(careBearSchema, query1, (subquery) => {
+		forEachSchemalessQuery(query1, (subquery) => {
 			visited.push(subquery);
 		});
 
@@ -55,7 +51,7 @@ describe("forEachQuery", () => {
 
 	it("collects path info", () => {
 		const pathInfo = [] as any[];
-		forEachQuery(careBearSchema, query1, (subquery, { path }) => {
+		forEachSchemalessQuery(query1, (subquery, { path }) => {
 			pathInfo.push(path);
 		});
 
@@ -64,26 +60,17 @@ describe("forEachQuery", () => {
 
 	it("collects parent info", () => {
 		const parents = [] as any[];
-		forEachQuery(careBearSchema, query1, (subquery, { parent }) => {
+		forEachSchemalessQuery(query1, (subquery, { parent }) => {
 			parents.push(parent);
 		});
 
 		expect(parents).toEqual([null, normalQuery1, normalQuery1.select.home]);
 	});
-
-	it("collects type info", () => {
-		const types = [] as any[];
-		forEachQuery(careBearSchema, query1, (subquery, { type }) => {
-			types.push(type);
-		});
-
-		expect(types).toEqual(["bears", "homes", "bears"]);
-	});
 });
 
-describe("mapQuery", () => {
+describe("mapSchemalessQuery", () => {
 	it("maps the query, stripping out limits", () => {
-		const result = mapQuery(careBearSchema, query1, (subquery) =>
+		const result = mapSchemalessQuery(query1, (subquery) =>
 			omit(subquery, ["limit"]),
 		);
 
@@ -93,10 +80,9 @@ describe("mapQuery", () => {
 				id: "id",
 				name: "name",
 				home: {
-					type: "homes",
 					select: {
 						name: "name",
-						residents: { type: "bears", select: { bellyBadge: "bellyBadge" } },
+						residents: { select: { bellyBadge: "bellyBadge" } },
 						residentCount: { $count: "residents" },
 					},
 				},
@@ -105,7 +91,7 @@ describe("mapQuery", () => {
 	});
 
 	it("maps the query, interfering with child queries", () => {
-		const result = mapQuery(careBearSchema, query1, (subquery, { parent }) =>
+		const result = mapSchemalessQuery(query1, (subquery, { parent }) =>
 			parent ? "chicken" : subquery,
 		);
 
@@ -122,7 +108,7 @@ describe("mapQuery", () => {
 
 	it("visits each subquery", () => {
 		const visited = [] as any[];
-		mapQuery(careBearSchema, query1, (subquery) => {
+		mapSchemalessQuery(query1, (subquery) => {
 			visited.push(subquery);
 		});
 
@@ -131,7 +117,7 @@ describe("mapQuery", () => {
 
 	it("collects path info", () => {
 		const pathInfo = [] as any[];
-		mapQuery(careBearSchema, query1, (subquery, { path }) => {
+		mapSchemalessQuery(query1, (subquery, { path }) => {
 			pathInfo.push(path);
 		});
 
@@ -140,38 +126,27 @@ describe("mapQuery", () => {
 
 	it("collects parent info", () => {
 		const parents = [] as any[];
-		mapQuery(careBearSchema, query1, (subquery, { parent }) => {
+		mapSchemalessQuery(query1, (subquery, { parent }) => {
 			parents.push(parent);
 		});
 
 		expect(parents).toEqual([normalQuery1.select.home, normalQuery1, null]);
 	});
-
-	it("collects type info", () => {
-		const types = [] as any[];
-		mapQuery(careBearSchema, query1, (subquery, { type }) => {
-			types.push(type);
-		});
-
-		expect(types).toEqual(["bears", "homes", "bears"]);
-	});
 });
 
-describe("reduceQuery", () => {
+describe("reduceSchemalessQuery", () => {
 	it("reduces the query, collecting limits", () => {
-		const result = reduceQuery(
-			careBearSchema,
+		const result = reduceSchemalessQuery(
 			query1,
 			(acc, subquery) => [...acc, subquery.limit],
-			[] as (number | undefined)[],
+			[],
 		);
 
 		expect(result).toEqual([3, 4, undefined]);
 	});
 
 	it("reduces the query, finding query attributes with their paths", () => {
-		const result = reduceQuery(
-			careBearSchema,
+		const result = reduceSchemalessQuery(
 			query1,
 			(acc, subquery, { path }) => {
 				const out = acc;
@@ -181,7 +156,7 @@ describe("reduceQuery", () => {
 
 				return out;
 			},
-			[] as string[],
+			[],
 		);
 
 		expect(result).toEqual([
@@ -194,14 +169,12 @@ describe("reduceQuery", () => {
 
 	it("visits each subquery", () => {
 		const visited = [] as any[];
-		reduceQuery(
-			careBearSchema,
+		reduceSchemalessQuery(
 			query1,
-			(acc, subquery) => {
+			(subquery) => {
 				visited.push(subquery);
-				return null;
 			},
-			null,
+			[],
 		);
 
 		expect(visited.length).toEqual(3);
@@ -209,14 +182,12 @@ describe("reduceQuery", () => {
 
 	it("collects path info", () => {
 		const pathInfo = [] as any[];
-		reduceQuery(
-			careBearSchema,
+		reduceSchemalessQuery(
 			query1,
 			(acc, subquery, { path }) => {
 				pathInfo.push(path);
-				return null;
 			},
-			null,
+			[],
 		);
 
 		expect(pathInfo).toEqual([[], ["home"], ["home", "residents"]]);
@@ -224,31 +195,14 @@ describe("reduceQuery", () => {
 
 	it("collects parent info", () => {
 		const parents = [] as any[];
-		reduceQuery(
-			careBearSchema,
+		reduceSchemalessQuery(
 			query1,
 			(acc, subquery, { parent }) => {
 				parents.push(parent);
-				return null;
 			},
-			null,
+			[],
 		);
 
 		expect(parents).toEqual([null, normalQuery1, normalQuery1.select.home]);
-	});
-
-	it("collects type info", () => {
-		const types = [] as any[];
-		reduceQuery(
-			careBearSchema,
-			query1,
-			(acc, subquery, { type }) => {
-				types.push(type);
-				return null;
-			},
-			null,
-		);
-
-		expect(types).toEqual(["bears", "homes", "bears"]);
 	});
 });

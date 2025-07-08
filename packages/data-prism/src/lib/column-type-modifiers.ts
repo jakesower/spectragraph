@@ -55,7 +55,7 @@ export const columnTypeModifiers: { [k: string]: ColumnTypeModifier } = {
 		schemaProperties: { type: "string", format: "relative-json-pointer" },
 	},
 	// geojson
-	geojson: {
+	"data-prism:geojson": {
 		schemaProperties: {
 			type: "object",
 			$ref: "https://data-prism.dev/schemas/geojson.schema.json#/",
