@@ -36,5 +36,6 @@ export type Schema = {
         [k: string]: SchemaResource;
     };
 };
+export declare function ensureValidSchema(schema: any): void;
 export {};
 //# sourceMappingURL=schema.d.ts.map

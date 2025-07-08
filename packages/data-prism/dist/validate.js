@@ -6,10 +6,10 @@ import { geoJSONSchema } from "../schemas/geojson.schema.js";
 export const defaultValidator = new Ajv();
 defaultValidator.addSchema(geoJSONSchema);
 addFormats(defaultValidator);
-export const createValidator = ({ schemas = [] } = {}) => {
+export const createValidator = ({ ajvSchemas = [] } = {}) => {
     const ajv = new Ajv();
     addFormats(ajv);
-    schemas.forEach((schema) => ajv.addSchema(schema));
+    ajvSchemas.forEach((schema) => ajv.addSchema(schema));
     if (!("https://data-prism.dev/schemas/geojson.schema.json" in ajv.schemas)) {
         ajv.addSchema(geoJSONSchema);
     }

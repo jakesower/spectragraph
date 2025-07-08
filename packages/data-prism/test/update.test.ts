@@ -40,7 +40,7 @@ it("updates a single resource with only attributes", async () => {
 it("fails to update a single resource with a nonexistant ID", async () => {
 	const id = randomBytes(20).toString("hex");
 
-	expect(async () => {
+	await expect(async () => {
 		await store.update({
 			type: "bears",
 			id,
@@ -65,7 +65,7 @@ it("fails to update a single resource with an invalid attribute", async () => {
 		},
 	});
 
-	expect(async () => {
+	await expect(async () => {
 		await store.update({
 			type: "bears",
 			id: created.id,
@@ -118,7 +118,7 @@ it("fails to update a single resource with an geometry attribute subType", async
 		},
 	});
 
-	expect(async () => {
+	await expect(async () => {
 		await store.update({
 			type: "homes",
 			id: created.id,

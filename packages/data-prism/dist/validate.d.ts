@@ -24,8 +24,8 @@ type UpdateResource = {
 };
 type DeleteResource = Ref;
 export declare const defaultValidator: Ajv;
-export declare const createValidator: ({ schemas }?: {
-    schemas?: any[];
+export declare const createValidator: ({ ajvSchemas }?: {
+    ajvSchemas?: any[];
 }) => Ajv;
 export declare function validateCreateResource(schema: Schema, resource: CreateResource, validator?: Ajv): ErrorObject[];
 export declare function validateUpdateResource(schema: Schema, resource: UpdateResource, validator?: Ajv): ErrorObject[];

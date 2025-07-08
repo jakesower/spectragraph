@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { mapValues } from "lodash-es";
+import { ensureValidSchema } from "./schema.js";
 import { createQueryGraph, createEmptyGraph, linkInverses, mergeGraphs, } from "./graph.js";
 import { createGraphFromTrees } from "./mappers.js";
 import { createOrUpdate } from "./create-or-update.js";
@@ -10,6 +11,7 @@ import { splice } from "./splice.js";
 export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 export function createMemoryStore(schema, config = {}) {
     const { initialData = {}, validator = defaultValidator } = config;
+    ensureValidSchema(schema);
     let queryGraph;
     let storeGraph = mergeGraphs(createEmptyGraph(schema), initialData);
     const runQuery = (query) => {

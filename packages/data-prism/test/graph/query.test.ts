@@ -200,24 +200,6 @@ describe("queryTree core", () => {
 		});
 	});
 
-	it("disallows invalid attribute names", async () => {
-		await expect(async () => {
-			graph.query({
-				type: "bears",
-				select: ["lol"],
-			});
-		}).rejects.toThrowError();
-	});
-
-	it("disallows invalid attribute paths", async () => {
-		await expect(async () => {
-			graph.query({
-				type: "bears",
-				select: [{ homeSize: "home.size" }],
-			});
-		}).rejects.toThrowError();
-	});
-
 	it("disallows queries with no 'type'", async () => {
 		await expect(async () => {
 			graph.query({

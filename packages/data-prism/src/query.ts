@@ -16,7 +16,7 @@ export type Query = {
 		| {
 				[k: string]: string | Query | Expression;
 		  };
-	type?: string;
+	type: string;
 	where?: { [k: string]: unknown };
 };
 
@@ -36,6 +36,7 @@ export type NormalRootQuery = RootQuery & NormalQuery;
 export type QueryInfo = {
 	path: string[];
 	parent: Query | null;
+	type: string;
 };
 
 type ParentQueryInfo<S extends Schema> = QueryInfo & {
@@ -49,10 +50,13 @@ export type SchemaQueryInfo<S extends Schema> = ParentQueryInfo<S> & {
 
 const { isExpression } = defaultExpressionEngine;
 
-export function normalizeQuery(rootQuery: RootQuery): NormalRootQuery {
+export function normalizeQuery(
+	schema: Schema,
+	rootQuery: RootQuery,
+): NormalRootQuery {
 	const stringToProp = (str) => ({ [str]: str });
 
-	const go = (query: Query): NormalQuery => {
+	const go = (query: Query, type: string): NormalQuery => {
 		const { select } = query;
 
 		if (!select) throw new Error("queries must have a `select` clause");
@@ -64,9 +68,13 @@ export function normalizeQuery(rootQuery: RootQuery): NormalRootQuery {
 				}, {})
 			: select;
 
-		const subqueries = mapValues(selectObj, (sel) =>
-			typeof sel === "object" && !isExpression(sel) ? go(sel) : sel,
-		);
+		const subqueries = mapValues(selectObj, (sel, key) => {
+			if (key in schema.resources[type].relationships && typeof sel === "object") {
+				const relType = schema.resources[type].relationships[key].type;
+				return go(sel, relType);
+			}
+			return sel;
+		});
 
 		const orderObj = query.order
 			? { order: !Array.isArray(query.order) ? [query.order] : query.order }
@@ -75,83 +83,12 @@ export function normalizeQuery(rootQuery: RootQuery): NormalRootQuery {
 		return {
 			...query,
 			select: subqueries,
+			type,
 			...orderObj,
 		} as NormalQuery;
 	};
 
-	return go(rootQuery) as NormalRootQuery;
-}
-
-export function forEachSchemalessQuery(query, fn) {
-	const go = (subquery: Query, info: QueryInfo) => {
-		fn(subquery, info);
-
-		Object.entries(subquery.select).forEach(([prop, select]) => {
-			if (typeof select === "object" && !isExpression(select)) {
-				const nextInfo = {
-					path: [...info.path, prop],
-					parent: subquery,
-				};
-
-				go(select as Query, nextInfo);
-			}
-		});
-	};
-
-	const initInfo = {
-		path: [],
-		parent: null,
-	};
-
-	go(normalizeQuery(query), initInfo);
-}
-
-export function mapSchemalessQuery(query, fn) {
-	const go = (subquery: Query, info: QueryInfo) => {
-		const mappedSelect = mapValues(subquery.select, (select, prop) => {
-			if (typeof select !== "object" || isExpression(select)) return select;
-
-			const nextInfo = {
-				path: [...info.path, prop],
-				parent: subquery,
-			};
-
-			return go(select as Query, nextInfo);
-		});
-
-		return fn({ ...subquery, select: mappedSelect }, info);
-	};
-
-	const initInfo = {
-		path: [],
-		parent: null,
-	};
-
-	return go(normalizeQuery(query), initInfo);
-}
-
-export function reduceSchemalessQuery(query, fn, init) {
-	const go = (subquery: Query, info: QueryInfo, accValue) =>
-		Object.entries(subquery.select).reduce(
-			(acc, [prop, select]) => {
-				if (typeof select !== "object" || isExpression(select)) return acc;
-
-				const nextInfo = {
-					path: [...info.path, prop],
-					parent: subquery,
-				};
-
-				return go(select as Query, nextInfo, acc);
-			},
-			fn(accValue, subquery, info),
-		);
-
-	const initInfo = {
-		path: [],
-		parent: null,
-	};
-
-	return go(normalizeQuery(query), initInfo, init);
+	return go(rootQuery, rootQuery.type) as NormalRootQuery;
 }
 
 export function forEachQuery<S extends Schema>(
@@ -198,7 +135,7 @@ export function forEachQuery<S extends Schema>(
 		type: query.type,
 	};
 
-	go(normalizeQuery(query), initInfo);
+	go(normalizeQuery(schema, query), initInfo);
 }
 
 export function mapQuery<S extends Schema>(
@@ -245,7 +182,7 @@ export function mapQuery<S extends Schema>(
 		type: query.type,
 	};
 
-	return go(normalizeQuery(query), initInfo);
+	return go(normalizeQuery(schema, query), initInfo);
 }
 
 export function reduceQuery<S extends Schema, T>(
@@ -294,7 +231,7 @@ export function reduceQuery<S extends Schema, T>(
 		type: query.type,
 	};
 
-	return go(normalizeQuery(query), initInfo, init);
+	return go(normalizeQuery(schema, query), initInfo, init);
 }
 
 export function ensureValidQuery(schema, query: RootQuery): void {
