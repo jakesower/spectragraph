@@ -24,7 +24,7 @@
 		"start-server-and-test": "^2.0.4",
 		"tsx": "^4.16.2",
 		"typescript": "^5.5.3",
-		"vitest": "^0.31.4"
+		"vitest": "^3.2.4"
 	},
 	"publishConfig": {
 		"access": "public"
@@ -34,6 +34,7 @@
 		"@data-prism/expressions": "^0.0.9",
 		"@data-prism/utils": "^0.0.5",
 		"data-prism": "^0.0.16",
-		"lodash-es": "^4.17.21"
+		"lodash-es": "^4.17.21",
+		"vite": "7.0.6"
 	}
 }
