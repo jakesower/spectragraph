@@ -1,5 +1,5 @@
 import { expect, it, describe } from "vitest";
-import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
+import { careBearData } from "../fixtures/care-bear-data.js";
 import careBearSchema from "../fixtures/care-bears.schema.json";
 import { createMemoryStore } from "../../src/memory-store.js";
 

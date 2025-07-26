@@ -4,15 +4,15 @@
 	"workspaces": [
 		"packages/*"
 	],
+	"type": "module",
 	"version": "1.0.0",
 	"devDependencies": {
+		"@eslint/js": "^9.32.0",
+		"@rollup/plugin-commonjs": "^28.0.6",
 		"@rollup/plugin-node-resolve": "^16.0.1",
-		"@typescript-eslint/eslint-plugin": "^8.11.0",
-		"@typescript-eslint/parser": "^8.11.0",
-		"eslint": "^8.57.1",
-		"eslint-config-prettier": "^9.1.0",
-		"eslint-config-standard": "^17.1.0",
-		"prettier": "^3.3.3",
+		"eslint": "^9.32.0",
+		"eslint-config-prettier": "^10.1.8",
+		"prettier": "^3.6.2",
 		"rollup": "^4.45.3"
 	}
 }

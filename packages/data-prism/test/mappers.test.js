@@ -1,12 +1,12 @@
 import { expect, it, describe } from "vitest";
-import { careBearData } from "./fixtures/care-bear-data.js"; // eslint-disable-line
+import { careBearData } from "./fixtures/care-bear-data.js";
 import rawCareBearSchema from "./fixtures/care-bears.schema.json";
 import {
 	normalizeResource,
 	createGraphFromTrees,
 	flattenResource,
 } from "../src/mappers.js";
-import { flatCareBearData } from "./fixtures/care-bear-data-flat.js"; // eslint-disable-line
+import { flatCareBearData } from "./fixtures/care-bear-data-flat.js";
 import { omit, pick } from "lodash-es";
 
 const careBearSchema = rawCareBearSchema;

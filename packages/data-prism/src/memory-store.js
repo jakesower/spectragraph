@@ -1,4 +1,3 @@
-import Ajv from "ajv";
 import { v4 as uuidv4 } from "uuid";
 import { mapValues } from "lodash-es";
 import { ensureValidSchema } from "./schema.js";

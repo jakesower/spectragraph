@@ -92,7 +92,7 @@ describe("normalizeQuery", () => {
 describe("forEachQuery", () => {
 	it("doesn't mutate the query", () => {
 		const result = structuredClone(query1);
-		forEachQuery(careBearSchema, query1, () => {}); // eslint-disable-line
+		forEachQuery(careBearSchema, query1, () => {});
 		expect(result).toEqual(query1);
 	});
 

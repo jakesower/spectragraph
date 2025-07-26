@@ -1,6 +1,6 @@
 import { expect, it, describe } from "vitest";
 import { mapValues, omit, pick } from "lodash-es";
-import { careBearData as rawCareBearData } from "./fixtures/care-bear-data.js"; // eslint-disable-line
+import { careBearData as rawCareBearData } from "./fixtures/care-bear-data.js";
 import { linkInverses, mergeGraphs } from "../src/graph.js";
 import rawCareBearSchema from "./fixtures/care-bears.schema.json";
 

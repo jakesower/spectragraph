@@ -80,9 +80,8 @@ const attributeTypes = [
  * @throws {Error} If the schema is invalid
  */
 export function ensureValidSchema(schema) {
-	if (typeof schema !== "object") {
+	if (typeof schema !== "object")
 		throw new Error("The schema must be an object.");
-	}
 
 	if (!("resources" in schema) || Array.isArray(schema.resources)) {
 		throw new Error(
@@ -104,21 +103,19 @@ export function ensureValidSchema(schema) {
 			);
 		}
 
-		Object.entries(resource.attributes).forEach(
-			([attrKey, attribute]) => {
-				if (!attribute.type) {
-					throw new Error(
-						`Invalid schema. All attributes must have a type. Check the "${attrKey}" attribute on the "${resKey}" resource type.`,
-					);
-				}
+		Object.entries(resource.attributes).forEach(([attrKey, attribute]) => {
+			if (!attribute.type) {
+				throw new Error(
+					`Invalid schema. All attributes must have a type. Check the "${attrKey}" attribute on the "${resKey}" resource type.`,
+				);
+			}
 
-				if (!attributeTypes.includes(attribute.type)) {
-					throw new Error(
-						`Invalid schema. "${attribute.type}" is not a valid type. Check the "${attrKey}" attribute on the "${resKey}" resource type. Valid types: ${attributeTypes.join(", ")}.`,
-					);
-				}
-			},
-		);
+			if (!attributeTypes.includes(attribute.type)) {
+				throw new Error(
+					`Invalid schema. "${attribute.type}" is not a valid type. Check the "${attrKey}" attribute on the "${resKey}" resource type. Valid types: ${attributeTypes.join(", ")}.`,
+				);
+			}
+		});
 
 		if (
 			!("relationships" in resource) ||
@@ -129,29 +126,27 @@ export function ensureValidSchema(schema) {
 			);
 		}
 
-		Object.entries(resource.relationships).forEach(
-			([relKey, relationship]) => {
-				if (!relationship.cardinality || !relationship.type) {
-					throw new Error(
-						`Invalid schema. All relationships must have a cardinality or a type. Check the "${relKey}" relationship on the "${resKey}" resource type.`,
-					);
-				}
+		Object.entries(resource.relationships).forEach(([relKey, relationship]) => {
+			if (!relationship.cardinality || !relationship.type) {
+				throw new Error(
+					`Invalid schema. All relationships must have a cardinality or a type. Check the "${relKey}" relationship on the "${resKey}" resource type.`,
+				);
+			}
 
-				if (
-					relationship.cardinality !== "one" &&
-					relationship.cardinality !== "many"
-				) {
-					throw new Error(
-						`Invalid schema. Relationship cardinality must be either "one" or "many". Check the "${relKey}" relationship on the "${resKey}" resource type.`,
-					);
-				}
+			if (
+				relationship.cardinality !== "one" &&
+				relationship.cardinality !== "many"
+			) {
+				throw new Error(
+					`Invalid schema. Relationship cardinality must be either "one" or "many". Check the "${relKey}" relationship on the "${resKey}" resource type.`,
+				);
+			}
 
-				if (!Object.keys(schema.resources).includes(relationship.type)) {
-					throw new Error(
-						`Invalid schema. "${relationship.type}" is not a valid relationship type. Relationship types must be a type of resource defined in the schema. Check the "${relKey}" relationship on the "${resKey}" resource type. Valid resource type: ${Object.keys(schema.resources).join(", ")}`,
-					);
-				}
-			},
-		);
+			if (!Object.keys(schema.resources).includes(relationship.type)) {
+				throw new Error(
+					`Invalid schema. "${relationship.type}" is not a valid relationship type. Relationship types must be a type of resource defined in the schema. Check the "${relKey}" relationship on the "${resKey}" resource type. Valid resource type: ${Object.keys(schema.resources).join(", ")}`,
+				);
+			}
+		});
 	});
 }
