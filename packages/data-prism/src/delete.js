@@ -39,7 +39,7 @@ export function deleteAction(resource, context) {
 			} else {
 				refs.forEach((ref) => {
 					storeGraph[relType][ref.id].relationships[inverse] = (
-						/** @type {import('./graph.js').Ref[]} */ (storeGraph[relType][ref.id].relationships[inverse]) ?? []
+						storeGraph[relType][ref.id].relationships[inverse] ?? []
 					).filter((r) => r.id !== resource.id);
 				});
 			}

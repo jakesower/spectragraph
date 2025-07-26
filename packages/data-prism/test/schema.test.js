@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { createValidator, ensureValidSchema } from "../src/index.js";
+import { ensureValidSchema } from "../src/index.js";
 import careBearSchema from "./fixtures/care-bears.schema.json";
 
 it("should validate a valid schema", () => {

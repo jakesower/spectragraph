@@ -33,7 +33,7 @@ const normalQuery1 = normalizeSchemalessQuery(query1);
 describe("forEachSchemalessQuery", () => {
 	it("doesn't mutate the query", () => {
 		const result = structuredClone(query1);
-		forEachSchemalessQuery(query1, () => {}); // eslint-disable-line
+		forEachSchemalessQuery(query1, () => {});
 		expect(result).toEqual(query1);
 	});
 

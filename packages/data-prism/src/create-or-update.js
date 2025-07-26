@@ -26,20 +26,18 @@ export function createOrUpdate(resource, context) {
 			if (inverseRel.cardinality === "one") {
 				refs.forEach((ref) => {
 					/** @type {import('./graph.js').Ref | null} */
-					const currentInverseRef = storeGraph[relType][ref.id].relationships[
-						inverse
-					];
+					const currentInverseRef =
+						storeGraph[relType][ref.id].relationships[inverse];
 
 					if (currentInverseRef && currentInverseRef.id !== ref.id) {
 						if (relSchema.cardinality === "one") {
 							storeGraph[type][currentInverseRef.id].relationships[relName] =
 								null;
 						} else {
-							storeGraph[type][currentInverseRef.id].relationships[relName] = (
-								/** @type {import('./graph.js').Ref[]} */ (storeGraph[type][currentInverseRef.id].relationships[
+							storeGraph[type][currentInverseRef.id].relationships[relName] =
+								storeGraph[type][currentInverseRef.id].relationships[
 									relName
-								])
-							).filter((r) => r.id !== storeGraph[relType][ref.id].id);
+								].filter((r) => r.id !== storeGraph[relType][ref.id].id);
 						}
 					}
 
@@ -51,14 +49,11 @@ export function createOrUpdate(resource, context) {
 			} else {
 				refs.forEach((ref) => {
 					const isRedundantRef = (
-						/** @type {import('./graph.js').Ref[]} */ (storeGraph[ref.type][ref.id].relationships[inverse]) ?? []
+						storeGraph[ref.type][ref.id].relationships[inverse] ?? []
 					).some((r) => r.id === resource.id);
 
 					if (!isRedundantRef) {
-						(
-							/** @type {import('./graph.js').Ref[]} */ (storeGraph[ref.type][ref.id].relationships[inverse]) ??
-							[]
-						).push({
+						(storeGraph[ref.type][ref.id].relationships[inverse] ?? []).push({
 							type: resource.type,
 							id: resource.id,
 						});

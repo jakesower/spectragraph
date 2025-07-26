@@ -7,7 +7,7 @@ import {
 	validateResourceTree,
 	validateUpdateResource,
 } from "../src/validate.js";
-import geojsonSchema from "./fixtures/geojson.schema.json" assert { type: "json" };
+import geojsonSchema from "./fixtures/geojson.schema.json" with { type: "json" };
 
 const soccerSchema = rawSoccerSchema;
 

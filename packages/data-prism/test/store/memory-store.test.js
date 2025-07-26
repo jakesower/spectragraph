@@ -1,10 +1,10 @@
 import { expect, it, describe } from "vitest";
-import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
+import { careBearData } from "../fixtures/care-bear-data.js";
 import careBearSchema from "../fixtures/care-bears.schema.json";
 import { soccerSchema as rawSoccerSchema } from "../fixtures/soccer-schema.js";
 import { createMemoryStore } from "../../src/memory-store.js";
 import { createValidator } from "../../src/validate.js";
-import geojsonSchema from "../fixtures/geojson.schema.json" assert { type: "json" };
+import geojsonSchema from "../fixtures/geojson.schema.json" with { type: "json" };
 
 const soccerSchema = rawSoccerSchema;
 
@@ -1064,7 +1064,7 @@ describe("splice", () => {
 				},
 			});
 
-			expect((result.relationships?.referee).id).not.toEqual(null);
+			expect(result.relationships?.referee?.id).not.toEqual(null);
 			expect(result).toMatchObject({
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },

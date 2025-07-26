@@ -4,7 +4,6 @@ import { applyOrMap } from "@data-prism/utils";
 import { normalizeSchemalessQuery } from "../schemaless-query.js";
 import { buildWhereExpression } from "./where-helpers.js";
 import { createExpressionProjector } from "./select-helpers.js";
-import { normalizeQuery } from "../query.js";
 
 /**
  * @typedef {Object<string, unknown>} Result

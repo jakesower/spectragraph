@@ -1,4 +1,3 @@
-import Ajv from "ajv";
 import { v4 as uuidv4 } from "uuid";
 import { mapValues, pick } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
@@ -17,10 +16,7 @@ import { validateResourceTree } from "./validate.js";
  * @param {Context} context
  * @returns {import('./memory-store.js').NormalResourceTree}
  */
-export function splice(
-	resourceTree,
-	context,
-) {
+export function splice(resourceTree, context) {
 	const { schema, validator, store, storeGraph } = context;
 	const errors = validateResourceTree(schema, resourceTree, validator);
 	if (errors.length > 0) throw new Error("invalid resource", { cause: errors });
@@ -62,11 +58,7 @@ export function splice(
 	 * @param {any} [parentRelSchema=null]
 	 * @returns {import('./memory-store.js').NormalResourceTree}
 	 */
-	const go = (
-		res,
-		parent = null,
-		parentRelSchema = null,
-	) => {
+	const go = (res, parent = null, parentRelSchema = null) => {
 		const resSchema = schema.resources[res.type];
 		const resCopy = structuredClone(res);
 		const inverse = parentRelSchema?.inverse;
@@ -76,12 +68,10 @@ export function splice(
 			resCopy.relationships = resCopy.relationships ?? {};
 			if (
 				relSchema.cardinality === "many" &&
-				!(
-					/** @type {import('./graph.js').Ref[] | import('./memory-store.js').NormalResourceTree[]} */ (resCopy.relationships[inverse] ?? [])
-				).some((r) => r.id === res.id)
+				!(resCopy.relationships[inverse] ?? []).some((r) => r.id === res.id)
 			) {
 				resCopy.relationships[inverse] = [
-					.../** @type {import('./graph.js').Ref[] | import('./memory-store.js').NormalResourceTree[]} */ (resCopy.relationships[inverse] ?? []),
+					...(resCopy.relationships[inverse] ?? []),
 					{ type: parent.type, id: parent.id },
 				];
 			} else if (relSchema.cardinality === "one") {
@@ -127,7 +117,7 @@ export function splice(
 
 		const normalized = {
 			...prepped,
-			relationships: /** @type {Object<string, import('./graph.js').Ref | import('./graph.js').Ref[]>} */ (pick(prepped.relationships, ["type", "id"])),
+			relationships: pick(prepped.relationships, ["type", "id"]),
 		};
 
 		storeGraph[res.type][resultId] = existing
