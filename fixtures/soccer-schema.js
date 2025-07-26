@@ -5,6 +5,7 @@ export const soccerSchema = {
 	resources: {
 		fields: {
 			attributes: {
+				id: { type: "string" },
 				name: { type: "string", pattern: "^[A-Z][A-Za-z0-9 ]+" },
 			},
 			relationships: {
@@ -18,6 +19,7 @@ export const soccerSchema = {
 		games: {
 			idAttribute: "id",
 			attributes: {
+				id: { type: "string" },
 				homeScore: { type: "integer", required: true, minimum: 0 },
 				awayScore: { type: "integer", required: true, minimum: 0 },
 			},
@@ -41,6 +43,7 @@ export const soccerSchema = {
 		},
 		referees: {
 			attributes: {
+				id: { type: "string" },
 				name: { type: "string", required: true },
 			},
 			relationships: {
@@ -54,6 +57,7 @@ export const soccerSchema = {
 		teams: {
 			idAttribute: "id",
 			attributes: {
+				id: { type: "string" },
 				name: { type: "string", required: true },
 				homeColor: { type: "string" },
 				awayColor: { type: "string" },

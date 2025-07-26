@@ -16,13 +16,14 @@
   "devDependencies": {
     "@types/lodash-es": "^4.17.7",
     "typescript": "^5.1.3",
-    "vitest": "^0.31.4"
+    "vitest": "^3.2.4"
   },
   "publishConfig": {
     "access": "public"
   },
   "private": false,
   "dependencies": {
-    "lodash-es": "^4.17.21"
+    "lodash-es": "^4.17.21",
+    "vite": "7.0.6"
   }
 }
