@@ -1,0 +1,87 @@
+{
+	"$schema": "../../src/fixtures/data-prism-schema.schema.json",
+	"$comment": "this schema is meant to be suitable for validation tests",
+	"resources": {
+		"fields": {
+			"attributes": {
+				"id": { "type": "string" },
+				"name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9 ]+" }
+			},
+			"relationships": {
+				"teams": {
+					"type": "teams",
+					"cardinality": "many",
+					"inverse": "homeField"
+				}
+			}
+		},
+		"games": {
+			"idAttribute": "id",
+			"requiredAttributes": ["homeScore", "awayScore"],
+			"attributes": {
+				"id": { "type": "string" },
+				"homeScore": { "type": "integer", "minimum": 0 },
+				"awayScore": { "type": "integer", "minimum": 0 }
+			},
+			"relationships": {
+				"homeTeam": {
+					"cardinality": "one",
+					"type": "teams",
+					"inverse": "homeGames"
+				},
+				"awayTeam": {
+					"cardinality": "one",
+					"type": "teams",
+					"inverse": "awayGames"
+				},
+				"referee": {
+					"cardinality": "one",
+					"type": "referees",
+					"inverse": "games"
+				}
+			}
+		},
+		"referees": {
+			"requiredAttributes": ["name"],
+			"attributes": {
+				"id": { "type": "string" },
+				"name": { "type": "string" }
+			},
+			"relationships": {
+				"games": {
+					"type": "games",
+					"cardinality": "many",
+					"inverse": "referee"
+				}
+			}
+		},
+		"teams": {
+			"idAttribute": "id",
+			"requiredAttributes": ["name"],
+			"attributes": {
+				"id": { "type": "string" },
+				"name": { "type": "string" },
+				"homeColor": { "type": "string" },
+				"awayColor": { "type": "string" }
+			},
+			"requiredRelationships": ["homeField"],
+			"relationships": {
+				"homeGames": {
+					"cardinality": "many",
+					"type": "games",
+					"inverse": "homeTeam"
+				},
+				"awayGames": {
+					"cardinality": "many",
+					"type": "games",
+					"inverse": "awayTeam"
+				},
+				"homeField": {
+					"cardinality": "one",
+					"type": "fields",
+					"inverse": "teams"
+				}
+			}
+		}
+	}
+}

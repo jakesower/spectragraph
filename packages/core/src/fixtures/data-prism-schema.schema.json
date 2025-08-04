@@ -1,0 +1,70 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "https://raw.githubusercontent.com/jakesower/data-prism/main/schemas/data-prism-schema.1.0.schema.json",
+	"title": "Data Prism Schema",
+	"description": "A metaschema for Data Prism schemas.",
+	"type": "object",
+	"required": ["resources"],
+	"properties": {
+		"$id": { "type": "string" },
+		"$comment": { "type": "string" },
+		"$schema": { "type": "string" },
+		"version": { "type": "string" },
+		"resources": {
+			"type": "object",
+			"minProperties": 1,
+			"patternProperties": {
+				"[^.$]": { "$ref": "#/$defs/resource" }
+			}
+		}
+	},
+	"$defs": {
+		"attribute": {
+			"$ref": "http://json-schema.org/draft-07/schema#"
+		},
+		"relationship": {
+			"type": "object",
+			"required": ["type", "cardinality"],
+			"properties": {
+				"type": { "type": "string" },
+				"cardinality": { "type": "string", "enum": ["one", "many"] },
+				"inverse": { "type": "string" }
+			}
+		},
+		"resource": {
+			"type": "object",
+			"required": ["attributes", "relationships"],
+			"properties": {
+				"plural": { "type": "string" },
+				"singular": { "type": "string" },
+				"idAttribute": { "type": "string" },
+				"requiredAttributes": {
+					"type": "array",
+					"items": { "type": "string" },
+					"default": []
+				},
+				"requiredRelationships": {
+					"type": "array",
+					"items": { "type": "string" },
+					"default": []
+				},
+				"attributes": {
+					"type": "object",
+					"patternProperties": {
+						"[^.$]": {
+							"$ref": "#/$defs/attribute"
+						}
+					}
+				},
+				"relationships": {
+					"type": "object",
+					"patternProperties": {
+						"[^.$]": {
+							"$ref": "#/$defs/relationship"
+						}
+					}
+				}
+			}
+		}
+	}
+}

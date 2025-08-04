@@ -1,0 +1,203 @@
+import { describe, expect, it } from "vitest";
+import { ensureValidSchema } from "../src/index.js";
+import careBearSchema from "./fixtures/care-bears.schema.json" with { type: "json" };
+
+describe("structure", () => {
+	it("should validate a valid schema", () => {
+		expect(() => ensureValidSchema(careBearSchema)).not.toThrowError();
+	});
+
+	it("should not validate a nonobject schema", () => {
+		expect(() => ensureValidSchema("hi")).toThrowError();
+	});
+
+	it("should not validate a schema that's an array", () => {
+		expect(() => ensureValidSchema(["hi"])).toThrowError();
+	});
+
+	it("should not validate a schema without resources or that's an array", () => {
+		expect(() => ensureValidSchema({ title: "hi" })).toThrowError();
+		expect(() =>
+			ensureValidSchema({ title: "hi", resources: ["hi"] }),
+		).toThrowError();
+	});
+});
+
+describe("attributes", () => {
+	it("should not validate a schema without attributes", () => {
+		expect(() =>
+			ensureValidSchema({ resources: { buildings: { relationships: {} } } }),
+		).toThrowError();
+	});
+
+	it("should validate a schema with only an id attribute", () => {
+		expect(() =>
+			ensureValidSchema({
+				resources: {
+					buildings: {
+						attributes: { id: { type: "number" } },
+						relationships: {},
+					},
+				},
+			}),
+		).not.toThrowError();
+	});
+
+	it("should not validate a schema without an id attribute", () => {
+		expect(() =>
+			ensureValidSchema({
+				resources: {
+					buildings: {
+						attributes: { height: { type: "number" } },
+						relationships: {},
+					},
+				},
+			}),
+		).toThrowError();
+	});
+
+	it("should not validate a schema without a non defaulted id attribute", () => {
+		expect(() =>
+			ensureValidSchema({
+				resources: {
+					buildings: {
+						idAttribute: "buildingId",
+						attributes: { id: { type: "number" } },
+						relationships: {},
+					},
+				},
+			}),
+		).toThrowError();
+	});
+
+	it("should not validate a schema with an invalid attribute type", () => {
+		expect(() =>
+			ensureValidSchema({
+				resources: {
+					buildings: {
+						attributes: { id: { type: "nothing" } },
+						relationships: {},
+					},
+				},
+			}),
+		).toThrowError();
+	});
+
+	it("should not validate a schema with a missing required attribute", () => {
+		expect(() =>
+			ensureValidSchema({
+				resources: {
+					buildings: {
+						requiredAttributes: ["location"],
+						attributes: { id: { type: "number" } },
+						relationships: {},
+					},
+				},
+			}),
+		).toThrowError();
+	});
+});
+
+describe("relationships", () => {
+	it("should not validate a schema without relationships", () => {
+		expect(() =>
+			ensureValidSchema({
+				resources: { buildings: { attributes: { id: { type: "string" } } } },
+			}),
+		).toThrowError();
+	});
+
+	it("should not validate a schema with an invalid relationship", () => {
+		expect(() =>
+			ensureValidSchema({
+				resources: {
+					buildings: {
+						attributes: { id: { type: "string" } },
+						relationships: { builder: {} },
+					},
+				},
+			}),
+		).toThrowError();
+	});
+
+	it("should not validate a schema with an invalid relationship cardinality", () => {
+		expect(() => {
+			ensureValidSchema({
+				resources: {
+					buildings: {
+						attributes: { id: { type: "string" } },
+						relationships: {
+							builder: { cardinality: "many", type: "builders" },
+						},
+					},
+					builders: {
+						attributes: { id: { type: "string" } },
+						relationships: {},
+					},
+				},
+			});
+		}).not.toThrowError();
+
+		expect(() => {
+			ensureValidSchema({
+				resources: {
+					buildings: {
+						attributes: { id: { type: "string" } },
+						relationships: {
+							builder: { cardinality: "some", type: "builders" },
+						},
+					},
+					builders: {
+						attributes: { id: { type: "string" } },
+						relationships: {},
+					},
+				},
+			});
+		}).toThrowError();
+	});
+
+	it("should not validate a schema with an invalid relationship type", () => {
+		expect(() => {
+			ensureValidSchema({
+				resources: {
+					buildings: {
+						attributes: { id: { type: "string" } },
+						relationships: { builder: { cardinality: "one", type: "fake" } },
+					},
+					builders: {
+						attributes: { id: { type: "string" } },
+						relationships: {},
+					},
+				},
+			});
+		}).toThrowError();
+	});
+
+	it("should validate a schema with a present required relationship", () => {
+		expect(() =>
+			ensureValidSchema({
+				resources: {
+					buildings: {
+						attributes: { id: { type: "number" } },
+						requiredRelationships: ["rel"],
+						relationships: { rel: { type: "buildings", cardinality: "one" } },
+					},
+				},
+			}),
+		).not.toThrowError();
+	});
+
+	it("should not validate a schema with a missing required relationship", () => {
+		expect(() =>
+			ensureValidSchema({
+				resources: {
+					buildings: {
+						attributes: { id: { type: "number" } },
+						requiredRelationships: ["builder"],
+						relationships: { rel: { type: "buildings", cardinality: "one" } },
+					},
+				},
+			}),
+		).toThrowError();
+	});
+});

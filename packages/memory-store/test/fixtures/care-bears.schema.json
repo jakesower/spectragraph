@@ -1,5 +1,4 @@
 {
-	"$schema": "../../src/fixtures/data-prism-schema.schema.json",
 	"resources": {
 		"bears": {
 			"idAttribute": "id",
