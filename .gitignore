@@ -8,3 +8,6 @@ commonjs/
 cjs/
 .DS_STORE
 coverage/
+
+# LLM
+CLAUDE.md
