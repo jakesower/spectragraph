@@ -1,5 +1,6 @@
 import { defaultExpressionEngine } from "@data-prism/expressions";
-import { mapValues, omit } from "lodash-es";
+import { get, last, mapValues, omit, sortBy } from "lodash-es";
+import { defaultValidator } from "./resource.js";
 
 /**
  * @typedef {Object} Expression
@@ -39,146 +40,198 @@ import { mapValues, omit } from "lodash-es";
  * @param {RootQuery} query - The query to validate
  * @throws {Error} If the query is invalid
  */
-export function ensureValidQuery(schema, query) {
-	const go = (subquery, info) => {
-		const { path, type } = info;
-		const resourceSchema = schema.resources[type];
-		const pathStr = `#/${path.join(".select.")}`;
+export function ensureValidQuery(schema, query, options = {}) {
+	const { expressionEngine = defaultExpressionEngine } = options;
 
-		const propertyValidators = {
-			id: () => {
-				if (path.length > 0) {
-					throw new Error(
-						`[invalid query] [${pathStr}.id] id is only allowed on the root query`,
-					);
-				}
+	const querySchema = {
+		type: "object",
+		required: ["type"],
+		$ref: `#/definitions/resources/${query.type}`,
+		definitions: {
+			expression: {
+				type: "object",
+				minProperties: 1,
+				maxProperties: 1,
+				additionalProperties: false,
+				properties: expressionEngine.expressionNames.reduce(
+					(acc, n) => ({ ...acc, [n]: {} }),
+					{},
+				),
 			},
-			limit: (limit) => {
-				if (typeof limit !== "number" || limit < 1) {
-					throw new Error(
-						`[invalid query] [${pathStr}.limit] offset must be number that's at least 0`,
-					);
-				}
-			},
-			offset: (offset) => {
-				if (typeof offset !== "number" || offset < 0) {
-					throw new Error(
-						`[invalid query] [${pathStr}.offset] offset must be number that's at least 0`,
-					);
-				}
-			},
-			order: (order) => {
-				const checkItem = (item) => {
-					if (Object.keys(item).length !== 1) {
-						throw new Error(
-							`[invalid query] [${pathStr}.order] objects must have exactly one key`,
-						);
-					}
+			resources: mapValues(schema.resources, (resSchema, resName) => ({
+				type: "object",
+				required: ["select"],
+				properties: {
+					type: { type: "string", const: resName },
+					id: { type: "string" },
+					select: {
+						oneOf: [
+							{ type: "string", const: "*" },
+							{
+								$ref: `#/definitions/resources/${resName}/definitions/selectObject`,
+							},
+							{
+								$ref: `#/definitions/resources/${resName}/definitions/selectArray`,
+							},
+						],
+					},
+					limit: { type: "integer", minimum: 1 },
+					offset: { type: "integer", minimum: 0 },
+					where: {
+						anyOf: [
+							{ $ref: "#/definitions/expression" },
+							{
+								type: "object",
+								properties: mapValues(resSchema.attributes, () => ({})),
+								additionalProperties: {
+									not: true,
+									errorMessage:
+										"is neither be an expression nor an object that uses valid attributes as keys",
+								},
+							},
+						],
+					},
+					order: {
+						oneOf: [
+							{
+								$ref: `#/definitions/resources/${resName}/definitions/orderItem`,
+							},
+							{
+								type: "array",
+								items: {
+									$ref: `#/definitions/resources/${resName}/definitions/orderItem`,
+								},
+							},
+						],
+						errorMessage:
+							'must be a value or array of values of the form { "attribute": "asc/desc" }',
+					},
+				},
+				definitions: {
+					selectArray: {
+						type: "array",
+						minItems: 1,
+						items: {
+							anyOf: [
+								{
+									type: "string",
+									enum: ["*", ...Object.keys(resSchema.attributes)],
+								},
+								{
+									$ref: `#/definitions/resources/${resName}/definitions/selectObject`,
+								},
+							],
+							errorMessage:
+								'invalid item in a selection array: ${0} -- selection arrays must contain one of "*", the name of an attribute, or a selection object',
+						},
+					},
+					selectObject: {
+						type: "object",
+						properties: {
+							"*": {},
+							...mapValues(resSchema.relationships, (relSchema) => ({
+								$ref: `#/definitions/resources/${relSchema.type}`,
+							})),
+						},
+						additionalProperties: {
+							oneOf: [
+								{ type: "string", enum: Object.keys(resSchema.attributes) },
+								{ $ref: "#/definitions/expression" },
+							],
+						},
+						errorMessage: `invalid selection clause: \${0} -- selections must be one of { "*": true }, { "someKey": an expression }, { "someKey": (one of "${Object.keys(resSchema.attributes).join('", "')}") }, or ({ ["${Object.keys(resSchema.relationships).join('" | "')}"]: subquery })`,
+					},
+					orderItem: {
+						type: "object",
+						minProperties: 1,
+						maxProperties: 1,
+						properties: mapValues(resSchema.attributes, () => ({})),
+						additionalProperties: {
+							anyOf: [{ $ref: "#/definitions/expression" }],
+						},
+						errorMessage: {
+							maxProperties:
+								'must have exactly one key with the name of an attribute and a value of "asc" or "desc"',
+							minProperties:
+								'must have exactly one key with the name of an attribute and a value of "asc" or "desc"',
+						},
+					},
+				},
+			})),
+		},
+	};
 
-					const [prop, dir] = Object.entries(item)[0];
-					if (!["asc", "desc"].includes(dir)) {
-						throw new Error(
-							`[invalid query] [${pathStr}.order] objects have values of "asc" or "desc"`,
-						);
-					}
+	// write better errors on complex select clause problems
+	const invalidSelectError = (error) => {
+		const cleanPath = error.instancePath.split("/").slice(1);
+		const problemSelect = get(query, cleanPath);
+		const resType = cleanPath
+			.filter((p) => p !== "select")
+			.reduce(
+				(acc, rel) => schema.resources[acc].relationships[rel].type,
+				query.type,
+			);
+		const resSchema = schema.resources[resType];
 
-					if (!Object.keys(resourceSchema.attributes).includes(prop)) {
-						throw new Error(
-							`[invalid query] [${pathStr}.order] "${prop}" is not a valid attribute and cannot be ordered on`,
-						);
-					}
-				};
-
-				Array.isArray(order) ? order.forEach(checkItem) : checkItem(order);
-			},
-			where: (where) => {
-				if (typeof where !== "object") {
-					throw new Error(
-						`[invalid query] [${pathStr}.where] must be an object`,
-					);
-				}
-			},
-			select: (select) => {
-				const validateObject = (obj) => {
-					Object.entries(obj).forEach(([key, val]) => {
-						if (defaultExpressionEngine.isExpression(val)) return;
-						if (key === "*") return;
-
-						if (
-							typeof val === "string" &&
-							!Object.keys(resourceSchema.attributes).includes(val) &&
-							!Object.keys(resourceSchema.relationships).includes(val)
-						) {
-							throw new Error(
-								`[invalid query] [${pathStr}.select.${key}] ${val} is an invalid string property (did you misspell an attribute name?)`,
-							);
-						}
-
-						if (key in Object.keys(resourceSchema.relationships)) {
-							if (typeof val !== "object" || Array.isArray(val)) {
-								throw new Error(
-									`[invalid query] [${pathStr}.select.${key}] ${val} is the name of a relationship and must supply a subquery as its value`,
-								);
-							}
-
-							go(val, {
-								path: [...path, key],
-								type: resourceSchema.relationships[key].type,
-							});
-						}
-					});
-				};
-
-				if (select === "*") return;
-
-				if (Array.isArray(select)) {
-					select.forEach((val, idx) => {
-						if (
-							typeof val === "string" &&
-							!Object.keys(resourceSchema.attributes).includes(val) &&
-							!Object.keys(resourceSchema.relationships).includes(val)
-						) {
-							throw new Error(
-								`[invalid query] [${pathStr}.select[${idx}]] ${val} is an invalid string property (did you misspell an attribute name?)`,
-							);
-						} else if (typeof val === "object") validateObject(val);
-					});
-				} else if (typeof select === "object") validateObject(select);
-				else {
-					throw new Error(
-						`[invalid query] [${pathStr}.select] select queries must be arrays, object, or the "*" string`,
-					);
-				}
-			},
-		};
-
-		if (!("select" in subquery)) {
+		if (typeof problemSelect === "string" && problemSelect !== "*") {
 			throw new Error(
-				`[invalid query] [${pathStr}] queries must have a select clause`,
+				`[data-prism] query${error.instancePath} ${problemSelect} is a string and therefore must be "*" -- perhaps you meant ["${problemSelect}"]`,
 			);
 		}
 
-		mapValues(subquery, (v, k) => {
-			if (propertyValidators[k]) propertyValidators[k](v);
+		Object.entries(problemSelect).forEach(([key, val]) => {
+			if (resSchema.relationships[key]) {
+				throw new Error(
+					`[data-prism] query${error.instancePath}/${key} must have a valid subquery as its value`,
+				);
+			}
+
+			if (
+				typeof val === "object" &&
+				!Array.isArray(val) &&
+				!expressionEngine.isExpression(val)
+			) {
+				throw new Error(
+					`[data-prism] query${error.instancePath}/${key} is an object and therefore must be a valid data prism expression (if you meant to have a relationship with a subquery, check your spelling)`,
+				);
+			}
 		});
+
+		// there's an unusual case if none of the above hit -- let the default error handle it
 	};
 
-	if (typeof query !== "object" || Array.isArray(query))
-		throw new Error("queries must be objects");
+	const validate = defaultValidator.compile(querySchema);
+	if (!validate(query)) {
+		const customErrorsByDepth = sortBy(
+			validate.errors
+				.filter((err) => err.keyword === "errorMessage")
+				.toReversed(),
+			[(err) => err.instancePath.split("/").length],
+		);
 
-	if (!query.type)
-		throw new Error("root queries must be objects and have a `type`");
+		const interestingErrors = validate.errors.filter(
+			(e) => !["allOf", "anyOf", "oneOf"].includes(e.keyword),
+		);
+		const usedErrors =
+			customErrorsByDepth.length > 0
+				? [last(customErrorsByDepth)]
+				: interestingErrors.length > 0
+					? interestingErrors
+					: validate.errors;
 
-	if (!Object.keys(schema.resources).includes(query.type))
-		throw new Error(`${query.type} is not a valid query type`);
+		console.log(usedErrors);
+		try {
+			if (usedErrors[0].instancePath.endsWith("/select"))
+				invalidSelectError(usedErrors[0]);
 
-	const initInfo = {
-		path: [],
-		parent: null,
-		type: query.type,
-	};
-
-	go(query, initInfo);
+			throw new Error(
+				`[data-prism] ${defaultValidator.errorsText(usedErrors, { dataVar: "query" })}`,
+			);
+		} catch (err) {
+			console.log(err);
+			throw err;
+		}
+	}
 }
 
 /**

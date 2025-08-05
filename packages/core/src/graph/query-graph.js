@@ -19,12 +19,12 @@ const TYPE = Symbol("type");
 const RAW = Symbol("raw");
 
 /**
- * @param {import('../graph.js').Graph} resources
+ * @param {import('../graph.js').Graph} graph
  * @returns {Object}
  */
-function prepData(resources) {
+function prepData(graph) {
 	const data = {};
-	Object.entries(resources).forEach(([resType, ressOfType]) => {
+	Object.entries(graph).forEach(([resType, ressOfType]) => {
 		data[resType] = {};
 		Object.entries(ressOfType).forEach(([resId, res]) => {
 			const defaultedRes = {

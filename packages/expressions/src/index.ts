@@ -21,6 +21,7 @@ export type ExpressionEngine = {
 	apply: (expression: Expression, arg: any) => any;
 	compile: (expression: Expression) => (arg: any) => any;
 	evaluate: (expression: Expression) => any;
+	expressionNames: string[];
 	isExpression: (expression: Expression) => boolean;
 };
 
@@ -48,8 +49,8 @@ export function createExpressionEngine(definitions: object): ExpressionEngine {
 				return Array.isArray(expression)
 					? expression.map(step)
 					: typeof expression === "object"
-					? mapValues(expression, step)
-					: expression;
+						? mapValues(expression, step)
+						: expression;
 			}
 
 			const [expressionName, expressionParams] = Object.entries(expression)[0];
@@ -79,8 +80,8 @@ export function createExpressionEngine(definitions: object): ExpressionEngine {
 				return Array.isArray(expression)
 					? expression.map(go)
 					: typeof expression === "object"
-					? mapValues(expression, go)
-					: expression;
+						? mapValues(expression, go)
+						: expression;
 			}
 
 			const [expressionName, expressionArgs] = Object.entries(expression)[0];
@@ -104,6 +105,7 @@ export function createExpressionEngine(definitions: object): ExpressionEngine {
 	return {
 		apply,
 		evaluate,
+		expressionNames: Object.keys(allDefinitions),
 		compile: (expression) => {
 			if (!isExpression(expression))
 				throw new Error("only expressions may be compiled");

@@ -165,13 +165,13 @@ describe("queryTree core", () => {
 		const q = {
 			type: "bears",
 			id: "1",
-			select: ["home"],
+			select: { home: { select: ["id"] } },
 		};
 
 		const result = graph.query(q);
 
 		expect(result).toEqual({
-			home: { type: "homes", id: "1" },
+			home: { id: "1" },
 		});
 	});
 
@@ -179,17 +179,13 @@ describe("queryTree core", () => {
 		const q = {
 			type: "homes",
 			id: "1",
-			select: ["residents"],
+			select: { residents: { select: ["id"] } },
 		};
 
 		const result = await graph.query(q);
 
 		expect(result).toEqual({
-			residents: [
-				{ type: "bears", id: "1" },
-				{ type: "bears", id: "2" },
-				{ type: "bears", id: "3" },
-			],
+			residents: [{ id: "1" }, { id: "2" }, { id: "3" }],
 		});
 	});
 
@@ -241,23 +237,6 @@ describe("queryTree core", () => {
 		});
 	});
 
-	it("fetches a single resource ref with many-to-many relationship", async () => {
-		const query = {
-			type: "bears",
-			id: "1",
-			select: ["powers"],
-		};
-
-		const result = await graph.query(query);
-
-		expect(result).toEqual({
-			powers: [{ type: "powers", id: "careBearStare" }],
-		});
-		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
-		});
-	});
-
 	it("fetches a single resource with many-to-many relationship and a `type` property", async () => {
 		const query = {
 			type: "bears",
@@ -281,9 +260,9 @@ describe("queryTree core", () => {
 			id: "1",
 			select: {
 				home: {
-					select: ["residents"],
+					select: ["name"],
 				},
-				powers: "powers",
+				powers: { select: "*" },
 			},
 		};
 
@@ -291,13 +270,16 @@ describe("queryTree core", () => {
 
 		expect(result).toEqual({
 			home: {
-				residents: [
-					{ type: "bears", id: "1" },
-					{ type: "bears", id: "2" },
-					{ type: "bears", id: "3" },
-				],
+				name: "Care-a-Lot",
 			},
-			powers: [{ type: "powers", id: "careBearStare" }],
+			powers: [
+				{
+					description: "Purges evil.",
+					name: "Care Bear Stare",
+					powerId: "careBearStare",
+					type: "group power",
+				},
+			],
 		});
 		expect(() => {
 			ensureValidQueryResult(careBearsSchema, query, result);
@@ -309,7 +291,7 @@ describe("queryTree core", () => {
 			type: "bears",
 			select: {
 				id: "id",
-				bestFriend: "bestFriend",
+				bestFriend: { select: ["id"] },
 			},
 		};
 
@@ -317,8 +299,8 @@ describe("queryTree core", () => {
 
 		expect(result).toEqual([
 			{ id: "1", bestFriend: null },
-			{ id: "2", bestFriend: { type: "bears", id: "3" } },
-			{ id: "3", bestFriend: { type: "bears", id: "2" } },
+			{ id: "2", bestFriend: { id: "3" } },
+			{ id: "3", bestFriend: { id: "2" } },
 			{ id: "5", bestFriend: null },
 		]);
 		expect(() => {

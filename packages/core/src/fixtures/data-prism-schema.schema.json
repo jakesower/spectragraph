@@ -14,11 +14,11 @@
 			"type": "object",
 			"minProperties": 1,
 			"patternProperties": {
-				"[^.$]": { "$ref": "#/$defs/resource" }
+				"[^.$]": { "$ref": "#/definitions/resource" }
 			}
 		}
 	},
-	"$defs": {
+	"definitions": {
 		"attribute": {
 			"$ref": "http://json-schema.org/draft-07/schema#"
 		},
@@ -52,7 +52,7 @@
 					"type": "object",
 					"patternProperties": {
 						"[^.$]": {
-							"$ref": "#/$defs/attribute"
+							"$ref": "#/definitions/attribute"
 						}
 					}
 				},
@@ -60,7 +60,7 @@
 					"type": "object",
 					"patternProperties": {
 						"[^.$]": {
-							"$ref": "#/$defs/relationship"
+							"$ref": "#/definitions/relationship"
 						}
 					}
 				}

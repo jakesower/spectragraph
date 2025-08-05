@@ -246,7 +246,7 @@ This creates a new graph with all of the resources from both graphs combined. No
 ### `linkInverses`
 
 ```javascript
-linkInverses(graph, schema);
+linkInverses(schema, graph);
 ```
 
 As mentioned above, sometimes the data we get from an API makes for an incomplete graph. `linkInverses` comes into play here. Consider this graph (with some attributes cut out for brevity):
