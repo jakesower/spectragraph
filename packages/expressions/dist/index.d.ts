@@ -12,6 +12,7 @@ export type ExpressionEngine = {
     apply: (expression: Expression, arg: any) => any;
     compile: (expression: Expression) => (arg: any) => any;
     evaluate: (expression: Expression) => any;
+    expressionNames: string[];
     isExpression: (expression: Expression) => boolean;
 };
 export type FunctionExpression<Args, Input, Output> = (evaluate: (...args: any) => any) => Expression;

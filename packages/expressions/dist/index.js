@@ -61,6 +61,7 @@ export function createExpressionEngine(definitions) {
     return {
         apply,
         evaluate,
+        expressionNames: Object.keys(allDefinitions),
         compile: (expression) => {
             if (!isExpression(expression))
                 throw new Error("only expressions may be compiled");

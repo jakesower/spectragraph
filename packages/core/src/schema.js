@@ -79,7 +79,7 @@ const jsonSchemaWithErrors = {
 
 const metaschemaWithErrors = (() => {
 	const out = merge(structuredClone(metaschema), {
-		$defs: {
+		definitions: {
 			attribute: {
 				$ref: "https://data-prism.dev/json-schema-draft-07-with-errors.json",
 			},
@@ -120,14 +120,14 @@ export function ensureValidSchema(schema, options = {}) {
 		properties: {
 			resources: {
 				properties: mapValues(schema.resources, (_, resName) => ({
-					$ref: `#/$defs/resources/${resName}`,
+					$ref: `#/definitions/resources/${resName}`,
 				})),
 			},
 		},
-		$defs: {
+		definitions: {
 			resources: mapValues(schema.resources, (resSchema, resName) => ({
 				allOf: [
-					{ $ref: "#/$defs/resource" },
+					{ $ref: "#/definitions/resource" },
 					{
 						type: "object",
 						properties: {

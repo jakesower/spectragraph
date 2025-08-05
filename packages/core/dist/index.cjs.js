@@ -1007,7 +1007,7 @@ function createEmptyGraph(schema) {
  * @param {import('./schema.js').Schema} schema - The schema defining relationships
  * @returns {Graph} Graph with inverse relationships linked
  */
-function linkInverses(graph, schema) {
+function linkInverses(schema, graph) {
 	const output = structuredClone(graph);
 
 	Object.entries(schema.resources).forEach(([resType, resSchema]) => {

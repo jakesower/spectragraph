@@ -33,11 +33,11 @@ export function createEmptyGraph(schema) {
 
 /**
  * Links inverse relationships in a graph
- * @param {Graph} graph - The graph to link inverses in
  * @param {import('./schema.js').Schema} schema - The schema defining relationships
+ * @param {Graph} graph - The graph to link inverses in
  * @returns {Graph} Graph with inverse relationships linked
  */
-export function linkInverses(graph, schema) {
+export function linkInverses(schema, graph) {
 	const output = structuredClone(graph);
 
 	Object.entries(schema.resources).forEach(([resType, resSchema]) => {
