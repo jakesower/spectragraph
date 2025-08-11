@@ -1,7 +1,8 @@
+import { mapValues, merge } from "lodash-es";
 import { defaultValidator } from "./resource.js";
+import { createDeepCache, translateAjvErrors } from "./lib/helpers.js";
 import metaschema from "./fixtures/data-prism-schema.schema.json" with { type: "json" };
 import jsonSchema from "./fixtures/json-schema-draft-07.json" with { type: "json" };
-import { mapValues, merge } from "lodash-es";
 
 /**
  * @typedef {"object"|"array"|"boolean"|"string"|"number"|"integer"|"null"} JSONSchemaType
@@ -96,6 +97,8 @@ const metaschemaWithErrors = (() => {
 	return out;
 })();
 
+const getValidateSchemaCache = createDeepCache();
+
 /**
  * Validates that a schema is valid
  * @param {Schema} schema - The schema to validate
@@ -103,17 +106,27 @@ const metaschemaWithErrors = (() => {
  * @param {import('ajv').Ajv} options.validator
  * @throws {Error} If the schema is invalid
  */
-export function ensureValidSchema(schema, options = {}) {
+export function validateSchema(schema, options = {}) {
 	const { validator = defaultValidator } = options;
 
+	if (typeof schema !== "object")
+		return [{ message: "[data-prism] schema must be an object" }];
+
+	// cache by schema reference, then validator referece (both unlikely to change)
+	const validatorCache = getValidateSchemaCache(schema, validator);
+	if (validatorCache.hit) return validatorCache.value;
+
+	// cache miss path
+
+	// add the schema if needed -- not an important side effect
 	if (!validator.getSchema(jsonSchemaWithErrors.$id))
 		validator.addSchema(jsonSchemaWithErrors);
 
 	const baseValidate = validator.compile(metaschemaWithErrors);
 	if (!baseValidate(schema)) {
-		throw new Error(
-			`[data-prism] ${validator.errorsText(baseValidate.errors, { dataVar: "schema" })}`,
-		);
+		const result = translateAjvErrors(baseValidate.errors, schema, "schema");
+		validatorCache.set(validator, result);
+		return result;
 	}
 
 	const introspectiveSchema = merge(structuredClone(metaschema), {
@@ -161,9 +174,11 @@ export function ensureValidSchema(schema, options = {}) {
 	delete introspectiveSchema.properties.resources.patternProperties;
 
 	const introspectiveValidate = validator.compile(introspectiveSchema);
-	if (!introspectiveValidate(schema)) {
-		throw new Error(
-			`[data-prism] ${validator.errorsText(introspectiveValidate.errors, { dataVar: "schema" })}`,
-		);
-	}
+
+	const result = introspectiveValidate(schema)
+		? []
+		: translateAjvErrors(introspectiveValidate.errors, schema, "schema");
+
+	validatorCache.set(validator, result);
+	return result;
 }

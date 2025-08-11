@@ -1,10 +1,8 @@
 import { expect, it, describe } from "vitest";
-import { createQueryGraph, queryGraph } from "../../src/graph.js";
+import { queryGraph } from "../../src/graph.js";
 import { ensureValidQueryResult } from "../../src/resource.js";
 import careBearsSchema from "../fixtures/care-bears.schema.json" with { type: "json" };
 import careBearData from "../fixtures/care-bear-data.json" with { type: "json" };
-
-const graph = createQueryGraph(careBearsSchema, careBearData);
 
 describe("queryTree core", () => {
 	it("fetches a single resource with array notation", async () => {
@@ -14,7 +12,7 @@ describe("queryTree core", () => {
 			select: ["name"],
 		};
 
-		const result = graph.query(query);
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual({ name: "Tenderheart Bear" });
 		expect(() => {
@@ -29,22 +27,7 @@ describe("queryTree core", () => {
 			select: { name: "name" },
 		};
 
-		const result = graph.query(query);
-
-		expect(result).toEqual({ name: "Tenderheart Bear" });
-		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
-		});
-	});
-
-	it("using the immediate evaluation function", async () => {
-		const query = {
-			type: "bears",
-			id: "1",
-			select: ["name"],
-		};
-
-		const result = queryGraph(careBearsSchema, careBearData, query);
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual({ name: "Tenderheart Bear" });
 		expect(() => {
@@ -59,7 +42,7 @@ describe("queryTree core", () => {
 			select: ["name", { yearIntroduced: "yearIntroduced" }],
 		};
 
-		const result = graph.query(query);
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual({
 			name: "Tenderheart Bear",
@@ -77,7 +60,7 @@ describe("queryTree core", () => {
 			select: ["id", "name"],
 		};
 
-		const result = graph.query(query);
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual({ id: "1", name: "Tenderheart Bear" });
 		expect(() => {
@@ -92,7 +75,7 @@ describe("queryTree core", () => {
 			select: ["name"],
 		};
 
-		const result = graph.query(query);
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual({ name: "Tenderheart Bear" });
 		expect(() => {
@@ -109,7 +92,7 @@ describe("queryTree core", () => {
 			},
 		};
 
-		const result = graph.query(query);
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual({ nombre: "Tenderheart Bear" });
 		expect(() => {
@@ -123,7 +106,7 @@ describe("queryTree core", () => {
 			select: { name: "name" },
 		};
 
-		const result = graph.query(query);
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		const expected = [
 			"Tenderheart Bear",
@@ -145,7 +128,7 @@ describe("queryTree core", () => {
 			select: ["id"],
 		};
 
-		const result = graph.query(query);
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual(null);
 		expect(() => {
@@ -155,20 +138,19 @@ describe("queryTree core", () => {
 
 	it("disallows queries with no 'type'", async () => {
 		await expect(async () => {
-			graph.query({
-				select: ["name"],
-			});
+			const query = { select: ["name"] };
+			queryGraph(careBearsSchema, query, careBearData);
 		}).rejects.toThrowError();
 	});
 
 	it("fetches a single resource with a many-to-one relationship", async () => {
-		const q = {
+		const query = {
 			type: "bears",
 			id: "1",
 			select: { home: { select: ["id"] } },
 		};
 
-		const result = graph.query(q);
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual({
 			home: { id: "1" },
@@ -176,13 +158,13 @@ describe("queryTree core", () => {
 	});
 
 	it("a single resource with a one-to-many relationship", async () => {
-		const q = {
+		const query = {
 			type: "homes",
 			id: "1",
 			select: { residents: { select: ["id"] } },
 		};
 
-		const result = await graph.query(q);
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual({
 			residents: [{ id: "1" }, { id: "2" }, { id: "3" }],
@@ -196,7 +178,7 @@ describe("queryTree core", () => {
 			select: ["id", "name", "furColor"],
 		};
 
-		const result = graph.query(query);
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual({
 			id: "1",
@@ -209,13 +191,13 @@ describe("queryTree core", () => {
 	});
 
 	it("fetches a single resource with a subset of props on a relationship", async () => {
-		const q = {
+		const query = {
 			type: "bears",
 			id: "1",
 			select: { home: { select: { caringMeter: "caringMeter" } } },
 		};
 
-		const result = await graph.query(q);
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual({ home: { caringMeter: 1 } });
 	});
@@ -229,7 +211,7 @@ describe("queryTree core", () => {
 			},
 		};
 
-		const result = await graph.query(query);
+		const result = await queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual({ powerId: "careBearStare" });
 		expect(() => {
@@ -244,7 +226,7 @@ describe("queryTree core", () => {
 			select: { powers: { select: ["type"] } },
 		};
 
-		const result = await graph.query(query);
+		const result = await queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual({
 			powers: [{ type: "group power" }],
@@ -266,7 +248,7 @@ describe("queryTree core", () => {
 			},
 		};
 
-		const result = await graph.query(query);
+		const result = await queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual({
 			home: {
@@ -295,7 +277,7 @@ describe("queryTree core", () => {
 			},
 		};
 
-		const result = await graph.query(query);
+		const result = await queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ id: "1", bestFriend: null },

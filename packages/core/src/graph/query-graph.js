@@ -22,7 +22,7 @@ const RAW = Symbol("raw");
  * @param {import('../graph.js').Graph} graph
  * @returns {Object}
  */
-function prepData(graph) {
+function prepGraph(graph) {
 	const data = {};
 	Object.entries(graph).forEach(([resType, ressOfType]) => {
 		data[resType] = {};
@@ -75,7 +75,7 @@ function prepData(graph) {
 }
 
 /**
- * @param {import('../query.js').NormalRootQuery} rootQuery
+ * @param {import('../query.js').NormalQuery} rootQuery
  * @param {Object} data
  * @returns {Result}
  */
@@ -229,26 +229,13 @@ function runQuery(rootQuery, data) {
 
 /**
  * @param {import('../schema.js').Schema} schema
- * @param {import('../graph.js').Graph} graph
- * @returns {QueryGraph}
- */
-export function createQueryGraph(schema, graph) {
-	const data = prepData(graph);
-
-	return {
-		query(query) {
-			const compiled = normalizeQuery(schema, query);
-			return runQuery(compiled, data);
-		},
-	};
-}
-
-/**
- * @param {import('../schema.js').Schema} schema
- * @param {import('../graph.js').Graph} graph
  * @param {import('../query.js').RootQuery} query
+ * @param {import('../graph.js').Graph} graph
  * @returns {Result}
  */
-export function queryGraph(schema, graph, query) {
-	return createQueryGraph(schema, graph).query(query);
+export function queryGraph(schema, query, graph) {
+	const preppedGraph = prepGraph(graph);
+	const normalQuery = normalizeQuery(schema, query);
+
+	return runQuery(normalQuery, preppedGraph);
 }

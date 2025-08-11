@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
 	createValidator,
-	ensureValidQueryResult,
+	validateQueryResult,
 	validateCreateResource,
 	validateDeleteResource,
-	validateSpliceResourceTree,
+	validateSpliceResource,
 	validateUpdateResource,
 } from "../src/resource.js";
 import soccerSchema from "./fixtures/soccer.schema.json" with { type: "json" };
@@ -157,7 +157,7 @@ describe("create validation", () => {
 					},
 				},
 			},
-			geojsonValidator,
+			{ validator: geojsonValidator },
 		);
 
 		expect(result.length).toEqual(0);
@@ -172,7 +172,7 @@ describe("create validation", () => {
 					location: { type: "Chicken Butt" },
 				},
 			},
-			geojsonValidator,
+			{ validator: geojsonValidator },
 		);
 
 		expect(result.length).toBeGreaterThan(0);
@@ -327,31 +327,31 @@ describe("delete validation", () => {
 describe("resource splice validation", () => {
 	describe("without an id", () => {
 		it("fails validation on an empty object", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {});
+			const result = validateSpliceResource(soccerSchema, {});
 			expect(result.length).toBeGreaterThan(0);
 		});
 
 		it("fails validation on an invalid type", () => {
-			const result = validateSpliceResourceTree(soccerSchema, { type: "foo" });
+			const result = validateSpliceResource(soccerSchema, { type: "foo" });
 			expect(result.length).toBeGreaterThan(0);
 		});
 
 		it("passes validation on an object with only a type and nothing required", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "fields",
 			});
 			expect(result.length).toEqual(0);
 		});
 
 		it("fails validation on an object with only a type and at least one required attribute", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "teams",
 			});
 			expect(result.length).toBeGreaterThan(0);
 		});
 
 		it("passes validation with an valid type", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "fields",
 				attributes: { name: "Tempe Elementary B" },
 			});
@@ -359,7 +359,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("fails validation with an invalid type", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "fields",
 				attributes: { name: 5 },
 			});
@@ -367,7 +367,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("fails validation with an invalid minimum", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: -1 },
 			});
@@ -375,7 +375,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("fails validation with an invalid pattern", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "fields",
 				attributes: { name: "my field" },
 			});
@@ -383,7 +383,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("fails validation with an invalid related resource", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
@@ -394,7 +394,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("passes validation with a null, non-required relationship", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
@@ -405,7 +405,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("passes validation with a valid relationship", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
@@ -419,7 +419,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("fails validation with a missing required relationship", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "teams",
 				attributes: { name: "Tempe Wave" },
 			});
@@ -427,7 +427,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("fails validation with an empty relationships object without the required relationships", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "teams",
 				attributes: { name: "Tempe Wave" },
 				relationships: {},
@@ -436,7 +436,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("fails validation with a null, required relationship", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "teams",
 				attributes: { name: "Tempe Wave" },
 				relationships: {
@@ -558,7 +558,7 @@ describe("resource splice validation", () => {
 
 	describe("with nested resources", () => {
 		it("passes validation with a valid nested create relationship", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
@@ -575,7 +575,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("fails validation with a valid nested create relationship and missing attribute", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
@@ -589,7 +589,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("passes validation with a valid nested update relationship", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
@@ -604,7 +604,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("passes validation with a doubly nested resource", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
@@ -624,7 +624,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("passes validation with a nested resource with a ref", () => {
-			const result = validateSpliceResourceTree(soccerSchema, {
+			const result = validateSpliceResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
@@ -646,66 +646,65 @@ describe("resource splice validation", () => {
 	});
 });
 
-describe("ensureValidQueryResult", () => {
+describe("validateQueryResult", () => {
 	// graph tests get validated with this, so we test invalid cases here
+	// (except one to make sure we're not getting invalid errors)
 
-	it("fails validation on an invalid structure", () => {
-		expect(() => {
-			ensureValidQueryResult(
-				soccerSchema,
-				{ type: "fields", select: ["name"] },
-				"chicken butt",
-			);
-		}).toThrowError();
+	it("succeeds on a valid structure", () => {
+		const query = { type: "fields", id: "1", select: ["name"] };
+		const result = validateQueryResult(soccerSchema, query, { name: "Hi" });
+		expect(result.length).toEqual(0);
 	});
 
-	it("fails validation on an invalid type", () => {
-		expect(() => {
-			ensureValidQueryResult(
-				soccerSchema,
-				{ type: "chickens", select: ["name"] },
-				[],
-			);
-		}).toThrowError();
+	it("fails validation on an invalid structure", () => {
+		const result = validateQueryResult(
+			soccerSchema,
+			{ type: "fields", select: ["name"] },
+			"chicken butt",
+		);
+		expect(result.length).toBeGreaterThan(0);
 	});
 
 	it("fails validation when expecting multiple resources", () => {
-		expect(() => {
-			ensureValidQueryResult(
-				soccerSchema,
-				{ type: "fields", select: ["name"] },
-				{ name: "Bob" },
-			);
-		}).toThrowError();
+		const result = validateQueryResult(
+			soccerSchema,
+			{ type: "fields", select: ["name"] },
+			{ name: "Bob" },
+		);
+		expect(result.length).toBeGreaterThan(0);
 	});
 
 	it("fails validation when expecting a single resource", () => {
-		expect(() => {
-			ensureValidQueryResult(
-				soccerSchema,
-				{ type: "fields", id: "1", select: ["name"] },
-				[],
-			);
-		}).toThrowError();
+		const result = validateQueryResult(
+			soccerSchema,
+			{ type: "fields", id: "1", select: ["name"] },
+			[],
+		);
+		expect(result.length).toBeGreaterThan(0);
 	});
 
 	it("fails validation on an invalid string type", () => {
-		expect(() => {
-			ensureValidQueryResult(
-				soccerSchema,
-				{ type: "fields", id: "1", select: ["name"] },
-				{ name: 5 },
-			);
-		}).toThrowError();
+		const result = validateQueryResult(
+			soccerSchema,
+			{ type: "fields", id: "1", select: ["name"] },
+			{ name: 5 },
+		);
+		expect(result.length).toBeGreaterThan(0);
+	});
+
+	it("fails based on a JSON schema definition in an attribute", () => {
+		const query = { type: "fields", id: "1", select: ["name"] };
+		const result = validateQueryResult(soccerSchema, query, { name: "hi" });
+		expect(result.length).toBeGreaterThan(0);
 	});
 
 	it("fails validation on a defined $ref", () => {
-		expect(() => {
-			ensureValidQueryResult(
-				geojsonDPSchema,
-				{ type: "fields", id: "1", select: ["location"] },
-				{ location: { hi: "there" } },
-			);
-		}).toThrowError();
+		const result = validateQueryResult(
+			geojsonDPSchema,
+			{ type: "fields", id: "1", select: ["location"] },
+			{ location: { hi: "there" } },
+			{ validator: geojsonValidator },
+		);
+		expect(result.length).toBeGreaterThan(0);
 	});
 });

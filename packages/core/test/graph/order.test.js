@@ -1,17 +1,16 @@
 import { expect, it, describe } from "vitest";
-import { createQueryGraph } from "../../src/graph.js";
+import { queryGraph } from "../../src/graph.js";
 import careBearsSchema from "../fixtures/care-bears.schema.json" with { type: "json" };
 import careBearData from "../fixtures/care-bear-data.json" with { type: "json" };
 
-const graph = createQueryGraph(careBearsSchema, careBearData);
-
 describe("order tests", async () => {
 	it("sorts on a numeric field", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: { name: "name", yearIntroduced: "yearIntroduced" },
 			order: { yearIntroduced: "desc" },
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Smart Heart Bear", yearIntroduced: 2005 },
@@ -22,11 +21,12 @@ describe("order tests", async () => {
 	});
 
 	it("sorts on a string field", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: { name: "name", yearIntroduced: "yearIntroduced" },
 			order: { name: "asc" },
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Cheer Bear", yearIntroduced: 1982 },
@@ -37,11 +37,12 @@ describe("order tests", async () => {
 	});
 
 	it("sorts on a numerical and a string field", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: { name: "name", yearIntroduced: "yearIntroduced" },
 			order: [{ yearIntroduced: "desc" }, { name: "asc" }],
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Smart Heart Bear", yearIntroduced: 2005 },
@@ -52,7 +53,7 @@ describe("order tests", async () => {
 	});
 
 	it("sorts on a field with a nested resource", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: {
 				name: "name",
@@ -60,7 +61,8 @@ describe("order tests", async () => {
 				home: { select: ["name"] },
 			},
 			order: [{ yearIntroduced: "desc" }, { name: "asc" }],
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{
@@ -84,11 +86,15 @@ describe("order tests", async () => {
 
 	it("disallows sorting on invalid attribute names", async () => {
 		await expect(async () => {
-			return graph.query({
-				type: "bears",
-				select: ["name"],
-				order: { lol: "asc" },
-			});
+			return queryGraph(
+				careBearsSchema,
+				{
+					type: "bears",
+					select: ["name"],
+					order: { lol: "asc" },
+				},
+				careBearData,
+			);
 		}).rejects.toThrowError();
 	});
 });
