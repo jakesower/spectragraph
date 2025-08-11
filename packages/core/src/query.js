@@ -1,6 +1,9 @@
 import { defaultExpressionEngine } from "@data-prism/expressions";
-import { get, last, mapValues, omit, sortBy } from "lodash-es";
+import { mapValues, omit, partition } from "lodash-es";
 import { defaultValidator } from "./resource.js";
+import { createDeepCache, ensure, translateAjvErrors } from "./lib/helpers.js";
+import baseQuerySchema from "./fixtures/query.schema.json";
+import { formatSelectErrors } from "./lib/query-errors.js";
 
 /**
  * @typedef {Object} Expression
@@ -30,218 +33,244 @@ import { defaultValidator } from "./resource.js";
  * @property {string} type - Required type
  */
 
-/**
- * @typedef {RootQuery & NormalQuery} NormalRootQuery
- */
+// these arguments have references that should seldom, if ever, change
+const getValidateQueryCache = createDeepCache();
+const baseValidatorCache = new WeakMap();
+
+function validateQueryShape(query, validator) {
+	let validateBasis = baseValidatorCache.get(validator);
+	if (!validateBasis) {
+		validateBasis = validator.compile(baseQuerySchema);
+		baseValidatorCache.set(validator, validateBasis);
+	}
+
+	return validateBasis(query)
+		? []
+		: translateAjvErrors(validateBasis.errors, query, "query");
+}
+
+function getQuerySchemaDefinitions(schema, expressionEngine, validator) {
+	const cache = getValidateQueryCache(schema, expressionEngine, validator);
+	let resourceDefinitions = cache.value;
+
+	if (!resourceDefinitions) {
+		resourceDefinitions = {
+			definitions: {
+				expression: buildExpressionDefinition(expressionEngine),
+				resources: mapValues(schema.resources, buildResourceSchema),
+			},
+		};
+		cache.set(resourceDefinitions);
+	}
+
+	return resourceDefinitions;
+}
+
+function buildResourceSchema(resSchema, resName) {
+	return {
+		type: "object",
+		required: ["select"],
+		properties: {
+			type: { type: "string", const: resName },
+			id: { type: "string" },
+			select: {
+				oneOf: [
+					{ type: "string", const: "*" },
+					{
+						$ref: `#/definitions/resources/${resName}/definitions/selectObject`,
+					},
+					{
+						$ref: `#/definitions/resources/${resName}/definitions/selectArray`,
+					},
+				],
+			},
+			limit: { type: "integer", minimum: 1 },
+			offset: { type: "integer", minimum: 0 },
+			where: {
+				anyOf: [
+					{ $ref: "#/definitions/expression" },
+					{
+						type: "object",
+						properties: mapValues(resSchema.attributes, () => ({})),
+						additionalProperties: {
+							not: true,
+							errorMessage:
+								"is neither be an expression nor an object that uses valid attributes as keys",
+						},
+					},
+				],
+			},
+			order: {
+				oneOf: [
+					{
+						$ref: `#/definitions/resources/${resName}/definitions/orderItem`,
+					},
+					{
+						type: "array",
+						items: {
+							$ref: `#/definitions/resources/${resName}/definitions/orderItem`,
+						},
+					},
+				],
+				errorMessage:
+					'must be a value or array of values of the form { "attribute": "asc/desc" }',
+			},
+		},
+		definitions: {
+			selectArray: {
+				type: "array",
+				minItems: 1,
+				items: {
+					anyOf: [
+						{
+							type: "string",
+							enum: ["*", ...Object.keys(resSchema.attributes)],
+						},
+						{
+							$ref: `#/definitions/resources/${resName}/definitions/selectObject`,
+						},
+					],
+					errorMessage:
+						'invalid item in a selection array: ${0} -- selection arrays must contain one of "*", the name of an attribute, or a selection object',
+				},
+			},
+			selectObject: {
+				type: "object",
+				properties: {
+					"*": {},
+					...mapValues(resSchema.relationships, (relSchema) => ({
+						$ref: `#/definitions/resources/${relSchema.type}`,
+					})),
+				},
+				additionalProperties: {
+					oneOf: [
+						{ type: "string", enum: Object.keys(resSchema.attributes) },
+						{ $ref: "#/definitions/expression" },
+					],
+				},
+				errorMessage: `invalid selection clause: \${0} -- selections must be one of { "*": true }, { "someKey": an expression }, { "someKey": (one of "${Object.keys(resSchema.attributes).join('", "')}") }, or ({ ["${Object.keys(resSchema.relationships).join('" | "')}"]: subquery })`,
+			},
+			orderItem: {
+				type: "object",
+				minProperties: 1,
+				maxProperties: 1,
+				properties: mapValues(resSchema.attributes, () => ({})),
+				additionalProperties: {
+					anyOf: [{ $ref: "#/definitions/expression" }],
+				},
+				errorMessage: {
+					maxProperties:
+						'must have exactly one key with the name of an attribute and a value of "asc" or "desc"',
+					minProperties:
+						'must have exactly one key with the name of an attribute and a value of "asc" or "desc"',
+				},
+			},
+		},
+	};
+}
+
+function buildExpressionDefinition(expressionEngine) {
+	return {
+		type: "object",
+		minProperties: 1,
+		maxProperties: 1,
+		additionalProperties: false,
+		properties: expressionEngine.expressionNames.reduce(
+			(acc, n) => ({ ...acc, [n]: {} }),
+			{},
+		),
+	};
+}
 
 /**
  * Validates that a query is valid against the schema
  * @param {Object} schema - The schema object
  * @param {RootQuery} query - The query to validate
- * @throws {Error} If the query is invalid
+ * @param {Object} [options]
+ * @param {Object} [options.expressionEngine] - a @data-prism/graph expression engine
+ * @param {Ajv} [options.validator] - The validator instance to use
+ * @return {import('./lib/helpers.js').StandardError[]}
  */
-export function ensureValidQuery(schema, query, options = {}) {
-	const { expressionEngine = defaultExpressionEngine } = options;
+export function validateQuery(schema, query, options = {}) {
+	const {
+		expressionEngine = defaultExpressionEngine,
+		validator = defaultValidator,
+	} = options;
 
+	if (typeof schema !== "object")
+		return [{ message: "[data-prism] schema must be an object" }];
+	if (typeof expressionEngine !== "object")
+		return [{ message: "[data-prism] expressionEngine must be an object" }];
+	if (typeof validator !== "object")
+		return [{ message: "[data-prism] validator must be an object" }];
+	if (typeof query !== "object")
+		return [{ message: "[data-prism] query must be an object" }];
+
+	// Shape validation
+	const shapeErrors = validateQueryShape(query, validator);
+	if (shapeErrors.length > 0) return shapeErrors;
+
+	// Type validation
+	if (!Object.keys(schema.resources).includes(query.type)) {
+		return [
+			{
+				message: `[data-prism] query/type ${query.type} is not a valid query type`,
+				path: "query/type",
+				keyword: "compile",
+				value: query.type,
+			},
+		];
+	}
+
+	// Get cached schema definitions
+	const resourceDefinitions = getQuerySchemaDefinitions(
+		schema,
+		expressionEngine,
+		validator,
+	);
+
+	// Compile query-specific validator
 	const querySchema = {
 		type: "object",
 		required: ["type"],
 		$ref: `#/definitions/resources/${query.type}`,
-		definitions: {
-			expression: {
-				type: "object",
-				minProperties: 1,
-				maxProperties: 1,
-				additionalProperties: false,
-				properties: expressionEngine.expressionNames.reduce(
-					(acc, n) => ({ ...acc, [n]: {} }),
-					{},
-				),
-			},
-			resources: mapValues(schema.resources, (resSchema, resName) => ({
-				type: "object",
-				required: ["select"],
-				properties: {
-					type: { type: "string", const: resName },
-					id: { type: "string" },
-					select: {
-						oneOf: [
-							{ type: "string", const: "*" },
-							{
-								$ref: `#/definitions/resources/${resName}/definitions/selectObject`,
-							},
-							{
-								$ref: `#/definitions/resources/${resName}/definitions/selectArray`,
-							},
-						],
-					},
-					limit: { type: "integer", minimum: 1 },
-					offset: { type: "integer", minimum: 0 },
-					where: {
-						anyOf: [
-							{ $ref: "#/definitions/expression" },
-							{
-								type: "object",
-								properties: mapValues(resSchema.attributes, () => ({})),
-								additionalProperties: {
-									not: true,
-									errorMessage:
-										"is neither be an expression nor an object that uses valid attributes as keys",
-								},
-							},
-						],
-					},
-					order: {
-						oneOf: [
-							{
-								$ref: `#/definitions/resources/${resName}/definitions/orderItem`,
-							},
-							{
-								type: "array",
-								items: {
-									$ref: `#/definitions/resources/${resName}/definitions/orderItem`,
-								},
-							},
-						],
-						errorMessage:
-							'must be a value or array of values of the form { "attribute": "asc/desc" }',
-					},
-				},
-				definitions: {
-					selectArray: {
-						type: "array",
-						minItems: 1,
-						items: {
-							anyOf: [
-								{
-									type: "string",
-									enum: ["*", ...Object.keys(resSchema.attributes)],
-								},
-								{
-									$ref: `#/definitions/resources/${resName}/definitions/selectObject`,
-								},
-							],
-							errorMessage:
-								'invalid item in a selection array: ${0} -- selection arrays must contain one of "*", the name of an attribute, or a selection object',
-						},
-					},
-					selectObject: {
-						type: "object",
-						properties: {
-							"*": {},
-							...mapValues(resSchema.relationships, (relSchema) => ({
-								$ref: `#/definitions/resources/${relSchema.type}`,
-							})),
-						},
-						additionalProperties: {
-							oneOf: [
-								{ type: "string", enum: Object.keys(resSchema.attributes) },
-								{ $ref: "#/definitions/expression" },
-							],
-						},
-						errorMessage: `invalid selection clause: \${0} -- selections must be one of { "*": true }, { "someKey": an expression }, { "someKey": (one of "${Object.keys(resSchema.attributes).join('", "')}") }, or ({ ["${Object.keys(resSchema.relationships).join('" | "')}"]: subquery })`,
-					},
-					orderItem: {
-						type: "object",
-						minProperties: 1,
-						maxProperties: 1,
-						properties: mapValues(resSchema.attributes, () => ({})),
-						additionalProperties: {
-							anyOf: [{ $ref: "#/definitions/expression" }],
-						},
-						errorMessage: {
-							maxProperties:
-								'must have exactly one key with the name of an attribute and a value of "asc" or "desc"',
-							minProperties:
-								'must have exactly one key with the name of an attribute and a value of "asc" or "desc"',
-						},
-					},
-				},
-			})),
-		},
+		...resourceDefinitions,
 	};
 
-	// write better errors on complex select clause problems
-	const invalidSelectError = (error) => {
-		const cleanPath = error.instancePath.split("/").slice(1);
-		const problemSelect = get(query, cleanPath);
-		const resType = cleanPath
-			.filter((p) => p !== "select")
-			.reduce(
-				(acc, rel) => schema.resources[acc].relationships[rel].type,
-				query.type,
-			);
-		const resSchema = schema.resources[resType];
-
-		if (typeof problemSelect === "string" && problemSelect !== "*") {
-			throw new Error(
-				`[data-prism] query${error.instancePath} ${problemSelect} is a string and therefore must be "*" -- perhaps you meant ["${problemSelect}"]`,
-			);
-		}
-
-		Object.entries(problemSelect).forEach(([key, val]) => {
-			if (resSchema.relationships[key]) {
-				throw new Error(
-					`[data-prism] query${error.instancePath}/${key} must have a valid subquery as its value`,
-				);
-			}
-
-			if (
-				typeof val === "object" &&
-				!Array.isArray(val) &&
-				!expressionEngine.isExpression(val)
-			) {
-				throw new Error(
-					`[data-prism] query${error.instancePath}/${key} is an object and therefore must be a valid data prism expression (if you meant to have a relationship with a subquery, check your spelling)`,
-				);
-			}
-		});
-
-		// there's an unusual case if none of the above hit -- let the default error handle it
-	};
-
-	const validate = defaultValidator.compile(querySchema);
-	if (!validate(query)) {
-		const customErrorsByDepth = sortBy(
-			validate.errors
-				.filter((err) => err.keyword === "errorMessage")
-				.toReversed(),
-			[(err) => err.instancePath.split("/").length],
-		);
-
-		const interestingErrors = validate.errors.filter(
-			(e) => !["allOf", "anyOf", "oneOf"].includes(e.keyword),
-		);
-		const usedErrors =
-			customErrorsByDepth.length > 0
-				? [last(customErrorsByDepth)]
-				: interestingErrors.length > 0
-					? interestingErrors
-					: validate.errors;
-
-		console.log(usedErrors);
-		try {
-			if (usedErrors[0].instancePath.endsWith("/select"))
-				invalidSelectError(usedErrors[0]);
-
-			throw new Error(
-				`[data-prism] ${defaultValidator.errorsText(usedErrors, { dataVar: "query" })}`,
-			);
-		} catch (err) {
-			console.log(err);
-			throw err;
-		}
+	let validate;
+	try {
+		validate = validator.compile(querySchema);
+	} catch (err) {
+		return [
+			{ ...err, message: `[data-prism] ${err.message}`, keyword: "compile" },
+		];
 	}
+
+	if (validate(query)) return [];
+
+	// Process errors
+	const [rawSelectErrors, otherErrors] = partition(validate.errors, (e) =>
+		e.instancePath.endsWith("/select"),
+	);
+
+	return translateAjvErrors(
+		[
+			...formatSelectErrors(rawSelectErrors, query, schema, expressionEngine),
+			...otherErrors,
+		],
+		query,
+		"query",
+	);
 }
 
 /**
  * Normalizes a query by expanding shorthand syntax and ensuring consistent structure
  * @param {Object} schema - The schema object
  * @param {RootQuery} rootQuery - The query to normalize
- * @returns {NormalRootQuery} The normalized query
+ * @returns {NormalQuery} The normalized query
  */
 export function normalizeQuery(schema, rootQuery) {
-	ensureValidQuery(schema, rootQuery);
+	ensure(validateQuery)(schema, rootQuery);
 
 	const stringToProp = (str) => ({
 		[str]: str,

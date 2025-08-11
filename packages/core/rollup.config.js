@@ -1,33 +1,34 @@
-import { nodeResolve } from '@rollup/plugin-node-resolve';
-import commonjs from '@rollup/plugin-commonjs';
+import { nodeResolve } from "@rollup/plugin-node-resolve";
+import commonjs from "@rollup/plugin-commonjs";
+import json from "@rollup/plugin-json";
 
 export default [
 	// ESM build
 	{
 		input: "src/index.js",
 		output: { file: "dist/index.esm.js", format: "es" },
-		plugins: [nodeResolve(), commonjs()],
+		plugins: [nodeResolve(), commonjs(), json()],
 		external: [
 			"lodash-es",
 			"@data-prism/expressions",
 			"@data-prism/utils",
 			"ajv",
 			"ajv-formats",
-			"uuid"
+			"uuid",
 		],
 	},
 	// CommonJS build
 	{
 		input: "src/index.js",
 		output: { file: "dist/index.cjs.js", format: "cjs" },
-		plugins: [nodeResolve(), commonjs()],
+		plugins: [nodeResolve(), commonjs(), json()],
 		external: [
 			"lodash-es",
 			"@data-prism/expressions",
 			"@data-prism/utils",
 			"ajv",
 			"ajv-formats",
-			"uuid"
+			"uuid",
 		],
 	},
 ];

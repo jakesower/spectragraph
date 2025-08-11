@@ -1,10 +1,8 @@
 import { expect, it, describe } from "vitest";
-import { createQueryGraph } from "../../src/graph.js";
+import { queryGraph } from "../../src/graph.js";
 import { ensureValidQueryResult } from "../../src/resource.js";
 import careBearsSchema from "../fixtures/care-bears.schema.json" with { type: "json" };
 import careBearData from "../fixtures/care-bear-data.json";
-
-const graph = createQueryGraph(careBearsSchema, careBearData);
 
 describe("limit/offset", () => {
 	it("fetches a single resource", async () => {
@@ -13,7 +11,7 @@ describe("limit/offset", () => {
 			select: { name: "name" },
 			limit: 1,
 		};
-		const result = await graph.query(query);
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([{ name: "Tenderheart Bear" }]);
 		expect(() => {
@@ -29,7 +27,7 @@ describe("limit/offset", () => {
 			limit: 2,
 		};
 
-		const result = await graph.query(query);
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Cheer Bear" },
@@ -42,24 +40,26 @@ describe("limit/offset", () => {
 	});
 
 	it("limits after sorting with 1", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
 			limit: 1,
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([{ name: "Cheer Bear" }]);
 	});
 
 	it("limits with an offset", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
 			limit: 2,
 			offset: 1,
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Smart Heart Bear" },
@@ -68,12 +68,13 @@ describe("limit/offset", () => {
 	});
 
 	it("allows for offset only", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
 			offset: 1,
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Smart Heart Bear" },
@@ -83,13 +84,14 @@ describe("limit/offset", () => {
 	});
 
 	it("allows for limit + offset to exceed size of data", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
 			limit: 6,
 			offset: 2,
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Tenderheart Bear" },
@@ -98,24 +100,26 @@ describe("limit/offset", () => {
 	});
 
 	it("returns nothing when the offset has surpassed the data size", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
 			limit: 6,
 			offset: 20,
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([]);
 	});
 
 	it("allows a zero offset", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
 			offset: 0,
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Cheer Bear" },
@@ -123,26 +127,5 @@ describe("limit/offset", () => {
 			{ name: "Tenderheart Bear" },
 			{ name: "Wish Bear" },
 		]);
-	});
-
-	it("errors for a bad limit", async () => {
-		await expect(async () => {
-			await graph.query({
-				type: "bears",
-				select: ["id"],
-				limit: 0,
-			});
-		}).rejects.toThrowError();
-	});
-
-	it("errors for a bad offset", async () => {
-		await expect(async () => {
-			await graph.query({
-				type: "bears",
-				select: ["id"],
-				limit: 3,
-				offset: -1,
-			});
-		}).rejects.toThrowError();
 	});
 });

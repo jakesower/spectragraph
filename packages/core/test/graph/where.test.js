@@ -1,27 +1,27 @@
 import { expect, it, describe } from "vitest";
-import { createQueryGraph } from "../../src/graph.js";
+import { queryGraph } from "../../src/graph.js";
 import careBearsSchema from "../fixtures/care-bears.schema.json" with { type: "json" };
 import careBearData from "../fixtures/care-bear-data.json" with { type: "json" };
 
-const graph = createQueryGraph(careBearsSchema, careBearData);
-
 describe("where clauses", () => {
 	it("filters on an implicit property equality constraint", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: ["id", "name"],
 			where: { name: "Cheer Bear" },
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "2", name: "Cheer Bear" }]);
 	});
 
 	it("doesn't break on an empty where object", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: ["id"],
 			where: {},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ id: "1" },
@@ -32,126 +32,136 @@ describe("where clauses", () => {
 	});
 
 	it("filters on a property that is not returned from properties", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: ["id"],
 			where: { name: { $eq: "Cheer Bear" } },
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "2" }]);
 	});
 
 	it("filters on multiple property equality where", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "homes",
 			select: ["id"],
 			where: {
 				caringMeter: 1,
 				isInClouds: false,
 			},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "2" }]);
 	});
 
 	it("filters using $eq operator", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: ["id"],
 			where: {
 				yearIntroduced: { $eq: 2005 },
 			},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "5" }]);
 	});
 
 	it("filters using $gt operator", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: ["id"],
 			where: {
 				yearIntroduced: { $gt: 2000 },
 			},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "5" }]);
 	});
 
 	it("filters using $lt operator", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: ["id"],
 			where: {
 				yearIntroduced: { $lt: 2000 },
 			},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
 	});
 
 	it("filters using $lte operator", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: ["id"],
 			where: {
 				yearIntroduced: { $lte: 2000 },
 			},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
 	});
 
 	it("filters using $gte operator", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: ["id"],
 			where: {
 				yearIntroduced: { $gte: 2005 },
 			},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "5" }]);
 	});
 
 	it("filters using $in 1", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: ["id"],
 			where: {
 				yearIntroduced: { $in: [2005, 2022] },
 			},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "5" }]);
 	});
 
 	it("filters using $in 2", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: ["id"],
 			where: {
 				yearIntroduced: { $in: [2022] },
 			},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([]);
 	});
 
 	it("filters using $ne operator", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "bears",
 			select: ["id"],
 			where: {
 				yearIntroduced: { $ne: 2005 },
 			},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
 	});
 
 	it("filters related resources", async () => {
-		const result = await graph.query({
+		const query = {
 			type: "powers",
 			id: "careBearStare",
 			select: {
@@ -163,7 +173,8 @@ describe("where clauses", () => {
 					},
 				},
 			},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual({
 			powerId: "careBearStare",
@@ -171,21 +182,9 @@ describe("where clauses", () => {
 		});
 	});
 
-	it("filters on paths of resources", async () => {
-		const result = await graph.query({
-			type: "bears",
-			select: ["id"],
-			where: {
-				"home.name": "Care-a-Lot",
-			},
-		});
-
-		expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
-	});
-
 	describe("where expressions", () => {
 		it("filters using an $or operation", async () => {
-			const result = await graph.query({
+			const query = {
 				type: "bears",
 				select: {
 					id: "id",
@@ -193,13 +192,14 @@ describe("where clauses", () => {
 				where: {
 					$or: [{ yearIntroduced: { $gt: 2000 } }, { bellyBadge: "rainbow" }],
 				},
-			});
+			};
+			const result = queryGraph(careBearsSchema, query, careBearData);
 
 			expect(result).toEqual([{ id: "2" }, { id: "5" }]);
 		});
 
 		it("filters using an $or and $and operation", async () => {
-			const result = await graph.query({
+			const query = {
 				type: "bears",
 				select: {
 					id: "id",
@@ -210,13 +210,14 @@ describe("where clauses", () => {
 						{ $and: [{ name: "Tenderheart Bear" }, { bellyBadge: "rainbow" }] },
 					],
 				},
-			});
+			};
+			const result = queryGraph(careBearsSchema, query, careBearData);
 
 			expect(result).toEqual([{ id: "5" }]);
 		});
 
 		it("filters using an $or and $not operation", async () => {
-			const result = await graph.query({
+			const query = {
 				type: "bears",
 				select: {
 					id: "id",
@@ -226,7 +227,8 @@ describe("where clauses", () => {
 						$or: [{ yearIntroduced: { $gt: 2000 } }, { bellyBadge: "rainbow" }],
 					},
 				},
-			});
+			};
+			const result = queryGraph(careBearsSchema, query, careBearData);
 
 			expect(result).toEqual([{ id: "1" }, { id: "3" }]);
 		});

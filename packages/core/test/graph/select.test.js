@@ -1,19 +1,17 @@
 import { expect, it, describe } from "vitest";
-import { createQueryGraph } from "../../src/graph.js";
+import { queryGraph } from "../../src/graph.js";
 import careBearsSchema from "../fixtures/care-bears.schema.json" with { type: "json" };
 import careBearData from "../fixtures/care-bear-data.json" with { type: "json" };
 
-const graph = createQueryGraph(careBearsSchema, careBearData);
-
-
 describe("select expressions", () => {
 	it("projects a field to a literal expression", async () => {
-		const result = graph.query({
+		const query = {
 			type: "bears",
 			select: {
 				beep: { $literal: "boop" },
 			},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ beep: "boop" },
@@ -24,13 +22,14 @@ describe("select expressions", () => {
 	});
 
 	it("projects a field to an expression", async () => {
-		const result = graph.query({
+		const query = {
 			type: "homes",
 			select: {
 				name: "name",
 				numberOfResidents: { $count: "residents" },
 			},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Care-a-Lot", numberOfResidents: 3 },
@@ -40,13 +39,14 @@ describe("select expressions", () => {
 	});
 
 	it("applies expressions over a nested resource", async () => {
-		const result = graph.query({
+		const query = {
 			type: "bears",
 			select: {
 				name: "name",
 				powerCount: { $count: { $get: "powers" } },
 			},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Tenderheart Bear", powerCount: 1 },
@@ -57,13 +57,14 @@ describe("select expressions", () => {
 	});
 
 	it("evaluates the minimum across one-to-many nested resources", async () => {
-		const result = graph.query({
+		const query = {
 			type: "homes",
 			select: {
 				name: "name",
 				minYear: { $min: "residents.$.yearIntroduced" },
 			},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Care-a-Lot", minYear: 1982 },
@@ -73,13 +74,14 @@ describe("select expressions", () => {
 	});
 
 	it("evaluates the minimum across many-to-many nested resources", async () => {
-		const result = graph.query({
+		const query = {
 			type: "powers",
 			select: {
 				name: "name",
 				minYear: { $min: "wielders.$.yearIntroduced" },
 			},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Care Bear Stare", minYear: 1982 },
@@ -89,13 +91,14 @@ describe("select expressions", () => {
 	});
 
 	it("evaluates deeply nested values", async () => {
-		const result = graph.query({
+		const query = {
 			type: "powers",
 			select: {
 				name: "name",
 				caring: { $sum: "wielders.$.home.caringMeter" },
 			},
-		});
+		};
+		const result = queryGraph(careBearsSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Care Bear Stare", caring: 3 },

@@ -1,228 +1,501 @@
-// Main data-prism TypeScript definitions
+// TypeScript definitions for @data-prism/core
+// Generated from JSDoc annotations
 
-// Schema types
-export interface SchemaAttribute {
-  type: "object" | "array" | "boolean" | "string" | "number" | "integer" | "null" |
-        "date" | "time" | "date-time" | "iso-time" | "iso-date-time" | "duration" |
-        "uri" | "uri-reference" | "uri-template" | "url" | "email" | "hostname" |
-        "ipv4" | "ipv6" | "regex" | "uuid" | "json-pointer" | "relative-json-pointer" |
-        "byte" | "int32" | "int64" | "float" | "double" | "password" | "binary" |
-        "data-prism:geojson" | "data-prism:geojson-point";
-  title?: string;
-  description?: string;
-  default?: unknown;
-  $comment?: string;
-  deprecated?: boolean;
-  meta?: unknown;
-  required?: boolean;
-  subType?: string;
-  [k: string]: unknown;
+import type { Ajv, DefinedError } from "ajv";
+
+// === JSON SCHEMA ===
+
+export type JSONSchemaType =
+	| "null"
+	| "boolean"
+	| "object"
+	| "array"
+	| "number"
+	| "string"
+	| "integer";
+
+export interface JSONSchemaDefinition {
+	[key: string]: JSONSchema;
 }
 
+export interface JSONSchema {
+	// Schema identification
+	$id?: string;
+	$schema?: string;
+	$ref?: string;
+	$comment?: string;
+
+	// Meta-data
+	title?: string;
+	description?: string;
+	default?: unknown;
+	readOnly?: boolean;
+	writeOnly?: boolean;
+	examples?: unknown[];
+
+	// Type validation
+	type?: JSONSchemaType | JSONSchemaType[];
+
+	// Numeric validation
+	multipleOf?: number;
+	maximum?: number;
+	exclusiveMaximum?: number;
+	minimum?: number;
+	exclusiveMinimum?: number;
+
+	// String validation
+	maxLength?: number;
+	minLength?: number;
+	pattern?: string;
+
+	// Array validation
+	items?: JSONSchema | JSONSchema[];
+	additionalItems?: JSONSchema;
+	maxItems?: number;
+	minItems?: number;
+	uniqueItems?: boolean;
+	contains?: JSONSchema;
+
+	// Object validation
+	maxProperties?: number;
+	minProperties?: number;
+	required?: string[];
+	properties?: { [key: string]: JSONSchema };
+	patternProperties?: { [pattern: string]: JSONSchema };
+	additionalProperties?: JSONSchema | boolean;
+	dependencies?: {
+		[key: string]: JSONSchema | string[];
+	};
+	propertyNames?: JSONSchema;
+
+	// Generic validation
+	const?: unknown;
+	enum?: unknown[];
+
+	// Combining schemas
+	allOf?: JSONSchema[];
+	anyOf?: JSONSchema[];
+	oneOf?: JSONSchema[];
+	not?: JSONSchema;
+
+	// Conditional schemas
+	if?: JSONSchema;
+	then?: JSONSchema;
+	else?: JSONSchema;
+
+	// Format validation (Draft 07 formats)
+	format?:
+		| "date-time"
+		| "time"
+		| "date"
+		| "duration"
+		| "email"
+		| "idn-email"
+		| "hostname"
+		| "idn-hostname"
+		| "ipv4"
+		| "ipv6"
+		| "uri"
+		| "uri-reference"
+		| "iri"
+		| "iri-reference"
+		| "uri-template"
+		| "json-pointer"
+		| "relative-json-pointer"
+		| "regex"
+		| string; // Allow custom formats
+
+	// Schema composition
+	definitions?: JSONSchemaDefinition;
+	$defs?: JSONSchemaDefinition;
+
+	// Content validation (Draft 07)
+	contentMediaType?: string;
+	contentEncoding?: string;
+
+	// Allow additional properties for extensions
+	[key: string]: unknown;
+}
+
+// === SCHEMA TYPES ===
+
 export interface SchemaRelationship {
-  type: string;
-  cardinality: "one" | "many";
-  inverse?: string;
-  required?: boolean;
+	type: string;
+	cardinality: "one" | "many";
+	inverse?: string;
+	required?: boolean;
 }
 
 export interface SchemaResource {
-  idAttribute?: string;
-  attributes: { [k: string]: SchemaAttribute };
-  relationships: { [k: string]: SchemaRelationship };
+	idAttribute?: string;
+	attributes: { [k: string]: JSONSchema };
+	relationships: { [k: string]: SchemaRelationship };
+	requiredAttributes?: string[];
+	requiredRelationships?: string[];
 }
 
 export interface Schema {
-  $schema?: string;
-  $id?: string;
-  title?: string;
-  description?: string;
-  meta?: unknown;
-  version?: string;
-  resources: { [k: string]: SchemaResource };
+	$schema?: string;
+	$id?: string;
+	title?: string;
+	description?: string;
+	meta?: unknown;
+	version?: string;
+	resources: { [k: string]: SchemaResource };
 }
 
-// Query types
+// === QUERY TYPES ===
+
 export interface Expression {
-  [k: string]: unknown;
+	[key: string]: unknown;
 }
 
 export interface Query {
-  id?: string;
-  limit?: number;
-  offset?: number;
-  order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
-  select: readonly (string | { [k: string]: string | Query | Expression })[] | 
-          { [k: string]: string | Query | Expression } | "*";
-  type?: string;
-  where?: { [k: string]: unknown };
+	id?: string;
+	limit?: number;
+	offset?: number;
+	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
+	select:
+		| readonly (string | { [k: string]: string | Query | Expression })[]
+		| { [k: string]: string | Query | Expression }
+		| "*";
+	type?: string;
+	where?: { [k: string]: unknown };
 }
 
 export interface RootQuery extends Query {
-  type: string;
+	type: string;
 }
 
 export interface NormalQuery extends Query {
-  select: { [k: string]: string | NormalQuery | Expression };
-  order?: { [k: string]: "asc" | "desc" }[];
-  type: string;
+	select: { [k: string]: string | NormalQuery | Expression };
+	order?: { [k: string]: "asc" | "desc" }[];
+	type: string;
 }
 
-export interface NormalRootQuery extends RootQuery, NormalQuery {}
+// === RESOURCE TYPES ===
 
-export interface QueryInfo {
-  path: string[];
-  parent: Query | null;
-  type: string;
-}
-
-// Graph types
 export interface Ref {
-  type: string;
-  id: string;
+	type: string;
+	id: string;
 }
 
-export interface NormalResource {
-  id: string;
-  type: string;
-  attributes: { [k: string]: unknown };
-  relationships: { [k: string]: Ref | Ref[] | null };
+export interface BaseResource {
+	type: string;
 }
 
-export type Graph = {
-  [k: string]: { [k: string]: NormalResource };
-};
-
-export interface NormalResourceTree {
-  type: string;
-  id?: string;
-  attributes?: { [k: string]: unknown };
-  relationships?: {
-    [k: string]: NormalResourceTree | NormalResourceTree[] | Ref | Ref[] | null;
-  };
+export interface NormalResource extends BaseResource {
+	id: string;
+	attributes: { [k: string]: unknown };
+	relationships: { [k: string]: Ref | Ref[] | null };
 }
 
-// Validation types
-export interface CreateResource {
-  type: string;
-  id?: number | string;
-  attributes?: { [k: string]: unknown };
-  relationships?: { [k: string]: Ref | Ref[] | null };
+export interface CreateResource extends BaseResource {
+	id?: number | string;
+	new?: true;
+	attributes?: { [k: string]: unknown };
+	relationships?: { [k: string]: Ref | Ref[] | null };
 }
 
-export interface UpdateResource {
-  type: string;
-  id: number | string;
-  attributes?: { [k: string]: unknown };
-  relationships?: { [k: string]: Ref | Ref[] | null };
+export interface UpdateResource extends BaseResource {
+	id: number | string;
+	new?: false;
+	attributes?: { [k: string]: unknown };
+	relationships?: { [k: string]: Ref | Ref[] | null };
 }
 
 export type DeleteResource = Ref;
 
-export interface MemoryStoreConfig {
-  initialData?: Graph;
-  validator?: any; // Ajv instance
+// === GRAPH TYPES ===
+
+export interface Graph {
+	[resourceType: string]: { [resourceId: string]: NormalResource };
 }
 
-// Query result types
-export interface Result {
-  [k: string]: unknown;
+export interface QueryGraph {
+	query(query: RootQuery): unknown;
 }
 
-// Schema functions
-export function ensureValidSchema(schema: any): void;
+// === RESULT TYPES ===
 
-// Query functions
-export function ensureValidQuery(schema: any, query: RootQuery): void;
-export function normalizeQuery(schema: Schema, rootQuery: RootQuery): NormalRootQuery;
-export function forEachQuery<S extends Schema>(
-  schema: S,
-  query: RootQuery,
-  fn: (subquery: Query, info: any) => unknown
+export type QueryResult = { [k: string]: unknown };
+
+// === SCHEMA FUNCTIONS ===
+
+/**
+ * Validates that a schema is valid
+ * @param schema - The schema to validate
+ * @param options - Validation options
+ * @param options.validator - The validator instance to use
+ * @returns Array of validation errors
+ */
+export function validateSchema(
+	schema: unknown,
+	options?: { validator?: Ajv },
+): DefinedError[];
+
+/**
+ * Validates that a schema is valid
+ * @param schema - The schema to validate
+ * @param options - Validation options
+ * @param options.validator - The validator instance to use
+ * @throws If the schema is invalid
+ */
+export function ensureValidSchema(
+	schema: unknown,
+	options?: { validator?: Ajv },
 ): void;
-export function mapQuery<S extends Schema>(
-  schema: S,
-  query: RootQuery,  
-  fn: (subquery: NormalQuery, info: any) => unknown
-): any;
-export function reduceQuery<S extends Schema, T>(
-  schema: S,
-  query: RootQuery,
-  fn: (acc: T, subquery: NormalQuery, info: any) => T,
-  init: T
-): T;
 
-// Schemaless query functions
-export function forEachSchemalessQuery(
-  query: any,
-  fn: (subquery: any, info: any) => unknown
+// === QUERY FUNCTIONS ===
+
+/**
+ * Validates that a query is valid against the schema
+ * @param schema - The schema object
+ * @param query - The query to validate
+ * @param options - Validation options
+ * @param options.expressionEngine - Custom expression engine
+ * @param options.validator - The validator instance to use
+ * @returns Array of validation errors
+ */
+export function validateQuery(
+	schema: Schema,
+	query: RootQuery,
+	options?: { expressionEngine?: unknown; validator?: Ajv },
+): DefinedError[];
+
+/**
+ * Validates that a query is valid against the schema
+ * @param schema - The schema object
+ * @param query - The query to validate
+ * @param options - Validation options
+ * @param options.expressionEngine - Custom expression engine
+ * @param options.validator - The validator instance to use
+ * @throws If the query is invalid
+ */
+export function ensureValidQuery(
+	schema: Schema,
+	query: RootQuery,
+	options?: { expressionEngine?: unknown; validator?: Ajv },
 ): void;
-export function mapSchemalessQuery(
-  query: any,
-  fn: (subquery: any, info: any) => unknown
-): any;
-export function reduceSchemalessQuery<T>(
-  query: any,
-  fn: (acc: T, subquery: any, info: any) => T,
-  init: T
-): T;
 
-// Graph functions
+/**
+ * Normalizes a query by expanding shorthand syntax and ensuring consistent structure
+ * @param schema - The schema object
+ * @param rootQuery - The query to normalize
+ * @returns The normalized query
+ */
+export function normalizeQuery(
+	schema: Schema,
+	rootQuery: RootQuery,
+): NormalQuery;
+
+// === GRAPH FUNCTIONS ===
+
+/**
+ * Creates an empty graph structure based on a schema
+ * @param schema - The schema to base the graph on
+ * @returns Empty graph structure
+ */
 export function createEmptyGraph(schema: Schema): Graph;
-export function linkInverses(graph: Graph, schema: Schema): Graph;
+
+/**
+ * Links inverse relationships in a graph
+ * @param schema - The schema defining relationships
+ * @param graph - The graph to link inverses in
+ * @returns Graph with inverse relationships linked
+ */
+export function linkInverses(schema: Schema, graph: Graph): Graph;
+
+/**
+ * Merges two graphs together
+ * @param left - The left graph
+ * @param right - The right graph
+ * @returns Merged graph
+ */
 export function mergeGraphs(left: Graph, right: Graph): Graph;
-export function createQueryGraph(graph: Graph): any;
-export function queryGraph(graph: Graph, query: RootQuery): Result;
 
-// Mapper functions
-export function flattenResource(
-  resourceId: any,
-  resource: any,
-  idAttribute?: string
-): any;
+/**
+ * Creates a query graph from a schema and graph
+ * @param schema - The schema defining relationships
+ * @param graph - The graph to create query graph from
+ * @returns Query graph instance
+ */
+export function createQueryGraph(schema: Schema, graph: Graph): QueryGraph;
+
+/**
+ * Executes a query against a graph
+ * @param schema - The schema defining relationships
+ * @param query - The query to execute
+ * @param graph - The graph to query
+ * @returns Query result
+ */
+export function queryGraph(
+	schema: Schema,
+	query: RootQuery,
+	graph: Graph,
+): QueryResult;
+
+// === RESOURCE FUNCTIONS ===
+
+/**
+ * Converts a resource object to normal form
+ * @param schema - The schema defining the resource structure  
+ * @param resourceType - The type of resource being normalized
+ * @param resource - The flat resource data
+ * @returns Normalized resource with separated attributes and relationships
+ */
 export function normalizeResource(
-  resourceType: string,
-  resource: { [k: string]: unknown },
-  schema: Schema,
-  graphMappers?: any
+	schema: Schema,
+	resourceType: string,
+	resource: { [k: string]: unknown },
 ): NormalResource;
-export function createGraphFromTrees(
-  schema: Schema,
-  trees: NormalResourceTree[]
-): Graph;
 
-// Memory store functions
-export function createMemoryStore(
-  schema: Schema,
-  config?: MemoryStoreConfig
-): {
-  query: (query: RootQuery) => Result;
-  create: (resource: CreateResource | NormalResourceTree) => void;
-  update: (resource: UpdateResource | NormalResourceTree) => void;
-  delete: (resource: DeleteResource) => void;
-  splice: (resources: (CreateResource | UpdateResource | DeleteResource | NormalResourceTree)[]) => void;
-  getGraph: () => Graph;
-};
+/**
+ * Creates a new validator instance
+ * @param options - Validator options
+ * @param options.ajvSchemas - Additional schemas to add
+ * @returns Configured validator instance
+ */
+export function createValidator(options?: { ajvSchemas?: unknown[] }): Ajv;
 
-// Validation functions
-export function createValidator(options?: { ajvSchemas?: any[] }): any;
+/**
+ * Validates a create resource operation
+ * @param schema - The schema to validate against
+ * @param resource - The resource to validate
+ * @param validator - The validator instance to use
+ * @returns Array of validation errors
+ */
 export function validateCreateResource(
-  schema: Schema,
-  resource: CreateResource,
-  validator?: any
-): any[];
+	schema: Schema,
+	resource: CreateResource,
+	options?: { validator?: Ajv },
+): DefinedError[];
+
+/**
+ * Validates an update resource operation
+ * @param schema - The schema to validate against
+ * @param resource - The resource to validate
+ * @param validator - The validator instance to use
+ * @returns Array of validation errors
+ */
 export function validateUpdateResource(
-  schema: Schema,
-  resource: UpdateResource,
-  validator?: any
-): any[];
+	schema: Schema,
+	resource: UpdateResource,
+	options?: { validator?: Ajv },
+): DefinedError[];
+
+/**
+ * Validates a delete resource operation
+ * @param schema - The schema to validate against
+ * @param resource - The resource to validate
+ * @returns Array of validation errors
+ */
 export function validateDeleteResource(
-  schema: Schema,
-  resource: DeleteResource,
-  validator?: any
-): any[];
-export function validateResourceTree(
-  schema: Schema,
-  resource: NormalResourceTree,
-  validator?: any
-): any[];
+	schema: Schema,
+	resource: DeleteResource,
+): DefinedError[];
+
+/**
+ * Validates a resource tree that will be spliced into a graph
+ * @param schema - The schema to validate against
+ * @param resource - The resource tree to validate
+ * @param options - Validation options
+ * @param options.validator - The validator instance to use
+ * @returns Array of validation errors
+ */
+export function validateSpliceResource(
+	schema: Schema,
+	resource: unknown,
+	options?: { validator?: Ajv },
+): DefinedError[];
+
+/**
+ * Validates a query result
+ * @param schema - The schema to validate against
+ * @param rootQuery - The root query
+ * @param result - The resource tree to validate
+ * @param options - Validation options
+ * @param options.validator - The validator instance to use
+ * @returns Array of validation errors
+ */
+export function validateQueryResult(
+	schema: Schema,
+	rootQuery: RootQuery,
+	result: unknown,
+	options?: { validator?: Ajv },
+): DefinedError[];
+
+// === ENSURE FUNCTIONS ===
+
+/**
+ * Validates a create resource operation
+ * @param schema - The schema to validate against
+ * @param resource - The resource to validate
+ * @param options - Validation options
+ * @param options.validator - The validator instance to use
+ * @throws If the resource is invalid
+ */
+export function ensureValidCreateResource(
+	schema: Schema,
+	resource: CreateResource,
+	options?: { validator?: Ajv },
+): void;
+
+/**
+ * Validates an update resource operation
+ * @param schema - The schema to validate against
+ * @param resource - The resource to validate
+ * @param options - Validation options
+ * @param options.validator - The validator instance to use
+ * @throws If the resource is invalid
+ */
+export function ensureValidUpdateResource(
+	schema: Schema,
+	resource: UpdateResource,
+	options?: { validator?: Ajv },
+): void;
+
+/**
+ * Validates a delete resource operation
+ * @param schema - The schema to validate against
+ * @param resource - The resource to validate
+ * @throws If the resource is invalid
+ */
+export function ensureValidDeleteResource(
+	schema: Schema,
+	resource: DeleteResource,
+): void;
+
+/**
+ * Validates a resource tree that will be spliced into a graph
+ * @param schema - The schema to validate against
+ * @param resource - The resource tree to validate
+ * @param options - Validation options
+ * @param options.validator - The validator instance to use
+ * @throws If the resource tree is invalid
+ */
+export function ensureValidSpliceResource(
+	schema: Schema,
+	resource: unknown,
+	options?: { validator?: Ajv },
+): void;
+
+/**
+ * Validates a query result
+ * @param schema - The schema to validate against
+ * @param rootQuery - The root query
+ * @param result - The resource tree to validate
+ * @param options - Validation options
+ * @param options.validator - The validator instance to use
+ * @throws If the resource tree is invalid
+ */
+export function ensureValidQueryResult(
+	schema: Schema,
+	rootQuery: RootQuery,
+	result: unknown,
+	options?: { validator?: Ajv },
+): void;
+
+// === EXPORTED CONSTANTS ===
+
+export const defaultValidator: Ajv;
