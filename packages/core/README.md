@@ -296,6 +296,39 @@ const normalized = normalizeResource(schema, "teams", flatTeam);
 // Returns normalized resource with attributes and relationships separated
 ```
 
+#### `createGraphFromResources(schema, resourceType, resources)`
+
+Creates a complete graph from an array of resource objects, recursively processing nested relationships. **This function is particularly useful for handling nested resources.**
+
+**Parameters:**
+
+- `schema` (Schema) - The schema defining the resource structure
+- `resourceType` (string) - The root resource type to process
+- `resources` (Array) - Array of flat resource objects to convert
+
+**Returns:** Complete graph with all discoverable resources from the input data
+
+```javascript
+import { createGraphFromResources } from "@data-prism/core";
+
+const flatTeam = {
+	id: "team-1",
+	name: "Arizona Bay FC",
+	city: "Phoenix",
+	homeMatches: [
+		{
+			id: "match-1",
+			field: "Phoenix Park 1",
+			ageGroup: 11,
+			awayTeam: "team-2",
+		},
+	],
+};
+
+const graph = createGraphFromResources(schema, "teams", [flatTeam]);
+// Returns a graph containing teams and matches resources
+// with proper normalization and relationship structure
+```
 
 ### Validation Functions
 

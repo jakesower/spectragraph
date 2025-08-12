@@ -10,6 +10,53 @@ describe("validateQuery", () => {
 			expect(result).toEqual([]);
 		});
 
+		it("should validate a valid query in mixed array/object form", () => {
+			const query = {
+				type: "bears",
+				select: [
+					"*",
+					{ home: { select: ["name", { residents: { select: ["name"] } }] } },
+				],
+			};
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toEqual(0);
+		});
+
+		it("should validate a valid query in another mixed array/object form", () => {
+			const query = {
+				type: "homes",
+				select: {
+					id: "id",
+					residents: {
+						select: [
+							"name",
+							{
+								home: { select: ["name"] },
+								powers: { select: { name: "name" } },
+							},
+						],
+					},
+				},
+			};
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toEqual(0);
+		});
+
+		it("should validate a valid query with a nested limit", () => {
+			const query = {
+				type: "homes",
+				select: {
+					id: "id",
+					residents: {
+						select: ["name"],
+						limit: 3,
+					},
+				},
+			};
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toEqual(0);
+		});
+
 		it("should not validate a nonobject query", () => {
 			const query = "hi";
 			const result = validateQuery(careBearSchema, query);
@@ -40,6 +87,16 @@ describe("validateQuery", () => {
 				type: "bears",
 				id: "1",
 				select: { home: { select: ["noperz"] } },
+			};
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toBeGreaterThan(0);
+		});
+
+		it("fails validation when selecting an array containing a string that's a relationship", () => {
+			const query = {
+				type: "bears",
+				id: "1",
+				select: { home: { select: ["residents"] } },
 			};
 			const result = validateQuery(careBearSchema, query);
 			expect(result.length).toBeGreaterThan(0);
@@ -85,7 +142,7 @@ describe("validateQuery", () => {
 			expect(result.length).toBeGreaterThan(0);
 		});
 
-		it("fails validation when selecting an object with a key that's not relationship name pointing to a subquery", () => {
+		it("fails validation when selecting an object with a key that's not a relationship name pointing to a subquery", () => {
 			const query = {
 				type: "bears",
 				id: "1",
@@ -105,13 +162,23 @@ describe("validateQuery", () => {
 			expect(result.length).toEqual(0);
 		});
 
-		it("fails validation when selecting an invalid expression with a misc key", () => {
+		it("passes validation when selecting an invalid expression with a misc key (non-strict mode)", () => {
 			const query = {
 				type: "bears",
 				id: "1",
 				select: { chicken: { $notAnExpression: [2, 3] } },
 			};
 			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toEqual(0);
+		});
+
+		it("fails validation when selecting an invalid expression with a misc key (strict mode)", () => {
+			const query = {
+				type: "bears",
+				id: "1",
+				select: { chicken: { $notAnExpression: [2, 3] } },
+			};
+			const result = validateQuery(careBearSchema, query, { strict: true });
 			expect(result.length).toBeGreaterThan(0);
 		});
 	});
@@ -193,7 +260,7 @@ describe("validateQuery", () => {
 			expect(result.length).toEqual(0);
 		});
 
-		it("fails validation when using an invalid attribute", () => {
+		it("passes validation when using an invalid attribute that looks like an expression (non-strict mode)", () => {
 			const query = {
 				type: "bears",
 				select: {
@@ -206,6 +273,22 @@ describe("validateQuery", () => {
 				},
 			};
 			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toEqual(0);
+		});
+
+		it("fails validation when using an invalid attribute that looks like an expression (strict mode)", () => {
+			const query = {
+				type: "bears",
+				select: {
+					name: "name",
+					yearIntroduced: "yearIntroduced",
+					home: { select: ["name"] },
+				},
+				where: {
+					notAnAttribute: "value",
+				},
+			};
+			const result = validateQuery(careBearSchema, query, { strict: true });
 			expect(result.length).toBeGreaterThan(0);
 		});
 
@@ -219,13 +302,23 @@ describe("validateQuery", () => {
 			expect(result.length).toEqual(0);
 		});
 
-		it("false validation when using something that looks like a valid expression for the value, but isn't", () => {
+		it("passes validation when using something that looks like a valid expression for the value, but isn't (non-strict mode)", () => {
 			const query = {
 				type: "bears",
 				select: ["name"],
 				where: { $notAnExpression: 2 },
 			};
 			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toEqual(0);
+		});
+
+		it("fails validation when using something that looks like a valid expression for the value, but isn't (strict mode)", () => {
+			const query = {
+				type: "bears",
+				select: ["name"],
+				where: { $notAnExpression: 2 },
+			};
+			const result = validateQuery(careBearSchema, query, { strict: true });
 			expect(result.length).toBeGreaterThan(0);
 		});
 	});

@@ -3337,6 +3337,11 @@ function createDeepCache() {
 	};
 }
 
+const errorKeywordFormatters = {
+	enum: (error, dataVar) =>
+		`[data-prism] ${dataVar}${error.instancePath} ${error.message} (${error.params?.allowedValues?.join(", ")})`,
+};
+
 /**
  * Converts AJV validation errors to standardized errors.
  *
@@ -3367,7 +3372,10 @@ function translateAjvErrors(
 	);
 
 	return topErrors.map((error) => ({
-		message: `[data-prism] ${dataVar}${error.instancePath} ${error.message}`,
+		...error,
+		message: errorKeywordFormatters[error.keyword]
+			? errorKeywordFormatters[error.keyword](error, dataVar)
+			: `[data-prism] ${dataVar}${error.instancePath} ${error.message}`,
 		path: error.instancePath ?? error.schemaPath,
 		code: error.keyword,
 		value: lodashEs.get(subject, error.instancePath?.replaceAll("/", ".")?.slice(1)),
@@ -3375,13 +3383,13 @@ function translateAjvErrors(
 	}));
 }
 
-var $schema$2 = "http://json-schema.org/draft-07/schema#";
-var type$2 = "object";
+var $schema$1 = "http://json-schema.org/draft-07/schema#";
+var type$1 = "object";
 var required$1 = [
 	"type"
 ];
 var $ref = "#/definitions/query";
-var definitions$2 = {
+var definitions$1 = {
 	subquery: {
 		type: "object",
 		allOf: [
@@ -3428,8 +3436,7 @@ var definitions$2 = {
 	select: {
 		oneOf: [
 			{
-				type: "string",
-				"const": "*"
+				type: "string"
 			},
 			{
 				type: "array",
@@ -3451,69 +3458,12 @@ var definitions$2 = {
 	}
 };
 var baseQuerySchema = {
-	$schema: $schema$2,
-	type: type$2,
+	$schema: $schema$1,
+	type: type$1,
 	required: required$1,
 	$ref: $ref,
-	definitions: definitions$2
+	definitions: definitions$1
 };
-
-// errors on the select clause are the most complex and need more intensive formatting
-function formatSelectError(error, query, schema, expressionEngine) {
-	const cleanPath = error.instancePath.split("/").slice(1);
-	const problemSelect = lodashEs.get(query, cleanPath);
-	const resType = cleanPath
-		.filter((p) => p !== "select")
-		.reduce(
-			(acc, rel) => schema.resources[acc].relationships[rel].type,
-			query.type,
-		);
-	const resSchema = schema.resources[resType];
-
-	if (typeof problemSelect === "string" && problemSelect !== "*") {
-		return {
-			...error,
-			message: `query${error.instancePath} ${problemSelect} is a string and therefore must be "*" -- perhaps you meant ["${problemSelect}"]`,
-			keyword: "errorMessage",
-		};
-	}
-
-	const errors = [];
-	Object.entries(problemSelect).forEach(([key, val]) => {
-		if (resSchema.relationships[key]) {
-			errors.push({
-				...error,
-				message: `query${error.instancePath}/${key} must have a valid subquery as its value`,
-				keyword: "errorMessage",
-			});
-		}
-
-		if (
-			typeof val === "object" &&
-			!Array.isArray(val) &&
-			!expressionEngine.isExpression(val)
-		) {
-			errors.push({
-				...error,
-				message: `the "${key}" key is an object and therefore must be a valid data prism expression (if you meant to have a relationship with a subquery, check your spelling)`,
-				keyword: "errorMessage",
-			});
-		}
-	});
-
-	return errors.length > 0 ? errors : [error];
-}
-
-function formatSelectErrors(
-	rawSelectErrors,
-	query,
-	schema,
-	expressionEngine,
-) {
-	return rawSelectErrors.flatMap((error) =>
-		formatSelectError(error, query, schema, expressionEngine),
-	);
-}
 
 /**
  * @typedef {Object} Expression
@@ -3544,56 +3494,44 @@ function formatSelectErrors(
  */
 
 // these arguments have references that should seldom, if ever, change
-const getValidateQueryCache = createDeepCache();
-const baseValidatorCache = new WeakMap();
+const getResourceSchemaCache = createDeepCache();
+const getResourceSchemaStrictCache = createDeepCache();
+let validateQueryShape;
 
-function validateQueryShape(query, validator) {
-	let validateBasis = baseValidatorCache.get(validator);
-	if (!validateBasis) {
-		validateBasis = validator.compile(baseQuerySchema);
-		baseValidatorCache.set(validator, validateBasis);
+const isExpressionLike = (obj) =>
+	typeof obj === "object" &&
+	!Array.isArray(obj) &&
+	Object.keys(obj).length === 1 &&
+	!obj.select;
+
+function getResourceStructureValidator(
+	schema,
+	resourceType,
+	strict,
+	validator,
+	expressionEngine,
+) {
+	let resourceSchemaCache = strict
+		? getResourceSchemaCache(schema, validator, expressionEngine)
+		: getResourceSchemaStrictCache(schema, validator, expressionEngine);
+
+	let resourceSchemasByType;
+	if (!resourceSchemaCache.value) {
+		resourceSchemasByType = new Map();
+		resourceSchemaCache.set(resourceSchemasByType);
+	} else {
+		resourceSchemasByType = resourceSchemaCache.value;
+		const resourceSchema = resourceSchemasByType.get(resourceType);
+		if (resourceSchema) return resourceSchema;
 	}
 
-	return validateBasis(query)
-		? []
-		: translateAjvErrors(validateBasis.errors, query, "query");
-}
-
-function getQuerySchemaDefinitions(schema, expressionEngine, validator) {
-	const cache = getValidateQueryCache(schema, expressionEngine, validator);
-	let resourceDefinitions = cache.value;
-
-	if (!resourceDefinitions) {
-		resourceDefinitions = {
-			definitions: {
-				expression: buildExpressionDefinition(expressionEngine),
-				resources: lodashEs.mapValues(schema.resources, buildResourceSchema),
-			},
-		};
-		cache.set(resourceDefinitions);
-	}
-
-	return resourceDefinitions;
-}
-
-function buildResourceSchema(resSchema, resName) {
-	return {
+	const ajvSchema = {
 		type: "object",
 		required: ["select"],
 		properties: {
-			type: { type: "string", const: resName },
+			type: { type: "string", const: resourceType },
 			id: { type: "string" },
-			select: {
-				oneOf: [
-					{ type: "string", const: "*" },
-					{
-						$ref: `#/definitions/resources/${resName}/definitions/selectObject`,
-					},
-					{
-						$ref: `#/definitions/resources/${resName}/definitions/selectArray`,
-					},
-				],
-			},
+			select: {}, // validated programatically
 			limit: { type: "integer", minimum: 1 },
 			offset: { type: "integer", minimum: 0 },
 			where: {
@@ -3601,7 +3539,10 @@ function buildResourceSchema(resSchema, resName) {
 					{ $ref: "#/definitions/expression" },
 					{
 						type: "object",
-						properties: lodashEs.mapValues(resSchema.attributes, () => ({})),
+						properties: lodashEs.mapValues(
+							schema.resources[resourceType].attributes,
+							() => ({}),
+						),
 						additionalProperties: {
 							not: true,
 							errorMessage:
@@ -3613,12 +3554,12 @@ function buildResourceSchema(resSchema, resName) {
 			order: {
 				oneOf: [
 					{
-						$ref: `#/definitions/resources/${resName}/definitions/orderItem`,
+						$ref: `#/definitions/orderItem`,
 					},
 					{
 						type: "array",
 						items: {
-							$ref: `#/definitions/resources/${resName}/definitions/orderItem`,
+							$ref: `#/definitions/orderItem`,
 						},
 					},
 				],
@@ -3627,44 +3568,28 @@ function buildResourceSchema(resSchema, resName) {
 			},
 		},
 		definitions: {
-			selectArray: {
-				type: "array",
-				minItems: 1,
-				items: {
-					anyOf: [
-						{
-							type: "string",
-							enum: ["*", ...Object.keys(resSchema.attributes)],
-						},
-						{
-							$ref: `#/definitions/resources/${resName}/definitions/selectObject`,
-						},
-					],
-					errorMessage:
-						'invalid item in a selection array: ${0} -- selection arrays must contain one of "*", the name of an attribute, or a selection object',
-				},
-			},
-			selectObject: {
+			expression: {
 				type: "object",
-				properties: {
-					"*": {},
-					...lodashEs.mapValues(resSchema.relationships, (relSchema) => ({
-						$ref: `#/definitions/resources/${relSchema.type}`,
-					})),
-				},
-				additionalProperties: {
-					oneOf: [
-						{ type: "string", enum: Object.keys(resSchema.attributes) },
-						{ $ref: "#/definitions/expression" },
-					],
-				},
-				errorMessage: `invalid selection clause: \${0} -- selections must be one of { "*": true }, { "someKey": an expression }, { "someKey": (one of "${Object.keys(resSchema.attributes).join('", "')}") }, or ({ ["${Object.keys(resSchema.relationships).join('" | "')}"]: subquery })`,
+				minProperties: 1,
+				maxProperties: 1,
+				...(strict
+					? {
+							additionalProperties: false,
+							properties: expressionEngine.expressionNames.reduce(
+								(acc, n) => ({ ...acc, [n]: {} }),
+								{},
+							),
+						}
+					: {}),
 			},
 			orderItem: {
 				type: "object",
 				minProperties: 1,
 				maxProperties: 1,
-				properties: lodashEs.mapValues(resSchema.attributes, () => ({})),
+				properties: lodashEs.mapValues(
+					schema.resources[resourceType].attributes,
+					() => ({}),
+				),
 				additionalProperties: {
 					anyOf: [{ $ref: "#/definitions/expression" }],
 				},
@@ -3677,19 +3602,10 @@ function buildResourceSchema(resSchema, resName) {
 			},
 		},
 	};
-}
+	const compiled = validator.compile(ajvSchema);
 
-function buildExpressionDefinition(expressionEngine) {
-	return {
-		type: "object",
-		minProperties: 1,
-		maxProperties: 1,
-		additionalProperties: false,
-		properties: expressionEngine.expressionNames.reduce(
-			(acc, n) => ({ ...acc, [n]: {} }),
-			{},
-		),
-	};
+	resourceSchemasByType.set(resourceType, compiled);
+	return compiled;
 }
 
 /**
@@ -3699,13 +3615,18 @@ function buildExpressionDefinition(expressionEngine) {
  * @param {Object} [options]
  * @param {Object} [options.expressionEngine] - a @data-prism/graph expression engine
  * @param {Ajv} [options.validator] - The validator instance to use
+ * @param {boolean} [options.strict=false] - The validator and expression engine will be used in validation
  * @return {import('./lib/helpers.js').StandardError[]}
  */
-function validateQuery(schema, query, options = {}) {
+function validateQuery(schema, rootQuery, options = {}) {
 	const {
 		expressionEngine = expressions.defaultExpressionEngine,
 		validator = defaultValidator,
+		strict = false,
 	} = options;
+
+	if (!validateQueryShape)
+		validateQueryShape = defaultValidator.compile(baseQuerySchema);
 
 	if (typeof schema !== "object")
 		return [{ message: "[data-prism] schema must be an object" }];
@@ -3713,64 +3634,115 @@ function validateQuery(schema, query, options = {}) {
 		return [{ message: "[data-prism] expressionEngine must be an object" }];
 	if (typeof validator !== "object")
 		return [{ message: "[data-prism] validator must be an object" }];
-	if (typeof query !== "object")
+	if (typeof rootQuery !== "object")
 		return [{ message: "[data-prism] query must be an object" }];
+	if (!rootQuery.type)
+		return [{ message: "[data-prism] query must have a type" }];
 
 	// Shape validation
-	const shapeErrors = validateQueryShape(query, validator);
-	if (shapeErrors.length > 0) return shapeErrors;
+	if (!validateQueryShape(rootQuery) > 0) return validateQueryShape.errors;
 
-	// Type validation
-	if (!Object.keys(schema.resources).includes(query.type)) {
-		return [
-			{
-				message: `[data-prism] query/type ${query.type} is not a valid query type`,
-				path: "query/type",
-				keyword: "compile",
-				value: query.type,
-			},
-		];
-	}
-
-	// Get cached schema definitions
-	const resourceDefinitions = getQuerySchemaDefinitions(
-		schema,
-		expressionEngine,
-		validator,
-	);
-
-	// Compile query-specific validator
-	const querySchema = {
-		type: "object",
-		required: ["type"],
-		$ref: `#/definitions/resources/${query.type}`,
-		...resourceDefinitions,
+	const errors = [];
+	const addError = (message, path, value) => {
+		errors.push({
+			message: `[data-prism] [query/${path.join("/")}] ${message}`,
+			value,
+		});
 	};
 
-	let validate;
-	try {
-		validate = validator.compile(querySchema);
-	} catch (err) {
-		return [
-			{ ...err, message: `[data-prism] ${err.message}`, keyword: "compile" },
-		];
-	}
+	const go = (query, type, path) => {
+		const resSchema = schema.resources[type];
+		const validateStructure = getResourceStructureValidator(
+			schema,
+			type,
+			strict,
+			validator,
+			expressionEngine,
+		);
 
-	if (validate(query)) return [];
+		if (!validateStructure(query)) {
+			translateAjvErrors(validateStructure.errors, query, "query").forEach(
+				(err) => {
+					errors.push(err);
+				},
+			);
+			if (typeof query.select !== "object") return;
+		}
 
-	// Process errors
-	const [rawSelectErrors, otherErrors] = lodashEs.partition(validate.errors, (e) =>
-		e.instancePath.endsWith("/select"),
-	);
+		const validateSelectObject = (selectObj, prevPath) => {
+			Object.entries(selectObj).forEach(([key, val]) => {
+				const curPath = [...prevPath, key];
 
-	return translateAjvErrors(
-		[
-			...formatSelectErrors(rawSelectErrors, query, schema, expressionEngine),
-			...otherErrors,
-		],
-		query,
-		"query",
-	);
+				if (key === "*") return;
+
+				if (key in resSchema.relationships) {
+					go(val, resSchema.relationships[key].type, curPath);
+				} else if (Array.isArray(val)) {
+					addError("selections within an object may not be arrays", curPath);
+				} else if (typeof val === "object") {
+					if (
+						(strict && !expressionEngine.isExpression(val)) ||
+						(!strict && !isExpressionLike(val))
+					) {
+						addError(
+							`selections with objects as their values must either be valid data prism expressions or subqueries with a valid relationship as the key (${key} is not a valid relationship)`,
+							curPath,
+						);
+					}
+				} else if (typeof val === "string") {
+					if (!Object.keys(resSchema.attributes).includes(val)) {
+						addError(
+							`selections that are strings must be the name of an attribute -- "${val}" is not`,
+							curPath,
+							val,
+						);
+					}
+				}
+				// if none of these trigger, the selection is valid
+			});
+		};
+
+		const validateSelectArray = (selectArray) => {
+			selectArray.forEach((val, idx) => {
+				const curPath = [...path, "select", idx];
+
+				if (val === "*") return;
+
+				if (Array.isArray(val)) {
+					addError(
+						"selections within an array may not be arrays",
+						curPath,
+						val,
+					);
+				} else if (typeof val === "object") {
+					validateSelectObject(val, curPath);
+				} else if (typeof val === "string") {
+					if (!Object.keys(resSchema.attributes).includes(val)) {
+						addError(
+							`selections within an array that are strings must be "*" or the name of an attribute -- "${val}" is not`,
+							curPath,
+							val,
+						);
+					}
+				}
+				// if none of these trigger, the selection is valid
+			});
+		};
+
+		if (query.select === "*") return;
+		if (Array.isArray(query.select)) return validateSelectArray(query.select);
+		if (typeof query.select === "object")
+			return validateSelectObject(query.select, [...path, "select"]);
+
+		addError(
+			`selections must be one of { "*": true }, { "someKey": an expression }, { "someKey": (one of "${Object.keys(resSchema.attributes).join('", "')}") }, or ({ "${Object.keys(resSchema.relationships).join('" | "')}": subquery })`,
+			[...path, "select"],
+			query.select,
+		);
+	};
+
+	go(rootQuery, rootQuery.type, []);
+	return errors;
 }
 
 /**
@@ -4282,8 +4254,8 @@ function validateSpliceResource(schema, resource, options = {}) {
 function validateQueryResult(schema, rootQuery, result, options = {}) {
 	const { validator = defaultValidator } = options;
 
-	if (typeof schema !== "object")
-		return [{ message: "[data-prism] schema must be an object" }];
+	ensure(validateSchema)(schema, options);
+
 	if (typeof validator !== "object")
 		return [{ message: "[data-prism] validator must be an object" }];
 	if (typeof rootQuery !== "object")
@@ -4330,15 +4302,15 @@ function validateQueryResult(schema, rootQuery, result, options = {}) {
 		: translateAjvErrors(compiledValidator.errors, result, "resource");
 }
 
-var $schema$1 = "http://json-schema.org/draft-07/schema#";
-var $id$1 = "https://raw.githubusercontent.com/jakesower/data-prism/main/schemas/data-prism-schema.1.0.schema.json";
-var title$1 = "Data Prism Schema";
+var $schema = "http://json-schema.org/draft-07/schema#";
+var $id = "https://raw.githubusercontent.com/jakesower/data-prism/main/schemas/data-prism-schema.1.0.schema.json";
+var title = "Data Prism Schema";
 var description = "A metaschema for Data Prism schemas.";
-var type$1 = "object";
+var type = "object";
 var required = [
 	"resources"
 ];
-var properties$1 = {
+var properties = {
 	$id: {
 		type: "string"
 	},
@@ -4361,7 +4333,7 @@ var properties$1 = {
 		}
 	}
 };
-var definitions$1 = {
+var definitions = {
 	attribute: {
 		$ref: "http://json-schema.org/draft-07/schema#"
 	},
@@ -4439,270 +4411,14 @@ var definitions$1 = {
 	}
 };
 var metaschema = {
-	$schema: $schema$1,
-	$id: $id$1,
-	title: title$1,
-	description: description,
-	type: type$1,
-	required: required,
-	properties: properties$1,
-	definitions: definitions$1
-};
-
-var $schema = "http://json-schema.org/draft-07/schema#";
-var $id = "http://json-schema.org/draft-07/schema#";
-var title = "Core schema meta-schema";
-var definitions = {
-	schemaArray: {
-		type: "array",
-		minItems: 1,
-		items: {
-			$ref: "#"
-		}
-	},
-	nonNegativeInteger: {
-		type: "integer",
-		minimum: 0
-	},
-	nonNegativeIntegerDefault0: {
-		allOf: [
-			{
-				$ref: "#/definitions/nonNegativeInteger"
-			},
-			{
-				"default": 0
-			}
-		]
-	},
-	simpleTypes: {
-		"enum": [
-			"array",
-			"boolean",
-			"integer",
-			"null",
-			"number",
-			"object",
-			"string"
-		]
-	},
-	stringArray: {
-		type: "array",
-		items: {
-			type: "string"
-		},
-		uniqueItems: true,
-		"default": [
-		]
-	}
-};
-var type = [
-	"object",
-	"boolean"
-];
-var properties = {
-	$id: {
-		type: "string",
-		format: "uri-reference"
-	},
-	$schema: {
-		type: "string",
-		format: "uri"
-	},
-	$ref: {
-		type: "string",
-		format: "uri-reference"
-	},
-	$comment: {
-		type: "string"
-	},
-	title: {
-		type: "string"
-	},
-	description: {
-		type: "string"
-	},
-	"default": true,
-	readOnly: {
-		type: "boolean",
-		"default": false
-	},
-	writeOnly: {
-		type: "boolean",
-		"default": false
-	},
-	examples: {
-		type: "array",
-		items: true
-	},
-	multipleOf: {
-		type: "number",
-		exclusiveMinimum: 0
-	},
-	maximum: {
-		type: "number"
-	},
-	exclusiveMaximum: {
-		type: "number"
-	},
-	minimum: {
-		type: "number"
-	},
-	exclusiveMinimum: {
-		type: "number"
-	},
-	maxLength: {
-		$ref: "#/definitions/nonNegativeInteger"
-	},
-	minLength: {
-		$ref: "#/definitions/nonNegativeIntegerDefault0"
-	},
-	pattern: {
-		type: "string",
-		format: "regex"
-	},
-	additionalItems: {
-		$ref: "#"
-	},
-	items: {
-		anyOf: [
-			{
-				$ref: "#"
-			},
-			{
-				$ref: "#/definitions/schemaArray"
-			}
-		],
-		"default": true
-	},
-	maxItems: {
-		$ref: "#/definitions/nonNegativeInteger"
-	},
-	minItems: {
-		$ref: "#/definitions/nonNegativeIntegerDefault0"
-	},
-	uniqueItems: {
-		type: "boolean",
-		"default": false
-	},
-	contains: {
-		$ref: "#"
-	},
-	maxProperties: {
-		$ref: "#/definitions/nonNegativeInteger"
-	},
-	minProperties: {
-		$ref: "#/definitions/nonNegativeIntegerDefault0"
-	},
-	required: {
-		$ref: "#/definitions/stringArray"
-	},
-	additionalProperties: {
-		$ref: "#"
-	},
-	definitions: {
-		type: "object",
-		additionalProperties: {
-			$ref: "#"
-		},
-		"default": {
-		}
-	},
-	properties: {
-		type: "object",
-		additionalProperties: {
-			$ref: "#"
-		},
-		"default": {
-		}
-	},
-	patternProperties: {
-		type: "object",
-		additionalProperties: {
-			$ref: "#"
-		},
-		propertyNames: {
-			format: "regex"
-		},
-		"default": {
-		}
-	},
-	dependencies: {
-		type: "object",
-		additionalProperties: {
-			anyOf: [
-				{
-					$ref: "#"
-				},
-				{
-					$ref: "#/definitions/stringArray"
-				}
-			]
-		}
-	},
-	propertyNames: {
-		$ref: "#"
-	},
-	"const": true,
-	"enum": {
-		type: "array",
-		items: true,
-		minItems: 1,
-		uniqueItems: true
-	},
-	type: {
-		anyOf: [
-			{
-				$ref: "#/definitions/simpleTypes"
-			},
-			{
-				type: "array",
-				items: {
-					$ref: "#/definitions/simpleTypes"
-				},
-				minItems: 1,
-				uniqueItems: true
-			}
-		]
-	},
-	format: {
-		type: "string"
-	},
-	contentMediaType: {
-		type: "string"
-	},
-	contentEncoding: {
-		type: "string"
-	},
-	"if": {
-		$ref: "#"
-	},
-	then: {
-		$ref: "#"
-	},
-	"else": {
-		$ref: "#"
-	},
-	allOf: {
-		$ref: "#/definitions/schemaArray"
-	},
-	anyOf: {
-		$ref: "#/definitions/schemaArray"
-	},
-	oneOf: {
-		$ref: "#/definitions/schemaArray"
-	},
-	not: {
-		$ref: "#"
-	}
-};
-var jsonSchema = {
 	$schema: $schema,
 	$id: $id,
 	title: title,
-	definitions: definitions,
+	description: description,
 	type: type,
+	required: required,
 	properties: properties,
-	"default": true
+	definitions: definitions
 };
 
 /**
@@ -4773,17 +4489,11 @@ var jsonSchema = {
  * @property {Object<string, SchemaResource>} resources
  */
 
-const jsonSchemaWithErrors = {
-	...jsonSchema,
-	$id: "https://data-prism.dev/json-schema-draft-07-with-errors.json",
-	errorMessage: { properties: { type: "${0/type} is not a valid type" } },
-};
-
 const metaschemaWithErrors = (() => {
 	const out = lodashEs.merge(structuredClone(metaschema), {
 		definitions: {
 			attribute: {
-				$ref: "https://data-prism.dev/json-schema-draft-07-with-errors.json",
+				$ref: "http://json-schema.org/draft-07/schema#",
 			},
 			relationship: {
 				properties: {
@@ -4813,21 +4523,33 @@ function validateSchema(schema, options = {}) {
 	if (typeof schema !== "object")
 		return [{ message: "[data-prism] schema must be an object" }];
 
-	// cache by schema reference, then validator referece (both unlikely to change)
 	const validatorCache = getValidateSchemaCache(schema, validator);
 	if (validatorCache.hit) return validatorCache.value;
-
-	// cache miss path
-
-	// add the schema if needed -- not an important side effect
-	if (!validator.getSchema(jsonSchemaWithErrors.$id))
-		validator.addSchema(jsonSchemaWithErrors);
 
 	const baseValidate = validator.compile(metaschemaWithErrors);
 	if (!baseValidate(schema)) {
 		const result = translateAjvErrors(baseValidate.errors, schema, "schema");
-		validatorCache.set(validator, result);
+		validatorCache.set(result);
 		return result;
+	}
+
+	const attributeSchemaErrors = [];
+	Object.entries(schema.resources).forEach(([resName, resSchema]) =>
+		Object.entries(resSchema.attributes).forEach(([attrName, attrSchema]) => {
+			try {
+				validator.compile(attrSchema);
+			} catch (err) {
+				console.log(err, validator.schemas);
+				attributeSchemaErrors.push({
+					message: `[data-prism] there was a problem compiling the schema for ${resName}.${attrName}: ${err.message}`,
+				});
+			}
+		}),
+	);
+
+	if (attributeSchemaErrors.length > 0) {
+		validatorCache.set(attributeSchemaErrors);
+		return attributeSchemaErrors;
 	}
 
 	const introspectiveSchema = lodashEs.merge(structuredClone(metaschema), {
@@ -4875,13 +4597,12 @@ function validateSchema(schema, options = {}) {
 	delete introspectiveSchema.properties.resources.patternProperties;
 
 	const introspectiveValidate = validator.compile(introspectiveSchema);
-
-	const result = introspectiveValidate(schema)
+	const introspectiveResult = introspectiveValidate(schema)
 		? []
 		: translateAjvErrors(introspectiveValidate.errors, schema, "schema");
 
-	validatorCache.set(validator, result);
-	return result;
+	validatorCache.set(introspectiveResult);
+	return introspectiveResult;
 }
 
 /**
@@ -5310,6 +5031,57 @@ function mergeGraphs(left, right) {
 	return output;
 }
 
+function mergeResources(left, right = { attributes: {}, relationships: {} }) {
+	return {
+		...left,
+		attributes: { ...left.attributes, ...right.attributes },
+		relationships: { ...left.relationships, ...right.relationships },
+	};
+}
+
+/**
+ * Takes an array of resources and creates a graph from all the resources given
+ * as well as any nested resources, automatically linking them.
+ *
+ * @param {import('./schema.js').Schema} schema
+ * @param {string} resourceType
+ * @param {Object[]} resources
+ * @returns {Graph}
+ */
+function createGraphFromResources(
+	schema,
+	rootResourceType,
+	rootResources,
+) {
+	const output = createEmptyGraph(schema);
+
+	const go = (resourceType, resource) => {
+		const resourceSchema = schema.resources[resourceType];
+		const idAttribute = resourceSchema.idAttribute ?? "id";
+		const resourceId = resource[idAttribute];
+
+		output[resourceType][resourceId] = mergeResources(
+			normalizeResource(schema, resourceType, resource),
+			output[resourceType][resourceId],
+		);
+
+		Object.entries(resourceSchema.relationships).forEach(
+			([relName, relSchema]) => {
+				const emptyRel = relSchema.cardinality === "many" ? [] : null;
+				return utils.applyOrMap(resource[relName] ?? emptyRel, (relRes) => {
+					if (typeof relRes === "object") go(relSchema.type, relRes);
+				});
+			},
+		);
+	};
+
+	rootResources.forEach((r) => {
+		go(rootResourceType, r);
+	});
+
+	return output;
+}
+
 const ensureValidSchema = ensure(validateSchema);
 const ensureValidQuery = ensure(validateQuery);
 const ensureValidCreateResource = ensure(validateCreateResource);
@@ -5319,6 +5091,7 @@ const ensureValidSpliceResource = ensure(validateSpliceResource);
 const ensureValidQueryResult = ensure(validateQueryResult);
 
 exports.createEmptyGraph = createEmptyGraph;
+exports.createGraphFromResources = createGraphFromResources;
 exports.createValidator = createValidator;
 exports.ensureValidCreateResource = ensureValidCreateResource;
 exports.ensureValidDeleteResource = ensureValidDeleteResource;

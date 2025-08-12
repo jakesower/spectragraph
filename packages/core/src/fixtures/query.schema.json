@@ -29,7 +29,7 @@
 		},
 		"select": {
 			"oneOf": [
-				{ "type": "string", "const": "*" },
+				{ "type": "string" },
 				{
 					"type": "array",
 					"items": {

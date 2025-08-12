@@ -1,5 +1,4 @@
 {
-	"$schema": "../../src/fixtures/data-prism-schema.schema.json",
 	"$comment": "this schema is meant to be suitable for validation tests",
 	"resources": {
 		"fields": {

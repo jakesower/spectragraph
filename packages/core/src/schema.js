@@ -72,17 +72,11 @@ import jsonSchema from "./fixtures/json-schema-draft-07.json" with { type: "json
  * @property {Object<string, SchemaResource>} resources
  */
 
-const jsonSchemaWithErrors = {
-	...jsonSchema,
-	$id: "https://data-prism.dev/json-schema-draft-07-with-errors.json",
-	errorMessage: { properties: { type: "${0/type} is not a valid type" } },
-};
-
 const metaschemaWithErrors = (() => {
 	const out = merge(structuredClone(metaschema), {
 		definitions: {
 			attribute: {
-				$ref: "https://data-prism.dev/json-schema-draft-07-with-errors.json",
+				$ref: "http://json-schema.org/draft-07/schema#",
 			},
 			relationship: {
 				properties: {
@@ -112,21 +106,33 @@ export function validateSchema(schema, options = {}) {
 	if (typeof schema !== "object")
 		return [{ message: "[data-prism] schema must be an object" }];
 
-	// cache by schema reference, then validator referece (both unlikely to change)
 	const validatorCache = getValidateSchemaCache(schema, validator);
 	if (validatorCache.hit) return validatorCache.value;
-
-	// cache miss path
-
-	// add the schema if needed -- not an important side effect
-	if (!validator.getSchema(jsonSchemaWithErrors.$id))
-		validator.addSchema(jsonSchemaWithErrors);
 
 	const baseValidate = validator.compile(metaschemaWithErrors);
 	if (!baseValidate(schema)) {
 		const result = translateAjvErrors(baseValidate.errors, schema, "schema");
-		validatorCache.set(validator, result);
+		validatorCache.set(result);
 		return result;
+	}
+
+	const attributeSchemaErrors = [];
+	Object.entries(schema.resources).forEach(([resName, resSchema]) =>
+		Object.entries(resSchema.attributes).forEach(([attrName, attrSchema]) => {
+			try {
+				validator.compile(attrSchema);
+			} catch (err) {
+				console.log(err, validator.schemas)
+				attributeSchemaErrors.push({
+					message: `[data-prism] there was a problem compiling the schema for ${resName}.${attrName}: ${err.message}`,
+				});
+			}
+		}),
+	);
+
+	if (attributeSchemaErrors.length > 0) {
+		validatorCache.set(attributeSchemaErrors);
+		return attributeSchemaErrors;
 	}
 
 	const introspectiveSchema = merge(structuredClone(metaschema), {
@@ -174,11 +180,10 @@ export function validateSchema(schema, options = {}) {
 	delete introspectiveSchema.properties.resources.patternProperties;
 
 	const introspectiveValidate = validator.compile(introspectiveSchema);
-
-	const result = introspectiveValidate(schema)
+	const introspectiveResult = introspectiveValidate(schema)
 		? []
 		: translateAjvErrors(introspectiveValidate.errors, schema, "schema");
 
-	validatorCache.set(validator, result);
-	return result;
+	validatorCache.set(introspectiveResult);
+	return introspectiveResult;
 }

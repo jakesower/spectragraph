@@ -4,8 +4,9 @@ import { get } from "lodash-es";
 export function formatSelectError(error, query, schema, expressionEngine) {
 	const cleanPath = error.instancePath.split("/").slice(1);
 	const problemSelect = get(query, cleanPath);
+
 	const resType = cleanPath
-		.filter((p) => p !== "select")
+		.filter((p) => p !== "select" && !/^[0-9]$/.test(p))
 		.reduce(
 			(acc, rel) => schema.resources[acc].relationships[rel].type,
 			query.type,
