@@ -5,7 +5,8 @@ import { applyOrMap } from "@data-prism/utils";
 import { defaultExpressionEngine } from "@data-prism/expressions";
 import { mapValues, omit, pickBy } from "lodash-es";
 import { normalizeQuery } from "./query.js";
-import { createDeepCache, translateAjvErrors } from "./lib/helpers.js";
+import { createDeepCache, ensure, translateAjvErrors } from "./lib/helpers.js";
+import { validateSchema } from "./schema.js";
 
 /**
  * @typedef {Object} Ref
@@ -503,8 +504,8 @@ export function validateSpliceResource(schema, resource, options = {}) {
 export function validateQueryResult(schema, rootQuery, result, options = {}) {
 	const { validator = defaultValidator } = options;
 
-	if (typeof schema !== "object")
-		return [{ message: "[data-prism] schema must be an object" }];
+	ensure(validateSchema)(schema, options);
+
 	if (typeof validator !== "object")
 		return [{ message: "[data-prism] validator must be an object" }];
 	if (typeof rootQuery !== "object")

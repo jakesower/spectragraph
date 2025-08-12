@@ -1,6 +1,11 @@
 export { validateSchema } from "./schema.js";
 export { normalizeQuery, validateQuery } from "./query.js";
-export { linkInverses, createEmptyGraph, mergeGraphs } from "./graph.js";
+export {
+	linkInverses,
+	createEmptyGraph,
+	createGraphFromResources,
+	mergeGraphs,
+} from "./graph.js";
 export { queryGraph } from "./graph/query-graph.js";
 export {
 	createValidator,

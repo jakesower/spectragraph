@@ -207,3 +207,13 @@ describe("relationships", () => {
 		expect(result.length).toBeGreaterThan(0);
 	});
 });
+
+describe("real world bugs", () => {
+	it("should not compile with an attribute that has a bad format", () => {
+		const schema = structuredClone(careBearSchema);
+		schema.resources.bears.attributes.yearIntroduced.format = "bad-bugz";
+
+		const result = validateSchema(schema);
+		expect(result.length).toBeGreaterThan(0);
+	});
+});

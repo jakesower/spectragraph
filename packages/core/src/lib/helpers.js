@@ -61,6 +61,11 @@ export function createDeepCache() {
 	};
 }
 
+const errorKeywordFormatters = {
+	enum: (error, dataVar) =>
+		`[data-prism] ${dataVar}${error.instancePath} ${error.message} (${error.params?.allowedValues?.join(", ")})`,
+};
+
 /**
  * Converts AJV validation errors to standardized errors.
  *
@@ -91,7 +96,10 @@ export function translateAjvErrors(
 	);
 
 	return topErrors.map((error) => ({
-		message: `[data-prism] ${dataVar}${error.instancePath} ${error.message}`,
+		...error,
+		message: errorKeywordFormatters[error.keyword]
+			? errorKeywordFormatters[error.keyword](error, dataVar)
+			: `[data-prism] ${dataVar}${error.instancePath} ${error.message}`,
 		path: error.instancePath ?? error.schemaPath,
 		code: error.keyword,
 		value: get(subject, error.instancePath?.replaceAll("/", ".")?.slice(1)),

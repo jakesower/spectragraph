@@ -315,6 +315,19 @@ export function linkInverses(schema: Schema, graph: Graph): Graph;
 export function mergeGraphs(left: Graph, right: Graph): Graph;
 
 /**
+ * Creates a complete graph from an array of resource objects, recursively processing nested relationships
+ * @param schema - The schema defining the resource structure
+ * @param resourceType - The root resource type to process
+ * @param resources - Array of flat resource objects to convert
+ * @returns Complete graph with all discoverable resources from the input data
+ */
+export function createGraphFromResources(
+	schema: Schema,
+	resourceType: string,
+	resources: { [k: string]: unknown }[],
+): Graph;
+
+/**
  * Creates a query graph from a schema and graph
  * @param schema - The schema defining relationships
  * @param graph - The graph to create query graph from
