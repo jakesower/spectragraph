@@ -49,7 +49,7 @@ describe("core expressions (plus $eq for help)", () => {
 	});
 
 	it("pipes expressions", () => {
-		const compiled = compile({ $pipe: [{ $prop: "age" }, { $eq: 6 }] });
+		const compiled = compile({ $compose: [{ $prop: "age" }, { $eq: 6 }] });
 		expect(compiled(kids.zoe)).toEqual(true);
 	});
 });

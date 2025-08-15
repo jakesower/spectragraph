@@ -2,7 +2,6 @@ import { mapValues, merge } from "lodash-es";
 import { defaultValidator } from "./resource.js";
 import { createDeepCache, translateAjvErrors } from "./lib/helpers.js";
 import metaschema from "./fixtures/data-prism-schema.schema.json" with { type: "json" };
-import jsonSchema from "./fixtures/json-schema-draft-07.json" with { type: "json" };
 
 /**
  * @typedef {"object"|"array"|"boolean"|"string"|"number"|"integer"|"null"} JSONSchemaType
@@ -122,7 +121,6 @@ export function validateSchema(schema, options = {}) {
 			try {
 				validator.compile(attrSchema);
 			} catch (err) {
-				console.log(err, validator.schemas)
 				attributeSchemaErrors.push({
 					message: `[data-prism] there was a problem compiling the schema for ${resName}.${attrName}: ${err.message}`,
 				});

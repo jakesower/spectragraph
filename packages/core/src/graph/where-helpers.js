@@ -15,7 +15,7 @@ export function buildWhereExpression(whereClause, expressionEngine) {
 
 	const whereExpressions = Object.entries(whereClause).map(
 		([propPath, propVal]) => ({
-			$pipe: [
+			$compose: [
 				{ $get: propPath },
 				expressionEngine.isExpression(propVal) ? propVal : { $eq: propVal },
 			],

@@ -1,13 +1,10 @@
 import { isEqual } from "lodash-es";
-import { Operation } from "..";
-
-type FilterOperation<T> = Operation<T, T, boolean>;
 
 const injectLeft = (param, implicit) => [implicit, param];
 const injectRight = (param, implicit) => [param, implicit];
 
-const $eq: FilterOperation<any> = {
-	name: "equal",
+const $eq = {
+	name: "$eq",
 	apply: isEqual,
 	evaluate: ([left, right]) => isEqual(left, right),
 	inject: injectLeft,
@@ -16,8 +13,8 @@ const $eq: FilterOperation<any> = {
 	},
 };
 
-const $ne: FilterOperation<any> = {
-	name: "not equal",
+const $ne = {
+	name: "$ne",
 	apply: (param, arg) => !isEqual(param, arg),
 	evaluate: ([left, right]) => !isEqual(left, right),
 	inject: injectLeft,
@@ -27,7 +24,7 @@ const $ne: FilterOperation<any> = {
 };
 
 const $gt = {
-	name: "greater than",
+	name: "$gt",
 	apply: (param, arg) => arg > param,
 	evaluate: ([left, right]) => left > right,
 	inject: injectLeft,
@@ -37,7 +34,7 @@ const $gt = {
 };
 
 const $gte = {
-	name: "greater than or equal to",
+	name: "$gte",
 	apply: (param, arg) => arg >= param,
 	evaluate: ([left, right]) => left >= right,
 	inject: injectLeft,
@@ -47,7 +44,7 @@ const $gte = {
 };
 
 const $lt = {
-	name: "less than",
+	name: "$lt",
 	apply: (param, arg) => arg < param,
 	evaluate: ([left, right]) => left < right,
 	inject: injectLeft,
@@ -57,7 +54,7 @@ const $lt = {
 };
 
 const $lte = {
-	name: "less than or equal to",
+	name: "$lte",
 	apply: (param, arg) => arg <= param,
 	evaluate: ([left, right]) => left <= right,
 	inject: injectLeft,
@@ -67,7 +64,7 @@ const $lte = {
 };
 
 const $in = {
-	name: "in",
+	name: "$in",
 	apply: (param, arg) => param.includes(arg),
 	evaluate: (param, arg) => param.includes(arg),
 	inject: injectRight,
@@ -77,7 +74,7 @@ const $in = {
 };
 
 const $nin = {
-	name: "not in",
+	name: "$nin",
 	apply: (param, arg) => !param.includes(arg),
 	evaluate: (param, arg) => !param.includes(arg),
 	inject: injectRight,
@@ -95,4 +92,4 @@ export const comparativeDefinitions = {
 	$ne,
 	$in,
 	$nin,
-} as const;
+};

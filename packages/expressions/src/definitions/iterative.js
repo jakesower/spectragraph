@@ -17,7 +17,7 @@ export const iterativeDefinitions = {
 	$filter,
 	$flatMap,
 	$map,
-} as const;
+};
 
 // apply: ([items, subexpr], arg) => {
 // 	console.log(items, subexpr, arg);

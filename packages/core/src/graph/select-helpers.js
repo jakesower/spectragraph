@@ -20,10 +20,10 @@ function distributeStrings(expression, expressionEngine) {
 		if (rest.length === 0) return { $get: expression };
 
 		return {
-			$pipe: [
+			$compose: [
 				{ $get: iteratee },
 				{ $flatMap: distributeStrings(rest.join(".$."), expressionEngine) },
-				{ $filter: { $defined: {} } },
+				{ $filter: { $isDefined: {} } },
 			],
 		};
 	}

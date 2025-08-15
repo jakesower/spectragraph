@@ -3554,12 +3554,12 @@ function getResourceStructureValidator(
 			order: {
 				oneOf: [
 					{
-						$ref: `#/definitions/orderItem`,
+						$ref: "#/definitions/orderItem",
 					},
 					{
 						type: "array",
 						items: {
-							$ref: `#/definitions/orderItem`,
+							$ref: "#/definitions/orderItem",
 						},
 					},
 				],
@@ -3675,11 +3675,11 @@ function validateQuery(schema, rootQuery, options = {}) {
 
 				if (key === "*") return;
 
-				if (key in resSchema.relationships) {
+				if (key in resSchema.relationships)
 					go(val, resSchema.relationships[key].type, curPath);
-				} else if (Array.isArray(val)) {
+				else if (Array.isArray(val))
 					addError("selections within an object may not be arrays", curPath);
-				} else if (typeof val === "object") {
+				else if (typeof val === "object") {
 					if (
 						(strict && !expressionEngine.isExpression(val)) ||
 						(!strict && !isExpressionLike(val))
@@ -3714,9 +3714,8 @@ function validateQuery(schema, rootQuery, options = {}) {
 						curPath,
 						val,
 					);
-				} else if (typeof val === "object") {
-					validateSelectObject(val, curPath);
-				} else if (typeof val === "string") {
+				} else if (typeof val === "object") validateSelectObject(val, curPath);
+				else if (typeof val === "string") {
 					if (!Object.keys(resSchema.attributes).includes(val)) {
 						addError(
 							`selections within an array that are strings must be "*" or the name of an attribute -- "${val}" is not`,
@@ -4539,7 +4538,6 @@ function validateSchema(schema, options = {}) {
 			try {
 				validator.compile(attrSchema);
 			} catch (err) {
-				console.log(err, validator.schemas);
 				attributeSchemaErrors.push({
 					message: `[data-prism] there was a problem compiling the schema for ${resName}.${attrName}: ${err.message}`,
 				});
@@ -4622,7 +4620,7 @@ function buildWhereExpression(whereClause, expressionEngine) {
 
 	const whereExpressions = Object.entries(whereClause).map(
 		([propPath, propVal]) => ({
-			$pipe: [
+			$compose: [
 				{ $get: propPath },
 				expressionEngine.isExpression(propVal) ? propVal : { $eq: propVal },
 			],
@@ -4653,10 +4651,10 @@ function distributeStrings(expression, expressionEngine) {
 		if (rest.length === 0) return { $get: expression };
 
 		return {
-			$pipe: [
+			$compose: [
 				{ $get: iteratee },
 				{ $flatMap: distributeStrings(rest.join(".$."), expressionEngine) },
-				{ $filter: { $defined: {} } },
+				{ $filter: { $isDefined: {} } },
 			],
 		};
 	}

@@ -120,7 +120,7 @@ Output: any
 
 Allows the expression engine to evaluate lists of expressions and objects of expressions.
 
-### `$defined`
+### `$isDefined`
 
 Param: -
 Arg: any
@@ -152,7 +152,7 @@ Output: any
 
 Returns whatever input it was given without evaluation.
 
-### `$pipe`
+### `$compose`
 
 Param: expression[]
 Arg: any
