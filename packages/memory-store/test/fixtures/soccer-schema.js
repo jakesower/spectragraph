@@ -20,8 +20,8 @@ export const soccerSchema = {
 			idAttribute: "id",
 			attributes: {
 				id: { type: "string" },
-				homeScore: { type: "integer", required: true, minimum: 0 },
-				awayScore: { type: "integer", required: true, minimum: 0 },
+				homeScore: { type: "integer", minimum: 0 },
+				awayScore: { type: "integer", minimum: 0 },
 			},
 			relationships: {
 				homeTeam: {
@@ -44,7 +44,7 @@ export const soccerSchema = {
 		referees: {
 			attributes: {
 				id: { type: "string" },
-				name: { type: "string", required: true },
+				name: { type: "string" },
 			},
 			relationships: {
 				games: {
@@ -58,7 +58,7 @@ export const soccerSchema = {
 			idAttribute: "id",
 			attributes: {
 				id: { type: "string" },
-				name: { type: "string", required: true },
+				name: { type: "string" },
 				homeColor: { type: "string" },
 				awayColor: { type: "string" },
 			},
