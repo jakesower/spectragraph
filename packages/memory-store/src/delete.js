@@ -3,22 +3,22 @@
  * @property {string} type
  * @property {string} id
  * @property {Object<string, unknown>} [attributes]
- * @property {Object<string, import('./graph.js').Ref | import('./graph.js').Ref[]>} [relationships]
+ * @property {Object<string, import('@data-prism/core').Ref | import('@data-prism/core').Ref[]>} [relationships]
  */
 
 // WARNING: MUTATES storeGraph
 /**
  * @param {DeleteResource} resource
  * @param {Object} context
- * @param {import('./schema.js').Schema} context.schema
- * @param {import('./graph.js').Graph} context.storeGraph
+ * @param {import('@data-prism/core').Schema} context.schema
+ * @param {import('@data-prism/core').Graph} context.storeGraph
  * @returns {DeleteResource}
  */
 export function deleteAction(resource, context) {
 	const { schema, storeGraph } = context;
 	const { type, id } = resource;
 	const resSchema = schema.resources[resource.type];
-	/** @type {import('./graph.js').NormalResource} */
+	/** @type {import('@data-prism/core').NormalResource} */
 	const existingRes = storeGraph[type][id];
 
 	Object.entries(existingRes.relationships).forEach(([relName, related]) => {
@@ -28,7 +28,7 @@ export function deleteAction(resource, context) {
 			const inverseResSchema = schema.resources[relType];
 			const inverseRel = inverseResSchema.relationships[inverse];
 
-			/** @type {import('./graph.js').Ref[]} */
+			/** @type {import('@data-prism/core').Ref[]} */
 			const refs =
 				related === null ? [] : Array.isArray(related) ? related : [related];
 

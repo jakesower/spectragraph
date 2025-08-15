@@ -1,10 +1,10 @@
 // WARNING: MUTATES storeGraph
 /**
- * @param {import('./graph.js').NormalResource} resource
+ * @param {import('@data-prism/core').NormalResource} resource
  * @param {Object} context
- * @param {import('./schema.js').Schema} context.schema
- * @param {import('./graph.js').Graph} context.storeGraph
- * @returns {import('./graph.js').NormalResource}
+ * @param {import('@data-prism/core').Schema} context.schema
+ * @param {import('@data-prism/core').Graph} context.storeGraph
+ * @returns {import('@data-prism/core').NormalResource}
  */
 export function createOrUpdate(resource, context) {
 	const { schema, storeGraph } = context;
@@ -19,13 +19,11 @@ export function createOrUpdate(resource, context) {
 			const inverseResSchema = schema.resources[relType];
 			const inverseRel = inverseResSchema.relationships[inverse];
 
-			/** @type {import('./graph.js').Ref[]} */
 			const refs =
 				related === null ? [] : Array.isArray(related) ? related : [related];
 
 			if (inverseRel.cardinality === "one") {
 				refs.forEach((ref) => {
-					/** @type {import('./graph.js').Ref | null} */
 					const currentInverseRef =
 						storeGraph[relType][ref.id].relationships[inverse];
 

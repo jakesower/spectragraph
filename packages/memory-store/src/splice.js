@@ -1,29 +1,29 @@
 import { v4 as uuidv4 } from "uuid";
 import { mapValues, pick } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
-import { validateResourceTree } from "./validate.js";
+import { ensureValidSpliceResource } from "@data-prism/core";
 
 /**
  * @typedef {Object} Context
- * @property {import('./schema.js').Schema} schema
+ * @property {import('@data-prism/core').Schema} schema
  * @property {Ajv} validator
  * @property {import('./memory-store.js').MemoryStore} store
- * @property {import('./graph.js').Graph} storeGraph
+ * @property {import('@data-prism/core').Graph} storeGraph
  */
 
 /**
- * @param {import('./memory-store.js').NormalResourceTree} resourceTree
+ * @param {Object} resourceTree
  * @param {Context} context
- * @returns {import('./memory-store.js').NormalResourceTree}
+ * @returns {Object}
  */
 export function splice(resourceTree, context) {
 	const { schema, validator, store, storeGraph } = context;
-	const errors = validateResourceTree(schema, resourceTree, validator);
-	if (errors.length > 0) throw new Error("invalid resource", { cause: errors });
+
+	ensureValidSpliceResource(schema, resourceTree, { validator });
 
 	/**
-	 * @param {import('./memory-store.js').NormalResourceTree} res
-	 * @returns {import('./graph.js').Ref[]}
+	 * @param {Object} res
+	 * @returns {import('@data-prism/core').Ref[]}
 	 */
 	const expectedExistingResources = (res) => {
 		const related = Object.values(res.relationships ?? {}).flatMap((rel) =>
@@ -53,10 +53,10 @@ export function splice(resourceTree, context) {
 	}
 
 	/**
-	 * @param {import('./memory-store.js').NormalResourceTree} res
-	 * @param {import('./memory-store.js').NormalResourceTree | null} [parent=null]
+	 * @param {Object} res
+	 * @param {Object | null} [parent=null]
 	 * @param {any} [parentRelSchema=null]
-	 * @returns {import('./memory-store.js').NormalResourceTree}
+	 * @returns {Object}
 	 */
 	const go = (res, parent = null, parentRelSchema = null) => {
 		const resSchema = schema.resources[res.type];
@@ -76,7 +76,6 @@ export function splice(resourceTree, context) {
 				];
 			} else if (relSchema.cardinality === "one") {
 				const existing = store.getOne(parent.type, parent.id);
-				/** @type {import('./graph.js').Ref} */
 				const existingRef = existing?.relationships?.[inverse];
 
 				if (existingRef && existingRef.id !== parent.id) {
@@ -91,7 +90,6 @@ export function splice(resourceTree, context) {
 		}
 
 		const existing = store.getOne(res.type, res.id);
-		/** @type {string} */
 		const resultId = res.id ?? existing?.id ?? uuidv4();
 		const prepped = res.id
 			? {

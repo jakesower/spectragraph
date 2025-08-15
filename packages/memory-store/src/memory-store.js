@@ -1,24 +1,21 @@
 import { v4 as uuidv4 } from "uuid";
 import { mapValues } from "lodash-es";
-import { ensureValidSchema } from "./schema.js";
 import {
-	createQueryGraph,
+	ensureValidSchema,
+	ensureValidQuery,
+	normalizeQuery,
 	createEmptyGraph,
 	linkInverses,
 	mergeGraphs,
-} from "./graph.js";
-import { createGraphFromTrees } from "./mappers.js";
+	queryGraph,
+	createValidator,
+	ensureValidCreateResource,
+	ensureValidDeleteResource,
+	ensureValidUpdateResource,
+} from "@data-prism/core";
 import { createOrUpdate } from "./create-or-update.js";
 import { deleteAction } from "./delete.js";
-import { ensureValidQuery, normalizeQuery } from "./query.js";
-import {
-	defaultValidator,
-	validateCreateResource,
-	validateDeleteResource,
-	validateUpdateResource,
-} from "./validate.js";
 import { splice } from "./splice.js";
-export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 
 /**
  * @typedef {Object} Ref
@@ -36,7 +33,7 @@ export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 
 /**
  * @typedef {Object} MemoryStoreConfig
- * @property {import('./graph.js').Graph} [initialData]
+ * @property {import('@data-prism/core').Graph} [initialData]
  * @property {Ajv} [validator]
  */
 
@@ -59,43 +56,39 @@ export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
 
 /**
  * @typedef {Object} Store
- * @property {function(string, string): import('./graph.js').NormalResource} getOne
- * @property {function(CreateResource): import('./graph.js').NormalResource} create
- * @property {function(UpdateResource): import('./graph.js').NormalResource} update
- * @property {function(CreateResource | UpdateResource): import('./graph.js').NormalResource} upsert
+ * @property {function(string, string): import('@data-prism/core').NormalResource} getOne
+ * @property {function(CreateResource): import('@data-prism/core').NormalResource} create
+ * @property {function(UpdateResource): import('@data-prism/core').NormalResource} update
+ * @property {function(CreateResource | UpdateResource): import('@data-prism/core').NormalResource} upsert
  * @property {function(import('./delete.js').DeleteResource): import('./delete.js').DeleteResource} delete
- * @property {function(import('./query.js').RootQuery): any} query
+ * @property {function(import('@data-prism/core').RootQuery): any} query
  * @property {function(NormalResourceTree): NormalResourceTree} splice
  */
 
 /**
  * @typedef {Store & {
  *   linkInverses: function(): void,
- *   merge: function(import('./graph.js').Graph): void,
- *   mergeTree: function(string, any, any?): void,
- *   mergeTrees: function(string, any[], any?): void
+ *   merge: function(import('@data-prism/core').Graph): void
  * }} MemoryStore
  */
 
 /**
- * @param {import('./schema.js').Schema} schema
+ * @param {import('@data-prism/core').Schema} schema
  * @param {MemoryStoreConfig} [config={}]
  * @returns {MemoryStore}
  */
 export function createMemoryStore(schema, config = {}) {
-	const { initialData = {}, validator = defaultValidator } = config;
+	const { initialData = {}, validator = createValidator() } = config;
 
-	ensureValidSchema(schema);
+	ensureValidSchema(schema, { validator });
 
-	let queryGraph;
 	let storeGraph = mergeGraphs(createEmptyGraph(schema), initialData);
 
 	const runQuery = (query) => {
-		if (!queryGraph) queryGraph = createQueryGraph(storeGraph);
 		const normalQuery = normalizeQuery(schema, query);
 
 		ensureValidQuery(schema, normalQuery);
-		return queryGraph.query(normalQuery);
+		return queryGraph(schema, normalQuery, storeGraph);
 	};
 
 	// WARNING: MUTATES storeGraph
@@ -105,11 +98,8 @@ export function createMemoryStore(schema, config = {}) {
 		const { idAttribute = "id" } = resSchema;
 		const newId = id ?? uuidv4();
 
-		const errors = validateCreateResource(schema, resource, validator);
-		if (errors.length > 0)
-			throw new Error("invalid resource", { cause: errors });
+		ensureValidCreateResource(schema, resource, validator);
 
-		/** @type {import('./graph.js').NormalResource} */
 		const normalRes = {
 			attributes: { ...(resource.attributes ?? {}), [idAttribute]: newId },
 			relationships: mapValues(
@@ -122,19 +112,15 @@ export function createMemoryStore(schema, config = {}) {
 			type,
 		};
 
-		queryGraph = null;
 		return createOrUpdate(normalRes, { schema, storeGraph });
 	};
 
 	// WARNING: MUTATES storeGraph
 	const update = (resource) => {
-		const errors = validateUpdateResource(schema, resource, validator);
-		if (errors.length > 0)
-			throw new Error("invalid resource", { cause: errors });
+		ensureValidUpdateResource(schema, resource, validator);
 
 		const existingRes = storeGraph[resource.type][resource.id];
 
-		/** @type {import('./graph.js').NormalResource} */
 		const normalRes = {
 			...resource,
 			attributes: { ...existingRes.attributes, ...resource.attributes },
@@ -145,7 +131,6 @@ export function createMemoryStore(schema, config = {}) {
 		};
 
 		// WARNING: MUTATES storeGraph
-		queryGraph = null;
 		return createOrUpdate(normalRes, { schema, storeGraph });
 	};
 
@@ -156,30 +141,16 @@ export function createMemoryStore(schema, config = {}) {
 	};
 
 	const delete_ = (resource) => {
-		const errors = validateDeleteResource(schema, resource, validator);
-		if (errors.length > 0)
-			throw new Error("invalid resource", { cause: errors });
+		ensureValidDeleteResource(schema, resource, validator);
 
-		queryGraph = null;
 		return deleteAction(resource, { schema, storeGraph });
 	};
 
 	const merge = (graph) => {
-		queryGraph = null;
 		storeGraph = mergeGraphs(storeGraph, graph);
 	};
 
-	const mergeTrees = (resourceType, trees, mappers = {}) => {
-		const graph = createGraphFromTrees(resourceType, trees, schema, mappers);
-		merge(graph);
-	};
-
-	const mergeTree = (resourceType, tree, mappers = {}) => {
-		mergeTrees(resourceType, [tree], mappers);
-	};
-
 	const linkStoreInverses = () => {
-		queryGraph = null;
 		storeGraph = linkInverses(storeGraph, schema);
 	};
 
@@ -193,11 +164,8 @@ export function createMemoryStore(schema, config = {}) {
 		upsert,
 		delete: delete_,
 		merge,
-		mergeTree,
-		mergeTrees,
 		query: runQuery,
 		splice(resource) {
-			queryGraph = null;
 			return splice(resource, { schema, validator, store: this, storeGraph });
 		},
 	};
