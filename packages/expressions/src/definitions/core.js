@@ -1,25 +1,17 @@
 import { get } from "lodash-es";
 
-// Some of the functions in here are called specially. These are always
-// included among definition sets, but can be overriden at the author's peril.
-
-const $apply = {
-	name: "apply",
-	apply: (params) => params,
-};
-
-const $defined = {
-	name: "defined",
+const $isDefined = {
+	name: "$isDefined",
 	apply: (_, arg) => arg !== undefined,
 };
 
 const $echo = {
-	name: "echo",
+	name: "$echo",
 	apply: (_, arg) => arg,
 };
 
 const $ensurePath = {
-	name: "ensure path",
+	name: "$ensurePath",
 	apply: (params, arg) => {
 		const go = (curValue, paths, used = []) => {
 			if (paths.length === 0) return;
@@ -40,12 +32,12 @@ const $ensurePath = {
 };
 
 const $get = {
-	name: "get",
+	name: "$get",
 	apply: (params, arg) => get(arg, params),
 };
 
-const $ifThenElse = {
-	name: "if/then/else",
+const $if = {
+	name: "$if",
 	apply: (params, arg, apply, isExpression) => {
 		if (!isExpression(params.if) && params.if !== true && params.if !== false)
 			throw new Error('"if" must be an expression, true, or false');
@@ -57,21 +49,21 @@ const $ifThenElse = {
 };
 
 const $literal = {
-	name: "literal",
+	name: "$literal",
 	apply: (params) => params,
 	controlsEvaluation: true,
 };
 
-const $log = {
-	name: "log",
+const $debug = {
+	name: "$debug",
 	apply: (_, arg) => {
 		console.log(arg);
 		return arg;
 	},
 };
 
-const $pipe = {
-	name: "pipe",
+const $compose = {
+	name: "$compose",
 	apply: (params, arg, apply, isExpression) =>
 		params.reduce((acc, expr) => {
 			if (!isExpression(expr))
@@ -82,21 +74,14 @@ const $pipe = {
 	controlsEvaluation: true,
 };
 
-const $prop = {
-	name: "prop",
-	apply: (params, arg) => arg[params],
-	controlsEvaluation: true,
-};
-
 export const coreDefinitions = {
 	$apply,
-	$defined,
+	$compose,
+	$debug,
 	$echo,
-	$ensurePath,
 	$get,
-	$ifThenElse,
+	$if,
+	$isDefined,
 	$literal,
-	$log,
-	$pipe,
-	$prop,
-} as const;
+	$ensurePath,
+};

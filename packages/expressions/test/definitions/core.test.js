@@ -29,11 +29,11 @@ describe("$ensurePath", () => {
 	});
 });
 
-describe("$ifThenElse", () => {
+describe("$if", () => {
 	it("handles a true value", () => {
 		expect(
 			apply(
-				{ $ifThenElse: { if: { $eq: "Bob" }, then: "yep", else: "nope" } },
+				{ $if: { condition: { $eq: "Bob" }, then: "yep", else: "nope" } },
 				"Bob",
 			),
 		).toEqual("yep");
@@ -42,7 +42,7 @@ describe("$ifThenElse", () => {
 	it("handles a false value", () => {
 		expect(
 			apply(
-				{ $ifThenElse: { if: { $eq: "Bob" }, then: "yep", else: "nope" } },
+				{ $if: { condition: { $eq: "Bob" }, then: "yep", else: "nope" } },
 				"Alice",
 			),
 		).toEqual("nope");
@@ -52,8 +52,8 @@ describe("$ifThenElse", () => {
 		expect(
 			apply(
 				{
-					$ifThenElse: {
-						if: { $eq: { name: "Bob" } },
+					$if: {
+						condition: { $eq: { name: "Bob" } },
 						then: { $get: "name" },
 						else: "nope",
 					},
@@ -67,8 +67,8 @@ describe("$ifThenElse", () => {
 		expect(
 			apply(
 				{
-					$ifThenElse: {
-						if: { $eq: { name: "Bob" } },
+					$if: {
+						condition: { $eq: { name: "Bob" } },
 						then: "yep",
 						else: { $get: "age" },
 					},
@@ -80,36 +80,36 @@ describe("$ifThenElse", () => {
 
 	it("handles a true if value", () => {
 		expect(
-			apply({ $ifThenElse: { if: true, then: "yep", else: "nope" } }, "Bob"),
+			apply({ $if: { condition: true, then: "yep", else: "nope" } }, "Bob"),
 		).toEqual("yep");
 	});
 
 	it("handles a false if value", () => {
 		expect(
-			apply({ $ifThenElse: { if: false, then: "yep", else: "nope" } }, "Bob"),
+			apply({ $if: { condition: false, then: "yep", else: "nope" } }, "Bob"),
 		).toEqual("nope");
 	});
 
 	it("throws with an non-expression/non-boolean if value", () => {
 		expect(() => {
 			apply(
-				{ $ifThenElse: { if: "Chicken", then: "yep", else: "nope" } },
+				{ $if: { condition: "Chicken", then: "yep", else: "nope" } },
 				"Alice",
 			);
 		}).toThrowError();
 	});
 });
 
-describe("$pipe", () => {
+describe("$compose", () => {
 	it("pipes through expressions", () => {
-		expect(apply({ $pipe: [{ $get: "name" }] }, { name: "Bob" })).toEqual(
+		expect(apply({ $compose: [{ $get: "name" }] }, { name: "Bob" })).toEqual(
 			"Bob",
 		);
 	});
 
 	it("throws with an invalid expression", () => {
 		expect(() => {
-			apply({ $pipe: [{ $invalid: "hello.name" }] }, { name: "Bob" });
+			apply({ $compose: [{ $in: "hello.name" }] }, { name: "Bob" });
 		}).toThrowError();
 	});
 });

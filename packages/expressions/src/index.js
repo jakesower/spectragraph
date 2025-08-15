@@ -5,33 +5,46 @@ import { comparativeDefinitions } from "./definitions/comparative.js";
 import { aggregativeDefinitions } from "./definitions/aggregative.js";
 import { iterativeDefinitions } from "./definitions/iterative.js";
 
-export type ApplicativeExpression = object;
-export type Expression = object;
+/**
+ * @typedef {object} ApplicativeExpression
+ */
 
-export type Operation<Args, Input, Output> = {
-	apply: (expression: any, arg: Input) => Output;
-	applyImplicit?: (args: Args, vars: Input, implicitVar: any) => Output;
-	evaluate: (params: Input) => Output;
-	inject?: (args: any, inject: (v: any) => any) => any;
-	name?: string;
-	schema: object;
-};
+/**
+ * @typedef {object} Expression
+ */
 
-export type ExpressionEngine = {
-	apply: (expression: Expression, arg: any) => any;
-	compile: (expression: Expression) => (arg: any) => any;
-	evaluate: (expression: Expression) => any;
-	expressionNames: string[];
-	isExpression: (expression: Expression) => boolean;
-};
+/**
+ * @template Args, Input, Output
+ * @typedef {object} Operation
+ * @property {function(any, Input): Output} apply
+ * @property {function(Args, Input, any): Output} [applyImplicit]
+ * @property {function(Input): Output} evaluate
+ * @property {function(any, function(any): any): any} [inject]
+ * @property {string} [name]
+ * @property {object} schema
+ */
 
-export type FunctionExpression<Args, Input, Output> = (
-	evaluate: (...args: any) => any,
-) => Expression;
+/**
+ * @typedef {object} ExpressionEngine
+ * @property {function(Expression, any): any} apply
+ * @property {function(Expression): function(any): any} compile
+ * @property {function(Expression): any} evaluate
+ * @property {string[]} expressionNames
+ * @property {function(Expression): boolean} isExpression
+ */
 
-export function createExpressionEngine(definitions: object): ExpressionEngine {
+/**
+ * @template Args, Input, Output
+ * @typedef {function(...any): Expression} FunctionExpression
+ */
+
+/**
+ * @param {object} definitions
+ * @returns {ExpressionEngine}
+ */
+export function createExpressionEngine(definitions) {
 	const allDefinitions = { ...coreDefinitions, ...definitions }; // mutated later
-	const isExpression = (val: unknown): boolean => {
+	const isExpression = (val) => {
 		const expressionKeys = new Set(Object.keys(allDefinitions));
 
 		return (
@@ -43,8 +56,8 @@ export function createExpressionEngine(definitions: object): ExpressionEngine {
 		);
 	};
 
-	const apply = (rootExpression: Expression, arg: any) => {
-		const step = <Input>(expression: Input) => {
+	const apply = (rootExpression, arg) => {
+		const step = (expression) => {
 			if (!isExpression(expression)) {
 				return Array.isArray(expression)
 					? expression.map(step)
@@ -54,7 +67,7 @@ export function createExpressionEngine(definitions: object): ExpressionEngine {
 			}
 
 			const [expressionName, expressionParams] = Object.entries(expression)[0];
-			const expressionDefinition = allDefinitions[expressionName] as any;
+			const expressionDefinition = allDefinitions[expressionName];
 
 			// some operations need to control the flow of evaluation
 			if (expressionDefinition.controlsEvaluation) {
@@ -74,8 +87,8 @@ export function createExpressionEngine(definitions: object): ExpressionEngine {
 		return step(rootExpression);
 	};
 
-	const evaluate = (rootExpression: Expression) => {
-		const go = <Input>(expression: Input) => {
+	const evaluate = (rootExpression) => {
+		const go = (expression) => {
 			if (!isExpression(expression)) {
 				return Array.isArray(expression)
 					? expression.map(go)
@@ -90,7 +103,7 @@ export function createExpressionEngine(definitions: object): ExpressionEngine {
 			if (expressionName === "$literal") return expression[expressionName];
 
 			// some operations need to control the flow of evaluation
-			const expressionDefinition = definitions[expressionName] as any;
+			const expressionDefinition = definitions[expressionName];
 			if (expressionDefinition.controlsEvaluation)
 				return expressionDefinition.evaluate(expressionArgs, evaluate);
 

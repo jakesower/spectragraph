@@ -19,7 +19,7 @@ describe("the $eq expression", () => {
 });
 
 it("implements the $gt expression", () => {
-	const exp = { $pipe: [{ $prop: "age" }, { $gt: 5 }] };
+	const exp = { $compose: [{ $prop: "age" }, { $gt: 5 }] };
 
 	expect(compile(exp)(kids.xinema)).toBe(false);
 	expect(compile(exp)(kids.yousef)).toBe(false);
@@ -27,7 +27,7 @@ it("implements the $gt expression", () => {
 });
 
 it("implements the $gte expression", () => {
-	const exp = { $pipe: [{ $prop: "age" }, { $gte: 5 }] };
+	const exp = { $compose: [{ $prop: "age" }, { $gte: 5 }] };
 
 	expect(compile(exp)(kids.xinema)).toBe(false);
 	expect(compile(exp)(kids.yousef)).toBe(true);
@@ -35,7 +35,7 @@ it("implements the $gte expression", () => {
 });
 
 it("implements the $lt expression", () => {
-	const exp = { $pipe: [{ $prop: "age" }, { $lt: 5 }] };
+	const exp = { $compose: [{ $prop: "age" }, { $lt: 5 }] };
 
 	expect(compile(exp)(kids.xinema)).toBe(true);
 	expect(compile(exp)(kids.yousef)).toBe(false);
@@ -43,7 +43,7 @@ it("implements the $lt expression", () => {
 });
 
 it("implements the $lte expression", () => {
-	const exp = { $pipe: [{ $prop: "age" }, { $lte: 5 }] };
+	const exp = { $compose: [{ $prop: "age" }, { $lte: 5 }] };
 
 	expect(compile(exp)(kids.xinema)).toBe(true);
 	expect(compile(exp)(kids.yousef)).toBe(true);
@@ -51,7 +51,7 @@ it("implements the $lte expression", () => {
 });
 
 it("implements the $ne expression", () => {
-	const exp = { $pipe: [{ $prop: "age" }, { $ne: 5 }] };
+	const exp = { $compose: [{ $prop: "age" }, { $ne: 5 }] };
 
 	expect(compile(exp)(kids.xinema)).toBe(true);
 	expect(compile(exp)(kids.yousef)).toBe(false);
@@ -59,7 +59,7 @@ it("implements the $ne expression", () => {
 });
 
 it("implements the $in expression", () => {
-	const exp = { $pipe: [{ $prop: "age" }, { $in: [4, 6] }] };
+	const exp = { $compose: [{ $prop: "age" }, { $in: [4, 6] }] };
 
 	expect(compile(exp)(kids.xinema)).toBe(true);
 	expect(compile(exp)(kids.yousef)).toBe(false);
@@ -67,7 +67,7 @@ it("implements the $in expression", () => {
 });
 
 it("implements the $nin expression", () => {
-	const exp = { $pipe: [{ $prop: "age" }, { $nin: [4, 6] }] };
+	const exp = { $compose: [{ $prop: "age" }, { $nin: [4, 6] }] };
 
 	expect(compile(exp)(kids.xinema)).toBe(false);
 	expect(compile(exp)(kids.yousef)).toBe(true);

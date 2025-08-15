@@ -1,5 +1,5 @@
 const $and = {
-	name: "and",
+	name: "$and",
 	apply: (params, arg, apply) => params.every((subexpr) => apply(subexpr, arg)),
 	controlsEvaluation: true,
 	evaluate: (params) => params.every(Boolean),
@@ -9,7 +9,7 @@ const $and = {
 };
 
 const $or = {
-	name: "or",
+	name: "$or",
 	apply: (params, arg, apply) => params.some((subexpr) => apply(subexpr, arg)),
 	controlsEvaluation: true,
 	evaluate: (params) => params.some(Boolean),
@@ -19,7 +19,7 @@ const $or = {
 };
 
 const $not = {
-	name: "not",
+	name: "$not",
 	apply: (subexpr, arg, apply) => !apply(subexpr, arg),
 	controlsEvaluation: true,
 	schema: { type: "boolean" },
@@ -29,4 +29,4 @@ export const logicalDefinitions = {
 	$and,
 	$not,
 	$or,
-} as const;
+};

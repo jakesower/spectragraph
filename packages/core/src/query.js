@@ -1,5 +1,5 @@
 import { defaultExpressionEngine } from "@data-prism/expressions";
-import { mapValues, omit, partition } from "lodash-es";
+import { mapValues, omit } from "lodash-es";
 import { defaultValidator } from "./resource.js";
 import { createDeepCache, ensure, translateAjvErrors } from "./lib/helpers.js";
 import baseQuerySchema from "./fixtures/query.schema.json";
@@ -93,12 +93,12 @@ function getResourceStructureValidator(
 			order: {
 				oneOf: [
 					{
-						$ref: `#/definitions/orderItem`,
+						$ref: "#/definitions/orderItem",
 					},
 					{
 						type: "array",
 						items: {
-							$ref: `#/definitions/orderItem`,
+							$ref: "#/definitions/orderItem",
 						},
 					},
 				],
@@ -214,11 +214,11 @@ export function validateQuery(schema, rootQuery, options = {}) {
 
 				if (key === "*") return;
 
-				if (key in resSchema.relationships) {
+				if (key in resSchema.relationships)
 					go(val, resSchema.relationships[key].type, curPath);
-				} else if (Array.isArray(val)) {
+				else if (Array.isArray(val))
 					addError("selections within an object may not be arrays", curPath);
-				} else if (typeof val === "object") {
+				else if (typeof val === "object") {
 					if (
 						(strict && !expressionEngine.isExpression(val)) ||
 						(!strict && !isExpressionLike(val))
@@ -253,9 +253,8 @@ export function validateQuery(schema, rootQuery, options = {}) {
 						curPath,
 						val,
 					);
-				} else if (typeof val === "object") {
-					validateSelectObject(val, curPath);
-				} else if (typeof val === "string") {
+				} else if (typeof val === "object") validateSelectObject(val, curPath);
+				else if (typeof val === "string") {
 					if (!Object.keys(resSchema.attributes).includes(val)) {
 						addError(
 							`selections within an array that are strings must be "*" or the name of an attribute -- "${val}" is not`,

@@ -1,5 +1,5 @@
 const $count = {
-	name: "count",
+	name: "$count",
 	apply(params) {
 		return this.evaluate(params);
 	},
@@ -11,7 +11,7 @@ const $count = {
 };
 
 const $max = {
-	name: "max",
+	name: "$max",
 	apply(params) {
 		return this.evaluate(params);
 	},
@@ -23,7 +23,7 @@ const $max = {
 };
 
 const $min = {
-	name: "min",
+	name: "$min",
 	apply(params) {
 		return this.evaluate(params);
 	},
@@ -35,7 +35,7 @@ const $min = {
 };
 
 const $sum = {
-	name: "sum",
+	name: "$sum",
 	apply(params) {
 		return this.evaluate(params);
 	},
