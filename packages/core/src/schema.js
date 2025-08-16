@@ -103,7 +103,7 @@ export function validateSchema(schema, options = {}) {
 	const { validator = defaultValidator } = options;
 
 	if (typeof schema !== "object")
-		return [{ message: "[data-prism] schema must be an object" }];
+		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
 
 	const validatorCache = getValidateSchemaCache(schema, validator);
 	if (validatorCache.hit) return validatorCache.value;
@@ -122,7 +122,7 @@ export function validateSchema(schema, options = {}) {
 				validator.compile(attrSchema);
 			} catch (err) {
 				attributeSchemaErrors.push({
-					message: `[data-prism] there was a problem compiling the schema for ${resName}.${attrName}: ${err.message}`,
+					message: `Invalid attribute schema "${resName}.${attrName}": ${err.message}`,
 				});
 			}
 		}),
@@ -168,7 +168,7 @@ export function validateSchema(schema, options = {}) {
 				properties: {
 					type: {
 						enum: Object.keys(schema.resources),
-						errorMessage: `must reference a valid resource type defined in the schema -- found \${0}, looking for one of ("${Object.keys(schema.resources).join('", "')}")`,
+						errorMessage: `Invalid resource type "\${0}": use one of (${Object.keys(schema.resources).join(", ")})`,
 					},
 				},
 			},

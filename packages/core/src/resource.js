@@ -94,6 +94,7 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 							not: true,
 							errorMessage:
 								"attributes must not have extra properties; extra property is ${0#}",
+							// errorMessage: "Unknown attribute \"${0#}\": not defined in schema",
 						},
 					}),
 		},
@@ -161,12 +162,12 @@ export const validateNormalResource = (schema, resource, options = {}) => {
 	const { validator = defaultValidator } = options;
 
 	if (typeof schema !== "object")
-		return [{ message: "[data-prism] schema must be an object" }];
+		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
 	if (typeof validator !== "object")
-		return [{ message: "[data-prism] validator must be an object" }];
+		return [{ message: "Invalid validator: expected object, got " + typeof validator }];
 	if (!resource.type || !(resource.type in schema.resources)) {
 		return [
-			{ message: `[data-prism] ${resource.type} is not a valid resource type` },
+			{ message: `Invalid resource type "${resource.type}": not defined in schema` },
 		];
 	}
 
@@ -247,12 +248,12 @@ export function validateCreateResource(schema, resource, options = {}) {
 	const { validator = defaultValidator } = options;
 
 	if (typeof schema !== "object")
-		return [{ message: "[data-prism] schema must be an object" }];
+		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
 	if (typeof validator !== "object")
-		return [{ message: "[data-prism] validator must be an object" }];
+		return [{ message: "Invalid validator: expected object, got " + typeof validator }];
 	if (!resource.type || !(resource.type in schema.resources)) {
 		return [
-			{ message: `[data-prism] ${resource.type} is not a valid resource type` },
+			{ message: `Invalid resource type "${resource.type}": not defined in schema` },
 		];
 	}
 
@@ -298,12 +299,12 @@ export function validateUpdateResource(schema, resource, options = {}) {
 	const { validator = defaultValidator } = options;
 
 	if (typeof schema !== "object")
-		return [{ message: "[data-prism] schema must be an object" }];
+		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
 	if (typeof validator !== "object")
-		return [{ message: "[data-prism] validator must be an object" }];
+		return [{ message: "Invalid validator: expected object, got " + typeof validator }];
 	if (!resource.type || !(resource.type in schema.resources)) {
 		return [
-			{ message: `[data-prism] ${resource.type} is not a valid resource type` },
+			{ message: `Invalid resource type "${resource.type}": not defined in schema` },
 		];
 	}
 
@@ -345,13 +346,13 @@ export function validateUpdateResource(schema, resource, options = {}) {
  */
 export function validateDeleteResource(schema, resource) {
 	if (typeof schema !== "object")
-		return [{ message: "[data-prism] schema must be an object" }];
+		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
 	if (typeof resource !== "object")
-		return [{ message: "[data-prism] resource must be an object" }];
+		return [{ message: "Invalid resource: expected object, got " + typeof resource }];
 	if (!resource.type || !(resource.type in schema.resources))
-		return [{ message: "[data-prism] resource must have a valid type" }];
+		return [{ message: `Invalid resource type "${resource.type}": not defined in schema` }];
 	if (!resource.id)
-		return [{ message: "[data-prism] resource must have a valid ID" }];
+		return [{ message: "Missing resource ID: required for delete operation" }];
 
 	return [];
 }
@@ -369,12 +370,12 @@ export function validateSpliceResource(schema, resource, options = {}) {
 	const { validator = defaultValidator } = options;
 
 	if (typeof schema !== "object")
-		return [{ message: "[data-prism] schema must be an object" }];
+		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
 	if (typeof validator !== "object")
-		return [{ message: "[data-prism] validator must be an object" }];
+		return [{ message: "Invalid validator: expected object, got " + typeof validator }];
 	if (!resource.type || !(resource.type in schema.resources)) {
 		return [
-			{ message: `[data-prism] ${resource.type} is not a valid resource type` },
+			{ message: `Invalid resource type "${resource.type}": not defined in schema` },
 		];
 	}
 
@@ -507,9 +508,9 @@ export function validateQueryResult(schema, rootQuery, result, options = {}) {
 	ensure(validateSchema)(schema, options);
 
 	if (typeof validator !== "object")
-		return [{ message: "[data-prism] validator must be an object" }];
+		return [{ message: "Invalid validator: expected object, got " + typeof validator }];
 	if (typeof rootQuery !== "object")
-		return [{ message: "[data-prism] query must be an object" }];
+		return [{ message: "Invalid query: expected object, got " + typeof rootQuery }];
 
 	// check for the special case of a null result to improve error quality
 	if (rootQuery.id && result === null) return [];

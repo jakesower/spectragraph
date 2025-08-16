@@ -63,7 +63,7 @@ export function createDeepCache() {
 
 const errorKeywordFormatters = {
 	enum: (error, dataVar) =>
-		`[data-prism] ${dataVar}${error.instancePath} ${error.message} (${error.params?.allowedValues?.join(", ")})`,
+		`${dataVar}${error.instancePath} ${error.message} (${error.params?.allowedValues?.join(", ")})`,
 };
 
 /**
@@ -99,7 +99,7 @@ export function translateAjvErrors(
 		...error,
 		message: errorKeywordFormatters[error.keyword]
 			? errorKeywordFormatters[error.keyword](error, dataVar)
-			: `[data-prism] ${dataVar}${error.instancePath} ${error.message}`,
+			: `${dataVar}${error.instancePath} ${error.message}`,
 		path: error.instancePath ?? error.schemaPath,
 		code: error.keyword,
 		value: get(subject, error.instancePath?.replaceAll("/", ".")?.slice(1)),

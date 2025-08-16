@@ -1,10 +1,15 @@
-// WARNING: MUTATES storeGraph
 /**
- * @param {import('@data-prism/core').NormalResource} resource
- * @param {Object} context
- * @param {import('@data-prism/core').Schema} context.schema
- * @param {import('@data-prism/core').Graph} context.storeGraph
- * @returns {import('@data-prism/core').NormalResource}
+ * Creates or updates a resource in the store and maintains inverse relationships.
+ * Updates related resources to ensure bidirectional relationship consistency.
+ * Handles both one-to-one and one-to-many relationship cardinalities.
+ * 
+ * WARNING: MUTATES storeGraph
+ * 
+ * @param {import('@data-prism/core').NormalResource} resource - The normalized resource to create or update
+ * @param {Object} context - Context object containing schema and storeGraph
+ * @param {import('@data-prism/core').Schema} context.schema - The schema defining resource types and relationships
+ * @param {import('@data-prism/core').Graph} context.storeGraph - The graph data structure to modify
+ * @returns {import('@data-prism/core').NormalResource} The created or updated resource
  */
 export function createOrUpdate(resource, context) {
 	const { schema, storeGraph } = context;
