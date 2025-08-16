@@ -13,9 +13,10 @@
 		},
 		"query": {
 			"type": "object",
+			"required": ["select"],
 			"properties": {
 				"type": { "type": "string" },
-				"select": { "$ref": "#/definitions/select" }
+				"select": { "anyOf": [{ "$ref": "#/definitions/select" }, {}] }
 			}
 		},
 		"selectObject": {
