@@ -1,10 +1,7 @@
 import { expect, it, describe } from "vitest";
-import {
-	normalizeQuery,
-	validateQuery,
-	validateQueryComplete,
-} from "../src/query.js";
+import { normalizeQuery, validateQuery } from "../src/query.js";
 import careBearSchema from "./fixtures/care-bears.schema.json" with { type: "json" };
+import { defaultExpressionEngine } from "@data-prism/expressions";
 
 describe("validateQuery", () => {
 	describe("structure", () => {
@@ -71,6 +68,11 @@ describe("validateQuery", () => {
 			const result = validateQuery(careBearSchema, [
 				{ type: "bears", select: "*" },
 			]);
+			expect(result.length).toBeGreaterThan(0);
+		});
+
+		it("should not validate a query that doesn't have a select clause", () => {
+			const result = validateQuery(careBearSchema, { type: "bears" });
 			expect(result.length).toBeGreaterThan(0);
 		});
 	});
@@ -182,7 +184,9 @@ describe("validateQuery", () => {
 				id: "1",
 				select: { chicken: { $notAnExpression: [2, 3] } },
 			};
-			const result = validateQueryComplete(careBearSchema, query);
+			const result = validateQuery(careBearSchema, query, {
+				expressionEngine: defaultExpressionEngine,
+			});
 			expect(result.length).toBeGreaterThan(0);
 		});
 	});
@@ -205,7 +209,9 @@ describe("validateQuery", () => {
 				limit: 3,
 				offset: -1,
 			};
-			const result = validateQueryComplete(careBearSchema, query);
+			const result = validateQuery(careBearSchema, query, {
+				expressionEngine: defaultExpressionEngine,
+			});
 			expect(result.length).toBeGreaterThan(0);
 			expect(result[0].code).toEqual("minimum");
 		});
@@ -299,34 +305,38 @@ describe("validateQuery", () => {
 			const result = validateQuery(careBearSchema, query);
 			expect(result.length).toEqual(0);
 		});
-	});
-});
 
-describe("validateQueryComplete", () => {
-	it("fails validation when using an invalid attribute that looks like an expression", () => {
-		const query = {
-			type: "bears",
-			select: {
-				name: "name",
-				yearIntroduced: "yearIntroduced",
-				home: { select: ["name"] },
-			},
-			where: {
-				notAnAttribute: "value",
-			},
-		};
-		const result = validateQueryComplete(careBearSchema, query);
-		expect(result.length).toBeGreaterThan(0);
-	});
+		describe("when providing an expressionEngine", () => {
+			it("fails validation when using an invalid attribute that looks like an expression", () => {
+				const query = {
+					type: "bears",
+					select: {
+						name: "name",
+						yearIntroduced: "yearIntroduced",
+						home: { select: ["name"] },
+					},
+					where: {
+						notAnAttribute: "value",
+					},
+				};
+				const result = validateQuery(careBearSchema, query, {
+					expressionEngine: defaultExpressionEngine,
+				});
+				expect(result.length).toBeGreaterThan(0);
+			});
 
-	it("fails validation when using something that looks like a valid expression for the value, but isn't", () => {
-		const query = {
-			type: "bears",
-			select: ["name"],
-			where: { $notAnExpression: 2 },
-		};
-		const result = validateQueryComplete(careBearSchema, query);
-		expect(result.length).toBeGreaterThan(0);
+			it("fails validation when using something that looks like a valid expression for the value, but isn't", () => {
+				const query = {
+					type: "bears",
+					select: ["name"],
+					where: { $notAnExpression: 2 },
+				};
+				const result = validateQuery(careBearSchema, query, {
+					expressionEngine: defaultExpressionEngine,
+				});
+				expect(result.length).toBeGreaterThan(0);
+			});
+		});
 	});
 });
 
