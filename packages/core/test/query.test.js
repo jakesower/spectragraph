@@ -1,5 +1,9 @@
 import { expect, it, describe } from "vitest";
-import { normalizeQuery, validateQuery } from "../src/query.js";
+import {
+	normalizeQuery,
+	validateQuery,
+	validateQueryComplete,
+} from "../src/query.js";
 import careBearSchema from "./fixtures/care-bears.schema.json" with { type: "json" };
 
 describe("validateQuery", () => {
@@ -178,7 +182,7 @@ describe("validateQuery", () => {
 				id: "1",
 				select: { chicken: { $notAnExpression: [2, 3] } },
 			};
-			const result = validateQuery(careBearSchema, query, { strict: true });
+			const result = validateQueryComplete(careBearSchema, query);
 			expect(result.length).toBeGreaterThan(0);
 		});
 	});
@@ -201,7 +205,7 @@ describe("validateQuery", () => {
 				limit: 3,
 				offset: -1,
 			};
-			const result = validateQuery(careBearSchema, query);
+			const result = validateQueryComplete(careBearSchema, query);
 			expect(result.length).toBeGreaterThan(0);
 			expect(result[0].code).toEqual("minimum");
 		});
@@ -260,7 +264,7 @@ describe("validateQuery", () => {
 			expect(result.length).toEqual(0);
 		});
 
-		it("passes validation when using an invalid attribute that looks like an expression (non-strict mode)", () => {
+		it("passes validation when using an invalid attribute that looks like an expression", () => {
 			const query = {
 				type: "bears",
 				select: {
@@ -274,22 +278,6 @@ describe("validateQuery", () => {
 			};
 			const result = validateQuery(careBearSchema, query);
 			expect(result.length).toEqual(0);
-		});
-
-		it("fails validation when using an invalid attribute that looks like an expression (strict mode)", () => {
-			const query = {
-				type: "bears",
-				select: {
-					name: "name",
-					yearIntroduced: "yearIntroduced",
-					home: { select: ["name"] },
-				},
-				where: {
-					notAnAttribute: "value",
-				},
-			};
-			const result = validateQuery(careBearSchema, query, { strict: true });
-			expect(result.length).toBeGreaterThan(0);
 		});
 
 		it("passes validation when using a valid expression for the value", () => {
@@ -302,7 +290,7 @@ describe("validateQuery", () => {
 			expect(result.length).toEqual(0);
 		});
 
-		it("passes validation when using something that looks like a valid expression for the value, but isn't (non-strict mode)", () => {
+		it("passes validation when using something that looks like a valid expression for the value, but isn't", () => {
 			const query = {
 				type: "bears",
 				select: ["name"],
@@ -311,16 +299,34 @@ describe("validateQuery", () => {
 			const result = validateQuery(careBearSchema, query);
 			expect(result.length).toEqual(0);
 		});
+	});
+});
 
-		it("fails validation when using something that looks like a valid expression for the value, but isn't (strict mode)", () => {
-			const query = {
-				type: "bears",
-				select: ["name"],
-				where: { $notAnExpression: 2 },
-			};
-			const result = validateQuery(careBearSchema, query, { strict: true });
-			expect(result.length).toBeGreaterThan(0);
-		});
+describe("validateQueryComplete", () => {
+	it("fails validation when using an invalid attribute that looks like an expression", () => {
+		const query = {
+			type: "bears",
+			select: {
+				name: "name",
+				yearIntroduced: "yearIntroduced",
+				home: { select: ["name"] },
+			},
+			where: {
+				notAnAttribute: "value",
+			},
+		};
+		const result = validateQueryComplete(careBearSchema, query);
+		expect(result.length).toBeGreaterThan(0);
+	});
+
+	it("fails validation when using something that looks like a valid expression for the value, but isn't", () => {
+		const query = {
+			type: "bears",
+			select: ["name"],
+			where: { $notAnExpression: 2 },
+		};
+		const result = validateQueryComplete(careBearSchema, query);
+		expect(result.length).toBeGreaterThan(0);
 	});
 });
 

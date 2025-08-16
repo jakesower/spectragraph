@@ -17,11 +17,6 @@ import { createOrUpdate } from "./create-or-update.js";
 import { deleteAction } from "./delete.js";
 import { splice } from "./splice.js";
 
-/**
- * @typedef {Object} Ref
- * @property {string} type
- * @property {string} id
- */
 
 /**
  * @typedef {Object} NormalResourceTree
@@ -33,34 +28,19 @@ import { splice } from "./splice.js";
 
 /**
  * @typedef {Object} MemoryStoreConfig
- * @property {import('@data-prism/core').Graph} [initialData]
- * @property {Ajv} [validator]
+ * @property {import('@data-prism/core').Graph} [initialData] - Initial graph data to populate the store
+ * @property {Ajv} [validator] - Custom AJV validator instance (defaults to createValidator())
  */
 
-/**
- * @typedef {Object} CreateResource
- * @property {string} type
- * @property {string} [id]
- * @property {boolean} [new]
- * @property {Object<string, unknown>} [attributes]
- * @property {Object<string, Ref | Ref[] | null>} [relationships]
- */
 
-/**
- * @typedef {Object} UpdateResource
- * @property {string} type
- * @property {string} id
- * @property {Object<string, unknown>} [attributes]
- * @property {Object<string, Ref | Ref[] | null>} [relationships]
- */
 
 /**
  * @typedef {Object} Store
  * @property {function(string, string): import('@data-prism/core').NormalResource} getOne
- * @property {function(CreateResource): import('@data-prism/core').NormalResource} create
- * @property {function(UpdateResource): import('@data-prism/core').NormalResource} update
- * @property {function(CreateResource | UpdateResource): import('@data-prism/core').NormalResource} upsert
- * @property {function(import('./delete.js').DeleteResource): import('./delete.js').DeleteResource} delete
+ * @property {function(import('@data-prism/core').CreateResource): import('@data-prism/core').NormalResource} create
+ * @property {function(import('@data-prism/core').UpdateResource): import('@data-prism/core').NormalResource} update
+ * @property {function(import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource): import('@data-prism/core').NormalResource} upsert
+ * @property {function(import('@data-prism/core').DeleteResource): import('@data-prism/core').DeleteResource} delete
  * @property {function(import('@data-prism/core').RootQuery): any} query
  * @property {function(NormalResourceTree): NormalResourceTree} splice
  */
@@ -73,9 +53,12 @@ import { splice } from "./splice.js";
  */
 
 /**
- * @param {import('@data-prism/core').Schema} schema
- * @param {MemoryStoreConfig} [config={}]
- * @returns {MemoryStore}
+ * Creates a new in-memory store instance that implements the data-prism store interface.
+ * Provides CRUD operations, querying, and relationship management for graph data.
+ * 
+ * @param {import('@data-prism/core').Schema} schema - The schema defining resource types and relationships
+ * @param {MemoryStoreConfig} [config={}] - Configuration options for the store
+ * @returns {MemoryStore} A new memory store instance
  */
 export function createMemoryStore(schema, config = {}) {
 	const { initialData = {}, validator = createValidator() } = config;
@@ -146,10 +129,12 @@ export function createMemoryStore(schema, config = {}) {
 		return deleteAction(resource, { schema, storeGraph });
 	};
 
+	// WARNING: MUTATES storeGraph
 	const merge = (graph) => {
 		storeGraph = mergeGraphs(storeGraph, graph);
 	};
 
+	// WARNING: MUTATES storeGraph
 	const linkStoreInverses = () => {
 		storeGraph = linkInverses(storeGraph, schema);
 	};

@@ -32,9 +32,8 @@ import baseQuerySchema from "./fixtures/query.schema.json";
  * @property {string} type - Required type
  */
 
-// these arguments have references that should seldom, if ever, change
 const getResourceSchemaCache = createDeepCache();
-const getResourceSchemaStrictCache = createDeepCache();
+
 let validateQueryShape;
 
 const isExpressionLike = (obj) =>
@@ -43,16 +42,18 @@ const isExpressionLike = (obj) =>
 	Object.keys(obj).length === 1 &&
 	!obj.select;
 
-function getResourceStructureValidator(
-	schema,
-	resourceType,
-	strict,
-	validator,
-	expressionEngine,
-) {
-	let resourceSchemaCache = strict
-		? getResourceSchemaCache(schema, validator, expressionEngine)
-		: getResourceSchemaStrictCache(schema, validator, expressionEngine);
+const isValidAttribute = (attributeName, resourceSchema) =>
+	attributeName in resourceSchema.attributes;
+
+const createErrorReporter =
+	(pathPrefix = "query") =>
+	(message, path, value) => ({
+		message: `[${pathPrefix}/${path.join("/")}] ${message}`,
+		value,
+	});
+
+function getResourceStructureValidator(schema, resourceType) {
+	let resourceSchemaCache = getResourceSchemaCache(schema);
 
 	let resourceSchemasByType;
 	if (!resourceSchemaCache.value) {
@@ -75,7 +76,7 @@ function getResourceStructureValidator(
 			offset: { type: "integer", minimum: 0 },
 			where: {
 				anyOf: [
-					{ $ref: "#/definitions/expression" },
+					{ $ref: "#/definitions/expressionLike" },
 					{
 						type: "object",
 						properties: mapValues(
@@ -107,19 +108,10 @@ function getResourceStructureValidator(
 			},
 		},
 		definitions: {
-			expression: {
+			expressionLike: {
 				type: "object",
 				minProperties: 1,
 				maxProperties: 1,
-				...(strict
-					? {
-							additionalProperties: false,
-							properties: expressionEngine.expressionNames.reduce(
-								(acc, n) => ({ ...acc, [n]: {} }),
-								{},
-							),
-						}
-					: {}),
 			},
 			orderItem: {
 				type: "object",
@@ -129,9 +121,7 @@ function getResourceStructureValidator(
 					schema.resources[resourceType].attributes,
 					() => ({}),
 				),
-				additionalProperties: {
-					anyOf: [{ $ref: "#/definitions/expression" }],
-				},
+				additionalProperties: false,
 				errorMessage: {
 					maxProperties:
 						'must have exactly one key with the name of an attribute and a value of "asc" or "desc"',
@@ -141,142 +131,191 @@ function getResourceStructureValidator(
 			},
 		},
 	};
-	const compiled = validator.compile(ajvSchema);
+	const compiled = defaultValidator.compile(ajvSchema);
 
 	resourceSchemasByType.set(resourceType, compiled);
 	return compiled;
 }
 
 /**
- * Validates that a query is valid against the schema
+ * Validates semantic aspects (relationships, attributes, expressions)
+ *
  * @param {Object} schema - The schema object
- * @param {RootQuery} query - The query to validate
- * @param {Object} [options]
- * @param {Object} [options.expressionEngine] - a @data-prism/graph expression engine
- * @param {Ajv} [options.validator] - The validator instance to use
- * @param {boolean} [options.strict=false] - The validator and expression engine will be used in validation
- * @return {import('./lib/helpers.js').StandardError[]}
+ * @param {Object} query - The query to validate
+ * @param {string} type - Resource type
+ * @param {Array} path - Current validation path
+ * @param {Object} validationFns - Validation functions
+ * @return {{errors: Array, isValid: boolean}}
  */
-export function validateQuery(schema, rootQuery, options = {}) {
-	const {
-		expressionEngine = defaultExpressionEngine,
-		validator = defaultValidator,
-		strict = false,
-	} = options;
-
-	if (!validateQueryShape)
-		validateQueryShape = defaultValidator.compile(baseQuerySchema);
-
-	if (typeof schema !== "object")
-		return [{ message: "[data-prism] schema must be an object" }];
-	if (typeof expressionEngine !== "object")
-		return [{ message: "[data-prism] expressionEngine must be an object" }];
-	if (typeof validator !== "object")
-		return [{ message: "[data-prism] validator must be an object" }];
-	if (typeof rootQuery !== "object")
-		return [{ message: "[data-prism] query must be an object" }];
-	if (!rootQuery.type)
-		return [{ message: "[data-prism] query must have a type" }];
-
-	// Shape validation
-	if (!validateQueryShape(rootQuery) > 0) return validateQueryShape.errors;
-
+function validateSemantics(schema, query, type, path, validationFns) {
+	const { isValidExpression, skipStringValidation } = validationFns;
 	const errors = [];
 	const addError = (message, path, value) => {
-		errors.push({
-			message: `[data-prism] [query/${path.join("/")}] ${message}`,
-			value,
+		errors.push(createErrorReporter()(message, path, value));
+	};
+
+	const resSchema = schema.resources[type];
+
+	// Validate where clause semantics
+	if (query.where) {
+		if (
+			!isValidExpression(query.where) &&
+			Object.keys(query.where).some((k) => !(k in resSchema.attributes))
+		) {
+			addError(
+				"Invalid where clause: unknown attribute names. Use valid attributes or an expression.",
+				[...path, "where"],
+				query.where,
+			);
+		}
+	}
+
+	// Validate select semantics
+	const validateSelectObject = (selectObj, prevPath) => {
+		Object.entries(selectObj).forEach(([key, val]) => {
+			const currentPath = [...prevPath, key];
+
+			if (key === "*") return;
+
+			if (key in resSchema.relationships) {
+				// Validate that relationship points to a valid subquery, not an attribute
+				if (typeof val === "string") {
+					addError(
+						`Invalid value for relationship "${key}": expected object, got string "${val}".`,
+						currentPath,
+						val,
+					);
+				}
+				return;
+			}
+
+			if (Array.isArray(val)) {
+				addError(
+					`Invalid selection "${key}": arrays not allowed in object selects.`,
+					currentPath,
+				);
+				return;
+			}
+
+			if (typeof val === "object") {
+				if (!isValidExpression(val)) {
+					addError(
+						`Invalid selection "${key}": not a valid relationship name. Object values must be expressions or subqueries.`,
+						currentPath,
+					);
+				}
+				return;
+			}
+
+			if (typeof val === "string" && !skipStringValidation) {
+				if (!isValidAttribute(val, resSchema)) {
+					addError(
+						`Invalid attribute "${val}": not a valid attribute name.`,
+						currentPath,
+						val,
+					);
+				}
+			}
 		});
 	};
 
-	const go = (query, type, path) => {
-		const resSchema = schema.resources[type];
-		const validateStructure = getResourceStructureValidator(
-			schema,
-			type,
-			strict,
-			validator,
-			expressionEngine,
-		);
+	const validateSelectArray = (selectArray) => {
+		selectArray.forEach((val, idx) => {
+			const currentPath = [...path, "select", idx];
 
-		if (!validateStructure(query)) {
-			translateAjvErrors(validateStructure.errors, query, "query").forEach(
-				(err) => {
-					errors.push(err);
-				},
+			if (val === "*") return;
+
+			if (Array.isArray(val)) {
+				addError(
+					"Invalid selection: nested arrays not allowed.",
+					currentPath,
+					val,
+				);
+				return;
+			}
+
+			if (typeof val === "object") {
+				validateSelectObject(val, currentPath);
+				return;
+			}
+
+			if (typeof val === "string" && !skipStringValidation) {
+				if (!isValidAttribute(val, resSchema)) {
+					addError(
+						`Invalid attribute "${val}" in select array: use "*" or a valid attribute name.`,
+						currentPath,
+						val,
+					);
+				}
+			}
+		});
+	};
+
+	if (query.select === "*") return { errors, isValid: true };
+
+	if (Array.isArray(query.select)) validateSelectArray(query.select);
+	else if (typeof query.select === "object")
+		validateSelectObject(query.select, [...path, "select"]);
+	else if (!skipStringValidation) {
+		addError(
+			"Invalid select value: must be \"*\", an object, or an array.",
+			[...path, "select"],
+			query.select,
+		);
+	}
+
+	return { errors, isValid: errors.length === 0 };
+}
+
+/**
+ * Private function that orchestrates validation phases
+ *
+ * @param {Object} schema - The schema object
+ * @param {RootQuery} rootQuery - The query to validate
+ * @param {Object} validationFns - Validation functions
+ * @return {import('./lib/helpers.js').StandardError[]}
+ */
+function validateQueryStructure(schema, rootQuery, validationFns) {
+	const errors = [];
+	// Cache structure validators to avoid repeated calls
+	const structureValidators = new Map();
+
+	const go = (query, type, path) => {
+		// Structural validation first
+		if (!structureValidators.has(type)) {
+			structureValidators.set(
+				type,
+				getResourceStructureValidator(schema, type),
+			);
+		}
+		const validator = structureValidators.get(type);
+
+		const structuralIsValid = validator(query);
+		if (!structuralIsValid) {
+			translateAjvErrors(validator.errors, query, "query").forEach((err) =>
+				errors.push(err),
 			);
 			if (typeof query.select !== "object") return;
 		}
 
-		const validateSelectObject = (selectObj, prevPath) => {
-			Object.entries(selectObj).forEach(([key, val]) => {
-				const curPath = [...prevPath, key];
-
-				if (key === "*") return;
-
-				if (key in resSchema.relationships)
-					go(val, resSchema.relationships[key].type, curPath);
-				else if (Array.isArray(val))
-					addError("selections within an object may not be arrays", curPath);
-				else if (typeof val === "object") {
-					if (
-						(strict && !expressionEngine.isExpression(val)) ||
-						(!strict && !isExpressionLike(val))
-					) {
-						addError(
-							`selections with objects as their values must either be valid data prism expressions or subqueries with a valid relationship as the key (${key} is not a valid relationship)`,
-							curPath,
-						);
-					}
-				} else if (typeof val === "string") {
-					if (!Object.keys(resSchema.attributes).includes(val)) {
-						addError(
-							`selections that are strings must be the name of an attribute -- "${val}" is not`,
-							curPath,
-							val,
-						);
-					}
-				}
-				// if none of these trigger, the selection is valid
-			});
-		};
-
-		const validateSelectArray = (selectArray) => {
-			selectArray.forEach((val, idx) => {
-				const curPath = [...path, "select", idx];
-
-				if (val === "*") return;
-
-				if (Array.isArray(val)) {
-					addError(
-						"selections within an array may not be arrays",
-						curPath,
-						val,
-					);
-				} else if (typeof val === "object") validateSelectObject(val, curPath);
-				else if (typeof val === "string") {
-					if (!Object.keys(resSchema.attributes).includes(val)) {
-						addError(
-							`selections within an array that are strings must be "*" or the name of an attribute -- "${val}" is not`,
-							curPath,
-							val,
-						);
-					}
-				}
-				// if none of these trigger, the selection is valid
-			});
-		};
-
-		if (query.select === "*") return;
-		if (Array.isArray(query.select)) return validateSelectArray(query.select);
-		if (typeof query.select === "object")
-			return validateSelectObject(query.select, [...path, "select"]);
-
-		addError(
-			`selections must be one of { "*": true }, { "someKey": an expression }, { "someKey": (one of "${Object.keys(resSchema.attributes).join('", "')}") }, or ({ "${Object.keys(resSchema.relationships).join('" | "')}": subquery })`,
-			[...path, "select"],
-			query.select,
+		// Semantic validation second
+		const semanticResult = validateSemantics(
+			schema,
+			query,
+			type,
+			path,
+			validationFns,
 		);
+		errors.push(...semanticResult.errors);
+
+		// Recurse into relationships
+		if (typeof query.select === "object" && !Array.isArray(query.select)) {
+			const resSchema = schema.resources[type];
+			Object.entries(query.select).forEach(([key, val]) => {
+				if (key in resSchema.relationships && typeof val === "object")
+					go(val, resSchema.relationships[key].type, [...path, key]);
+			});
+		}
 	};
 
 	go(rootQuery, rootQuery.type, []);
@@ -284,7 +323,59 @@ export function validateQuery(schema, rootQuery, options = {}) {
 }
 
 /**
+ * Validates that a query is valid against the schema
+ *
+ * @param {Object} schema - The schema object
+ * @param {RootQuery} query - The query to validate
+ * @return {import('./lib/helpers.js').StandardError[]}
+ */
+export function validateQuery(schema, rootQuery) {
+	if (!validateQueryShape)
+		validateQueryShape = defaultValidator.compile(baseQuerySchema);
+
+	if (typeof schema !== "object")
+		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
+	if (typeof rootQuery !== "object")
+		return [{ message: "Invalid query: expected object, got " + typeof rootQuery }];
+	if (!rootQuery.type) return [{ message: "Missing query type: required for validation" }];
+
+	// Shape validation
+	if (!validateQueryShape(rootQuery) > 0) return validateQueryShape.errors;
+
+	return validateQueryStructure(schema, rootQuery, {
+		isValidExpression: isExpressionLike,
+	});
+}
+
+/**
+ * Validates that a query is valid against the schema using validator and expressionEngine for complete validation
+ *
+ * @param {Object} schema - The schema object
+ * @param {RootQuery} query - The query to validate
+ * @param {Object} [options]
+ * @param {Object} [options.expressionEngine] - a @data-prism/graph expression engine
+ * @return {import('./lib/helpers.js').StandardError[]}
+ */
+export function validateQueryComplete(schema, rootQuery, options = {}) {
+	const { expressionEngine = defaultExpressionEngine } = options;
+
+	if (typeof expressionEngine !== "object")
+		return [{ message: "Invalid \"expressionEngine\": expected object, got " + typeof expressionEngine }];
+
+	// Standard validation
+	const validateQueryResult = validateQuery(schema, rootQuery);
+	if (validateQueryResult.length > 0) return validateQueryResult;
+
+	// Additional complete validation with expression engine
+	return validateQueryStructure(schema, rootQuery, {
+		isValidExpression: expressionEngine.isExpression,
+		skipStringValidation: true,
+	});
+}
+
+/**
  * Normalizes a query by expanding shorthand syntax and ensuring consistent structure
+ *
  * @param {Object} schema - The schema object
  * @param {RootQuery} rootQuery - The query to normalize
  * @returns {NormalQuery} The normalized query
