@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import Database from "better-sqlite3";
 import { createTables, seed } from "../src/seed.js";
 import { createSQLiteStore } from "../src/sqlite-store.js";
-import { careBearData } from "./fixtures/care-bear-data.js";
+import careBearData from "./fixtures/care-bear-data.json";
 import careBearSchema from "./fixtures/care-bears.schema.json";
 import { careBearConfig } from "./care-bear-config.js";
 
@@ -78,7 +78,7 @@ it("fetches a single resource with a many-to-one relationship", async () => {
 		select: {
 			home: { select: { id: "id" } },
 		},
-	} as const;
+	};
 
 	const result = await store.query(q);
 
@@ -92,7 +92,7 @@ it("fetches a single resource with a one-to-many relationship", async () => {
 		type: "homes",
 		id: "1",
 		select: { residents: { select: { id: "id" } } },
-	} as const;
+	};
 
 	const result = await store.query(q);
 
@@ -106,7 +106,7 @@ it("fetches a single resource with a one-to-many relationship and an implicit re
 		type: "homes",
 		id: "1",
 		select: { residents: { select: ["id"] } },
-	} as const;
+	};
 
 	const result = await store.query(q);
 
@@ -144,7 +144,7 @@ it("fetches a single resource with a subset of props on a relationship", async (
 		type: "bears",
 		id: "1",
 		select: { home: { select: { caringMeter: "caringMeter" } } },
-	} as const;
+	};
 
 	const result = await store.query(q);
 

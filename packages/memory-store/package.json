@@ -41,7 +41,7 @@
 	],
 	"sideEffects": false,
 	"dependencies": {
-		"@data-prism/core": "workspace:*",
+		"@data-prism/core": "*",
 		"lodash-es": "^4.17.21",
 		"uuid": "^10.0.0"
 	}

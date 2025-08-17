@@ -1,18 +1,25 @@
-import { Query, RootQuery, Schema } from "@data-prism/core";
 import { partition, pick } from "lodash-es";
 
-type QueryBreakdown<S extends Schema> = {
-	path: string[];
-	attributes: any;
-	relationships: any;
-	type: string & keyof S["resources"];
-}[];
+/**
+ * @typedef {Object} QueryBreakdownItem
+ * @property {string[]} path
+ * @property {any} attributes
+ * @property {any} relationships
+ * @property {string} type
+ */
 
-export function flattenQuery<S extends Schema>(
-	schema: S,
-	rootQuery: RootQuery<S>,
-): QueryBreakdown<S> {
-	const go = (query: Query<S>, type, path, parent = null, parentRelationship = null) => {
+/**
+ * @typedef {QueryBreakdownItem[]} QueryBreakdown
+ */
+
+/**
+ * Flattens a query into a breakdown structure
+ * @param {import("@data-prism/core").Schema} schema - The schema
+ * @param {import("@data-prism/core").RootQuery} rootQuery - The root query
+ * @returns {QueryBreakdown} The flattened query breakdown
+ */
+export function flattenQuery(schema, rootQuery) {
+	const go = (query, type, path, parent = null, parentRelationship = null) => {
 		const resDef = schema.resources[type];
 		const [attributesEntries, relationshipsEntries] = partition(
 			Object.entries(query.select ?? {}),
@@ -39,7 +46,7 @@ export function flattenQuery<S extends Schema>(
 			level,
 			...relationshipKeys.flatMap((relKey) => {
 				const relDef = resDef.relationships[relKey];
-				const subquery = query.select[relKey] as Query<S>;
+				const subquery = query.select[relKey];
 
 				return go(subquery, relDef.type, [...path, relKey], level, relKey);
 			}),
