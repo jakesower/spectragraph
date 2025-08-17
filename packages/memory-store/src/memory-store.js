@@ -103,7 +103,6 @@ export function createMemoryStore(schema, config = {}) {
 		ensureValidUpdateResource(schema, resource, validator);
 
 		const existingRes = storeGraph[resource.type][resource.id];
-
 		const normalRes = {
 			...resource,
 			attributes: { ...existingRes.attributes, ...resource.attributes },

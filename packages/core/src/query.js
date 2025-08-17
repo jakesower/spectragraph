@@ -271,7 +271,7 @@ function validateSemantics(schema, query, type, path, expressionEngine) {
 
 	if (Array.isArray(query.select)) validateSelectArray(query.select);
 	else if (typeof query.select === "object")
-		validateSelectObject(query.select, [...path, "select"]);
+		{validateSelectObject(query.select, [...path, "select"]);}
 	else {
 		addError(
 			'Invalid select value: must be "*", an object, or an array.',
@@ -307,15 +307,17 @@ export function validateQuery(schema, rootQuery, options = {}) {
 		];
 	}
 
-	if (expressionEngine && typeof expressionEngine !== "object")
+	if (expressionEngine && typeof expressionEngine !== "object") {
 		return [{ message: "[data-prism] expressionEngine must be an object" }];
 
-	if (!rootQuery.type)
+	}
+	if (!rootQuery.type) {
 		return [{ message: "Missing query type: required for validation" }];
 
+	}
 	// Shape validation
 	if (!validateQueryShape)
-		validateQueryShape = defaultValidator.compile(baseQuerySchema);
+		{validateQueryShape = defaultValidator.compile(baseQuerySchema);}
 	const shapeResult = validateQueryShape(rootQuery);
 	if (!shapeResult) return validateQueryShape.errors;
 
@@ -351,7 +353,7 @@ export function validateQuery(schema, rootQuery, options = {}) {
 			const resSchema = schema.resources[type];
 			Object.entries(query.select).forEach(([key, val]) => {
 				if (key in resSchema.relationships && typeof val === "object")
-					go(val, resSchema.relationships[key].type, [...path, key]);
+					{go(val, resSchema.relationships[key].type, [...path, key]);}
 			});
 		}
 

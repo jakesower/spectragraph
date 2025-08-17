@@ -4,7 +4,14 @@
 		"fields": {
 			"attributes": {
 				"id": { "type": "string" },
-				"name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9 ]+" }
+				"name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9 ]+" },
+				"surface": { "type": "string", "default": "grass" },
+				"capacity": { "type": "integer", "default": 5000 },
+				"amenities": {
+					"type": "array",
+					"items": { "type": "string" },
+					"default": []
+				}
 			},
 			"relationships": {
 				"teams": {
@@ -20,7 +27,16 @@
 			"attributes": {
 				"id": { "type": "string" },
 				"homeScore": { "type": "integer", "minimum": 0 },
-				"awayScore": { "type": "integer", "minimum": 0 }
+				"awayScore": { "type": "integer", "minimum": 0 },
+				"status": { "type": "string", "default": "scheduled" },
+				"attendance": { "type": "integer", "default": 0 },
+				"bookings": {
+					"type": "object",
+					"default": {
+						"homeTeam": [],
+						"awayTeam": []
+					}
+				}
 			},
 			"relationships": {
 				"homeTeam": {
@@ -44,7 +60,19 @@
 			"requiredAttributes": ["name"],
 			"attributes": {
 				"id": { "type": "string" },
-				"name": { "type": "string" }
+				"name": { "type": "string" },
+				"certifications": {
+					"type": "array",
+					"default": [],
+					"items": {
+						"type": "object",
+						"properties": {
+							"certifyingBody": { "type": "string" },
+							"grade": { "type": "integer", "default": 9 }
+						}
+					}
+				},
+				"experience": { "type": "integer", "default": 0 }
 			},
 			"relationships": {
 				"games": {
@@ -60,8 +88,34 @@
 			"attributes": {
 				"id": { "type": "string" },
 				"name": { "type": "string" },
-				"homeColor": { "type": "string" },
-				"awayColor": { "type": "string" }
+				"homeColor": { "type": "string", "default": "blue" },
+				"awayColor": { "type": "string", "default": "white" },
+				"founded": { "type": "integer", "default": 2000 },
+				"active": { "type": "boolean", "default": true },
+				"sponsors": {
+					"type": "object",
+					"default": { "FIFA": {} },
+					"properties": {
+						"FIFA": {
+							"type": "object",
+							"default": { "amount": 50 }
+						}
+					},
+					"patternProperties": {
+						"^local_": {
+							"type": "object",
+							"default": { "amount": 5000, "region": "local" }
+						},
+						"^global_": {
+							"type": "object",
+							"default": { "amount": 25000000, "region": "global" }
+						}
+					},
+					"additionalProperties": {
+						"type": "object",
+						"default": { "amount": 10000000 }
+					}
+				}
 			},
 			"requiredRelationships": ["homeField"],
 			"relationships": {

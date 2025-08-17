@@ -102,9 +102,10 @@ const getValidateSchemaCache = createDeepCache();
 export function validateSchema(schema, options = {}) {
 	const { validator = defaultValidator } = options;
 
-	if (typeof schema !== "object")
+	if (typeof schema !== "object") {
 		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
 
+	}
 	const validatorCache = getValidateSchemaCache(schema, validator);
 	if (validatorCache.hit) return validatorCache.value;
 

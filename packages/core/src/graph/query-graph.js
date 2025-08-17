@@ -134,9 +134,10 @@ function runQuery(rootQuery, data) {
 
 							const [head, ...tail] = path;
 
-							if (head === "$")
+							if (head === "$") {
 								return curValue.map((v) => extractPath(v, tail));
 
+							}
 							if (!(head in curValue)) return undefined;
 
 							return extractPath(curValue?.[head], tail);

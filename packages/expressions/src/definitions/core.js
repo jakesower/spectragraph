@@ -40,7 +40,7 @@ const $if = {
 	name: "$if",
 	apply: (params, arg, apply, isExpression) => {
 		if (!isExpression(params.if) && params.if !== true && params.if !== false)
-			throw new Error('"if" must be an expression, true, or false');
+			{throw new Error('"if" must be an expression, true, or false');}
 
 		const outcome = apply(params.if, arg) ? params.then : params.else;
 		return isExpression(outcome) ? apply(outcome, arg) : outcome;
@@ -67,7 +67,7 @@ const $compose = {
 	apply: (params, arg, apply, isExpression) =>
 		params.reduce((acc, expr) => {
 			if (!isExpression(expr))
-				throw new Error(`${JSON.stringify(expr)} is not a valid expression`);
+				{throw new Error(`${JSON.stringify(expr)} is not a valid expression`);}
 
 			return apply(expr, acc);
 		}, arg),

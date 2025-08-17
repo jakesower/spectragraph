@@ -30,7 +30,7 @@ export default [
 					functions: "always-multiline",
 				},
 			],
-			curly: ["error", "multi-or-nest"],
+			curly: ["error", "multi-line"],
 			eqeqeq: ["error", "always", { null: "ignore" }],
 			"func-names": "off",
 			"function-paren-newline": "off",
