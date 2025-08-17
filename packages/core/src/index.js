@@ -9,6 +9,7 @@ export {
 export { queryGraph } from "./graph/query-graph.js";
 export {
 	createValidator,
+	createResource,
 	normalizeResource,
 	validateCreateResource,
 	validateDeleteResource,

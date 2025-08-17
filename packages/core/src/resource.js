@@ -7,6 +7,7 @@ import { mapValues, omit, pickBy } from "lodash-es";
 import { normalizeQuery } from "./query.js";
 import { createDeepCache, ensure, translateAjvErrors } from "./lib/helpers.js";
 import { validateSchema } from "./schema.js";
+import { buildAttribute } from "./resource-helpers.js";
 
 /**
  * @typedef {Object} Ref
@@ -161,13 +162,23 @@ const getValidateQueryResultCache = createDeepCache();
 export const validateNormalResource = (schema, resource, options = {}) => {
 	const { validator = defaultValidator } = options;
 
-	if (typeof schema !== "object")
-		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
-	if (typeof validator !== "object")
-		return [{ message: "Invalid validator: expected object, got " + typeof validator }];
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
+	if (typeof validator !== "object") {
+		return [
+			{
+				message: "Invalid validator: expected object, got " + typeof validator,
+			},
+		];
+	}
 	if (!resource.type || !(resource.type in schema.resources)) {
 		return [
-			{ message: `Invalid resource type "${resource.type}": not defined in schema` },
+			{
+				message: `Invalid resource type "${resource.type}": not defined in schema`,
+			},
 		];
 	}
 
@@ -219,7 +230,9 @@ export function normalizeResource(schema, resourceType, resource) {
 		const emptyRel = relSchema.cardinality === "many" ? [] : null;
 		const relIdField = relResSchema.idAttribute ?? "id";
 
-		if (resource[rel] === undefined) return undefined;
+		if (resource[rel] === undefined) {
+			return undefined;
+		}
 
 		return applyOrMap(resource[rel] ?? emptyRel, (relRes) =>
 			typeof relRes === "object"
@@ -237,6 +250,42 @@ export function normalizeResource(schema, resourceType, resource) {
 }
 
 /**
+ * Creates a normalized resource with schema defaults applied
+ * @param {import('./schema.js').Schema} schema - The schema to use for defaults
+ * @param {CreateResource} [partialResource] - The partial resource to create from
+ * @returns {NormalResource} A complete normalized resource with defaults applied
+ */
+export function createResource(schema, partialResource = {}) {
+	const { type, attributes = {}, relationships = {} } = partialResource;
+	const resSchema = schema.resources[type];
+
+	const id =
+		partialResource.id ?? partialResource[resSchema.idAttribute ?? "id"];
+
+	const builtAttributes = mapValues(
+		resSchema.attributes,
+		(attrSchema, attrName) => buildAttribute(attrSchema, attributes[attrName]),
+	);
+
+	const builtRelationships = mapValues(
+		resSchema.relationships,
+		(relSchema, relName) =>
+			relationships[relName] === undefined
+				? relSchema.cardinality === "one"
+					? null
+					: []
+				: relationships[relName],
+	);
+
+	return {
+		id: attributes[resSchema.idAttribute ?? "id"],
+		...partialResource,
+		attributes: { ...builtAttributes, [resSchema.idAttribute ?? "id"]: id },
+		relationships: builtRelationships,
+	};
+}
+
+/**
  * Validates a create resource operation
  * @param {import('./schema.js').Schema} schema - The schema to validate against
  * @param {CreateResource} resource - The resource to validate
@@ -247,13 +296,23 @@ export function normalizeResource(schema, resourceType, resource) {
 export function validateCreateResource(schema, resource, options = {}) {
 	const { validator = defaultValidator } = options;
 
-	if (typeof schema !== "object")
-		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
-	if (typeof validator !== "object")
-		return [{ message: "Invalid validator: expected object, got " + typeof validator }];
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
+	if (typeof validator !== "object") {
+		return [
+			{
+				message: "Invalid validator: expected object, got " + typeof validator,
+			},
+		];
+	}
 	if (!resource.type || !(resource.type in schema.resources)) {
 		return [
-			{ message: `Invalid resource type "${resource.type}": not defined in schema` },
+			{
+				message: `Invalid resource type "${resource.type}": not defined in schema`,
+			},
 		];
 	}
 
@@ -268,10 +327,12 @@ export function validateCreateResource(schema, resource, options = {}) {
 	if (!compiledValidator) {
 		const resSchema = schema.resources[resource.type];
 		const required = ["type"];
-		if ((resSchema.requiredAttributes ?? []).length > 0)
+		if ((resSchema.requiredAttributes ?? []).length > 0) {
 			required.push("attributes");
-		if ((resSchema.requiredRelationships ?? []).length > 0)
+		}
+		if ((resSchema.requiredRelationships ?? []).length > 0) {
 			required.push("relationships");
+		}
 
 		compiledValidator = validator.compile({
 			type: "object",
@@ -298,13 +359,23 @@ export function validateCreateResource(schema, resource, options = {}) {
 export function validateUpdateResource(schema, resource, options = {}) {
 	const { validator = defaultValidator } = options;
 
-	if (typeof schema !== "object")
-		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
-	if (typeof validator !== "object")
-		return [{ message: "Invalid validator: expected object, got " + typeof validator }];
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
+	if (typeof validator !== "object") {
+		return [
+			{
+				message: "Invalid validator: expected object, got " + typeof validator,
+			},
+		];
+	}
 	if (!resource.type || !(resource.type in schema.resources)) {
 		return [
-			{ message: `Invalid resource type "${resource.type}": not defined in schema` },
+			{
+				message: `Invalid resource type "${resource.type}": not defined in schema`,
+			},
 		];
 	}
 
@@ -319,10 +390,12 @@ export function validateUpdateResource(schema, resource, options = {}) {
 	if (!compiledValidator) {
 		const resSchema = schema.resources[resource.type];
 		const required = ["type"];
-		if ((resSchema.requiredAttributes ?? []).length > 0)
+		if ((resSchema.requiredAttributes ?? []).length > 0) {
 			required.push("attributes");
-		if ((resSchema.requiredRelationships ?? []).length > 0)
+		}
+		if ((resSchema.requiredRelationships ?? []).length > 0) {
 			required.push("relationships");
+		}
 
 		compiledValidator = validator.compile({
 			type: "object",
@@ -345,15 +418,26 @@ export function validateUpdateResource(schema, resource, options = {}) {
  * @returns {Array} Array of validation errors
  */
 export function validateDeleteResource(schema, resource) {
-	if (typeof schema !== "object")
-		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
-	if (typeof resource !== "object")
-		return [{ message: "Invalid resource: expected object, got " + typeof resource }];
-	if (!resource.type || !(resource.type in schema.resources))
-		return [{ message: `Invalid resource type "${resource.type}": not defined in schema` }];
-	if (!resource.id)
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
+	if (typeof resource !== "object") {
+		return [
+			{ message: "Invalid resource: expected object, got " + typeof resource },
+		];
+	}
+	if (!resource.type || !(resource.type in schema.resources)) {
+		return [
+			{
+				message: `Invalid resource type "${resource.type}": not defined in schema`,
+			},
+		];
+	}
+	if (!resource.id) {
 		return [{ message: "Missing resource ID: required for delete operation" }];
-
+	}
 	return [];
 }
 
@@ -369,13 +453,23 @@ export function validateDeleteResource(schema, resource) {
 export function validateSpliceResource(schema, resource, options = {}) {
 	const { validator = defaultValidator } = options;
 
-	if (typeof schema !== "object")
-		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
-	if (typeof validator !== "object")
-		return [{ message: "Invalid validator: expected object, got " + typeof validator }];
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
+	if (typeof validator !== "object") {
+		return [
+			{
+				message: "Invalid validator: expected object, got " + typeof validator,
+			},
+		];
+	}
 	if (!resource.type || !(resource.type in schema.resources)) {
 		return [
-			{ message: `Invalid resource type "${resource.type}": not defined in schema` },
+			{
+				message: `Invalid resource type "${resource.type}": not defined in schema`,
+			},
 		];
 	}
 
@@ -409,10 +503,12 @@ export function validateSpliceResource(schema, resource, options = {}) {
 		const definitions = { create: {}, update: {} };
 		Object.entries(schema.resources).forEach(([resName, resSchema]) => {
 			const required = ["type"];
-			if ((resSchema.requiredAttributes ?? []).length > 0)
+			if ((resSchema.requiredAttributes ?? []).length > 0) {
 				required.push("attributes");
-			if ((resSchema.requiredRelationships ?? []).length > 0)
+			}
+			if ((resSchema.requiredRelationships ?? []).length > 0) {
 				required.push("relationships");
+			}
 
 			const requiredRelationships = resSchema.requiredRelationships ?? [];
 
@@ -507,13 +603,22 @@ export function validateQueryResult(schema, rootQuery, result, options = {}) {
 
 	ensure(validateSchema)(schema, options);
 
-	if (typeof validator !== "object")
-		return [{ message: "Invalid validator: expected object, got " + typeof validator }];
-	if (typeof rootQuery !== "object")
-		return [{ message: "Invalid query: expected object, got " + typeof rootQuery }];
-
+	if (typeof validator !== "object") {
+		return [
+			{
+				message: "Invalid validator: expected object, got " + typeof validator,
+			},
+		];
+	}
+	if (typeof rootQuery !== "object") {
+		return [
+			{ message: "Invalid query: expected object, got " + typeof rootQuery },
+		];
+	}
 	// check for the special case of a null result to improve error quality
-	if (rootQuery.id && result === null) return [];
+	if (rootQuery.id && result === null) {
+		return [];
+	}
 
 	const cache = getValidateQueryResultCache(schema, validator, rootQuery);
 	let compiledValidator = cache.value;
@@ -528,7 +633,9 @@ export function validateQueryResult(schema, rootQuery, result, options = {}) {
 
 				if (defaultExpressionEngine.isExpression(def)) return {};
 
-				if (typeof def === "string") return { ...resDef.attributes[def] };
+				if (typeof def === "string") {
+					return { ...resDef.attributes[def] };
+				}
 
 				const relDef = resDef.relationships[prop];
 				return relDef.cardinality === "one"

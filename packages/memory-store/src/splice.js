@@ -80,7 +80,7 @@ function handleInverseRelationships(
 	if (!parent || !parentRelSchema?.inverse) return;
 
 	const { schema } = context;
-	const inverse = parentRelSchema.inverse;
+	const { inverse } = parentRelSchema;
 	const relSchema = schema.resources[resource.type].relationships[inverse];
 
 	resource.relationships = resource.relationships ?? {};

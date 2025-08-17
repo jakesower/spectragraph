@@ -15,9 +15,9 @@
 	"scripts": {
 		"build": "npm run clean && rollup -c && cp index.d.ts dist/",
 		"clean": "rm -rf dist",
-		"lint": "eslint src/",
+		"lint": "eslint src/ test/",
 		"prepublishOnly": "npm run lint && npm run test && npm run build",
-		"test": "NODE_ENV=test vitest run",
+		"test": "NODE_ENV=test vitest run --coverage",
 		"test:watch": "vitest"
 	},
 	"keywords": [],
@@ -25,6 +25,7 @@
 	"devDependencies": {
 		"@rollup/plugin-commonjs": "^28.0.1",
 		"@rollup/plugin-node-resolve": "^16.0.0",
+		"@vitest/coverage-v8": "^3.2.4",
 		"rollup": "^4.28.1",
 		"vitest": "^3.2.4"
 	},
@@ -38,7 +39,5 @@
 		"LICENSE"
 	],
 	"sideEffects": false,
-	"dependencies": {
-		"lodash-es": "^4.17.21"
-	}
+	"dependencies": {}
 }
