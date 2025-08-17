@@ -32,6 +32,14 @@ import { splice } from "./splice.js";
  * @property {Ajv} [validator] - Custom AJV validator instance (defaults to createValidator())
  */
 
+/**
+ * @typedef {Object} MemoryStoreContext
+ * @property {import('@data-prism/core').Schema} schema - The schema defining resource types and relationships
+ * @property {Ajv} [validator] - AJV validator instance for resource validation
+ * @property {MemoryStore} [store] - The memory store instance
+ * @property {import('@data-prism/core').Graph} storeGraph - The graph data structure containing all resources
+ */
+
 
 
 /**
