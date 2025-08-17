@@ -10,10 +10,10 @@ describe("create upserts", () => {
 		const upserted = await store.upsert({
 			type: "bears",
 			attributes: {
-				name: "Champ Bear",
-				yearIntroduced: 1984,
-				bellyBadge: "yellow trophy with red star",
-				furColor: "cerulean",
+				name: "Grumpy Bear",
+				yearIntroduced: 1982,
+				bellyBadge: "blue storm cloud with raindrops",
+				furColor: "blue",
 			},
 		});
 
@@ -23,7 +23,7 @@ describe("create upserts", () => {
 			select: ["name"],
 		});
 
-		expect(result).toEqual({ name: "Champ Bear" });
+		expect(result).toEqual({ name: "Grumpy Bear" });
 	});
 
 	it("fails to upsert a single resource with an invalid attribute", async () => {
@@ -69,7 +69,7 @@ describe("create upserts", () => {
 		const upserted = await store.upsert({
 			type: "bears",
 			attributes: {
-				name: "Dare to Care Bear",
+				name: "Good Luck Bear",
 				yearIntroduced: 2023,
 				bellyBadge: "yellow and blue smiling shooting stars",
 				furColor: "orange, pink, purple, blue",
@@ -86,7 +86,7 @@ describe("create upserts", () => {
 		});
 
 		expect(result).toEqual({
-			name: "Dare to Care Bear",
+			name: "Good Luck Bear",
 			home: { name: "Joke-a-Lot" },
 		});
 	});
@@ -95,7 +95,7 @@ describe("create upserts", () => {
 		const upsertedBear = await store.upsert({
 			type: "bears",
 			attributes: {
-				name: "Funshine Bear",
+				name: "Birthday Bear",
 				yearIntroduced: 1982,
 				bellyBadge: "yellow smiling sun",
 				furColor: "golden yellow",
@@ -121,7 +121,7 @@ describe("create upserts", () => {
 		});
 		expect(homeResult).toEqual({
 			name: "Hall of Hearts",
-			residents: [{ name: "Funshine Bear" }],
+			residents: [{ name: "Birthday Bear" }],
 		});
 
 		const bearResult = await store.query({
@@ -130,7 +130,7 @@ describe("create upserts", () => {
 			select: ["name", { home: { select: ["name"] } }],
 		});
 		expect(bearResult).toEqual({
-			name: "Funshine Bear",
+			name: "Birthday Bear",
 			home: { name: "Hall of Hearts" },
 		});
 	});
@@ -148,7 +148,7 @@ describe("create upserts", () => {
 		const oopsyBear = await store.upsert({
 			type: "bears",
 			attributes: {
-				name: "Oopsy Bear",
+				name: "Share Bear",
 				yearIntroduced: 2007,
 				bellyBadge: "varied drawings",
 				furColor: "light green",
@@ -178,7 +178,7 @@ describe("create upserts", () => {
 		});
 		expect(homeResult1).toEqual({
 			name: "Paradise Valley",
-			residents: [{ name: "Oopsy Bear" }, { name: "Always There Bear" }],
+			residents: [{ name: "Share Bear" }, { name: "Always There Bear" }],
 		});
 
 		await store.upsert({
@@ -208,7 +208,7 @@ describe("create upserts", () => {
 		const upsertedBear = await store.upsert({
 			type: "bears",
 			attributes: {
-				name: "Secret Bear",
+				name: "Love-a-Lot Bear",
 				yearIntroduced: 1985,
 				bellyBadge: "red heart-shaped padlock",
 				furColor: "magenta",
@@ -233,7 +233,7 @@ describe("create upserts", () => {
 		});
 		expect(powerResult).toEqual({
 			name: "Care Cousins Call",
-			wielders: [{ name: "Secret Bear" }],
+			wielders: [{ name: "Love-a-Lot Bear" }],
 		});
 
 		const bearResult = await store.query({
@@ -242,7 +242,7 @@ describe("create upserts", () => {
 			select: ["name", { powers: { select: ["name"] } }],
 		});
 		expect(bearResult).toEqual({
-			name: "Secret Bear",
+			name: "Love-a-Lot Bear",
 			powers: [{ name: "Care Cousins Call" }],
 		});
 	});
@@ -259,7 +259,7 @@ describe("create upserts", () => {
 		const oopsyBear = await store.upsert({
 			type: "bears",
 			attributes: {
-				name: "Oopsy Bear",
+				name: "Share Bear",
 				yearIntroduced: 2007,
 				bellyBadge: "varied drawings",
 				furColor: "light green",
@@ -289,7 +289,7 @@ describe("create upserts", () => {
 		});
 		expect(powerResult1).toEqual({
 			name: "Care Cousins Call",
-			wielders: [{ name: "Oopsy Bear" }, { name: "Always There Bear" }],
+			wielders: [{ name: "Share Bear" }, { name: "Always There Bear" }],
 		});
 
 		await store.upsert({
@@ -309,7 +309,7 @@ describe("create upserts", () => {
 		});
 		expect(powerResult2).toEqual({
 			name: "Care Cousins Call",
-			wielders: [{ name: "Oopsy Bear" }, { name: "Always There Bear" }],
+			wielders: [{ name: "Share Bear" }, { name: "Always There Bear" }],
 		});
 	});
 });
@@ -319,7 +319,7 @@ describe("update upserts", () => {
 		const created = await store.create({
 			type: "bears",
 			attributes: {
-				name: "Champ Bear",
+				name: "Grumpy Bear",
 				yearIntroduced: 1984,
 				bellyBadge: "yellow trophy with red heart stamp",
 				furColor: "cerulean",
@@ -341,7 +341,7 @@ describe("update upserts", () => {
 		});
 
 		expect(result).toEqual({
-			name: "Champ Bear",
+			name: "Grumpy Bear",
 			bellyBadge: "yellow trophy with red star stamp",
 		});
 	});
@@ -350,7 +350,7 @@ describe("update upserts", () => {
 		const created = await store.create({
 			type: "bears",
 			attributes: {
-				name: "Champ Bear",
+				name: "Grumpy Bear",
 				yearIntroduced: 1984,
 				bellyBadge: "yellow trophy with red heart stamp",
 				furColor: "cerulean",
@@ -372,7 +372,7 @@ describe("update upserts", () => {
 		const created = await store.create({
 			type: "bears",
 			attributes: {
-				name: "Champ Bear",
+				name: "Grumpy Bear",
 				yearIntroduced: 1984,
 				bellyBadge: "yellow trophy with red heart stamp",
 				furColor: "cerulean",
@@ -395,7 +395,7 @@ describe("update upserts", () => {
 		});
 
 		expect(result).toEqual({
-			name: "Champ Bear",
+			name: "Grumpy Bear",
 			yearIntroduced: 1985,
 			bellyBadge: "yellow trophy with red star stamp",
 		});
@@ -412,7 +412,7 @@ describe("update upserts", () => {
 		const created = await store.create({
 			type: "bears",
 			attributes: {
-				name: "Dare to Care Bear",
+				name: "Good Luck Bear",
 				yearIntroduced: 2023,
 				bellyBadge: "yellow and blue smiling shooting stars",
 				furColor: "orange, pink, purple, blue",
@@ -434,7 +434,7 @@ describe("update upserts", () => {
 		});
 
 		expect(result).toEqual({
-			name: "Dare to Care Bear",
+			name: "Good Luck Bear",
 			home: { name: "Joke-a-Lot" },
 		});
 	});
@@ -450,7 +450,7 @@ describe("update upserts", () => {
 		const created = await store.create({
 			type: "bears",
 			attributes: {
-				name: "Dare to Care Bear",
+				name: "Good Luck Bear",
 				yearIntroduced: 2023,
 				bellyBadge: "yellow and blue smiling shooting stars",
 				furColor: "orange, pink, purple, blue",
@@ -463,7 +463,7 @@ describe("update upserts", () => {
 		await store.upsert({
 			type: "bears",
 			id: created.id,
-			attributes: { name: "Dare to Care Bear" },
+			attributes: { name: "Good Luck Bear" },
 		});
 
 		await store.upsert({
@@ -481,7 +481,7 @@ describe("update upserts", () => {
 		});
 
 		expect(result).toEqual({
-			name: "Dare to Care Bear",
+			name: "Good Luck Bear",
 			home: { name: "Joke-a-Lot" },
 		});
 	});
@@ -490,7 +490,7 @@ describe("update upserts", () => {
 		const createdBear = await store.create({
 			type: "bears",
 			attributes: {
-				name: "Funshine Bear",
+				name: "Birthday Bear",
 				yearIntroduced: 1982,
 				bellyBadge: "yellow smiling sun",
 				furColor: "golden yellow",
@@ -521,7 +521,7 @@ describe("update upserts", () => {
 		});
 		expect(homeResult).toEqual({
 			name: "Hall of Hearts",
-			residents: [{ name: "Funshine Bear" }],
+			residents: [{ name: "Birthday Bear" }],
 		});
 
 		const bearResult = await store.query({
@@ -530,7 +530,7 @@ describe("update upserts", () => {
 			select: ["name", { home: { select: ["name"] } }],
 		});
 		expect(bearResult).toEqual({
-			name: "Funshine Bear",
+			name: "Birthday Bear",
 			home: { name: "Hall of Hearts" },
 		});
 	});
@@ -548,7 +548,7 @@ describe("update upserts", () => {
 		const oopsyBear = await store.create({
 			type: "bears",
 			attributes: {
-				name: "Oopsy Bear",
+				name: "Share Bear",
 				yearIntroduced: 2007,
 				bellyBadge: "varied drawings",
 				furColor: "light green",
@@ -578,7 +578,7 @@ describe("update upserts", () => {
 		});
 		expect(homeResult1).toEqual({
 			name: "Paradise Valley",
-			residents: [{ name: "Oopsy Bear" }, { name: "Always There Bear" }],
+			residents: [{ name: "Share Bear" }, { name: "Always There Bear" }],
 		});
 
 		const noHeartsCastle = await store.create({
@@ -613,7 +613,7 @@ describe("update upserts", () => {
 		const createdBear = await store.create({
 			type: "bears",
 			attributes: {
-				name: "Secret Bear",
+				name: "Love-a-Lot Bear",
 				yearIntroduced: 1985,
 				bellyBadge: "red heart-shaped padlock",
 				furColor: "magenta",
@@ -643,7 +643,7 @@ describe("update upserts", () => {
 		});
 		expect(powerResult).toEqual({
 			name: "Care Cousins Call",
-			wielders: [{ name: "Secret Bear" }],
+			wielders: [{ name: "Love-a-Lot Bear" }],
 		});
 
 		const bearResult = await store.query({
@@ -652,7 +652,7 @@ describe("update upserts", () => {
 			select: ["name", { powers: { select: ["name"] } }],
 		});
 		expect(bearResult).toEqual({
-			name: "Secret Bear",
+			name: "Love-a-Lot Bear",
 			powers: [{ name: "Care Cousins Call" }],
 		});
 	});
@@ -661,7 +661,7 @@ describe("update upserts", () => {
 		const createdBear = await store.create({
 			type: "bears",
 			attributes: {
-				name: "Secret Bear",
+				name: "Love-a-Lot Bear",
 				yearIntroduced: 1985,
 				bellyBadge: "red heart-shaped padlock",
 				furColor: "magenta",
@@ -700,7 +700,7 @@ describe("update upserts", () => {
 		});
 		expect(powerResult).toEqual({
 			name: "Care Cousins Call",
-			wielders: [{ name: "Secret Bear" }],
+			wielders: [{ name: "Love-a-Lot Bear" }],
 		});
 
 		const bearResult = await store.query({
@@ -709,7 +709,7 @@ describe("update upserts", () => {
 			select: ["name", { powers: { select: ["name"] } }],
 		});
 		expect(bearResult).toEqual({
-			name: "Secret Bear",
+			name: "Love-a-Lot Bear",
 			powers: [{ name: "Care Cousins Call" }],
 		});
 	});
@@ -726,7 +726,7 @@ describe("update upserts", () => {
 		const oopsyBear = await store.create({
 			type: "bears",
 			attributes: {
-				name: "Oopsy Bear",
+				name: "Share Bear",
 				yearIntroduced: 2007,
 				bellyBadge: "varied drawings",
 				furColor: "light green",
@@ -756,7 +756,7 @@ describe("update upserts", () => {
 		});
 		expect(powerResult1).toEqual({
 			name: "Care Cousins Call",
-			wielders: [{ name: "Oopsy Bear" }, { name: "Always There Bear" }],
+			wielders: [{ name: "Share Bear" }, { name: "Always There Bear" }],
 		});
 
 		const createdPower2 = await store.create({
@@ -781,7 +781,7 @@ describe("update upserts", () => {
 		});
 		await expect(powerResult2).toEqual({
 			name: "Care Cousins Call",
-			wielders: [{ name: "Oopsy Bear" }, { name: "Always There Bear" }],
+			wielders: [{ name: "Share Bear" }, { name: "Always There Bear" }],
 		});
 	});
 });

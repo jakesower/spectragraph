@@ -8,10 +8,10 @@ it("splices a single resource with only attributes", async () => {
 	const spliced = await store.splice({
 		type: "bears",
 		attributes: {
-			name: "Champ Bear",
+			name: "Bedtime Bear",
 			yearIntroduced: 1984,
-			bellyBadge: "yellow trophy with red star",
-			furColor: "cerulean",
+			bellyBadge: "white crescent moon with yellow star",
+			furColor: "turquoise",
 		},
 	});
 
@@ -21,17 +21,17 @@ it("splices a single resource with only attributes", async () => {
 		select: ["name"],
 	});
 
-	expect(result).toEqual({ name: "Champ Bear" });
+	expect(result).toEqual({ name: "Bedtime Bear" });
 });
 
 it("updates a single resource with only attributes", async () => {
 	const created = await store.create({
 		type: "bears",
 		attributes: {
-			name: "Champ Bear",
-			yearIntroduced: 1984,
-			bellyBadge: "yellow trophy with red heart stamp",
-			furColor: "cerulean",
+			name: "Friend Bear",
+			yearIntroduced: 1982,
+			bellyBadge: "two yellow smiling flowers",
+			furColor: "orange",
 		},
 	});
 
@@ -39,7 +39,7 @@ it("updates a single resource with only attributes", async () => {
 		type: "bears",
 		id: created.id,
 		attributes: {
-			bellyBadge: "yellow trophy with red star stamp",
+			bellyBadge: "two yellow smiling flowers with hearts",
 		},
 	});
 
@@ -50,8 +50,8 @@ it("updates a single resource with only attributes", async () => {
 	});
 
 	expect(result).toEqual({
-		name: "Champ Bear",
-		bellyBadge: "yellow trophy with red star stamp",
+		name: "Friend Bear",
+		bellyBadge: "two yellow smiling flowers with hearts",
 	});
 });
 
