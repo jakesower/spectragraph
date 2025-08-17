@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import Database from "better-sqlite3";
 import { createTables, seed } from "../../src/seed.js";
 import { createSQLiteStore } from "../../src/sqlite-store.js";
-import { careBearData } from "../fixtures/care-bear-data.js";
+import careBearData from "../fixtures/care-bear-data.json";
 import careBearSchema from "../fixtures/care-bears.schema.json";
 import { careBearConfig } from "../care-bear-config.js";
 

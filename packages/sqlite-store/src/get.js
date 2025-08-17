@@ -1,8 +1,8 @@
 import { mapValues, omit } from "lodash-es";
-import { mapSchemalessQuery, queryGraph } from "data-prism";
+import { queryGraph } from "@data-prism/core";
 import { buildSql, composeClauses } from "./helpers/sql.js";
 import { runQuery } from "./operations/operations.js";
-import { flattenQuery } from "./helpers/query-helpers.ts";
+import { flattenQuery } from "./helpers/query-helpers.js";
 import { castValToDb } from "./helpers/sql.js";
 import { varsExpressionEngine } from "./helpers/sql-expressions.js";
 
@@ -128,8 +128,9 @@ export function get(query, context) {
 		allResults.forEach((row) => extractor(row));
 
 		return queryGraph(
+			schema,
+			omit(query, ["limit", "offset", "where"]),
 			dataGraph,
-			mapSchemalessQuery(query, (q) => omit(q, ["limit", "offset", "where"])),
 		);
 	});
 }

@@ -1,3 +1,8 @@
+/**
+ * @typedef {Object} CareBearConfig
+ * @property {Object} resources - Resource configuration
+ */
+
 export const careBearConfig = {
 	resources: {
 		bears: {
@@ -30,4 +35,4 @@ export const careBearConfig = {
 			},
 		},
 	},
-} as const;
+};

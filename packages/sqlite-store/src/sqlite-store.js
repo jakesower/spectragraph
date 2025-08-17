@@ -7,7 +7,7 @@ export function createSQLiteStore(schema, db, config = {}) {
 	};
 
 	return {
-		get: async (query) =>
+		query: async (query) =>
 			getQuery(query, {
 				config: fullStoreConfig,
 				schema,

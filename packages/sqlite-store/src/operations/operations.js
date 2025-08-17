@@ -1,5 +1,5 @@
 import { preQueryRelationships } from "./relationships.js";
-import { flattenQuery } from "../helpers/query-helpers.ts";
+import { flattenQuery } from "../helpers/query-helpers.js";
 import { uniq } from "lodash-es";
 import { whereExpressionEngine } from "../helpers/sql-expressions.js";
 
