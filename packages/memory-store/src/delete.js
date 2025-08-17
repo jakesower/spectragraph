@@ -7,9 +7,7 @@
  * WARNING: MUTATES storeGraph
  * 
  * @param {import('@data-prism/core').DeleteResource} resource - The resource to delete
- * @param {Object} context - Context object containing schema and storeGraph
- * @param {import('@data-prism/core').Schema} context.schema - The schema defining resource types and relationships
- * @param {import('@data-prism/core').Graph} context.storeGraph - The graph data structure to modify
+ * @param {import('./memory-store.js').MemoryStoreContext} context - Context object containing schema and storeGraph
  * @returns {import('@data-prism/core').DeleteResource} The deleted resource
  */
 export function deleteAction(resource, context) {

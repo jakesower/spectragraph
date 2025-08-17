@@ -4,11 +4,7 @@ import { applyOrMap } from "@data-prism/utils";
 import { ensureValidSpliceResource } from "@data-prism/core";
 
 /**
- * @typedef {Object} Context
- * @property {import('@data-prism/core').Schema} schema - The schema defining resource types and relationships
- * @property {Ajv} validator - AJV validator instance for resource validation
- * @property {import('./memory-store.js').MemoryStore} store - The memory store instance
- * @property {import('@data-prism/core').Graph} storeGraph - The graph data structure containing all resources
+ * @typedef {import('./memory-store.js').MemoryStoreContext} Context
  */
 
 /**
