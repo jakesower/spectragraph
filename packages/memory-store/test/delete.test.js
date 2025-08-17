@@ -8,10 +8,10 @@ it("deletes a single resource", async () => {
 	const created = await store.create({
 		type: "bears",
 		attributes: {
-			name: "Champ Bear",
-			yearIntroduced: 1984,
-			bellyBadge: "yellow trophy with red heart stamp",
-			furColor: "cerulean",
+			name: "Grumpy Bear",
+			yearIntroduced: 1982,
+			bellyBadge: "blue storm cloud with raindrops",
+			furColor: "blue",
 		},
 	});
 
@@ -33,17 +33,17 @@ it("deletes a single resource with a local relationship", async () => {
 	const createdHome = await store.create({
 		type: "homes",
 		attributes: {
-			name: "Joke-a-Lot",
+			name: "Rainbow Falls",
 		},
 	});
 
 	const created = await store.create({
 		type: "bears",
 		attributes: {
-			name: "Dare to Care Bear",
-			yearIntroduced: 2023,
-			bellyBadge: "yellow and blue smiling shooting stars",
-			furColor: "orange, pink, purple, blue",
+			name: "Good Luck Bear",
+			yearIntroduced: 1982,
+			bellyBadge: "green four-leaf clover",
+			furColor: "green",
 		},
 	});
 
@@ -71,10 +71,10 @@ it("deletes a single resource with a foreign to-one relationship", async () => {
 	const createdBear = await store.create({
 		type: "bears",
 		attributes: {
-			name: "Funshine Bear",
-			yearIntroduced: 1982,
-			bellyBadge: "yellow smiling sun",
-			furColor: "golden yellow",
+			name: "Birthday Bear",
+			yearIntroduced: 1984,
+			bellyBadge: "pink cupcake with candle",
+			furColor: "pink",
 		},
 	});
 
@@ -122,13 +122,13 @@ it("deletes all many-to-many foreign relationships that belong to a deleted reso
 		},
 	});
 
-	const oopsyBear = await store.create({
+	const shareBear = await store.create({
 		type: "bears",
 		attributes: {
-			name: "Oopsy Bear",
-			yearIntroduced: 2007,
-			bellyBadge: "varied drawings",
-			furColor: "light green",
+			name: "Share Bear",
+			yearIntroduced: 1988,
+			bellyBadge: "two ice cream sundaes",
+			furColor: "lavender",
 		},
 		relationships: {
 			powers: [{ type: "powers", id: createdPower.id }],
@@ -155,7 +155,7 @@ it("deletes all many-to-many foreign relationships that belong to a deleted reso
 	});
 	expect(powerResultPre).toEqual({
 		name: "Care Cousins Call",
-		wielders: [{ name: "Oopsy Bear" }, { name: "Always There Bear" }],
+		wielders: [{ name: "Share Bear" }, { name: "Always There Bear" }],
 	});
 
 	const createdPower2 = await store.create({
@@ -164,13 +164,13 @@ it("deletes all many-to-many foreign relationships that belong to a deleted reso
 			name: "Fly",
 		},
 		relationships: {
-			wielders: [{ type: "bears", id: oopsyBear.id }],
+			wielders: [{ type: "bears", id: shareBear.id }],
 		},
 	});
 
 	await store.delete({
 		type: "bears",
-		id: oopsyBear.id,
+		id: shareBear.id,
 	});
 
 	const powerResult1 = await store.query({
