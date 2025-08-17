@@ -8,8 +8,7 @@ import {
 	validateUpdateResource,
 	createResource,
 } from "../src/resource.js";
-import soccerSchema from "./fixtures/soccer.schema.json" with { type: "json" };
-import geojsonSchema from "./fixtures/geojson.schema.json" with { type: "json" };
+import { soccerSchema, geojsonSchema } from "@data-prism/test-fixtures";
 
 const geojsonDPSchema = structuredClone(soccerSchema);
 geojsonDPSchema.resources.fields.attributes.location = {

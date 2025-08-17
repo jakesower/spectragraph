@@ -1,0 +1,140 @@
+{
+	"$comment": "this schema is meant to be suitable for validation tests",
+	"resources": {
+		"fields": {
+			"attributes": {
+				"id": { "type": "string" },
+				"name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9 ]+" },
+				"surface": { "type": "string", "default": "grass" },
+				"capacity": { "type": "integer", "default": 5000 },
+				"amenities": {
+					"type": "array",
+					"items": { "type": "string" },
+					"default": []
+				}
+			},
+			"relationships": {
+				"teams": {
+					"type": "teams",
+					"cardinality": "many",
+					"inverse": "homeField"
+				}
+			}
+		},
+		"games": {
+			"idAttribute": "id",
+			"requiredAttributes": ["homeScore", "awayScore"],
+			"attributes": {
+				"id": { "type": "string" },
+				"homeScore": { "type": "integer", "minimum": 0 },
+				"awayScore": { "type": "integer", "minimum": 0 },
+				"status": { "type": "string", "default": "scheduled" },
+				"attendance": { "type": "integer", "default": 0 },
+				"bookings": {
+					"type": "object",
+					"default": {
+						"homeTeam": [],
+						"awayTeam": []
+					}
+				}
+			},
+			"relationships": {
+				"homeTeam": {
+					"cardinality": "one",
+					"type": "teams",
+					"inverse": "homeGames"
+				},
+				"awayTeam": {
+					"cardinality": "one",
+					"type": "teams",
+					"inverse": "awayGames"
+				},
+				"referee": {
+					"cardinality": "one",
+					"type": "referees",
+					"inverse": "games"
+				}
+			}
+		},
+		"referees": {
+			"requiredAttributes": ["name"],
+			"attributes": {
+				"id": { "type": "string" },
+				"name": { "type": "string" },
+				"certifications": {
+					"type": "array",
+					"default": [],
+					"items": {
+						"type": "object",
+						"properties": {
+							"certifyingBody": { "type": "string" },
+							"grade": { "type": "integer", "default": 9 }
+						}
+					}
+				},
+				"experience": { "type": "integer", "default": 0 }
+			},
+			"relationships": {
+				"games": {
+					"type": "games",
+					"cardinality": "many",
+					"inverse": "referee"
+				}
+			}
+		},
+		"teams": {
+			"idAttribute": "id",
+			"requiredAttributes": ["name"],
+			"attributes": {
+				"id": { "type": "string" },
+				"name": { "type": "string" },
+				"homeColor": { "type": "string", "default": "blue" },
+				"awayColor": { "type": "string", "default": "white" },
+				"founded": { "type": "integer", "default": 2000 },
+				"active": { "type": "boolean", "default": true },
+				"sponsors": {
+					"type": "object",
+					"default": { "FIFA": {} },
+					"properties": {
+						"FIFA": {
+							"type": "object",
+							"default": { "amount": 50 }
+						}
+					},
+					"patternProperties": {
+						"^local_": {
+							"type": "object",
+							"default": { "amount": 5000, "region": "local" }
+						},
+						"^global_": {
+							"type": "object",
+							"default": { "amount": 25000000, "region": "global" }
+						}
+					},
+					"additionalProperties": {
+						"type": "object",
+						"default": { "amount": 10000000 }
+					}
+				}
+			},
+			"requiredRelationships": ["homeField"],
+			"relationships": {
+				"homeGames": {
+					"cardinality": "many",
+					"type": "games",
+					"inverse": "homeTeam"
+				},
+				"awayGames": {
+					"cardinality": "many",
+					"type": "games",
+					"inverse": "awayTeam"
+				},
+				"homeField": {
+					"cardinality": "one",
+					"type": "fields",
+					"inverse": "teams"
+				}
+			}
+		}
+	}
+}

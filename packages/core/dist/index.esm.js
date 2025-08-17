@@ -3405,12 +3405,21 @@ var definitions$1 = {
 	},
 	query: {
 		type: "object",
+		required: [
+			"select"
+		],
 		properties: {
 			type: {
 				type: "string"
 			},
 			select: {
-				$ref: "#/definitions/select"
+				anyOf: [
+					{
+						$ref: "#/definitions/select"
+					},
+					{
+					}
+				]
 			}
 		}
 	},
@@ -3492,6 +3501,7 @@ var baseQuerySchema = {
  */
 
 const getResourceSchemaCache = createDeepCache();
+const getResourceSchemaEECache = createDeepCache();
 
 let validateQueryShape;
 
@@ -3511,8 +3521,10 @@ const createErrorReporter =
 		value,
 	});
 
-function getResourceStructureValidator(schema, resourceType) {
-	let resourceSchemaCache = getResourceSchemaCache(schema);
+function getResourceStructureValidator(schema, resourceType, expressionEngine) {
+	let resourceSchemaCache = expressionEngine
+		? getResourceSchemaEECache(schema, expressionEngine)
+		: getResourceSchemaCache(schema);
 
 	let resourceSchemasByType;
 	if (!resourceSchemaCache.value) {
@@ -3523,6 +3535,16 @@ function getResourceStructureValidator(schema, resourceType) {
 		const resourceSchema = resourceSchemasByType.get(resourceType);
 		if (resourceSchema) return resourceSchema;
 	}
+
+	const extraExpressionRules = expressionEngine
+		? {
+				additionalProperties: false,
+				properties: expressionEngine.expressionNames.reduce(
+					(acc, n) => ({ ...acc, [n]: {} }),
+					{},
+				),
+			}
+		: {};
 
 	const ajvSchema = {
 		type: "object",
@@ -3535,7 +3557,7 @@ function getResourceStructureValidator(schema, resourceType) {
 			offset: { type: "integer", minimum: 0 },
 			where: {
 				anyOf: [
-					{ $ref: "#/definitions/expressionLike" },
+					{ $ref: "#/definitions/expression" },
 					{
 						type: "object",
 						properties: mapValues(
@@ -3567,10 +3589,11 @@ function getResourceStructureValidator(schema, resourceType) {
 			},
 		},
 		definitions: {
-			expressionLike: {
+			expression: {
 				type: "object",
 				minProperties: 1,
 				maxProperties: 1,
+				...extraExpressionRules,
 			},
 			orderItem: {
 				type: "object",
@@ -3603,15 +3626,18 @@ function getResourceStructureValidator(schema, resourceType) {
  * @param {Object} query - The query to validate
  * @param {string} type - Resource type
  * @param {Array} path - Current validation path
- * @param {Object} validationFns - Validation functions
+ * @param {Object} expressionEngine - Validation functions
  * @return {{errors: Array, isValid: boolean}}
  */
-function validateSemantics(schema, query, type, path, validationFns) {
-	const { isValidExpression, skipStringValidation } = validationFns;
+function validateSemantics(schema, query, type, path, expressionEngine) {
 	const errors = [];
 	const addError = (message, path, value) => {
 		errors.push(createErrorReporter()(message, path, value));
 	};
+
+	const isValidExpression = expressionEngine
+		? expressionEngine.isExpression
+		: isExpressionLike;
 
 	const resSchema = schema.resources[type];
 
@@ -3666,7 +3692,7 @@ function validateSemantics(schema, query, type, path, validationFns) {
 				return;
 			}
 
-			if (typeof val === "string" && !skipStringValidation) {
+			if (typeof val === "string") {
 				if (!isValidAttribute(val, resSchema)) {
 					addError(
 						`Invalid attribute "${val}": not a valid attribute name.`,
@@ -3698,7 +3724,7 @@ function validateSemantics(schema, query, type, path, validationFns) {
 				return;
 			}
 
-			if (typeof val === "string" && !skipStringValidation) {
+			if (typeof val === "string") {
 				if (!isValidAttribute(val, resSchema)) {
 					addError(
 						`Invalid attribute "${val}" in select array: use "*" or a valid attribute name.`,
@@ -3714,10 +3740,10 @@ function validateSemantics(schema, query, type, path, validationFns) {
 
 	if (Array.isArray(query.select)) validateSelectArray(query.select);
 	else if (typeof query.select === "object")
-		validateSelectObject(query.select, [...path, "select"]);
-	else if (!skipStringValidation) {
+		{validateSelectObject(query.select, [...path, "select"]);}
+	else {
 		addError(
-			"Invalid select value: must be \"*\", an object, or an array.",
+			'Invalid select value: must be "*", an object, or an array.',
 			[...path, "select"],
 			query.select,
 		);
@@ -3727,30 +3753,54 @@ function validateSemantics(schema, query, type, path, validationFns) {
 }
 
 /**
- * Private function that orchestrates validation phases
+ * Validates that a query is valid against the schema
  *
  * @param {Object} schema - The schema object
- * @param {RootQuery} rootQuery - The query to validate
- * @param {Object} validationFns - Validation functions
+ * @param {RootQuery} query - The query to validate
+ * @param {Object} [options]
+ * @param {Object} [options.expressionEngine] - a @data-prism/graph expression engine
  * @return {import('./lib/helpers.js').StandardError[]}
  */
-function validateQueryStructure(schema, rootQuery, validationFns) {
+function validateQuery(schema, rootQuery, options = {}) {
+	const { expressionEngine } = options;
+
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
+
+	if (typeof rootQuery !== "object") {
+		return [
+			{ message: "Invalid query: expected object, got " + typeof rootQuery },
+		];
+	}
+
+	if (expressionEngine && typeof expressionEngine !== "object") {
+		return [{ message: "[data-prism] expressionEngine must be an object" }];
+
+	}
+	if (!rootQuery.type) {
+		return [{ message: "Missing query type: required for validation" }];
+
+	}
+	// Shape validation
+	if (!validateQueryShape)
+		{validateQueryShape = defaultValidator.compile(baseQuerySchema);}
+	const shapeResult = validateQueryShape(rootQuery);
+	if (!shapeResult) return validateQueryShape.errors;
+
 	const errors = [];
-	// Cache structure validators to avoid repeated calls
-	const structureValidators = new Map();
-
 	const go = (query, type, path) => {
-		// Structural validation first
-		if (!structureValidators.has(type)) {
-			structureValidators.set(
-				type,
-				getResourceStructureValidator(schema, type),
-			);
-		}
-		const validator = structureValidators.get(type);
+		const validator = getResourceStructureValidator(
+			schema,
+			type,
+			expressionEngine,
+		);
 
-		const structuralIsValid = validator(query);
-		if (!structuralIsValid) {
+		// Structure validation first
+		const structureIsValid = validator(query);
+		if (!structureIsValid) {
 			translateAjvErrors(validator.errors, query, "query").forEach((err) =>
 				errors.push(err),
 			);
@@ -3763,7 +3813,7 @@ function validateQueryStructure(schema, rootQuery, validationFns) {
 			query,
 			type,
 			path,
-			validationFns,
+			expressionEngine,
 		);
 		errors.push(...semanticResult.errors);
 
@@ -3772,38 +3822,14 @@ function validateQueryStructure(schema, rootQuery, validationFns) {
 			const resSchema = schema.resources[type];
 			Object.entries(query.select).forEach(([key, val]) => {
 				if (key in resSchema.relationships && typeof val === "object")
-					go(val, resSchema.relationships[key].type, [...path, key]);
+					{go(val, resSchema.relationships[key].type, [...path, key]);}
 			});
 		}
+
+		return errors;
 	};
 
-	go(rootQuery, rootQuery.type, []);
-	return errors;
-}
-
-/**
- * Validates that a query is valid against the schema
- *
- * @param {Object} schema - The schema object
- * @param {RootQuery} query - The query to validate
- * @return {import('./lib/helpers.js').StandardError[]}
- */
-function validateQuery(schema, rootQuery) {
-	if (!validateQueryShape)
-		validateQueryShape = defaultValidator.compile(baseQuerySchema);
-
-	if (typeof schema !== "object")
-		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
-	if (typeof rootQuery !== "object")
-		return [{ message: "Invalid query: expected object, got " + typeof rootQuery }];
-	if (!rootQuery.type) return [{ message: "Missing query type: required for validation" }];
-
-	// Shape validation
-	if (!validateQueryShape(rootQuery) > 0) return validateQueryShape.errors;
-
-	return validateQueryStructure(schema, rootQuery, {
-		isValidExpression: isExpressionLike,
-	});
+	return go(rootQuery, rootQuery.type, []);
 }
 
 /**
@@ -3816,31 +3842,37 @@ function validateQuery(schema, rootQuery) {
 function normalizeQuery(schema, rootQuery) {
 	ensure(validateQuery)(schema, rootQuery);
 
-	const stringToProp = (str) => ({
-		[str]: str,
-	});
-
 	const go = (query, type) => {
 		const { select } = query;
+		const resSchema = schema.resources[type];
 
-		const selectWithExpandedStar =
-			select === "*" ? Object.keys(schema.resources[type].attributes) : select;
+		const selectWithExpandedStar = select === "*" 
+			? Object.keys(resSchema.attributes) 
+			: select;
 
 		const selectObj = Array.isArray(selectWithExpandedStar)
-			? selectWithExpandedStar.reduce((selectObj, item) => {
-					const subObj = typeof item === "string" ? stringToProp(item) : item;
-					return { ...selectObj, ...subObj };
-				}, {})
+			? (() => {
+				const result = {};
+				for (const item of selectWithExpandedStar) {
+					if (typeof item === "string") {
+						result[item] = item;
+					} else {
+						Object.assign(result, item);
+					}
+				}
+				return result;
+			})()
 			: select;
 
 		const selectWithStar = selectObj["*"]
-			? {
-					...Object.keys(schema.resources[type].attributes).reduce(
-						(acc, attr) => ({ ...acc, ...stringToProp(attr) }),
-						{},
-					),
-					...omit(selectObj, ["*"]),
+			? (() => {
+				const result = {};
+				for (const attr of Object.keys(resSchema.attributes)) {
+					result[attr] = attr;
 				}
+				Object.assign(result, omit(selectObj, ["*"]));
+				return result;
+			})()
 			: selectObj;
 
 		const selectWithSubqueries = mapValues(selectWithStar, (sel, key) => {
@@ -3867,6 +3899,48 @@ function normalizeQuery(schema, rootQuery) {
 	};
 
 	return go(rootQuery, rootQuery.type);
+}
+
+function buildAttribute(attrSchema, curValue) {
+	const defaultedValue = curValue === undefined ? attrSchema.default : curValue;
+
+	if (attrSchema.type === "object" && typeof defaultedValue === "object") {
+		const mergedDefaultedValue = {
+			...mapValues(attrSchema.properties ?? {}, () => undefined),
+			...(attrSchema.default ?? {}),
+			...defaultedValue,
+		};
+
+		return mapValues(mergedDefaultedValue, (val, key) => {
+			if (key in (attrSchema.properties ?? {})) {
+				return buildAttribute(attrSchema.properties[key], val);
+			}
+
+			const patternPropKey = Object.keys(
+				attrSchema.patternProperties ?? {},
+			).find((ppKey) => new RegExp(ppKey).test(key));
+			if (patternPropKey) {
+				return buildAttribute(
+					attrSchema.patternProperties[patternPropKey],
+					val,
+				);
+			}
+
+			if (typeof attrSchema.additionalProperties === "object") {
+				return buildAttribute(attrSchema.additionalProperties, val);
+			}
+
+			return val;
+		});
+	}
+
+	if (attrSchema.type === "array" && Array.isArray(defaultedValue)) {
+		return defaultedValue.map((item) =>
+			buildAttribute(attrSchema.items ?? {}, item),
+		);
+	}
+
+	return defaultedValue;
 }
 
 /**
@@ -4032,7 +4106,9 @@ function normalizeResource(schema, resourceType, resource) {
 		const emptyRel = relSchema.cardinality === "many" ? [] : null;
 		const relIdField = relResSchema.idAttribute ?? "id";
 
-		if (resource[rel] === undefined) return undefined;
+		if (resource[rel] === undefined) {
+			return undefined;
+		}
 
 		return applyOrMap(resource[rel] ?? emptyRel, (relRes) =>
 			typeof relRes === "object"
@@ -4050,6 +4126,42 @@ function normalizeResource(schema, resourceType, resource) {
 }
 
 /**
+ * Creates a normalized resource with schema defaults applied
+ * @param {import('./schema.js').Schema} schema - The schema to use for defaults
+ * @param {CreateResource} [partialResource] - The partial resource to create from
+ * @returns {NormalResource} A complete normalized resource with defaults applied
+ */
+function createResource(schema, partialResource = {}) {
+	const { type, attributes = {}, relationships = {} } = partialResource;
+	const resSchema = schema.resources[type];
+
+	const id =
+		partialResource.id ?? partialResource[resSchema.idAttribute ?? "id"];
+
+	const builtAttributes = mapValues(
+		resSchema.attributes,
+		(attrSchema, attrName) => buildAttribute(attrSchema, attributes[attrName]),
+	);
+
+	const builtRelationships = mapValues(
+		resSchema.relationships,
+		(relSchema, relName) =>
+			relationships[relName] === undefined
+				? relSchema.cardinality === "one"
+					? null
+					: []
+				: relationships[relName],
+	);
+
+	return {
+		id: attributes[resSchema.idAttribute ?? "id"],
+		...partialResource,
+		attributes: { ...builtAttributes, [resSchema.idAttribute ?? "id"]: id },
+		relationships: builtRelationships,
+	};
+}
+
+/**
  * Validates a create resource operation
  * @param {import('./schema.js').Schema} schema - The schema to validate against
  * @param {CreateResource} resource - The resource to validate
@@ -4060,13 +4172,23 @@ function normalizeResource(schema, resourceType, resource) {
 function validateCreateResource(schema, resource, options = {}) {
 	const { validator = defaultValidator } = options;
 
-	if (typeof schema !== "object")
-		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
-	if (typeof validator !== "object")
-		return [{ message: "Invalid validator: expected object, got " + typeof validator }];
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
+	if (typeof validator !== "object") {
+		return [
+			{
+				message: "Invalid validator: expected object, got " + typeof validator,
+			},
+		];
+	}
 	if (!resource.type || !(resource.type in schema.resources)) {
 		return [
-			{ message: `Invalid resource type "${resource.type}": not defined in schema` },
+			{
+				message: `Invalid resource type "${resource.type}": not defined in schema`,
+			},
 		];
 	}
 
@@ -4081,10 +4203,12 @@ function validateCreateResource(schema, resource, options = {}) {
 	if (!compiledValidator) {
 		const resSchema = schema.resources[resource.type];
 		const required = ["type"];
-		if ((resSchema.requiredAttributes ?? []).length > 0)
+		if ((resSchema.requiredAttributes ?? []).length > 0) {
 			required.push("attributes");
-		if ((resSchema.requiredRelationships ?? []).length > 0)
+		}
+		if ((resSchema.requiredRelationships ?? []).length > 0) {
 			required.push("relationships");
+		}
 
 		compiledValidator = validator.compile({
 			type: "object",
@@ -4111,13 +4235,23 @@ function validateCreateResource(schema, resource, options = {}) {
 function validateUpdateResource(schema, resource, options = {}) {
 	const { validator = defaultValidator } = options;
 
-	if (typeof schema !== "object")
-		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
-	if (typeof validator !== "object")
-		return [{ message: "Invalid validator: expected object, got " + typeof validator }];
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
+	if (typeof validator !== "object") {
+		return [
+			{
+				message: "Invalid validator: expected object, got " + typeof validator,
+			},
+		];
+	}
 	if (!resource.type || !(resource.type in schema.resources)) {
 		return [
-			{ message: `Invalid resource type "${resource.type}": not defined in schema` },
+			{
+				message: `Invalid resource type "${resource.type}": not defined in schema`,
+			},
 		];
 	}
 
@@ -4131,10 +4265,8 @@ function validateUpdateResource(schema, resource, options = {}) {
 	let compiledValidator = schemaCache.get(resource.type);
 	if (!compiledValidator) {
 		const resSchema = schema.resources[resource.type];
-		if ((resSchema.requiredAttributes ?? []).length > 0)
-			;
-		if ((resSchema.requiredRelationships ?? []).length > 0)
-			;
+		if ((resSchema.requiredAttributes ?? []).length > 0) ;
+		if ((resSchema.requiredRelationships ?? []).length > 0) ;
 
 		compiledValidator = validator.compile({
 			type: "object",
@@ -4157,15 +4289,26 @@ function validateUpdateResource(schema, resource, options = {}) {
  * @returns {Array} Array of validation errors
  */
 function validateDeleteResource(schema, resource) {
-	if (typeof schema !== "object")
-		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
-	if (typeof resource !== "object")
-		return [{ message: "Invalid resource: expected object, got " + typeof resource }];
-	if (!resource.type || !(resource.type in schema.resources))
-		return [{ message: `Invalid resource type "${resource.type}": not defined in schema` }];
-	if (!resource.id)
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
+	if (typeof resource !== "object") {
+		return [
+			{ message: "Invalid resource: expected object, got " + typeof resource },
+		];
+	}
+	if (!resource.type || !(resource.type in schema.resources)) {
+		return [
+			{
+				message: `Invalid resource type "${resource.type}": not defined in schema`,
+			},
+		];
+	}
+	if (!resource.id) {
 		return [{ message: "Missing resource ID: required for delete operation" }];
-
+	}
 	return [];
 }
 
@@ -4181,13 +4324,23 @@ function validateDeleteResource(schema, resource) {
 function validateSpliceResource(schema, resource, options = {}) {
 	const { validator = defaultValidator } = options;
 
-	if (typeof schema !== "object")
-		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
-	if (typeof validator !== "object")
-		return [{ message: "Invalid validator: expected object, got " + typeof validator }];
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
+	if (typeof validator !== "object") {
+		return [
+			{
+				message: "Invalid validator: expected object, got " + typeof validator,
+			},
+		];
+	}
 	if (!resource.type || !(resource.type in schema.resources)) {
 		return [
-			{ message: `Invalid resource type "${resource.type}": not defined in schema` },
+			{
+				message: `Invalid resource type "${resource.type}": not defined in schema`,
+			},
 		];
 	}
 
@@ -4198,8 +4351,8 @@ function validateSpliceResource(schema, resource, options = {}) {
 		cache.set(schemaCache);
 	}
 
-	let compiledValidator = schemaCache.get(resource.type);
-	if (!compiledValidator) {
+	let compiledValidators = schemaCache.get(resource.type);
+	if (!compiledValidators) {
 		const toOneRefOfType = (type, required) => ({
 			anyOf: [
 				...(required ? [] : [{ type: "null" }]),
@@ -4221,10 +4374,12 @@ function validateSpliceResource(schema, resource, options = {}) {
 		const definitions = { create: {}, update: {} };
 		Object.entries(schema.resources).forEach(([resName, resSchema]) => {
 			const required = ["type"];
-			if ((resSchema.requiredAttributes ?? []).length > 0)
+			if ((resSchema.requiredAttributes ?? []).length > 0) {
 				required.push("attributes");
-			if ((resSchema.requiredRelationships ?? []).length > 0)
+			}
+			if ((resSchema.requiredRelationships ?? []).length > 0) {
 				required.push("relationships");
+			}
 
 			const requiredRelationships = resSchema.requiredRelationships ?? [];
 
@@ -4288,16 +4443,24 @@ function validateSpliceResource(schema, resource, options = {}) {
 			};
 		});
 
-		compiledValidator = validator.compile({
-			$ref:
-				resource.id && !resource.new
-					? `#/definitions/update/${resource.type}`
-					: `#/definitions/create/${resource.type}`,
-			definitions,
-		});
+		compiledValidators = {
+			create: validator.compile({
+				$ref: `#/definitions/create/${resource.type}`,
+				definitions,
+			}),
+			update: validator.compile({
+				$ref: `#/definitions/update/${resource.type}`,
+				definitions,
+			}),
+		};
 
-		schemaCache.set(resource.type, compiledValidator);
+		schemaCache.set(resource.type, compiledValidators);
 	}
+
+	const compiledValidator =
+		resource.id && !resource.new
+			? compiledValidators.update
+			: compiledValidators.create;
 
 	return compiledValidator(resource)
 		? []
@@ -4319,13 +4482,22 @@ function validateQueryResult(schema, rootQuery, result, options = {}) {
 
 	ensure(validateSchema)(schema, options);
 
-	if (typeof validator !== "object")
-		return [{ message: "Invalid validator: expected object, got " + typeof validator }];
-	if (typeof rootQuery !== "object")
-		return [{ message: "Invalid query: expected object, got " + typeof rootQuery }];
-
+	if (typeof validator !== "object") {
+		return [
+			{
+				message: "Invalid validator: expected object, got " + typeof validator,
+			},
+		];
+	}
+	if (typeof rootQuery !== "object") {
+		return [
+			{ message: "Invalid query: expected object, got " + typeof rootQuery },
+		];
+	}
 	// check for the special case of a null result to improve error quality
-	if (rootQuery.id && result === null) return [];
+	if (rootQuery.id && result === null) {
+		return [];
+	}
 
 	const cache = getValidateQueryResultCache(schema, validator, rootQuery);
 	let compiledValidator = cache.value;
@@ -4340,7 +4512,9 @@ function validateQueryResult(schema, rootQuery, result, options = {}) {
 
 				if (defaultExpressionEngine.isExpression(def)) return {};
 
-				if (typeof def === "string") return { ...resDef.attributes[def] };
+				if (typeof def === "string") {
+					return { ...resDef.attributes[def] };
+				}
 
 				const relDef = resDef.relationships[prop];
 				return relDef.cardinality === "one"
@@ -4583,9 +4757,10 @@ const getValidateSchemaCache = createDeepCache();
 function validateSchema(schema, options = {}) {
 	const { validator = defaultValidator } = options;
 
-	if (typeof schema !== "object")
+	if (typeof schema !== "object") {
 		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
 
+	}
 	const validatorCache = getValidateSchemaCache(schema, validator);
 	if (validatorCache.hit) return validatorCache.value;
 
@@ -4882,9 +5057,10 @@ function runQuery(rootQuery, data) {
 
 							const [head, ...tail] = path;
 
-							if (head === "$")
+							if (head === "$") {
 								return curValue.map((v) => extractPath(v, tail));
 
+							}
 							if (!(head in curValue)) return undefined;
 
 							return extractPath(curValue?.[head], tail);
@@ -5152,4 +5328,4 @@ const ensureValidDeleteResource = ensure(validateDeleteResource);
 const ensureValidSpliceResource = ensure(validateSpliceResource);
 const ensureValidQueryResult = ensure(validateQueryResult);
 
-export { createEmptyGraph, createGraphFromResources, createValidator, ensureValidCreateResource, ensureValidDeleteResource, ensureValidQuery, ensureValidQueryResult, ensureValidSchema, ensureValidSpliceResource, ensureValidUpdateResource, linkInverses, mergeGraphs, normalizeQuery, normalizeResource, queryGraph, validateCreateResource, validateDeleteResource, validateQuery, validateQueryResult, validateSchema, validateSpliceResource, validateUpdateResource };
+export { createEmptyGraph, createGraphFromResources, createResource, createValidator, ensureValidCreateResource, ensureValidDeleteResource, ensureValidQuery, ensureValidQueryResult, ensureValidSchema, ensureValidSpliceResource, ensureValidUpdateResource, linkInverses, mergeGraphs, normalizeQuery, normalizeResource, queryGraph, validateCreateResource, validateDeleteResource, validateQuery, validateQueryResult, validateSchema, validateSpliceResource, validateUpdateResource };

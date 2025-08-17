@@ -1,8 +1,7 @@
 import { expect, it, describe } from "vitest";
 import { queryGraph } from "../../src/graph.js";
 import { ensureValidQueryResult } from "../../src/resource.js";
-import careBearsSchema from "../fixtures/care-bears.schema.json" with { type: "json" };
-import careBearData from "../fixtures/care-bear-data.json" with { type: "json" };
+import { careBearSchema, careBearData } from "@data-prism/test-fixtures";
 
 describe("queryTree core", () => {
 	it("fetches a single resource with array notation", async () => {
@@ -12,11 +11,11 @@ describe("queryTree core", () => {
 			select: ["name"],
 		};
 
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual({ name: "Tenderheart Bear" });
 		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
+			ensureValidQueryResult(careBearSchema, query, result);
 		});
 	});
 
@@ -27,11 +26,11 @@ describe("queryTree core", () => {
 			select: { name: "name" },
 		};
 
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual({ name: "Tenderheart Bear" });
 		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
+			ensureValidQueryResult(careBearSchema, query, result);
 		});
 	});
 
@@ -42,14 +41,14 @@ describe("queryTree core", () => {
 			select: ["name", { yearIntroduced: "yearIntroduced" }],
 		};
 
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual({
 			name: "Tenderheart Bear",
 			yearIntroduced: 1982,
 		});
 		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
+			ensureValidQueryResult(careBearSchema, query, result);
 		});
 	});
 
@@ -60,11 +59,11 @@ describe("queryTree core", () => {
 			select: ["id", "name"],
 		};
 
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual({ id: "1", name: "Tenderheart Bear" });
 		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
+			ensureValidQueryResult(careBearSchema, query, result);
 		});
 	});
 
@@ -75,11 +74,11 @@ describe("queryTree core", () => {
 			select: ["name"],
 		};
 
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual({ name: "Tenderheart Bear" });
 		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
+			ensureValidQueryResult(careBearSchema, query, result);
 		});
 	});
 
@@ -92,11 +91,11 @@ describe("queryTree core", () => {
 			},
 		};
 
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual({ nombre: "Tenderheart Bear" });
 		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
+			ensureValidQueryResult(careBearSchema, query, result);
 		});
 	});
 
@@ -106,7 +105,7 @@ describe("queryTree core", () => {
 			select: { name: "name" },
 		};
 
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		const expected = [
 			"Tenderheart Bear",
@@ -117,7 +116,7 @@ describe("queryTree core", () => {
 
 		expect(result).toEqual(expected);
 		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
+			ensureValidQueryResult(careBearSchema, query, result);
 		});
 	});
 
@@ -128,18 +127,18 @@ describe("queryTree core", () => {
 			select: ["id"],
 		};
 
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual(null);
 		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
+			ensureValidQueryResult(careBearSchema, query, result);
 		});
 	});
 
 	it("disallows queries with no 'type'", async () => {
 		await expect(async () => {
 			const query = { select: ["name"] };
-			queryGraph(careBearsSchema, query, careBearData);
+			queryGraph(careBearSchema, query, careBearData);
 		}).rejects.toThrowError();
 	});
 
@@ -150,7 +149,7 @@ describe("queryTree core", () => {
 			select: { home: { select: ["id"] } },
 		};
 
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual({
 			home: { id: "1" },
@@ -164,7 +163,7 @@ describe("queryTree core", () => {
 			select: { residents: { select: ["id"] } },
 		};
 
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual({
 			residents: [{ id: "1" }, { id: "2" }, { id: "3" }],
@@ -178,7 +177,7 @@ describe("queryTree core", () => {
 			select: ["id", "name", "furColor"],
 		};
 
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual({
 			id: "1",
@@ -186,7 +185,7 @@ describe("queryTree core", () => {
 			furColor: "tan",
 		});
 		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
+			ensureValidQueryResult(careBearSchema, query, result);
 		});
 	});
 
@@ -197,7 +196,7 @@ describe("queryTree core", () => {
 			select: { home: { select: { caringMeter: "caringMeter" } } },
 		};
 
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual({ home: { caringMeter: 1 } });
 	});
@@ -211,11 +210,11 @@ describe("queryTree core", () => {
 			},
 		};
 
-		const result = await queryGraph(careBearsSchema, query, careBearData);
+		const result = await queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual({ powerId: "careBearStare" });
 		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
+			ensureValidQueryResult(careBearSchema, query, result);
 		});
 	});
 
@@ -226,13 +225,13 @@ describe("queryTree core", () => {
 			select: { powers: { select: ["type"] } },
 		};
 
-		const result = await queryGraph(careBearsSchema, query, careBearData);
+		const result = await queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual({
 			powers: [{ type: "group power" }],
 		});
 		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
+			ensureValidQueryResult(careBearSchema, query, result);
 		});
 	});
 
@@ -248,7 +247,7 @@ describe("queryTree core", () => {
 			},
 		};
 
-		const result = await queryGraph(careBearsSchema, query, careBearData);
+		const result = await queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual({
 			home: {
@@ -264,7 +263,7 @@ describe("queryTree core", () => {
 			],
 		});
 		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
+			ensureValidQueryResult(careBearSchema, query, result);
 		});
 	});
 
@@ -277,7 +276,7 @@ describe("queryTree core", () => {
 			},
 		};
 
-		const result = await queryGraph(careBearsSchema, query, careBearData);
+		const result = await queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ id: "1", bestFriend: null },
@@ -286,7 +285,7 @@ describe("queryTree core", () => {
 			{ id: "5", bestFriend: null },
 		]);
 		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
+			ensureValidQueryResult(careBearSchema, query, result);
 		});
 	});
 
