@@ -1,226 +1,31 @@
 import { v4 as uuidv4 } from "uuid";
-import { mapValues, pick } from "lodash-es";
+import { mapValues } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
 import { ensureValidSpliceResource } from "@data-prism/core";
+import { updateInverseRelationships } from "./lib/store-helpers.js";
 
 /**
  * @typedef {import('./memory-store.js').MemoryStoreContext} Context
  */
 
 /**
- * Handles inverse relationship updates for one-to-many cardinality.
- * Adds the parent reference to the resource's inverse relationship array.
+ * Checks if a relationship value contains nested resources (with attributes/relationships)
+ * rather than simple references. Nested resources handle their own inverse relationships.
  *
- * @param {import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource} resource - The resource to update
- * @param {import('@data-prism/core').NormalResource} parent - The parent resource
- * @param {string} inverse - The inverse relationship name
- * @returns {void}
+ * @param {import('@data-prism/core').Ref | import('@data-prism/core').Ref[] | null} relValue - The relationship value to check
+ * @returns {boolean} True if the relationship contains nested resources
  */
-function updateOneToManyInverse(resource, parent, inverse) {
-	resource.relationships = resource.relationships ?? {};
-	if (
-		!(resource.relationships[inverse] ?? []).some((r) => r.id === parent.id)
-	) {
-		resource.relationships[inverse] = [
-			...(resource.relationships[inverse] ?? []),
-			{ type: parent.type, id: parent.id },
-		];
-	}
+function containsNestedResources(relValue) {
+	if (!relValue) return false;
+	
+	return Array.isArray(relValue)
+		? relValue.some(r => r.attributes || r.relationships)
+		: relValue.attributes || relValue.relationships;
 }
 
-/**
- * Handles inverse relationship updates for one-to-one cardinality.
- * Updates the resource's inverse relationship and cleans up any previous one-to-one references.
- *
- * WARNING: MUTATES storeGraph
- *
- * @param {import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource} resource - The resource to update
- * @param {import('@data-prism/core').NormalResource} parent - The parent resource
- * @param {string} inverse - The inverse relationship name
- * @param {Context} context - Context object containing store and storeGraph
- * @returns {void}
- */
-function updateOneToOneInverse(resource, parent, inverse, context) {
-	const { store, storeGraph } = context;
-	const existing = store.getOne(parent.type, parent.id);
-	const existingRef = existing?.relationships?.[inverse];
 
-	if (existingRef && existingRef.id !== parent.id) {
-		storeGraph[existing.type][existing.id] = {
-			...existing,
-			relationships: { ...existing.relationships, [inverse]: null },
-		};
-	}
 
-	resource.relationships[inverse] = { type: parent.type, id: parent.id };
-}
 
-/**
- * Handles inverse relationship maintenance between a resource and its parent.
- * Delegates to specific handlers based on relationship cardinality.
- *
- * WARNING: MUTATES storeGraph (via updateOneToOneInverse)
- *
- * @param {import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource} resource - The resource to process
- * @param {import('@data-prism/core').NormalResource} parent - The parent resource
- * @param {any} parentRelSchema - The parent relationship schema definition
- * @param {Context} context - Context object containing schema, store, and storeGraph
- * @returns {void}
- */
-function handleInverseRelationships(
-	resource,
-	parent,
-	parentRelSchema,
-	context,
-) {
-	if (!parent || !parentRelSchema?.inverse) return;
-
-	const { schema } = context;
-	const { inverse } = parentRelSchema;
-	const relSchema = schema.resources[resource.type].relationships[inverse];
-
-	resource.relationships = resource.relationships ?? {};
-
-	if (relSchema.cardinality === "many") {
-		updateOneToManyInverse(resource, parent, inverse);
-	} else if (relSchema.cardinality === "one") {
-		updateOneToOneInverse(resource, parent, inverse, context);
-	}
-}
-
-/**
- * Merges a resource with an existing resource in the store.
- * Combines attributes and relationships from both resources.
- *
- * @param {import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource} resource - The incoming resource
- * @param {import('@data-prism/core').NormalResource} existing - The existing resource in the store
- * @param {string} resultId - The ID to use for the merged resource
- * @returns {import('@data-prism/core').NormalResource} The merged resource
- */
-function mergeWithExisting(resource, existing, resultId) {
-	return {
-		type: resource.type,
-		id: resultId,
-		attributes: { ...existing.attributes, ...resource.attributes },
-		relationships: {
-			...existing.relationships,
-			...resource.relationships,
-		},
-	};
-}
-
-/**
- * Creates a new resource with default relationship structure.
- * Initializes empty arrays for many-cardinality relationships and null for one-cardinality.
- *
- * @param {import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource} resource - The resource to create
- * @param {any} resSchema - The resource schema definition
- * @param {string} resultId - The ID to use for the new resource
- * @returns {import('@data-prism/core').NormalResource} The prepared new resource
- */
-function createNewResource(resource, resSchema, resultId) {
-	return {
-		type: resource.type,
-		id: resultId,
-		attributes: resource.attributes ?? {},
-		relationships: {
-			...mapValues(resSchema.relationships, (r) =>
-				r.cardinality === "one" ? null : [],
-			),
-			...resource.relationships,
-		},
-	};
-}
-
-/**
- * Prepares a resource for storage by determining whether to merge with existing or create new.
- * Generates a unique ID if none exists.
- *
- * @param {import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource} resource - The resource to prepare
- * @param {import('@data-prism/core').NormalResource | null} existing - The existing resource (if any)
- * @param {any} resSchema - The resource schema definition
- * @returns {import('@data-prism/core').NormalResource} The prepared resource
- */
-function prepareResourceForStorage(resource, existing, resSchema) {
-	const resultId = resource.id ?? existing?.id ?? uuidv4();
-
-	return resource.id
-		? mergeWithExisting(resource, existing, resultId)
-		: createNewResource(resource, resSchema, resultId);
-}
-
-/**
- * Normalizes resource references by extracting only type and id properties.
- *
- * @param {import('@data-prism/core').NormalResource} resource - The resource to normalize
- * @returns {import('@data-prism/core').NormalResource} The resource with normalized relationship references
- */
-function normalizeResourceReferences(resource) {
-	return {
-		...resource,
-		relationships: pick(resource.relationships, ["type", "id"]),
-	};
-}
-
-/**
- * Updates a resource in the store graph, merging with existing data if present.
- *
- * WARNING: MUTATES storeGraph
- *
- * @param {import('@data-prism/core').NormalResource} resource - The normalized resource to store
- * @param {import('@data-prism/core').NormalResource | null} existing - The existing resource (if any)
- * @param {import('@data-prism/core').Graph} storeGraph - The graph data structure to update
- * @returns {void}
- */
-function updateResourceInStore(resource, existing, storeGraph) {
-	storeGraph[resource.type][resource.id] = existing
-		? {
-				...resource,
-				attributes: { ...existing.attributes, ...resource.attributes },
-				relationships: {
-					...existing.relationships,
-					...resource.relationships,
-				},
-			}
-		: resource;
-}
-
-/**
- * Processes nested relationships within a resource, recursively handling sub-resources.
- * Updates the store graph with normalized relationship references.
- *
- * WARNING: MUTATES storeGraph
- *
- * @param {import('@data-prism/core').NormalResource} resource - The resource whose relationships to process
- * @param {any} resSchema - The resource schema definition
- * @param {Context} context - Context object containing schema, store, and storeGraph
- * @param {Function} processResourceTree - The recursive processing function
- * @returns {Object<string, any>} The processed relationships with full resource data
- */
-function processNestedRelationships(
-	resource,
-	resSchema,
-	context,
-	processResourceTree,
-) {
-	const { storeGraph } = context;
-
-	return mapValues(resource.relationships ?? {}, (rel, relName) => {
-		const relSchema = resSchema.relationships[relName];
-		const step = (relRes) =>
-			relRes.attributes || relRes.relationships
-				? processResourceTree(relRes, resource, relSchema, context)
-				: relRes;
-
-		const result = applyOrMap(rel, step);
-		storeGraph[resource.type][resource.id].relationships[relName] = applyOrMap(
-			result,
-			(r) => ({ type: relSchema.type, id: r.id }),
-		);
-
-		return result;
-	});
-}
 
 /**
  * Recursively processes a resource tree, handling inverse relationships and store updates.
@@ -239,30 +44,85 @@ function processResourceTree(resource, parent, parentRelSchema, context) {
 	const resSchema = schema.resources[resource.type];
 	const resourceCopy = structuredClone(resource);
 
-	// Handle inverse relationships
-	handleInverseRelationships(resourceCopy, parent, parentRelSchema, context);
+	// Handle inverse relationships from parent
+	if (parent && parentRelSchema?.inverse) {
+		const { inverse } = parentRelSchema;
+		resourceCopy.relationships = resourceCopy.relationships ?? {};
+		resourceCopy.relationships[inverse] = { type: parent.type, id: parent.id };
+	}
 
-	// Prepare resource for storage
+	// Prepare resource for storage and get existing reference
 	const existing = store.getOne(resource.type, resource.id);
-	const preparedResource = prepareResourceForStorage(
-		resourceCopy,
-		existing,
-		resSchema,
-	);
+	const resultId = resource.id ?? existing?.id ?? uuidv4();
+	
+	// Optimize: Build final resource in-place to avoid intermediate objects
+	const finalResource = existing
+		? {
+				type: resourceCopy.type,
+				id: resultId,
+				attributes: { ...existing.attributes, ...resourceCopy.attributes },
+				relationships: {
+					...existing.relationships,
+					...resourceCopy.relationships,
+				},
+			}
+		: {
+				type: resourceCopy.type,
+				id: resultId,
+				attributes: resourceCopy.attributes ?? {},
+				relationships: {
+					...mapValues(resSchema.relationships, (r) =>
+						r.cardinality === "one" ? null : [],
+					),
+					...resourceCopy.relationships,
+				},
+			};
 
-	// Normalize and update in store
-	const normalizedResource = normalizeResourceReferences(preparedResource);
-	updateResourceInStore(normalizedResource, existing, storeGraph);
+	// Normalize relationship references inline (avoid extra function call)
+	const normalizedForStore = {
+		...finalResource,
+		relationships: mapValues(finalResource.relationships, (rel, relName) => {
+			const relSchema = resSchema.relationships[relName];
+			if (!rel) return rel;
+			return Array.isArray(rel) 
+				? rel.map(r => ({ type: relSchema.type, id: r.id }))
+				: { type: relSchema.type, id: rel.id };
+		}),
+	};
 
-	// Process nested relationships
-	const processedRelationships = processNestedRelationships(
-		preparedResource,
-		resSchema,
-		context,
-		processResourceTree,
-	);
+	// Store the normalized resource
+	storeGraph[resource.type][resultId] = normalizedForStore;
 
-	return { ...preparedResource, relationships: processedRelationships };
+	// Process nested relationships (this handles complex trees)
+	const processedRelationships = mapValues(finalResource.relationships ?? {}, (rel, relName) => {
+		const relSchema = resSchema.relationships[relName];
+		
+		// Process nested resources first
+		const step = (relRes) =>
+			containsNestedResources(relRes)
+				? processResourceTree(relRes, finalResource, relSchema, context)
+				: relRes;
+
+		const result = applyOrMap(rel, step);
+		
+		// Update normalized references in store
+		storeGraph[finalResource.type][finalResource.id].relationships[relName] = applyOrMap(
+			result,
+			(r) => ({ type: relSchema.type, id: r.id }),
+		);
+
+		return result;
+	});
+
+	// Update inverse relationships for any simple refs (not nested resources)
+	Object.entries(finalResource.relationships ?? {}).forEach(([relName, rel]) => {
+		// Only update inverses for simple refs, not nested resources
+		if (rel && !containsNestedResources(rel)) {
+			updateInverseRelationships(finalResource, relName, rel, context);
+		}
+	});
+
+	return { ...finalResource, relationships: processedRelationships };
 }
 
 /**
@@ -276,7 +136,7 @@ function processResourceTree(resource, parent, parentRelSchema, context) {
  * @returns {import('@data-prism/core').NormalResource} The processed resource tree with all nested resources created/updated
  */
 export function splice(resourceTree, context) {
-	const { schema, validator, store, storeGraph } = context;
+	const { schema, validator, store } = context;
 
 	ensureValidSpliceResource(schema, resourceTree, { validator });
 
