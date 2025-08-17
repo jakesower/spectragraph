@@ -1,8 +1,7 @@
 import { expect, it, describe } from "vitest";
 import { queryGraph } from "../../src/graph.js";
 import { ensureValidQueryResult } from "../../src/resource.js";
-import careBearsSchema from "../fixtures/care-bears.schema.json" with { type: "json" };
-import careBearData from "../fixtures/care-bear-data.json";
+import { careBearSchema, careBearData } from "@data-prism/test-fixtures";
 
 describe("limit/offset", () => {
 	it("fetches a single resource", async () => {
@@ -11,11 +10,11 @@ describe("limit/offset", () => {
 			select: { name: "name" },
 			limit: 1,
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([{ name: "Tenderheart Bear" }]);
 		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
+			ensureValidQueryResult(careBearSchema, query, result);
 		});
 	});
 
@@ -27,7 +26,7 @@ describe("limit/offset", () => {
 			limit: 2,
 		};
 
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Cheer Bear" },
@@ -35,7 +34,7 @@ describe("limit/offset", () => {
 		]);
 
 		expect(() => {
-			ensureValidQueryResult(careBearsSchema, query, result);
+			ensureValidQueryResult(careBearSchema, query, result);
 		});
 	});
 
@@ -46,7 +45,7 @@ describe("limit/offset", () => {
 			order: { name: "asc" },
 			limit: 1,
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([{ name: "Cheer Bear" }]);
 	});
@@ -59,7 +58,7 @@ describe("limit/offset", () => {
 			limit: 2,
 			offset: 1,
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Smart Heart Bear" },
@@ -74,7 +73,7 @@ describe("limit/offset", () => {
 			order: { name: "asc" },
 			offset: 1,
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Smart Heart Bear" },
@@ -91,7 +90,7 @@ describe("limit/offset", () => {
 			limit: 6,
 			offset: 2,
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Tenderheart Bear" },
@@ -107,7 +106,7 @@ describe("limit/offset", () => {
 			limit: 6,
 			offset: 20,
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([]);
 	});
@@ -119,7 +118,7 @@ describe("limit/offset", () => {
 			order: { name: "asc" },
 			offset: 0,
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Cheer Bear" },

@@ -1,7 +1,6 @@
 import { expect, it, describe } from "vitest";
 import { queryGraph } from "../../src/graph.js";
-import careBearsSchema from "../fixtures/care-bears.schema.json" with { type: "json" };
-import careBearData from "../fixtures/care-bear-data.json" with { type: "json" };
+import { careBearSchema, careBearData } from "@data-prism/test-fixtures";
 
 describe("order tests", async () => {
 	it("sorts on a numeric field", async () => {
@@ -10,7 +9,7 @@ describe("order tests", async () => {
 			select: { name: "name", yearIntroduced: "yearIntroduced" },
 			order: { yearIntroduced: "desc" },
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Smart Heart Bear", yearIntroduced: 2005 },
@@ -26,7 +25,7 @@ describe("order tests", async () => {
 			select: { name: "name", yearIntroduced: "yearIntroduced" },
 			order: { name: "asc" },
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Cheer Bear", yearIntroduced: 1982 },
@@ -42,7 +41,7 @@ describe("order tests", async () => {
 			select: { name: "name", yearIntroduced: "yearIntroduced" },
 			order: [{ yearIntroduced: "desc" }, { name: "asc" }],
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Smart Heart Bear", yearIntroduced: 2005 },
@@ -62,7 +61,7 @@ describe("order tests", async () => {
 			},
 			order: [{ yearIntroduced: "desc" }, { name: "asc" }],
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{
@@ -87,7 +86,7 @@ describe("order tests", async () => {
 	it("disallows sorting on invalid attribute names", async () => {
 		await expect(async () => {
 			return queryGraph(
-				careBearsSchema,
+				careBearSchema,
 				{
 					type: "bears",
 					select: ["name"],

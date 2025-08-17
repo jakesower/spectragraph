@@ -480,8 +480,8 @@ export function validateSpliceResource(schema, resource, options = {}) {
 		cache.set(schemaCache);
 	}
 
-	let compiledValidator = schemaCache.get(resource.type);
-	if (!compiledValidator) {
+	let compiledValidators = schemaCache.get(resource.type);
+	if (!compiledValidators) {
 		const toOneRefOfType = (type, required) => ({
 			anyOf: [
 				...(required ? [] : [{ type: "null" }]),
@@ -572,16 +572,24 @@ export function validateSpliceResource(schema, resource, options = {}) {
 			};
 		});
 
-		compiledValidator = validator.compile({
-			$ref:
-				resource.id && !resource.new
-					? `#/definitions/update/${resource.type}`
-					: `#/definitions/create/${resource.type}`,
-			definitions,
-		});
+		compiledValidators = {
+			create: validator.compile({
+				$ref: `#/definitions/create/${resource.type}`,
+				definitions,
+			}),
+			update: validator.compile({
+				$ref: `#/definitions/update/${resource.type}`,
+				definitions,
+			}),
+		};
 
-		schemaCache.set(resource.type, compiledValidator);
+		schemaCache.set(resource.type, compiledValidators);
 	}
+
+	const compiledValidator =
+		resource.id && !resource.new
+			? compiledValidators.update
+			: compiledValidators.create;
 
 	return compiledValidator(resource)
 		? []

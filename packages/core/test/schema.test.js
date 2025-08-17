@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { validateSchema } from "../src/schema.js";
-import careBearSchema from "./fixtures/care-bears.schema.json" with { type: "json" };
+import { careBearSchema } from "@data-prism/test-fixtures";
 
 describe("structure", () => {
 	it("should validate a valid schema", () => {

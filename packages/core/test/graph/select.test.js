@@ -1,7 +1,6 @@
 import { expect, it, describe } from "vitest";
 import { queryGraph } from "../../src/graph.js";
-import careBearsSchema from "../fixtures/care-bears.schema.json" with { type: "json" };
-import careBearData from "../fixtures/care-bear-data.json" with { type: "json" };
+import { careBearSchema, careBearData } from "@data-prism/test-fixtures";
 
 describe("select expressions", () => {
 	it("projects a field to a literal expression", async () => {
@@ -11,7 +10,7 @@ describe("select expressions", () => {
 				beep: { $literal: "boop" },
 			},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ beep: "boop" },
@@ -29,7 +28,7 @@ describe("select expressions", () => {
 				numberOfResidents: { $count: "residents" },
 			},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Care-a-Lot", numberOfResidents: 3 },
@@ -46,7 +45,7 @@ describe("select expressions", () => {
 				powerCount: { $count: { $get: "powers" } },
 			},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Tenderheart Bear", powerCount: 1 },
@@ -64,7 +63,7 @@ describe("select expressions", () => {
 				minYear: { $min: "residents.$.yearIntroduced" },
 			},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Care-a-Lot", minYear: 1982 },
@@ -81,7 +80,7 @@ describe("select expressions", () => {
 				minYear: { $min: "wielders.$.yearIntroduced" },
 			},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Care Bear Stare", minYear: 1982 },
@@ -98,7 +97,7 @@ describe("select expressions", () => {
 				caring: { $sum: "wielders.$.home.caringMeter" },
 			},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Care Bear Stare", caring: 3 },

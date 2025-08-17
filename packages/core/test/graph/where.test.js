@@ -1,7 +1,6 @@
 import { expect, it, describe } from "vitest";
 import { queryGraph } from "../../src/graph.js";
-import careBearsSchema from "../fixtures/care-bears.schema.json" with { type: "json" };
-import careBearData from "../fixtures/care-bear-data.json" with { type: "json" };
+import { careBearSchema, careBearData } from "@data-prism/test-fixtures";
 
 describe("where clauses", () => {
 	it("filters on an implicit property equality constraint", async () => {
@@ -10,7 +9,7 @@ describe("where clauses", () => {
 			select: ["id", "name"],
 			where: { name: "Cheer Bear" },
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "2", name: "Cheer Bear" }]);
 	});
@@ -21,7 +20,7 @@ describe("where clauses", () => {
 			select: ["id"],
 			where: {},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ id: "1" },
@@ -37,7 +36,7 @@ describe("where clauses", () => {
 			select: ["id"],
 			where: { name: { $eq: "Cheer Bear" } },
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "2" }]);
 	});
@@ -51,7 +50,7 @@ describe("where clauses", () => {
 				isInClouds: false,
 			},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "2" }]);
 	});
@@ -64,7 +63,7 @@ describe("where clauses", () => {
 				yearIntroduced: { $eq: 2005 },
 			},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "5" }]);
 	});
@@ -77,7 +76,7 @@ describe("where clauses", () => {
 				yearIntroduced: { $gt: 2000 },
 			},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "5" }]);
 	});
@@ -90,7 +89,7 @@ describe("where clauses", () => {
 				yearIntroduced: { $lt: 2000 },
 			},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
 	});
@@ -103,7 +102,7 @@ describe("where clauses", () => {
 				yearIntroduced: { $lte: 2000 },
 			},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
 	});
@@ -116,7 +115,7 @@ describe("where clauses", () => {
 				yearIntroduced: { $gte: 2005 },
 			},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "5" }]);
 	});
@@ -129,7 +128,7 @@ describe("where clauses", () => {
 				yearIntroduced: { $in: [2005, 2022] },
 			},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "5" }]);
 	});
@@ -142,7 +141,7 @@ describe("where clauses", () => {
 				yearIntroduced: { $in: [2022] },
 			},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([]);
 	});
@@ -155,7 +154,7 @@ describe("where clauses", () => {
 				yearIntroduced: { $ne: 2005 },
 			},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
 	});
@@ -174,7 +173,7 @@ describe("where clauses", () => {
 				},
 			},
 		};
-		const result = queryGraph(careBearsSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual({
 			powerId: "careBearStare",
@@ -193,7 +192,7 @@ describe("where clauses", () => {
 					$or: [{ yearIntroduced: { $gt: 2000 } }, { bellyBadge: "rainbow" }],
 				},
 			};
-			const result = queryGraph(careBearsSchema, query, careBearData);
+			const result = queryGraph(careBearSchema, query, careBearData);
 
 			expect(result).toEqual([{ id: "2" }, { id: "5" }]);
 		});
@@ -211,7 +210,7 @@ describe("where clauses", () => {
 					],
 				},
 			};
-			const result = queryGraph(careBearsSchema, query, careBearData);
+			const result = queryGraph(careBearSchema, query, careBearData);
 
 			expect(result).toEqual([{ id: "5" }]);
 		});
@@ -228,7 +227,7 @@ describe("where clauses", () => {
 					},
 				},
 			};
-			const result = queryGraph(careBearsSchema, query, careBearData);
+			const result = queryGraph(careBearSchema, query, careBearData);
 
 			expect(result).toEqual([{ id: "1" }, { id: "3" }]);
 		});

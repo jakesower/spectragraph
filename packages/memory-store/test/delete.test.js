@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import careBearSchema from "./fixtures/care-bears.schema.json";
+import { careBearSchema } from "@data-prism/test-fixtures";
 import { createMemoryStore } from "../src";
 
 const store = createMemoryStore(careBearSchema);

@@ -1,0 +1,83 @@
+{
+	"$comment": "This schema is meant to test the nooks and crannies of JSON schema support in Data Prism.",
+	"resources": {
+		"fields": {
+			"attributes": {
+				"id": { "type": "string" },
+				"name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9 ]+" }
+			},
+			"relationships": {
+				"teams": {
+					"type": "teams",
+					"cardinality": "many",
+					"inverse": "homeField"
+				}
+			}
+		},
+		"games": {
+			"idAttribute": "id",
+			"attributes": {
+				"id": { "type": "string" },
+				"homeScore": { "type": "integer", "required": true, "minimum": 0 },
+				"awayScore": { "type": "integer", "required": true, "minimum": 0 }
+			},
+			"relationships": {
+				"homeTeam": {
+					"cardinality": "one",
+					"type": "teams",
+					"inverse": "homeGames"
+				},
+				"awayTeam": {
+					"cardinality": "one",
+					"type": "teams",
+					"inverse": "awayGames"
+				},
+				"referee": {
+					"cardinality": "one",
+					"type": "referees",
+					"inverse": "games"
+				}
+			}
+		},
+		"referees": {
+			"attributes": {
+				"id": { "type": "string" },
+				"name": { "type": "string", "required": true }
+			},
+			"relationships": {
+				"games": {
+					"type": "games",
+					"cardinality": "many",
+					"inverse": "referee"
+				}
+			}
+		},
+		"teams": {
+			"idAttribute": "id",
+			"attributes": {
+				"id": { "type": "string" },
+				"name": { "type": "string", "required": true },
+				"homeColor": { "type": "string" },
+				"awayColor": { "type": "string" }
+			},
+			"relationships": {
+				"homeGames": {
+					"cardinality": "many",
+					"type": "games",
+					"inverse": "homeTeam"
+				},
+				"awayGames": {
+					"cardinality": "many",
+					"type": "games",
+					"inverse": "homeTeam"
+				},
+				"homeField": {
+					"cardinality": "one",
+					"type": "fields",
+					"inverse": "teams",
+					"required": true
+				}
+			}
+		}
+	}
+}

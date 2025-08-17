@@ -23,6 +23,7 @@
 	"keywords": [],
 	"author": "Jake Sower",
 	"devDependencies": {
+		"@data-prism/test-fixtures": "*",
 		"@rollup/plugin-commonjs": "^28.0.1",
 		"@rollup/plugin-node-resolve": "^16.0.0",
 		"@vitest/coverage-istanbul": "^3.0.4",

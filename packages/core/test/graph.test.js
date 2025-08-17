@@ -5,9 +5,7 @@ import {
 	linkInverses,
 	mergeGraphs,
 } from "../src/graph.js";
-import careBearSchema from "./fixtures/care-bears.schema.json" with { type: "json" };
-import careBearData from "./fixtures/care-bear-data.json" with { type: "json" };
-import flatCareBearData from "./fixtures/care-bear-data-flat.json" with { type: "json" };
+import { careBearSchema, careBearData, careBearDataFlat as flatCareBearData } from "@data-prism/test-fixtures";
 
 describe("linkInverses", () => {
 	it("doesn't change anything for an already linked graph", () => {

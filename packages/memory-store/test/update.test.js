@@ -1,9 +1,8 @@
 import { expect, it } from "vitest";
 import { randomBytes } from "node:crypto";
 import { createMemoryStore } from "../src";
-import rawCareBearSchema from "./fixtures/care-bears.schema.json";
+import { careBearSchema } from "@data-prism/test-fixtures";
 
-const careBearSchema = rawCareBearSchema;
 const store = createMemoryStore(careBearSchema);
 
 it("updates a single resource with only attributes", async () => {

@@ -1,12 +1,8 @@
 import { expect, it, describe } from "vitest";
-import { careBearData } from "../fixtures/care-bear-data.js";
-import careBearSchema from "../fixtures/care-bears.schema.json";
-import { soccerSchema as rawSoccerSchema } from "../fixtures/soccer-schema.js";
+import { careBearData, careBearSchema, soccerSchema, geojsonSchema } from "@data-prism/test-fixtures";
 import { createMemoryStore } from "../../src/memory-store.js";
 import { createValidator } from "@data-prism/core";
-import geojsonSchema from "../fixtures/geojson.schema.json" with { type: "json" };
 
-const soccerSchema = rawSoccerSchema;
 
 const singleBearWithHomeTree = {
 	id: "bear-abc-123",
