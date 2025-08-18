@@ -23,7 +23,7 @@ it("implements the $gt expression", () => {
 
 	expect(compile(exp)(kids.ximena)).toBe(false);
 	expect(compile(exp)(kids.yousef)).toBe(false);
-	expect(compile(exp)(kids["zoë"])).toBe(true);
+	expect(compile(exp)(kids.zoë)).toBe(true);
 });
 
 it("implements the $gte expression", () => {
@@ -31,7 +31,7 @@ it("implements the $gte expression", () => {
 
 	expect(compile(exp)(kids.ximena)).toBe(false);
 	expect(compile(exp)(kids.yousef)).toBe(true);
-	expect(compile(exp)(kids["zoë"])).toBe(true);
+	expect(compile(exp)(kids.zoë)).toBe(true);
 });
 
 it("implements the $lt expression", () => {
@@ -39,7 +39,7 @@ it("implements the $lt expression", () => {
 
 	expect(compile(exp)(kids.ximena)).toBe(true);
 	expect(compile(exp)(kids.yousef)).toBe(false);
-	expect(compile(exp)(kids["zoë"])).toBe(false);
+	expect(compile(exp)(kids.zoë)).toBe(false);
 });
 
 it("implements the $lte expression", () => {
@@ -47,7 +47,7 @@ it("implements the $lte expression", () => {
 
 	expect(compile(exp)(kids.ximena)).toBe(true);
 	expect(compile(exp)(kids.yousef)).toBe(true);
-	expect(compile(exp)(kids["zoë"])).toBe(false);
+	expect(compile(exp)(kids.zoë)).toBe(false);
 });
 
 it("implements the $ne expression", () => {
@@ -55,7 +55,7 @@ it("implements the $ne expression", () => {
 
 	expect(compile(exp)(kids.ximena)).toBe(true);
 	expect(compile(exp)(kids.yousef)).toBe(false);
-	expect(compile(exp)(kids["zoë"])).toBe(true);
+	expect(compile(exp)(kids.zoë)).toBe(true);
 });
 
 it("implements the $in expression", () => {
@@ -63,7 +63,7 @@ it("implements the $in expression", () => {
 
 	expect(compile(exp)(kids.ximena)).toBe(true);
 	expect(compile(exp)(kids.yousef)).toBe(false);
-	expect(compile(exp)(kids["zoë"])).toBe(true);
+	expect(compile(exp)(kids.zoë)).toBe(true);
 });
 
 it("implements the $nin expression", () => {
@@ -71,5 +71,5 @@ it("implements the $nin expression", () => {
 
 	expect(compile(exp)(kids.ximena)).toBe(false);
 	expect(compile(exp)(kids.yousef)).toBe(true);
-	expect(compile(exp)(kids["zoë"])).toBe(false);
+	expect(compile(exp)(kids.zoë)).toBe(false);
 });
