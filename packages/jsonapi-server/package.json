@@ -10,6 +10,7 @@
 	"scripts": {
 		"build": "tsc -p ./tsconfig.json",
 		"start": "tsx test/test-server.ts",
+		"lint": "eslint src/ test/",
 		"test": "NODE_ENV=test vitest --no-file-parallelism",
 		"test:e2e": "start-test 3000"
 	},

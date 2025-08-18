@@ -4,7 +4,7 @@ import { defaultExpressionEngine } from "../../src/index.js";
 const kids = [
 	{ name: "Ximena", age: 4 },
 	{ name: "Yousef", age: 5 },
-	{ name: "Zoe", age: 6 },
+	{ name: "Zoë", age: 6 },
 ];
 
 const { apply } = defaultExpressionEngine;
@@ -16,7 +16,7 @@ describe("apply", () => {
 		});
 
 		it("should perform with a subexpression", () => {
-			expect(apply({ $map: { $prop: "age" } }, kids)).toEqual([4, 5, 6]);
+			expect(apply({ $map: { $get: "age" } }, kids)).toEqual([4, 5, 6]);
 		});
 	});
 

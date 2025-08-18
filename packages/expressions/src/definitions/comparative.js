@@ -65,8 +65,18 @@ const $lte = {
 
 const $in = {
 	name: "$in",
-	apply: (param, arg) => param.includes(arg),
-	evaluate: (param, arg) => param.includes(arg),
+	apply: (param, arg) => {
+		if (!Array.isArray(param)) {
+			throw new Error("$in parameter must be an array");
+		}
+		return param.includes(arg);
+	},
+	evaluate: (param, arg) => {
+		if (!Array.isArray(param)) {
+			throw new Error("$in parameter must be an array");
+		}
+		return param.includes(arg);
+	},
 	inject: injectRight,
 	schema: {
 		type: "boolean",
@@ -75,8 +85,18 @@ const $in = {
 
 const $nin = {
 	name: "$nin",
-	apply: (param, arg) => !param.includes(arg),
-	evaluate: (param, arg) => !param.includes(arg),
+	apply: (param, arg) => {
+		if (!Array.isArray(param)) {
+			throw new Error("$nin parameter must be an array");
+		}
+		return !param.includes(arg);
+	},
+	evaluate: (param, arg) => {
+		if (!Array.isArray(param)) {
+			throw new Error("$nin parameter must be an array");
+		}
+		return !param.includes(arg);
+	},
 	inject: injectRight,
 	schema: {
 		type: "boolean",

@@ -1,75 +1,6 @@
 import { expect, it, describe } from "vitest";
-import { careBearData, careBearSchema, soccerSchema, geojsonSchema } from "@data-prism/test-fixtures";
+import { careBearData, careBearSchema } from "@data-prism/test-fixtures";
 import { createMemoryStore } from "../../src/memory-store.js";
-import { createValidator } from "@data-prism/core";
-
-
-const singleBearWithHomeTree = {
-	id: "bear-abc-123",
-	name: "Tenderheart Bear",
-	date_introduced: "1982-02-04",
-	belly_badge: "red heart with pink outline",
-	fur_color: "tan",
-	home: {
-		id: "home-def-234",
-		name: "Care-a-Lot",
-		location: "Kingdom of Caring",
-		caring_meter: 1,
-		is_in_clouds: true,
-	},
-	powers: ["power-fgh-345", "power-ijk-456"],
-};
-
-const barePowersTrees = [
-	{
-		powerId: "power-fgh-345",
-		name: "Care Bear Stare",
-	},
-	{ powerId: "power-ijk-456", name: "Something Else" },
-];
-
-const createSoccerGraph = () => ({
-	fields: {
-		1: {
-			attributes: {
-				name: "Beachside Park A",
-			},
-			relationships: {
-				teams: [{ type: "teams", id: "1" }],
-			},
-		},
-	},
-	games: {
-		1: {
-			attributes: { homeScore: 0, awayScore: 1 },
-			relationships: {
-				homeTeam: null,
-				awayTeam: null,
-				referee: null,
-			},
-		},
-	},
-	referees: {
-		1: {
-			attributes: { name: "The Enforcer" },
-			relationships: {
-				games: [],
-			},
-		},
-	},
-	teams: {
-		1: {
-			attributes: {
-				name: "Arizona Bay FC",
-			},
-			relationships: {
-				homeGames: [],
-				awayGames: [],
-				homeField: { type: "fields", id: "1" },
-			},
-		},
-	},
-});
 
 describe("queryTree core", () => {
 	it("fetches appropriately on an empty store", async () => {
@@ -171,7 +102,7 @@ describe("queryTree core", () => {
 
 	it("can initialize with initial data", async () => {
 		const store = createMemoryStore(careBearSchema, {
-			initialData: { bears: careBearData.bears }
+			initialData: { bears: careBearData.bears },
 		});
 
 		const result = store.query({
