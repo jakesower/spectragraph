@@ -409,14 +409,14 @@ export function validateDeleteResource(
 ): DefinedError[];
 
 /**
- * Validates a resource tree that will be spliced into a graph
+ * Validates a resource tree that will be merged into a graph
  * @param schema - The schema to validate against
  * @param resource - The resource tree to validate
  * @param options - Validation options
  * @param options.validator - The validator instance to use
  * @returns Array of validation errors
  */
-export function validateSpliceResource(
+export function validateMergeResource(
 	schema: Schema,
 	resource: unknown,
 	options?: { validator?: Ajv },
@@ -480,14 +480,14 @@ export function ensureValidDeleteResource(
 ): void;
 
 /**
- * Validates a resource tree that will be spliced into a graph
+ * Validates a resource tree that will be merged into a graph
  * @param schema - The schema to validate against
  * @param resource - The resource tree to validate
  * @param options - Validation options
  * @param options.validator - The validator instance to use
  * @throws If the resource tree is invalid
  */
-export function ensureValidSpliceResource(
+export function ensureValidMergeResource(
 	schema: Schema,
 	resource: unknown,
 	options?: { validator?: Ajv },

@@ -14,7 +14,7 @@ export {
 	validateCreateResource,
 	validateDeleteResource,
 	validateQueryResult,
-	validateSpliceResource,
+	validateMergeResource,
 	validateUpdateResource,
 } from "./resource.js";
 
@@ -25,7 +25,7 @@ import {
 	validateCreateResource,
 	validateDeleteResource,
 	validateQueryResult,
-	validateSpliceResource,
+	validateMergeResource,
 	validateUpdateResource,
 } from "./resource.js";
 
@@ -34,5 +34,5 @@ export const ensureValidQuery = ensure(validateQuery);
 export const ensureValidCreateResource = ensure(validateCreateResource);
 export const ensureValidUpdateResource = ensure(validateUpdateResource);
 export const ensureValidDeleteResource = ensure(validateDeleteResource);
-export const ensureValidSpliceResource = ensure(validateSpliceResource);
+export const ensureValidMergeResource = ensure(validateMergeResource);
 export const ensureValidQueryResult = ensure(validateQueryResult);

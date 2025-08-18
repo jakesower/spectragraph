@@ -4078,7 +4078,7 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 };
 const getCreateResourceCache = createDeepCache();
 const getUpdateResourceCache = createDeepCache();
-const getSpliceResourceCache = createDeepCache();
+const getMergeResourceCache = createDeepCache();
 const getValidateQueryResultCache = createDeepCache();
 
 /**
@@ -4313,7 +4313,7 @@ function validateDeleteResource(schema, resource) {
 }
 
 /**
- * Validates a resource tree that will be spliced into a graph
+ * Validates a resource tree that will be merged into a graph
  *
  * @param {import('./schema.js').Schema} schema - The schema to validate against
  * @param {*} resource - The resource tree to validate
@@ -4321,7 +4321,7 @@ function validateDeleteResource(schema, resource) {
  * @param {Ajv} [options.validator] - The validator instance to use
  * @returns {import('ajv').DefinedError[]} Array of validation errors
  */
-function validateSpliceResource(schema, resource, options = {}) {
+function validateMergeResource(schema, resource, options = {}) {
 	const { validator = defaultValidator } = options;
 
 	if (typeof schema !== "object") {
@@ -4344,7 +4344,7 @@ function validateSpliceResource(schema, resource, options = {}) {
 		];
 	}
 
-	const cache = getSpliceResourceCache(schema, validator);
+	const cache = getMergeResourceCache(schema, validator);
 	let schemaCache = cache.value;
 	if (!schemaCache) {
 		schemaCache = new Map(); // Cache by resource type
@@ -5325,7 +5325,7 @@ const ensureValidQuery = ensure(validateQuery);
 const ensureValidCreateResource = ensure(validateCreateResource);
 const ensureValidUpdateResource = ensure(validateUpdateResource);
 const ensureValidDeleteResource = ensure(validateDeleteResource);
-const ensureValidSpliceResource = ensure(validateSpliceResource);
+const ensureValidMergeResource = ensure(validateMergeResource);
 const ensureValidQueryResult = ensure(validateQueryResult);
 
-export { createEmptyGraph, createGraphFromResources, createResource, createValidator, ensureValidCreateResource, ensureValidDeleteResource, ensureValidQuery, ensureValidQueryResult, ensureValidSchema, ensureValidSpliceResource, ensureValidUpdateResource, linkInverses, mergeGraphs, normalizeQuery, normalizeResource, queryGraph, validateCreateResource, validateDeleteResource, validateQuery, validateQueryResult, validateSchema, validateSpliceResource, validateUpdateResource };
+export { createEmptyGraph, createGraphFromResources, createResource, createValidator, ensureValidCreateResource, ensureValidDeleteResource, ensureValidMergeResource, ensureValidQuery, ensureValidQueryResult, ensureValidSchema, ensureValidUpdateResource, linkInverses, mergeGraphs, normalizeQuery, normalizeResource, queryGraph, validateCreateResource, validateDeleteResource, validateMergeResource, validateQuery, validateQueryResult, validateSchema, validateUpdateResource };

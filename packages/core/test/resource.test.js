@@ -4,7 +4,7 @@ import {
 	validateQueryResult,
 	validateCreateResource,
 	validateDeleteResource,
-	validateSpliceResource,
+	validateMergeResource,
 	validateUpdateResource,
 	createResource,
 } from "../src/resource.js";
@@ -324,34 +324,34 @@ describe("delete validation", () => {
 	});
 });
 
-describe("resource splice validation", () => {
+describe("resource merge validation", () => {
 	describe("without an id", () => {
 		it("fails validation on an empty object", () => {
-			const result = validateSpliceResource(soccerSchema, {});
+			const result = validateMergeResource(soccerSchema, {});
 			expect(result.length).toBeGreaterThan(0);
 		});
 
 		it("fails validation on an invalid type", () => {
-			const result = validateSpliceResource(soccerSchema, { type: "foo" });
+			const result = validateMergeResource(soccerSchema, { type: "foo" });
 			expect(result.length).toBeGreaterThan(0);
 		});
 
 		it("passes validation on an object with only a type and nothing required", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "fields",
 			});
 			expect(result.length).toEqual(0);
 		});
 
 		it("fails validation on an object with only a type and at least one required attribute", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "teams",
 			});
 			expect(result.length).toBeGreaterThan(0);
 		});
 
 		it("passes validation with an valid type", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "fields",
 				attributes: { name: "Tempe Elementary B" },
 			});
@@ -359,7 +359,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("fails validation with an invalid type", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "fields",
 				attributes: { name: 5 },
 			});
@@ -367,7 +367,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("fails validation with an invalid minimum", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: -1 },
 			});
@@ -375,7 +375,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("fails validation with an invalid pattern", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "fields",
 				attributes: { name: "my field" },
 			});
@@ -383,7 +383,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("fails validation with an invalid related resource", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
@@ -394,7 +394,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("passes validation with a null, non-required relationship", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
@@ -405,7 +405,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("passes validation with a valid relationship", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
@@ -419,7 +419,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("fails validation with a missing required relationship", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "teams",
 				attributes: { name: "Tempe Wave" },
 			});
@@ -427,7 +427,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("fails validation with an empty relationships object without the required relationships", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "teams",
 				attributes: { name: "Tempe Wave" },
 				relationships: {},
@@ -436,7 +436,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("fails validation with a null, required relationship", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "teams",
 				attributes: { name: "Tempe Wave" },
 				relationships: {
@@ -558,7 +558,7 @@ describe("resource splice validation", () => {
 
 	describe("with nested resources", () => {
 		it("passes validation with a valid nested create relationship", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
@@ -575,7 +575,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("fails validation with a valid nested create relationship and missing attribute", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
@@ -589,7 +589,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("passes validation with a valid nested update relationship", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
@@ -604,7 +604,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("passes validation with a doubly nested resource", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
@@ -624,7 +624,7 @@ describe("resource splice validation", () => {
 		});
 
 		it("passes validation with a nested resource with a ref", () => {
-			const result = validateSpliceResource(soccerSchema, {
+			const result = validateMergeResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {

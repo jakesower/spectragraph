@@ -169,9 +169,10 @@ describe("queryTree core", () => {
 		});
 	});
 
-	it("can merge data into the store", async () => {
-		const store = createMemoryStore(careBearSchema);
-		store.merge({ bears: careBearData.bears });
+	it("can initialize with initial data", async () => {
+		const store = createMemoryStore(careBearSchema, {
+			initialData: { bears: careBearData.bears }
+		});
 
 		const result = store.query({
 			type: "bears",

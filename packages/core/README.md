@@ -436,9 +436,9 @@ Validates a resource for delete operations.
 
 **Returns:** Array of validation errors (empty if valid)
 
-#### `validateSpliceResource(schema, resource, options?)`
+#### `validateMergeResource(schema, resource, options?)`
 
-Validates a resource tree that will be spliced into a graph.
+Validates a resource tree that will be merged into a graph.
 
 **Parameters:**
 
@@ -515,9 +515,9 @@ Validates a resource for delete operations. Throws on validation failure.
 
 **Throws:** Error if resource is invalid
 
-#### `ensureValidSpliceResource(schema, resource, options?)`
+#### `ensureValidMergeResource(schema, resource, options?)`
 
-Validates a resource tree that will be spliced into a graph. Throws on validation failure.
+Validates a resource tree that will be merged into a graph. Throws on validation failure.
 
 **Parameters:**
 

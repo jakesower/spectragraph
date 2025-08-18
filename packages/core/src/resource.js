@@ -146,7 +146,7 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 const getNormalResourceCache = createDeepCache();
 const getCreateResourceCache = createDeepCache();
 const getUpdateResourceCache = createDeepCache();
-const getSpliceResourceCache = createDeepCache();
+const getMergeResourceCache = createDeepCache();
 const getValidateQueryResultCache = createDeepCache();
 
 /**
@@ -442,7 +442,7 @@ export function validateDeleteResource(schema, resource) {
 }
 
 /**
- * Validates a resource tree that will be spliced into a graph
+ * Validates a resource tree that will be merged into a graph
  *
  * @param {import('./schema.js').Schema} schema - The schema to validate against
  * @param {*} resource - The resource tree to validate
@@ -450,7 +450,7 @@ export function validateDeleteResource(schema, resource) {
  * @param {Ajv} [options.validator] - The validator instance to use
  * @returns {import('ajv').DefinedError[]} Array of validation errors
  */
-export function validateSpliceResource(schema, resource, options = {}) {
+export function validateMergeResource(schema, resource, options = {}) {
 	const { validator = defaultValidator } = options;
 
 	if (typeof schema !== "object") {
@@ -473,7 +473,7 @@ export function validateSpliceResource(schema, resource, options = {}) {
 		];
 	}
 
-	const cache = getSpliceResourceCache(schema, validator);
+	const cache = getMergeResourceCache(schema, validator);
 	let schemaCache = cache.value;
 	if (!schemaCache) {
 		schemaCache = new Map(); // Cache by resource type

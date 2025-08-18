@@ -1,317 +1,438 @@
-# Data Prism
+# Data Prism Memory Store
 
-Data prism is a library with working with data graphs. It uses a user-provided schema to power various graph operations include fetching, creating, updating, deleting and querying resources.
+An in-memory store implementation for Data Prism that provides CRUD operations, querying, and relationship management for graph data. Perfect for prototyping, testing, or applications that need fast data access without external dependencies.
 
-## Schema
+## Overview
 
-The schema is a document of vital information that the library makes extensive use of. A well thought out and written schema is worth its weight in gold.
+Data Prism Memory Store is built around several key principles:
 
-### Schema Structure
+- **Schema-driven**: Validates all operations against your Data Prism schema
+- **Relationship-aware**: Automatically maintains bidirectional relationships
+- **Query-compatible**: Full support for Data Prism's query language
+- **Memory-efficient**: Normalized storage with reference-based relationships
 
-```
-{
-  resources: {
-    [resourceType]: {
-      idAttribute?: "id",
-      attributes: {
-        [attr1]: { type: "boolean" },
-        [attr2]: { type: "string", pattern: "^someregex.*$" }
-      },
-      relationships: {
-        [rel1]: {
-          type: "otherResourceType",
-          cardinality: "many",
-          inverse: "referenceBackToThisResource"
-        }
-      }
-    }
-  }
-}
+## Installation
+
+```bash
+npm install @data-prism/memory-store
 ```
 
-### Data Types
+## Core Concepts
 
-There are various data types that determine how data is cast and validated. Some of these data types have subtypes that provide further precision.
+### Memory Store
 
-#### Basic Types
-
-- `array`
-- `boolean`
-- `integer`
-- `null`
-- `number`
-- `object`
-
-#### Additional Types (see [AJV Guide](https://ajv.js.org/guide/formats.html))
-
-- `date`
-- `time`
-- `date-time`
-- `duration` - [RFC3339](https://tools.ietf.org/html/rfc3339#appendix-A)
-- `uri`
-- `uri-reference` - [RFC6570](https://datatracker.ietf.org/doc/rfc6570/)
-- `url` - (deprecated)
-- `email`
-- `hostname`
-- `ipv4`
-- `ipv6`
-- `regex`
-- `uuid` - [RFC4122](https://datatracker.ietf.org/doc/rfc4122/)
-- `json-pointer` - [RFC6901](https://datatracker.ietf.org/doc/rfc6901/)
-- `relative-json-pointer` - according to [this draft](http://tools.ietf.org/html/draft-luff-relative-json-pointer-00)
-
-#### GeoJSON Types
-
-- `geojson` - including subtypes:
-  - `point`
-  - `line-string`
-  - `polygon`
-  - `multi-point`
-  - `multi-line-string`
-  - `multi-polygon`
-  - `geometry-collection`
-  - `feature`
-  - `feature-collection`
-
-This borrows a great deal from AJV formats. However, it is important to note that rather than being formats, the options are elevated to actual types. Data Prism will do the work of transforming the Data Prism schema into a JSON Schema.
-
-Other JSON Schema properties are available to be added to any attribute definition.
-
-## Graph Queries
-
-This library exposes the ability to query graphs to receive result trees using a robust query language. In addition it provides a suite of utility functions to help wrangle data into appropriate formats and interact with data structures effectively. See [helper functions](./helpers.md).
-
-This document focuses on constructing queries as this is the most common and use case for the library that requires a fair bit of explaination.
-
-### Resource Data
-
-Resource data is a representation of the graph of data to be queried on. It should be presented in _normal form_, which looks like this:
+The memory store maintains your data in normalized form in memory, with automatic relationship management and validation. All data is stored in a graph structure organized by resource type and ID.
 
 ```javascript
-{
-  [resourceType]: {
-    [resourceId]: {
-      attributes: {
-        attr1: "value1",
-        attr2: "value2"
-      },
-      relationships: {
-        relationship1: { type: "other_resource", id: "1234" },
-      [relationship2]: [
-          { type: "bar_resource", id: 1 },
-          { type: "bar_resource", id: 2 }
-        ]
-      }
-    }
-  }
-}
+import { createMemoryStore } from "@data-prism/memory-store";
+
+const store = createMemoryStore(schema, {
+	initialData: existingGraph, // optional
+	validator: customValidator, // optional
+});
 ```
 
-Some effort may be required to get resources into this form, but it is designed to be as straightforward as possible. Having structure like this allows the query engine to make good assumptions about the data and allows it to execute many of the more powerful query features.
+### Operations
 
-### Queries
+The memory store provides standard CRUD operations plus advanced features:
 
-Queries are what make the library useful. They aim to match the format of data you want as the output for your tree as best as they can. There are many types of things you can do within a query. Here's a small example first:
+- **create** - Add new resources with automatic ID generation
+- **update** - Modify existing resources with attribute merging
+- **upsert** - Create or update based on resource existence
+- **delete** - Remove resources with relationship cleanup
+- **query** - Execute Data Prism queries against the store
+- **merge** - Insert complex resource trees with nested relationships
 
-```json
-{
-	"type": "resource type",
-	"select": ["attribute1", "attribute2"]
-}
-```
+## API Reference
 
-Here's the overall structure. Notice that it can be represented in JSON. Also, try not to get overwhelmed with the number of things going on.
+### `createMemoryStore(schema, config?)`
 
-```json
-{
-	"type": "[resource type]",
-	"id": "[resource id]",
-	"select": [
-		"attribute1",
-		"relationship ref1",
-		{
-			"relationship 2": {
-				"subquery": "goes here"
+Creates a new in-memory store instance.
+
+**Parameters:**
+
+- `schema` (Schema) - The Data Prism schema defining resource types and relationships
+- `config.initialData` (Graph, optional) - Initial graph data to populate the store
+- `config.validator` (Ajv, optional) - Custom AJV validator instance
+
+**Returns:** Memory store instance with CRUD and query operations
+
+```javascript
+import { createMemoryStore } from "@data-prism/memory-store";
+
+const store = createMemoryStore(schema, {
+	initialData: {
+		teams: {
+			"team-1": {
+				type: "teams",
+				id: "team-1",
+				attributes: { name: "Arizona Bay FC" },
+				relationships: { homeMatches: [] },
 			},
-			"some sum": { "$sum": "numeric field" }
-		}
-	],
-	"where": {
-		"some": "criterion"
+		},
 	},
-	"order": [{ "some field": "asc" }],
-	"limit": 5,
-	"offset": 3
-}
+});
 ```
 
-There's are a lot of options and power in there. Let's try to break it down across the top level keys first:
+### Store Operations
 
-- **type** indicates the type of the query. It's required at the root, but not in subqueries.
-- **id** gets a single resource with an ID. It's optional, and can't be used in subqueries.
-- **select** is a required field that instructs the engine what fields it is to return. There are a few types of things it can do, but we'll return to those in a moment.
-- **where** adds filters to the data that comes back. It's optional.
-- **order** sorts the resources, using one or more fields. It's also optional.
-- **limit** and **offset** take a subset of results. They can be useful for pagination and such. These are also optional.
+#### `store.create(resource)`
 
-The guts and focus of most queries are going to be on what gets selected. We'll start there with the different types of things.
+Creates a new resource in the store with automatic relationship linking.
 
-#### `type`
+**Parameters:**
 
-The `type` of an attribute determines which type of resource is being queried at the root level. It's required.
+- `resource` (CreateResource) - The resource to create
 
-#### `id`
+**Returns:** The created normalized resource
 
-An `id` attribute targets the query to a specific resource. With it, you'll get a single resource; without it, you'll get a collection of resources. If the ID isn't found in the graph, you'll get a result of `null`.
-
-#### `select`
-
-`select` can be either an array or an object.
-
-If it's an array, its members should be strings of attributes (or relationship refs) to get, or an object that adds additional fields select fields.
-
-If it's an object, the object can be of one of three types:
-
-- A string, in which case that attribute or relationship ref will be returned (and possibly be renamed).
-- A subquery, where a relationship will be traversed.
-- An expression, which processes the resource's data in some way (we'll come back to these much later as they can safely be ignored).
-
-A couple of examples:
-
-##### Select an Attribute
-
-```json
-{ "type": "teams", "select": ["name"] }
-```
-
-Might return:
-
-```json
-[{ "name": "Arizona Bay FC" }, { "name": "Scottsdale Surf" }]
-```
-
-In this example we select the name from each team in our resources.
-
-##### Rename an Attribute
-
-```json
-{ "type": "teams", "select": { "nombre": "name" } }
-```
-
-Might return:
-
-```json
-[{ "nombre": "Arizona Bay FC" }, { "nombre": "Scottsdale Surf" }]
-```
-
-Here we rename the "name" attribute to "nombre". You may have noticed that `{ "select": ["name"] }` is equivalent to `{ "select": { "name": "name" } }`.
-
-##### Run a Subquery
-
-```json
-{
-  "type": "teams",
-  "id": 1,
-  "select": [
-    "name",
-    "matches": {
-      "select": "field"
-    }
-  ]
-}
-```
-
-Might return:
-
-```json
-{
-	"name": "Arizona Bay FC",
-	"matches": [{ "field": "Phoenix Park 1" }, { "field": "Mesa Elementary B" }]
-}
-```
-
-Here we add an `id` key, meaning that we'll get a single resource back. Additionally, we've reached into one of its relationships and run a query there. The `type` of the subquery can be inferred from what's in the parent resource's relationships. Presumably we'd see something like this for the Arizona Bay resource:
-
-```json
-{
-	"attribute": {
-		"name": "Arizona Bay FC"
+```javascript
+const newTeam = store.create({
+	type: "teams",
+	attributes: {
+		name: "Scottsdale Surf",
+		city: "Scottsdale",
 	},
-	"relationships": {
-		"matches": [
-			{ "type": "matches", "id": 1 },
-			{ "type": "matches", "id": 2 }
-		]
-	}
+	relationships: {
+		homeField: { type: "fields", id: "field-1" },
+	},
+});
+```
+
+#### `store.update(resource)`
+
+Updates an existing resource, merging attributes and relationships.
+
+**Parameters:**
+
+- `resource` (UpdateResource) - The resource updates to apply
+
+**Returns:** The updated normalized resource
+
+```javascript
+const updatedTeam = store.update({
+	type: "teams",
+	id: "team-1",
+	attributes: {
+		city: "Phoenix", // New attribute
+	},
+	relationships: {
+		homeMatches: [{ type: "matches", id: "match-1" }], // Replace relationship
+	},
+});
+```
+
+#### `store.upsert(resource)`
+
+Creates a resource if it doesn't exist, otherwise updates it.
+
+**Parameters:**
+
+- `resource` (CreateResource | UpdateResource) - The resource to upsert
+
+**Returns:** The created or updated normalized resource
+
+```javascript
+// Creates if team-2 doesn't exist, updates if it does
+const team = store.upsert({
+	type: "teams",
+	id: "team-2",
+	attributes: { name: "Mesa Mariners" },
+});
+```
+
+#### `store.delete(resource)`
+
+Deletes a resource and cleans up all inverse relationships.
+
+**Parameters:**
+
+- `resource` (DeleteResource) - The resource reference to delete
+
+**Returns:** The deleted resource reference
+
+```javascript
+store.delete({ type: "teams", id: "team-1" });
+// All references to team-1 are automatically removed from related resources
+```
+
+#### `store.query(query)`
+
+Executes a Data Prism query against the store.
+
+**Parameters:**
+
+- `query` (RootQuery) - The query to execute
+
+**Returns:** Query results matching the query structure
+
+```javascript
+const results = store.query({
+	type: "teams",
+	select: {
+		name: "name",
+		homeMatches: {
+			select: ["field", "ageGroup"],
+			where: { ageGroup: { $gt: 10 } },
+		},
+	},
+	where: { city: "Phoenix" },
+});
+```
+
+#### `store.getOne(type, id)`
+
+Retrieves a single resource by type and ID.
+
+**Parameters:**
+
+- `type` (string) - The resource type
+- `id` (string) - The resource ID
+
+**Returns:** The normalized resource or null if not found
+
+```javascript
+const team = store.getOne("teams", "team-1");
+// Returns: { type: "teams", id: "team-1", attributes: {...}, relationships: {...} }
+```
+
+#### `store.merge(resourceTree)`
+
+Inserts a complex resource tree with nested relationships into the store.
+
+**Parameters:**
+
+- `resourceTree` (NormalResourceTree) - The resource tree to merge
+
+**Returns:** The processed resource tree with all nested resources created/updated
+
+```javascript
+const result = store.merge({
+	type: "teams",
+	attributes: { name: "Tempe Tidal Wave" },
+	relationships: {
+		homeMatches: [
+			{
+				// Nested resource - will be created automatically
+				type: "matches",
+				attributes: { field: "Tempe Community Center", ageGroup: 12 },
+				relationships: {
+					awayTeam: { type: "teams", id: "team-2" }, // Reference to existing
+				},
+			},
+		],
+	},
+});
+```
+
+### Advanced Operations
+
+#### `store.linkInverses()`
+
+Manually triggers inverse relationship linking across the entire store.
+
+```javascript
+store.linkInverses();
+// Ensures all bidirectional relationships are properly connected
+```
+
+## Examples
+
+### Basic Usage
+
+```javascript
+import { createMemoryStore } from "@data-prism/memory-store";
+
+// 1. Define your schema (or import from elsewhere)
+const schema = {
+	resources: {
+		teams: {
+			attributes: {
+				id: { type: "string" },
+				name: { type: "string" },
+				city: { type: "string" },
+			},
+			relationships: {
+				homeMatches: {
+					type: "matches",
+					cardinality: "many",
+					inverse: "homeTeam",
+				},
+			},
+		},
+		matches: {
+			attributes: {
+				id: { type: "string" },
+				field: { type: "string" },
+				ageGroup: { type: "integer" },
+			},
+			relationships: {
+				homeTeam: { type: "teams", cardinality: "one", inverse: "homeMatches" },
+			},
+		},
+	},
+};
+
+// 2. Create the store
+const store = createMemoryStore(schema);
+
+// 3. Create resources
+const team = store.create({
+	type: "teams",
+	attributes: {
+		name: "Arizona Bay FC",
+		city: "Phoenix",
+	},
+});
+
+const match = store.create({
+	type: "matches",
+	attributes: {
+		field: "Phoenix Park 1",
+		ageGroup: 11,
+	},
+	relationships: {
+		homeTeam: { type: "teams", id: team.id },
+	},
+});
+
+// 4. Query the data
+const results = store.query({
+	type: "teams",
+	select: {
+		name: "name",
+		homeMatches: {
+			select: ["field", "ageGroup"],
+		},
+	},
+});
+
+console.log(results);
+// [{ name: "Arizona Bay FC", homeMatches: [{ field: "Phoenix Park 1", ageGroup: 11 }] }]
+```
+
+### Complex Resource Trees
+
+```javascript
+// Create a team with nested matches and relationships
+const teamWithMatches = store.merge({
+	type: "teams",
+	attributes: {
+		name: "Scottsdale Surf",
+		city: "Scottsdale",
+	},
+	relationships: {
+		homeMatches: [
+			{
+				type: "matches",
+				attributes: {
+					field: "Scottsdale Community Center",
+					ageGroup: 12,
+				},
+				relationships: {
+					awayTeam: { type: "teams", id: team.id }, // Reference to existing team
+				},
+			},
+			{
+				type: "matches",
+				attributes: {
+					field: "Desert Breeze Park",
+					ageGroup: 14,
+				},
+			},
+		],
+	},
+});
+
+// All relationships are automatically linked bidirectionally
+const phoenixTeam = store.getOne("teams", team.id);
+console.log(phoenixTeam.relationships.awayMatches.length); // 1
+```
+
+### Data Validation
+
+```javascript
+// Validation happens automatically on all operations
+try {
+	store.create({
+		type: "teams",
+		attributes: {
+			name: 123, // Invalid: should be string
+		},
+	});
+} catch (error) {
+	console.error("Validation failed:", error.message);
 }
+
+// Custom validator for additional constraints
+import { createValidator } from "@data-prism/core";
+
+const customValidator = createValidator({
+	ajvSchemas: [myCustomSchema],
+});
+
+const strictStore = createMemoryStore(schema, {
+	validator: customValidator,
+});
 ```
 
-This is one reason why the normal form for resources is important: we can traverse the resource to elsewhere in the graph.
+### Querying with Filters
 
-##### Conclusion
-
-We've seen the basics of querying. Expressions will be discussed later, but any data can be fetched without them. Hopefully you've noticed that the results of the queries closely line up with what's in the `select` field, including the nested subqueries. For more examples, you can check out the test suite.
-
-#### `where`
-
-The `where` property allows you to filter the result based on either properties, expressions, or property expressions. We'll leave the full expressions for later, but touch on the property expressions a little bit here because they're an integral part of some results and hopefully don't introduce too much complexity.
-
-##### Equality
-
-```json
-{
-	"type": "matches",
-	"select": ["field", "ageGroup"],
-	"where": {
-		"field": "Phoenix Park 1"
-	}
-}
+```javascript
+// Find all matches for teams from Phoenix
+const phoenixMatches = store.query({
+	type: "matches",
+	select: {
+		field: "field",
+		ageGroup: "ageGroup",
+		homeTeamName: "homeTeam.name",
+	},
+	where: {
+		"homeTeam.city": "Phoenix",
+		ageGroup: { $gte: 11 },
+	},
+	order: [{ ageGroup: "asc" }, { field: "asc" }],
+	limit: 10,
+});
 ```
 
-Might give us:
+## TypeScript Support
 
-```json
-[
-	{ "field": "Phoenix Park 1", "ageGroup": 11 },
-	{ "field": "Phoenix Park 1", "ageGroup": 14 }
-]
+Data Prism Memory Store includes comprehensive TypeScript definitions:
+
+```typescript
+import type { MemoryStore, MemoryStoreConfig } from "@data-prism/memory-store";
+import type { Schema, CreateResource } from "@data-prism/core";
+
+const schema: Schema = {
+	resources: {
+		teams: {
+			attributes: {
+				id: { type: "string" },
+				name: { type: "string" },
+			},
+			relationships: {},
+		},
+	},
+};
+
+const store: MemoryStore = createMemoryStore(schema);
+
+const newTeam: CreateResource = {
+	type: "teams",
+	attributes: { name: "Mesa Mariners" },
+};
 ```
 
-The `where` clause has whittled the results down to just the matches with the correct field name.
+## Performance Considerations
 
-##### Numeric Comparison
+- **Memory usage**: All data is kept in memory - monitor usage for large datasets
+- **Relationship updates**: Complex relationship graphs may slow mutation operations
+- **Query optimization**: Simple queries are very fast, complex nested queries may need optimization
 
-```json
-{
-	"type": "matches",
-	"select": ["field", "ageGroup"],
-	"where": {
-		"ageGroup": { "$gt": 11 }
-	}
-}
-```
+## Related Packages
 
-Might give us:
-
-```json
-[
-  { "field": "Mesa HS", "ageGroup": 17 }
-  { "field": "Phoenix Park 1", "ageGroup": 14 }
-]
-```
-
-`{ "$gt": 11 }` is an expression that does a "greater than" comparison for its filtering. I'll document these at some point.
-
-#### `order`
-
-The `order` clause sorts results. It takes an array of field/direction pairs and sorts by them in order. If the first sorting is equal the second is applied, etc.
-
-```json
-{
-	"order": [{ "ageGroup": "desc" }, { "field": "asc" }]
-}
-```
-
-#### `limit` and `offset`
-
-These two properties work in tandem to reduce a list of results to a particular size. `[1, 2, 3, 4]` with limit 2, offset 1 would be `[2, 3]` for example. This pattern is well documented within the SQL world.
+- `@data-prism/core` - Core Data Prism functionality and validation
+- `@data-prism/postgres-store` - PostgreSQL backend store
+- `@data-prism/jsonapi-store` - JSON:API client store
+- `@data-prism/expressions` - Expression engine for advanced queries
