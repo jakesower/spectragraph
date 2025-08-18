@@ -104,8 +104,9 @@ export function createExpressionEngine(definitions) {
 
 			// some operations need to control the flow of evaluation
 			const expressionDefinition = definitions[expressionName];
-			if (expressionDefinition.controlsEvaluation)
-				{return expressionDefinition.evaluate(expressionArgs, evaluate);}
+			if (expressionDefinition.controlsEvaluation) {
+				return expressionDefinition.evaluate(expressionArgs, evaluate);
+			}
 
 			// with evaluated children
 			const evaluatedArgs = go(expressionArgs);
@@ -120,8 +121,9 @@ export function createExpressionEngine(definitions) {
 		evaluate,
 		expressionNames: Object.keys(allDefinitions),
 		compile: (expression) => {
-			if (!isExpression(expression))
-				{throw new Error("only expressions may be compiled");}
+			if (!isExpression(expression)) {
+				throw new Error("only expressions may be compiled");
+			}
 
 			return (arg) => apply(expression, arg);
 		},

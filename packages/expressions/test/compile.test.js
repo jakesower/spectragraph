@@ -4,7 +4,7 @@ import { defaultExpressionEngine } from "../src/index.js";
 const kids = {
 	xinema: { name: "Ximena", age: 4, toy: "ball" },
 	yousef: { name: "Yousef", age: 5, toy: "doll" },
-	zoe: { name: "Zoe", age: 6, toy: "boat" },
+	zoë: { name: "Zoë", age: 6, toy: "boat" },
 };
 
 const { compile } = defaultExpressionEngine;
@@ -27,29 +27,29 @@ describe("core expressions (plus $eq for help)", () => {
 	// });
 
 	it("doesn't compile contents of $literal expressions", () => {
-		const exp = { $literal: { $prop: "age" } };
+		const exp = { $literal: { $get: "age" } };
 		const compiled = compile(exp);
-		expect(compiled(kids.xinema)).toEqual({ $prop: "age" });
+		expect(compiled(kids.xinema)).toEqual({ $get: "age" });
 	});
 
 	it("looks up a variable", () => {
-		expect(compile({ $prop: "age" })(kids.xinema)).toEqual(4);
+		expect(compile({ $get: "age" })(kids.xinema)).toEqual(4);
 	});
 
 	it("evaluates expressions in arrays", () => {
-		const compiled = compile({ $apply: [{ $prop: "age" }, { $prop: "name" }] });
+		const compiled = compile({ $apply: [{ $get: "age" }, { $get: "name" }] });
 		expect(compiled(kids.yousef)).toEqual([5, "Yousef"]);
 	});
 
 	it("evaluates expressions in objects", () => {
 		const compiled = compile({
-			$apply: { age: { $prop: "age" }, name: { $prop: "name" } },
+			$apply: { age: { $get: "age" }, name: { $get: "name" } },
 		});
-		expect(compiled(kids.zoe)).toEqual({ age: 6, name: "Zoe" });
+		expect(compiled(kids["zoë"])).toEqual({ age: 6, name: "Zoë" });
 	});
 
 	it("pipes expressions", () => {
-		const compiled = compile({ $compose: [{ $prop: "age" }, { $eq: 6 }] });
-		expect(compiled(kids.zoe)).toEqual(true);
+		const compiled = compile({ $pipe: [{ $get: "age" }, { $eq: 6 }] });
+		expect(compiled(kids["zoë"])).toEqual(true);
 	});
 });

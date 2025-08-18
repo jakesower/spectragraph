@@ -8,14 +8,14 @@ describe("TypeScript to JSDoc conversion", () => {
 			resources: {
 				users: {
 					attributes: { name: { type: "string" } },
-					relationships: {}
-				}
-			}
+					relationships: {},
+				},
+			},
 		};
 		
 		const query = {
 			type: "users",
-			select: { name: "name" }
+			select: { name: "name" },
 		};
 
 		// This should not throw an error if the conversion worked

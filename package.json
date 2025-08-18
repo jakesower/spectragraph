@@ -13,7 +13,7 @@
 		"build": "npm run build --workspaces",
 		"test": "npm run test --workspaces",
 		"lint": "npm run lint --workspaces",
-		"lint-fix": "npm run lint --fix --workspaces"
+		"lint-fix": "npm run lint --workspaces -- --fix"
 	},
 	"devDependencies": {
 		"@changesets/cli": "^2.29.6",

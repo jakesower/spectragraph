@@ -136,7 +136,6 @@ function runQuery(rootQuery, data) {
 
 							if (head === "$") {
 								return curValue.map((v) => extractPath(v, tail));
-
 							}
 							if (!(head in curValue)) return undefined;
 
