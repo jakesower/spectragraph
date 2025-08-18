@@ -15,7 +15,7 @@ import {
 } from "@data-prism/core";
 import { createOrUpdate } from "./create-or-update.js";
 import { deleteAction } from "./delete.js";
-import { splice } from "./splice.js";
+import { merge } from "./merge.js";
 
 
 /**
@@ -50,13 +50,12 @@ import { splice } from "./splice.js";
  * @property {function(import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource): import('@data-prism/core').NormalResource} upsert
  * @property {function(import('@data-prism/core').DeleteResource): import('@data-prism/core').DeleteResource} delete
  * @property {function(import('@data-prism/core').RootQuery): any} query
- * @property {function(NormalResourceTree): NormalResourceTree} splice
+ * @property {function(NormalResourceTree): NormalResourceTree} merge
  */
 
 /**
  * @typedef {Store & {
- *   linkInverses: function(): void,
- *   merge: function(import('@data-prism/core').Graph): void
+ *   linkInverses: function(): void
  * }} MemoryStore
  */
 
@@ -137,11 +136,6 @@ export function createMemoryStore(schema, config = {}) {
 	};
 
 	// WARNING: MUTATES storeGraph
-	const merge = (graph) => {
-		storeGraph = mergeGraphs(storeGraph, graph);
-	};
-
-	// WARNING: MUTATES storeGraph
 	const linkStoreInverses = () => {
 		storeGraph = linkInverses(storeGraph, schema);
 	};
@@ -155,10 +149,9 @@ export function createMemoryStore(schema, config = {}) {
 		update,
 		upsert,
 		delete: delete_,
-		merge,
 		query: runQuery,
-		splice(resource) {
-			return splice(resource, { schema, validator, store: this, storeGraph });
+		merge(resource) {
+			return merge(resource, { schema, validator, store: this, storeGraph });
 		},
 	};
 }

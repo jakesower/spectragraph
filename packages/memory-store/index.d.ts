@@ -197,11 +197,13 @@ export function createMemoryStore(
   config?: MemoryStoreConfig
 ): {
   query: (query: RootQuery) => Result;
-  create: (resource: CreateResource | NormalResourceTree) => void;
-  update: (resource: UpdateResource | NormalResourceTree) => void;
-  delete: (resource: DeleteResource) => void;
-  splice: (resources: (CreateResource | UpdateResource | DeleteResource | NormalResourceTree)[]) => void;
-  getGraph: () => Graph;
+  create: (resource: CreateResource | NormalResourceTree) => NormalResource;
+  update: (resource: UpdateResource | NormalResourceTree) => NormalResource;
+  upsert: (resource: CreateResource | UpdateResource | NormalResourceTree) => NormalResource;
+  delete: (resource: DeleteResource) => DeleteResource;
+  merge: (resource: NormalResourceTree) => NormalResourceTree;
+  getOne: (type: string, id: string) => NormalResource | null;
+  linkInverses: () => void;
 };
 
 // Validation functions

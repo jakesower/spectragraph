@@ -4,8 +4,8 @@ import { careBearSchema } from "@data-prism/test-fixtures";
 
 const store = createMemoryStore(careBearSchema);
 
-it("splices a single resource with only attributes", async () => {
-	const spliced = await store.splice({
+it("merges a single resource with only attributes", async () => {
+	const merged = await store.merge({
 		type: "bears",
 		attributes: {
 			name: "Bedtime Bear",
@@ -17,7 +17,7 @@ it("splices a single resource with only attributes", async () => {
 
 	const result = await store.query({
 		type: "bears",
-		id: spliced.id,
+		id: merged.id,
 		select: ["name"],
 	});
 
@@ -35,7 +35,7 @@ it("updates a single resource with only attributes", async () => {
 		},
 	});
 
-	await store.splice({
+	await store.merge({
 		type: "bears",
 		id: created.id,
 		attributes: {
@@ -56,7 +56,7 @@ it("updates a single resource with only attributes", async () => {
 });
 
 it("creates resources in a tree and properly relates them", async () => {
-	const spliced = await store.splice({
+	const merged = await store.merge({
 		type: "bears",
 		attributes: {
 			name: "Care-a-Lot Bear",
@@ -77,7 +77,7 @@ it("creates resources in a tree and properly relates them", async () => {
 
 	const bearResult = store.query({
 		type: "bears",
-		id: spliced.id,
+		id: merged.id,
 		select: ["yearIntroduced", { home: { select: ["name"] } }],
 	});
 

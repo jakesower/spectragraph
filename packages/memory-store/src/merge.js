@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { mapValues } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
-import { ensureValidSpliceResource } from "@data-prism/core";
+import { ensureValidMergeResource } from "@data-prism/core";
 import { updateInverseRelationships } from "./lib/store-helpers.js";
 
 /**
@@ -17,15 +17,11 @@ import { updateInverseRelationships } from "./lib/store-helpers.js";
  */
 function containsNestedResources(relValue) {
 	if (!relValue) return false;
-	
+
 	return Array.isArray(relValue)
-		? relValue.some(r => r.attributes || r.relationships)
+		? relValue.some((r) => r.attributes || r.relationships)
 		: relValue.attributes || relValue.relationships;
 }
-
-
-
-
 
 /**
  * Recursively processes a resource tree, handling inverse relationships and store updates.
@@ -54,7 +50,7 @@ function processResourceTree(resource, parent, parentRelSchema, context) {
 	// Prepare resource for storage and get existing reference
 	const existing = store.getOne(resource.type, resource.id);
 	const resultId = resource.id ?? existing?.id ?? uuidv4();
-	
+
 	// Optimize: Build final resource in-place to avoid intermediate objects
 	const finalResource = existing
 		? {
@@ -84,8 +80,8 @@ function processResourceTree(resource, parent, parentRelSchema, context) {
 		relationships: mapValues(finalResource.relationships, (rel, relName) => {
 			const relSchema = resSchema.relationships[relName];
 			if (!rel) return rel;
-			return Array.isArray(rel) 
-				? rel.map(r => ({ type: relSchema.type, id: r.id }))
+			return Array.isArray(rel)
+				? rel.map((r) => ({ type: relSchema.type, id: r.id }))
 				: { type: relSchema.type, id: rel.id };
 		}),
 	};
@@ -94,51 +90,54 @@ function processResourceTree(resource, parent, parentRelSchema, context) {
 	storeGraph[resource.type][resultId] = normalizedForStore;
 
 	// Process nested relationships (this handles complex trees)
-	const processedRelationships = mapValues(finalResource.relationships ?? {}, (rel, relName) => {
-		const relSchema = resSchema.relationships[relName];
-		
-		// Process nested resources first
-		const step = (relRes) =>
-			containsNestedResources(relRes)
-				? processResourceTree(relRes, finalResource, relSchema, context)
-				: relRes;
+	const processedRelationships = mapValues(
+		finalResource.relationships ?? {},
+		(rel, relName) => {
+			const relSchema = resSchema.relationships[relName];
 
-		const result = applyOrMap(rel, step);
-		
-		// Update normalized references in store
-		storeGraph[finalResource.type][finalResource.id].relationships[relName] = applyOrMap(
-			result,
-			(r) => ({ type: relSchema.type, id: r.id }),
-		);
+			// Process nested resources first
+			const step = (relRes) =>
+				containsNestedResources(relRes)
+					? processResourceTree(relRes, finalResource, relSchema, context)
+					: relRes;
 
-		return result;
-	});
+			const result = applyOrMap(rel, step);
+
+			// Update normalized references in store
+			storeGraph[finalResource.type][finalResource.id].relationships[relName] =
+				applyOrMap(result, (r) => ({ type: relSchema.type, id: r.id }));
+
+			return result;
+		},
+	);
 
 	// Update inverse relationships for any simple refs (not nested resources)
-	Object.entries(finalResource.relationships ?? {}).forEach(([relName, rel]) => {
-		// Only update inverses for simple refs, not nested resources
-		if (rel && !containsNestedResources(rel)) {
-			updateInverseRelationships(finalResource, relName, rel, context);
-		}
-	});
+	Object.entries(finalResource.relationships ?? {}).forEach(
+		([relName, rel]) => {
+			// Only update inverses for simple refs, not nested resources
+			if (rel && !containsNestedResources(rel)) {
+				updateInverseRelationships(finalResource, relName, rel, context);
+			}
+		},
+	);
 
 	return { ...finalResource, relationships: processedRelationships };
 }
 
 /**
- * Splices a resource tree into the store, creating or updating resources and their relationships.
+ * Merges a resource tree into the store, creating or updating resources and their relationships.
  * Handles nested resources and maintains referential integrity through inverse relationship updates.
  *
  * WARNING: MUTATES storeGraph
  *
- * @param {import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource} resourceTree - The resource tree to splice into the store
+ * @param {import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource} resourceTree - The resource tree to merge into the store
  * @param {Context} context - Context object containing schema, validator, store, and storeGraph
  * @returns {import('@data-prism/core').NormalResource} The processed resource tree with all nested resources created/updated
  */
-export function splice(resourceTree, context) {
+export function merge(resourceTree, context) {
 	const { schema, validator, store } = context;
 
-	ensureValidSpliceResource(schema, resourceTree, { validator });
+	ensureValidMergeResource(schema, resourceTree, { validator });
 
 	/**
 	 * Recursively extracts all expected existing resource references from a resource tree.
@@ -176,134 +175,3 @@ export function splice(resourceTree, context) {
 
 	return processResourceTree(resourceTree, null, null, context);
 }
-
-/*
-// ORIGINAL IMPLEMENTATION (commented out)
-export function splice(resourceTree, context) {
-	const { schema, validator, store, storeGraph } = context;
-
-	ensureValidSpliceResource(schema, resourceTree, { validator });
-
-	const expectedExistingResources = (res) => {
-		const related = Object.values(res.relationships ?? {}).flatMap((rel) =>
-			rel
-				? Array.isArray(rel)
-					? rel.flatMap((r) =>
-							("attributes" in r || "relationships" in r) && "id" in r
-								? expectedExistingResources(r)
-								: rel,
-						)
-					: "attributes" in rel || "relationships" in rel
-						? expectedExistingResources(rel)
-						: rel
-				: null,
-		);
-
-		return !res.id ? related : [{ type: res.type, id: res.id }, ...related];
-	};
-
-	const missing = expectedExistingResources(resourceTree)
-		.filter((ref) => ref && ref.id)
-		.find(({ type, id }) => !store.getOne(type, id));
-	if (missing) {
-		throw new Error(
-			`expected { type: "${missing.type}", id: "${missing.id}" } to already exist in the graph`,
-		);
-	}
-
-	const go = (res, parent = null, parentRelSchema = null) => {
-		const resSchema = schema.resources[res.type];
-		const resCopy = structuredClone(res);
-		const inverse = parentRelSchema?.inverse;
-
-		if (parent && inverse) {
-			const relSchema = resSchema.relationships[inverse];
-			resCopy.relationships = resCopy.relationships ?? {};
-			if (
-				relSchema.cardinality === "many" &&
-				!(resCopy.relationships[inverse] ?? []).some((r) => r.id === res.id)
-			) {
-				resCopy.relationships[inverse] = [
-					...(resCopy.relationships[inverse] ?? []),
-					{ type: parent.type, id: parent.id },
-				];
-			} else if (relSchema.cardinality === "one") {
-				const existing = store.getOne(parent.type, parent.id);
-				const existingRef = existing?.relationships?.[inverse];
-
-				if (existingRef && existingRef.id !== parent.id) {
-					storeGraph[existing.type][existing.id] = {
-						...existing,
-						relationships: { ...existing.relationships, [inverse]: null },
-					};
-				}
-
-				resCopy.relationships[inverse] = { type: parent.type, id: parent.id };
-			}
-		}
-
-		const existing = store.getOne(res.type, res.id);
-		const resultId = res.id ?? existing?.id ?? uuidv4();
-		const prepped = res.id
-			? {
-					type: resCopy.type,
-					id: resultId,
-					attributes: { ...existing.attributes, ...resCopy.attributes },
-					relationships: {
-						...existing.relationships,
-						...resCopy.relationships,
-					},
-				}
-			: {
-					type: resCopy.type,
-					id: resultId,
-					attributes: resCopy.attributes ?? {},
-					relationships: {
-						...mapValues(resSchema.relationships, (r) =>
-							r.cardinality === "one" ? null : [],
-						),
-						...resCopy.relationships,
-					},
-				};
-
-		const normalized = {
-			...prepped,
-			relationships: pick(prepped.relationships, ["type", "id"]),
-		};
-
-		storeGraph[res.type][resultId] = existing
-			? {
-					...normalized,
-					attributes: { ...existing.attributes, ...normalized.attributes },
-					relationships: {
-						...existing.relationships,
-						...normalized.relationships,
-					},
-				}
-			: normalized;
-
-		const preppedRels = mapValues(
-			prepped.relationships ?? {},
-			(rel, relName) => {
-				const relSchema = resSchema.relationships[relName];
-				const step = (relRes) =>
-					relRes.attributes || relRes.relationships
-						? go(relRes, prepped, relSchema)
-						: relRes;
-
-				const result = applyOrMap(rel, step);
-				storeGraph[res.type][resultId].relationships[relName] = applyOrMap(
-					result,
-					(r) => ({ type: relSchema.type, id: r.id }),
-				);
-
-				return result;
-			},
-		);
-
-		return { ...prepped, relationships: preppedRels };
-	};
-
-	return go(resourceTree, null, null);
-}
-*/
