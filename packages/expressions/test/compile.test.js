@@ -45,11 +45,11 @@ describe("core expressions (plus $eq for help)", () => {
 		const compiled = compile({
 			$apply: { age: { $get: "age" }, name: { $get: "name" } },
 		});
-		expect(compiled(kids["zoë"])).toEqual({ age: 6, name: "Zoë" });
+		expect(compiled(kids.zoë)).toEqual({ age: 6, name: "Zoë" });
 	});
 
 	it("pipes expressions", () => {
 		const compiled = compile({ $pipe: [{ $get: "age" }, { $eq: 6 }] });
-		expect(compiled(kids["zoë"])).toEqual(true);
+		expect(compiled(kids.zoë)).toEqual(true);
 	});
 });
