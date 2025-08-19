@@ -1,11 +1,29 @@
 {
-  "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
-  "changelog": "@changesets/cli/changelog",
-  "commit": false,
-  "fixed": [],
-  "linked": [],
-  "access": "public",
-  "baseBranch": "main",
-  "updateInternalDependencies": "patch",
-  "ignore": ["@data-prism/jsonapi-server", "@data-prism/jsonapi-store", "@data-prism/postgres-store"]
+	"$schema": "https://unpkg.com/@changesets/config/schema.json",
+	"changelog": false,
+	"commit": false,
+	"linked": [],
+	"access": "restricted",
+	"baseBranch": "main",
+	"updateInternalDependencies": "patch",
+	"ignore": [
+		"@data-prism/postgres-store",
+		"@data-prism/jsonapi-store",
+		"@data-prism/jsonapi-server",
+    "data-prism"
+	],
+	"bumpVersions": [
+		{
+			"package": "*",
+			"bumpRule": {
+				"major": {
+					"0.*.*": "minor",
+					"*": "major"
+				},
+				"minor": "minor",
+				"patch": "patch",
+				"none": "none"
+			}
+		}
+	]
 }
