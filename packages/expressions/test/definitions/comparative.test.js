@@ -73,3 +73,60 @@ it("implements the $nin expression", () => {
 	expect(compile(exp)(kids.yousef)).toBe(true);
 	expect(compile(exp)(kids.zoë)).toBe(false);
 });
+
+describe("evaluate functions", () => {
+	const { evaluate } = defaultExpressionEngine;
+
+	it("$eq evaluates static comparisons", () => {
+		expect(evaluate({ $eq: [5, 5] })).toBe(true);
+		expect(evaluate({ $eq: [5, 10] })).toBe(false);
+		expect(evaluate({ $eq: [{ a: 1 }, { a: 1 }] })).toBe(true);
+	});
+
+	it("$ne evaluates static comparisons", () => {
+		expect(evaluate({ $ne: [5, 10] })).toBe(true);
+		expect(evaluate({ $ne: [5, 5] })).toBe(false);
+	});
+
+	it("$gt evaluates static comparisons", () => {
+		expect(evaluate({ $gt: [10, 5] })).toBe(true);
+		expect(evaluate({ $gt: [5, 10] })).toBe(false);
+		expect(evaluate({ $gt: [5, 5] })).toBe(false);
+	});
+
+	it("$gte evaluates static comparisons", () => {
+		expect(evaluate({ $gte: [10, 5] })).toBe(true);
+		expect(evaluate({ $gte: [5, 5] })).toBe(true);
+		expect(evaluate({ $gte: [5, 10] })).toBe(false);
+	});
+
+	it("$lt evaluates static comparisons", () => {
+		expect(evaluate({ $lt: [5, 10] })).toBe(true);
+		expect(evaluate({ $lt: [10, 5] })).toBe(false);
+		expect(evaluate({ $lt: [5, 5] })).toBe(false);
+	});
+
+	it("$lte evaluates static comparisons", () => {
+		expect(evaluate({ $lte: [5, 10] })).toBe(true);
+		expect(evaluate({ $lte: [5, 5] })).toBe(true);
+		expect(evaluate({ $lte: [10, 5] })).toBe(false);
+	});
+
+	it("$in evaluates static array membership", () => {
+		expect(evaluate({ $in: [[1, 2, 3], 2] })).toBe(true);
+		expect(evaluate({ $in: [[1, 2, 3], 5] })).toBe(false);
+	});
+
+	it("$in throws error for non-array parameter in evaluate", () => {
+		expect(() => evaluate({ $in: ["not-array", 2] })).toThrow("$in parameter must be an array");
+	});
+
+	it("$nin evaluates static array membership", () => {
+		expect(evaluate({ $nin: [[1, 2, 3], 5] })).toBe(true);
+		expect(evaluate({ $nin: [[1, 2, 3], 2] })).toBe(false);
+	});
+
+	it("$nin throws error for non-array parameter in evaluate", () => {
+		expect(() => evaluate({ $nin: ["not-array", 2] })).toThrow("$nin parameter must be an array");
+	});
+});

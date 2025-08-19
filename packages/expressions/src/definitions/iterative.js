@@ -1,15 +1,15 @@
 const $filter = {
-	apply: (subexpr, arg, apply) => arg.filter((item) => apply(subexpr, item)),
+	apply: (operand, inputData, apply) => inputData.filter((item) => apply(operand, item)),
 	controlsEvaluation: true,
 };
 
 const $flatMap = {
-	apply: (subexpr, arg, apply) => arg.flatMap((item) => apply(subexpr, item)),
+	apply: (operand, inputData, apply) => inputData.flatMap((item) => apply(operand, item)),
 	controlsEvaluation: true,
 };
 
 const $map = {
-	apply: (subexpr, arg, apply) => arg.map((item) => apply(subexpr, item)),
+	apply: (operand, inputData, apply) => inputData.map((item) => apply(operand, item)),
 	controlsEvaluation: true,
 };
 

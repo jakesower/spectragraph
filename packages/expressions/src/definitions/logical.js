@@ -1,8 +1,9 @@
 const $and = {
 	name: "$and",
-	apply: (params, arg, apply) => params.every((subexpr) => apply(subexpr, arg)),
+	apply: (operand, inputData, apply) =>
+		operand.every((subexpr) => apply(subexpr, inputData)),
 	controlsEvaluation: true,
-	evaluate: (params) => params.every(Boolean),
+	evaluate: (operand) => operand.every(Boolean),
 	schema: {
 		type: "boolean",
 	},
@@ -10,9 +11,10 @@ const $and = {
 
 const $or = {
 	name: "$or",
-	apply: (params, arg, apply) => params.some((subexpr) => apply(subexpr, arg)),
+	apply: (operand, inputData, apply) =>
+		operand.some((subexpr) => apply(subexpr, inputData)),
 	controlsEvaluation: true,
-	evaluate: (params) => params.some(Boolean),
+	evaluate: (operand) => operand.some(Boolean),
 	schema: {
 		type: "boolean",
 	},
@@ -20,7 +22,7 @@ const $or = {
 
 const $not = {
 	name: "$not",
-	apply: (subexpr, arg, apply) => !apply(subexpr, arg),
+	apply: (operand, inputData, apply) => !apply(operand, inputData),
 	controlsEvaluation: true,
 	schema: { type: "boolean" },
 };
