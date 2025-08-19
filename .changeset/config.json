@@ -7,5 +7,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@data-prism/frontend", "@data-prism/jsonapi-server", "@data-prism/jsonapi-store", "@data-prism/postgres-store"]
+  "ignore": ["@data-prism/jsonapi-server", "@data-prism/jsonapi-store", "@data-prism/postgres-store"]
 }
