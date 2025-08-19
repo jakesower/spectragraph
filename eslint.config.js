@@ -10,6 +10,7 @@ export default [
 			sourceType: "module",
 			globals: {
 				console: "readonly",
+				crypto: "readonly",
 				process: "readonly",
 				Buffer: "readonly",
 				__dirname: "readonly",
