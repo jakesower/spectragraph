@@ -1,13 +1,9 @@
 import { isEqual } from "lodash-es";
 
-const injectLeft = (param, implicit) => [implicit, param];
-const injectRight = (param, implicit) => [param, implicit];
-
 const $eq = {
 	name: "$eq",
 	apply: isEqual,
 	evaluate: ([left, right]) => isEqual(left, right),
-	inject: injectLeft,
 	schema: {
 		type: "boolean",
 	},
@@ -15,9 +11,8 @@ const $eq = {
 
 const $ne = {
 	name: "$ne",
-	apply: (param, arg) => !isEqual(param, arg),
+	apply: (operand, inputData) => !isEqual(operand, inputData),
 	evaluate: ([left, right]) => !isEqual(left, right),
-	inject: injectLeft,
 	schema: {
 		type: "boolean",
 	},
@@ -25,9 +20,8 @@ const $ne = {
 
 const $gt = {
 	name: "$gt",
-	apply: (param, arg) => arg > param,
+	apply: (operand, inputData) => inputData > operand,
 	evaluate: ([left, right]) => left > right,
-	inject: injectLeft,
 	schema: {
 		type: "boolean",
 	},
@@ -35,9 +29,8 @@ const $gt = {
 
 const $gte = {
 	name: "$gte",
-	apply: (param, arg) => arg >= param,
+	apply: (operand, inputData) => inputData >= operand,
 	evaluate: ([left, right]) => left >= right,
-	inject: injectLeft,
 	schema: {
 		type: "boolean",
 	},
@@ -45,9 +38,8 @@ const $gte = {
 
 const $lt = {
 	name: "$lt",
-	apply: (param, arg) => arg < param,
+	apply: (operand, inputData) => inputData < operand,
 	evaluate: ([left, right]) => left < right,
-	inject: injectLeft,
 	schema: {
 		type: "boolean",
 	},
@@ -55,9 +47,8 @@ const $lt = {
 
 const $lte = {
 	name: "$lte",
-	apply: (param, arg) => arg <= param,
+	apply: (operand, inputData) => inputData <= operand,
 	evaluate: ([left, right]) => left <= right,
-	inject: injectLeft,
 	schema: {
 		type: "boolean",
 	},
@@ -65,19 +56,18 @@ const $lte = {
 
 const $in = {
 	name: "$in",
-	apply: (param, arg) => {
-		if (!Array.isArray(param)) {
+	apply: (operand, inputData) => {
+		if (!Array.isArray(operand)) {
 			throw new Error("$in parameter must be an array");
 		}
-		return param.includes(arg);
+		return operand.includes(inputData);
 	},
-	evaluate: (param, arg) => {
-		if (!Array.isArray(param)) {
+	evaluate: ([array, value]) => {
+		if (!Array.isArray(array)) {
 			throw new Error("$in parameter must be an array");
 		}
-		return param.includes(arg);
+		return array.includes(value);
 	},
-	inject: injectRight,
 	schema: {
 		type: "boolean",
 	},
@@ -85,19 +75,18 @@ const $in = {
 
 const $nin = {
 	name: "$nin",
-	apply: (param, arg) => {
-		if (!Array.isArray(param)) {
+	apply: (operand, inputData) => {
+		if (!Array.isArray(operand)) {
 			throw new Error("$nin parameter must be an array");
 		}
-		return !param.includes(arg);
+		return !operand.includes(inputData);
 	},
-	evaluate: (param, arg) => {
-		if (!Array.isArray(param)) {
+	evaluate: ([array, value]) => {
+		if (!Array.isArray(array)) {
 			throw new Error("$nin parameter must be an array");
 		}
-		return !param.includes(arg);
+		return !array.includes(value);
 	},
-	inject: injectRight,
 	schema: {
 		type: "boolean",
 	},

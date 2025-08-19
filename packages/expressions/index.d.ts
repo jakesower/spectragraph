@@ -17,7 +17,6 @@ export type Expression = object;
  * @property {function(any, Input): Output} apply
  * @property {function(Args, Input, any): Output} [applyImplicit]
  * @property {function(Input): Output} evaluate
- * @property {function(any, function(any): any): any} [inject]
  * @property {string} [name]
  * @property {object} schema
  */
@@ -25,7 +24,6 @@ export interface Operation<Args, Input, Output> {
 	apply: (expression: any, arg: Input) => Output;
 	applyImplicit?: (args: Args, vars: Input, implicitVar: any) => Output;
 	evaluate: (params: Input) => Output;
-	inject?: (args: any, inject: (v: any) => any) => any;
 	name?: string;
 	schema: object;
 }

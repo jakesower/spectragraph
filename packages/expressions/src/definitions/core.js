@@ -1,23 +1,31 @@
 import { get } from "lodash-es";
+import { NoEvaluationAllowedError } from "../index.js";
 
 const $apply = {
 	name: "$apply",
-	apply: (params) => params,
+	apply: (operand) => operand,
+	evaluate: (operand) => operand,
 };
 
 const $isDefined = {
 	name: "$isDefined",
-	apply: (_, arg) => arg !== undefined,
+	apply: (_, inputData) => inputData !== undefined,
+	evaluate: () => {
+		throw new NoEvaluationAllowedError("$isDefined");
+	},
 };
 
 const $echo = {
 	name: "$echo",
-	apply: (_, arg) => arg,
+	apply: (_, inputData) => inputData,
+	evaluate: () => {
+		throw new NoEvaluationAllowedError("$echo");
+	},
 };
 
 const $ensurePath = {
 	name: "$ensurePath",
-	apply: (params, arg) => {
+	apply: (operand, inputData) => {
 		const go = (curValue, paths, used = []) => {
 			if (paths.length === 0) return;
 
@@ -31,100 +39,168 @@ const $ensurePath = {
 			go(curValue[head], tail, [...used, head]);
 		};
 
-		go(arg, params.split("."));
-		return arg;
+		go(inputData, operand.split("."));
+		return inputData;
+	},
+	evaluate: () => {
+		throw new NoEvaluationAllowedError("$ensurePath");
 	},
 };
 
 const $get = {
 	name: "$get",
-	apply: (params, arg) => get(arg, params),
+	apply: (operand, inputData) => get(inputData, operand),
+	evaluate: () => {
+		throw new NoEvaluationAllowedError("$get");
+	},
 };
 
 const $if = {
 	name: "$if",
-	apply: (params, arg, apply, isExpression) => {
-		if (!isExpression(params.if) && params.if !== true && params.if !== false) {
+	apply: (operand, inputData, apply, isExpression) => {
+		if (
+			!isExpression(operand.if) &&
+			operand.if !== true &&
+			operand.if !== false
+		) {
 			throw new Error('"if" must be an expression, true, or false');
 		}
 
-		const outcome = apply(params.if, arg) ? params.then : params.else;
-		return isExpression(outcome) ? apply(outcome, arg) : outcome;
+		const outcome = apply(operand.if, inputData) ? operand.then : operand.else;
+		return isExpression(outcome) ? apply(outcome, inputData) : outcome;
+	},
+	evaluate: (operand, evaluate) => {
+		const conditionResult =
+			typeof operand.if === "boolean" ? operand.if : evaluate(operand.if);
+		const outcome = conditionResult ? operand.then : operand.else;
+		return typeof outcome === "object" && outcome !== null
+			? evaluate(outcome)
+			: outcome;
 	},
 	controlsEvaluation: true,
 };
 
 const $case = {
 	name: "$case",
-	apply: (params, arg, apply, isExpression) => {
+	apply: (operand, inputData, apply, isExpression) => {
 		// Evaluate the value once
-		const value = isExpression(params.value) ? apply(params.value, arg) : params.value;
-		
+		const value = isExpression(operand.value)
+			? apply(operand.value, inputData)
+			: operand.value;
+
 		// Check each case
-		for (const caseItem of params.cases) {
+		for (const caseItem of operand.cases) {
 			let matches = false;
-			
+
 			// Handle both simple equality and complex expressions
 			if (isExpression(caseItem.when)) {
 				// For expressions that access properties from the original object (like $get),
 				// we need to evaluate with the original argument.
 				// For comparison expressions, we typically want to evaluate with the value.
 				const whenExpressionName = Object.keys(caseItem.when)[0];
-				const evaluationContext = whenExpressionName === '$get' ? arg : value;
+				const evaluationContext =
+					whenExpressionName === "$get" ? inputData : value;
 				matches = apply(caseItem.when, evaluationContext);
 			} else {
 				// Simple equality comparison
 				matches = value === caseItem.when;
 			}
-			
+
 			if (matches) {
-				return isExpression(caseItem.then) ? apply(caseItem.then, arg) : caseItem.then;
+				return isExpression(caseItem.then)
+					? apply(caseItem.then, inputData)
+					: caseItem.then;
 			}
 		}
-		
+
 		// Return default if no case matches
-		return isExpression(params.default) ? apply(params.default, arg) : params.default;
+		return isExpression(operand.default)
+			? apply(operand.default, inputData)
+			: operand.default;
+	},
+	evaluate: (operand, evaluate) => {
+		// Evaluate the value once
+		const value =
+			typeof operand.value === "object" && operand.value !== null
+				? evaluate(operand.value)
+				: operand.value;
+
+		// Check each case
+		for (const caseItem of operand.cases) {
+			let matches = false;
+
+			// Handle both simple equality and complex expressions
+			if (typeof caseItem.when === "object" && caseItem.when !== null) {
+				// For evaluate, we can only handle expressions that work with the value
+				// (not $get which needs inputData context)
+				matches = evaluate(caseItem.when) === value;
+			} else {
+				// Simple equality comparison
+				matches = value === caseItem.when;
+			}
+
+			if (matches) {
+				return typeof caseItem.then === "object" && caseItem.then !== null
+					? evaluate(caseItem.then)
+					: caseItem.then;
+			}
+		}
+
+		// Return default if no case matches
+		return typeof operand.default === "object" && operand.default !== null
+			? evaluate(operand.default)
+			: operand.default;
 	},
 	controlsEvaluation: true,
 };
 
 const $literal = {
 	name: "$literal",
-	apply: (params) => params,
+	apply: (operand) => operand,
 	controlsEvaluation: true,
 };
 
 const $debug = {
 	name: "$debug",
-	apply: (_, arg) => {
-		console.log(arg);
-		return arg;
+	apply: (_, inputData) => {
+		console.log(inputData);
+		return inputData;
+	},
+	evaluate: (operand) => {
+		console.log(operand);
+		return operand;
 	},
 };
 
 const $compose = {
 	name: "$compose",
-	apply: (params, arg, apply, isExpression) =>
-		params.reduceRight((acc, expr) => {
+	apply: (operand, inputData, apply, isExpression) =>
+		operand.reduceRight((acc, expr) => {
 			if (!isExpression(expr)) {
 				throw new Error(`${JSON.stringify(expr)} is not a valid expression`);
 			}
 
 			return apply(expr, acc);
-		}, arg),
+		}, inputData),
+	evaluate: () => {
+		throw new NoEvaluationAllowedError("$compose");
+	},
 	controlsEvaluation: true,
 };
 
 const $pipe = {
 	name: "$pipe",
-	apply: (params, arg, apply, isExpression) =>
-		params.reduce((acc, expr) => {
+	apply: (operand, inputData, apply, isExpression) =>
+		operand.reduce((acc, expr) => {
 			if (!isExpression(expr)) {
 				throw new Error(`${JSON.stringify(expr)} is not a valid expression`);
 			}
 
 			return apply(expr, acc);
-		}, arg),
+		}, inputData),
+	evaluate: () => {
+		throw new NoEvaluationAllowedError("$pipe");
+	},
 	controlsEvaluation: true,
 };
 

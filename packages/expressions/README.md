@@ -46,13 +46,19 @@ Expressions are JSON objects that describe computations to be performed on data.
 The expression engine compiles and evaluates expressions against data:
 
 ```javascript
-import { defaultExpressionEngine } from "@data-prism/expressions";
+import { defaultExpressionEngine, isEvaluable } from "@data-prism/expressions";
 
 const expression = { $gt: 21 };
 const data = 25;
 
 const result = defaultExpressionEngine.apply(expression, data);
 // Returns: true
+
+// Check if expression can be evaluated without input data
+if (isEvaluable({ $sum: [1, 2, 3] })) {
+	const staticResult = defaultExpressionEngine.evaluate({ $sum: [1, 2, 3] });
+	// Returns: 6
+}
 ```
 
 ## API Reference
@@ -161,6 +167,73 @@ Tests whether a value is a valid expression.
 const isExpr1 = engine.isExpression({ $get: "name" }); // true
 const isExpr2 = engine.isExpression({ name: "John" }); // false
 ```
+
+#### `isEvaluable(expression, operations?)`
+
+Tests whether an expression can be evaluated without input data context. This is useful for determining if an expression can be statically evaluated or if it requires runtime data.
+
+**Parameters:**
+
+- `expression` (any) - The expression or value to test
+- `operations` (object, optional) - Custom operations object (defaults to defaultExpressions)
+
+**Returns:** Boolean indicating if the expression can be evaluated statically
+
+```javascript
+import { isEvaluable } from "@data-prism/expressions";
+
+// Static expressions that can be evaluated
+isEvaluable({ $sum: [1, 2, 3] });           // true - no input data needed
+isEvaluable({ $random: {} });               // true - generates value independently  
+isEvaluable({ $eq: [5, 5] });               // true - static comparison
+isEvaluable({ $nowUTC: null });             // true - system time access
+isEvaluable("hello");                       // true - non-expression values are always evaluable
+
+// Dynamic expressions that require input data
+isEvaluable({ $get: "name" });              // false - needs data.name
+isEvaluable({ $echo: null });               // false - returns input data
+isEvaluable({ $compose: [{ $sum: [1,2] }]}); // false - requires data flow
+
+// Complex nested expressions
+isEvaluable({
+  $if: {
+    if: true,
+    then: { $sum: [10, 20] },
+    else: "fallback"
+  }
+}); // true - all parts are static
+
+isEvaluable({
+  $if: {
+    if: { $get: "isActive" },
+    then: "yes", 
+    else: "no"
+  }
+}); // false - condition requires input data
+
+// Arrays and objects
+isEvaluable([1, 2, { $random: {} }]);       // true - all elements evaluable
+isEvaluable([1, 2, { $get: "value" }]);     // false - contains non-evaluable expression
+isEvaluable({ 
+  total: { $sum: [1, 2, 3] },
+  id: { $uuid: null }
+}); // true - all properties evaluable
+```
+
+**Use Cases:**
+
+- **Static optimization**: Pre-compute expressions that don't depend on runtime data
+- **Validation**: Check if expressions are suitable for compilation or caching
+- **Query planning**: Determine which parts of a query can be evaluated at build time
+- **Error prevention**: Avoid runtime errors by checking evaluability before calling `evaluate()`
+
+**Implementation Notes:**
+
+- Returns `true` for non-expression values (strings, numbers, arrays, objects)
+- Recursively checks nested expressions in arrays and objects  
+- Tests actual evaluation to detect expressions that throw `NoEvaluationAllowedError`
+- Handles control flow expressions (`$if`, `$case`) by checking their operands
+- Works with custom operation definitions
 
 ## Built-in Operations
 
@@ -378,6 +451,61 @@ Count of items in an array.
 { "$count": [1, 2, 3, 4] } // Returns 4
 ```
 
+#### `$mean`
+
+Arithmetic mean (average) of array values.
+
+```json
+{ "$mean": [1, 2, 3, 4, 5] } // Returns 3
+```
+
+Returns `undefined` for empty arrays.
+
+#### `$median`
+
+Median (middle value) of array values.
+
+```json
+{ "$median": [1, 2, 3, 4, 5] } // Returns 3
+{ "$median": [1, 2, 3, 4] }    // Returns 2.5 (average of middle two)
+```
+
+Returns `undefined` for empty arrays.
+
+#### `$mode`
+
+Mode (most frequent value) of array values.
+
+```json
+{ "$mode": [1, 2, 2, 3, 4] }    // Returns 2 (single mode)
+{ "$mode": [1, 1, 2, 2, 3] }    // Returns [1, 2] (multiple modes)
+{ "$mode": [1, 2, 3, 4, 5] }    // Returns undefined (no mode)
+```
+
+Returns the single mode value, array of multiple modes, or `undefined` if no mode exists.
+
+#### `$quantile`
+
+Calculates quantiles (percentiles, quartiles, etc.) of array values.
+
+```json
+// Quartiles (4-quantiles)
+{ "$quantile": { "values": [1,2,3,4,5,6,7,8,9,10], "k": 1, "n": 4 } } // Q1
+{ "$quantile": { "values": [1,2,3,4,5,6,7,8,9,10], "k": 2, "n": 4 } } // Q2 (median)
+{ "$quantile": { "values": [1,2,3,4,5,6,7,8,9,10], "k": 3, "n": 4 } } // Q3
+
+// Percentiles (100-quantiles)
+{ "$quantile": { "values": [1,2,3,4,5,6,7,8,9,10], "k": 50, "n": 100 } } // 50th percentile
+{ "$quantile": { "values": [1,2,3,4,5,6,7,8,9,10], "k": 90, "n": 100 } } // 90th percentile
+```
+
+**Parameters:**
+- `values`: Array of numeric values
+- `k`: The k-th quantile to calculate (0 ≤ k ≤ n)
+- `n`: The total number of quantiles (e.g., 4 for quartiles, 100 for percentiles)
+
+Returns `undefined` for empty arrays. Uses linear interpolation for non-integer indices.
+
 ### Iterative Operations
 
 #### `$map`
@@ -403,6 +531,71 @@ Transform and flatten array items.
 ```json
 { "$flatMap": { "$get": "products" } } // Maps and flattens results
 ```
+
+### Generative Operations
+
+#### `$random`
+
+Generates a random number with optional range and precision control.
+
+```json
+{ "$random": {} }                                          // 0 to 1 (default)
+{ "$random": { "min": 10, "max": 20 } }                   // 10 to 20 range
+{ "$random": { "min": 0, "max": 1, "precision": 2 } }     // 2 decimal places (0.XX)
+{ "$random": { "min": 0, "max": 100, "precision": 0 } }   // Integers (0 decimal places)
+{ "$random": { "min": 0, "max": 1000, "precision": -1 } } // Round to nearest 10
+```
+
+**Parameters:**
+- `min` (default: 0): Minimum value (inclusive)
+- `max` (default: 1): Maximum value (exclusive)  
+- `precision` (default: null): Decimal places for positive values, or power of 10 for negative values
+  - `precision: 2` → 2 decimal places (0.01 precision)
+  - `precision: 0` → integers (1.0 precision)
+  - `precision: -1` → round to nearest 10
+  - `precision: null` → no rounding (full precision)
+
+#### `$uuid`
+
+Generates a unique UUID v4 string.
+
+```json
+{ "$uuid": null } // Returns UUID like "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+```
+
+The operand is ignored - this expression always generates a new UUID.
+
+### Temporal Operations
+
+#### `$nowUTC`
+
+Returns the current date and time as a UTC RFC3339 string.
+
+```json
+{ "$nowUTC": null } // Returns "2024-01-01T12:00:00.000Z"
+```
+
+The operand is ignored - this expression always returns the current UTC time in RFC3339 format.
+
+#### `$nowLocal`
+
+Returns the current date and time as a local RFC3339 string with timezone offset.
+
+```json
+{ "$nowLocal": null } // Returns "2024-01-01T05:00:00.000-07:00"
+```
+
+The operand is ignored - this expression returns the current local time with timezone information in RFC3339 format.
+
+#### `$timestamp`
+
+Returns the current timestamp as a number (milliseconds since Unix epoch).
+
+```json
+{ "$timestamp": null } // Returns current timestamp like 1704067200000
+```
+
+The operand is ignored - this expression always returns the current timestamp when evaluated.
 
 ## Examples
 
@@ -432,6 +625,20 @@ const userName = defaultExpressionEngine.apply({ $get: "name" }, data.user);
 const orderAmounts = data.orders.map((order) => order.amount);
 const totalAmount = defaultExpressionEngine.apply({ $sum: orderAmounts }, null);
 // Returns: 245
+
+// Calculate average order amount
+const avgAmount = defaultExpressionEngine.apply({ $mean: orderAmounts }, null);
+// Returns: 81.67
+
+// Get median order amount
+const medianAmount = defaultExpressionEngine.apply({ $median: orderAmounts }, null);
+// Returns: 75
+
+// Calculate 75th percentile of order amounts
+const p75 = defaultExpressionEngine.apply({ 
+	$quantile: { values: orderAmounts, k: 75, n: 100 } 
+}, null);
+// Returns: 97.5
 
 // Get names of adult users using pipe (left-to-right)
 const adultNames = defaultExpressionEngine.apply(
@@ -492,6 +699,74 @@ const ageGroup = defaultExpressionEngine.apply(
 	{ age: 4 },
 );
 // Returns: "Preschooler"
+
+// Generate random data with parameters
+const randomValue = defaultExpressionEngine.apply({ $random: {} }, null);
+// Returns: 0.7234 (random number 0-1)
+
+const randomInt = defaultExpressionEngine.apply({ 
+	$random: { min: 1, max: 100, precision: 0 } 
+}, null);
+// Returns: 42 (random integer 1-99)
+
+const randomPrice = defaultExpressionEngine.apply({ 
+	$random: { min: 10, max: 50, precision: 2 } 
+}, null);
+// Returns: 23.45 (random price with 2 decimal places)
+
+const uniqueId = defaultExpressionEngine.apply({ $uuid: null }, null);
+// Returns: "f47ac10b-58cc-4372-a567-0e02b2c3d479" (unique UUID)
+
+// Get current time information
+const utcTime = defaultExpressionEngine.apply({ $nowUTC: null }, null);
+// Returns: "2024-01-01T12:00:00.000Z" (UTC time string)
+
+const localTime = defaultExpressionEngine.apply({ $nowLocal: null }, null);
+// Returns: "2024-01-01T05:00:00.000-07:00" (local time with timezone)
+
+const timestamp = defaultExpressionEngine.apply({ $timestamp: null }, null);
+// Returns: 1704067200000 (current timestamp)
+
+// Use in conditional logic
+const sessionId = defaultExpressionEngine.apply({
+	$if: {
+		if: { $eq: null },
+		then: { $uuid: null },
+		else: { $get: "existingId" }
+	}
+}, { existingId: null });
+// Returns: new UUID since existingId is null
+
+// Check if expressions can be evaluated statically
+import { isEvaluable } from "@data-prism/expressions";
+
+const staticExpr = { $sum: [10, 20, 30] };
+const dynamicExpr = { $get: "userAge" };
+
+if (isEvaluable(staticExpr)) {
+	const precomputed = defaultExpressionEngine.evaluate(staticExpr);
+	console.log("Static result:", precomputed); // 60
+}
+
+if (isEvaluable(dynamicExpr)) {
+	console.log("Can precompute"); 
+} else {
+	console.log("Requires runtime data"); // This will run
+}
+
+// Optimize query expressions
+const queryExpression = {
+	$if: {
+		if: true, // Static condition
+		then: { $sum: [1, 2, 3] }, // Static calculation
+		else: { $get: "fallbackValue" }
+	}
+};
+
+if (isEvaluable(queryExpression)) {
+	const optimized = defaultExpressionEngine.evaluate(queryExpression);
+	console.log("Pre-computed result:", optimized); // 6
+}
 ```
 
 ### Query Enhancement
