@@ -17,4 +17,3 @@ export type CreateRequest = {
 };
 export declare function create(schema: Schema, store: any): (req: any, res: any) => Promise<void>;
 export {};
-//# sourceMappingURL=create.d.ts.map

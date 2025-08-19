@@ -1,62 +1,84 @@
-import { createExpressionEngine } from "@data-prism/expressions";
-import { mapValues } from "lodash-es";
-const sqlExpressions = {
+"use strict";
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.varsExpressionEngine = exports.whereExpressionEngine = void 0;
+var expressions_1 = require("@data-prism/expressions");
+var lodash_es_1 = require("lodash-es");
+var sqlExpressions = {
     $and: {
         name: "and",
-        where: (params) => params.join(" AND "),
-        vars: (params) => params.flat(),
+        where: function (params) { return params.join(" AND "); },
+        vars: function (params) { return params.flat(); },
     },
     $eq: {
         name: "equal",
-        where: (params) => `${params[0]} = ?`,
-        vars: (params) => params[1],
+        where: function (params) { return "".concat(params[0], " = ?"); },
+        vars: function (params) { return params[1]; },
     },
     $gt: {
         name: "greater than",
-        where: (params) => `${params[0]} > ?`,
-        vars: (params) => params[1],
+        where: function (params) { return "".concat(params[0], " > ?"); },
+        vars: function (params) { return params[1]; },
     },
     $gte: {
         name: "greater than or equal to",
-        where: (params) => `${params[0]} >= ?`,
-        vars: (params) => params[1],
+        where: function (params) { return "".concat(params[0], " >= ?"); },
+        vars: function (params) { return params[1]; },
     },
     $lt: {
         name: "less than",
-        where: (params) => `${params[0]} < ?`,
-        vars: (params) => params[1],
+        where: function (params) { return "".concat(params[0], " < ?"); },
+        vars: function (params) { return params[1]; },
     },
     $lte: {
         name: "less than or equal to",
-        where: (params) => `${params[0]} <= ?`,
-        vars: (params) => params[1],
+        where: function (params) { return "".concat(params[0], " <= ?"); },
+        vars: function (params) { return params[1]; },
     },
     $ne: {
         name: "not equal",
-        where: (params) => `${params[0]} != ?`,
-        vars: (params) => params[1],
+        where: function (params) { return "".concat(params[0], " != ?"); },
+        vars: function (params) { return params[1]; },
     },
     $in: {
         name: "contained in",
-        where: (params) => `${params[0]} IN (${params[1].map(() => "?").join(",")})`,
-        vars: (params) => params[1],
+        where: function (params) {
+            return "".concat(params[0], " IN (").concat(params[1].map(function () { return "?"; }).join(","), ")");
+        },
+        vars: function (params) { return params[1]; },
     },
     $nin: {
         name: "not contained in",
-        where: (params) => `${params[0]} NOT IN (${params[1].map(() => "?").join(",")})`,
-        vars: (params) => params[1],
+        where: function (params) {
+            return "".concat(params[0], " NOT IN (").concat(params[1].map(function () { return "?"; }).join(","), ")");
+        },
+        vars: function (params) { return params[1]; },
     },
     $or: {
         // TODO
         name: "or",
         controlsEvaluation: true,
-        where: (params, evaluate) => {
+        where: function (params, evaluate) {
             console.log("args", params.map(evaluate));
         },
-        vars: (...args) => {
+        vars: function () {
+            var args = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                args[_i] = arguments[_i];
+            }
             console.log("Var args", args);
         },
     },
 };
-export const whereExpressionEngine = createExpressionEngine(mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.where })));
-export const varsExpressionEngine = createExpressionEngine(mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.vars })));
+exports.whereExpressionEngine = (0, expressions_1.createExpressionEngine)((0, lodash_es_1.mapValues)(sqlExpressions, function (expr) { return (__assign(__assign({}, expr), { evaluate: expr.where })); }));
+exports.varsExpressionEngine = (0, expressions_1.createExpressionEngine)((0, lodash_es_1.mapValues)(sqlExpressions, function (expr) { return (__assign(__assign({}, expr), { evaluate: expr.vars })); }));

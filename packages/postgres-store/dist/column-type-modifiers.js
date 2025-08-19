@@ -1,6 +1,9 @@
-export const columnTypeModifiers = {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.columnTypeModifiers = void 0;
+exports.columnTypeModifiers = {
     geojson: {
-        extract: (val) => JSON.parse(val),
-        select: (val) => `ST_AsGeoJSON(${val})`,
+        extract: function (val) { return JSON.parse(val); },
+        select: function (val) { return "ST_AsGeoJSON(".concat(val, ")"); },
     },
 };

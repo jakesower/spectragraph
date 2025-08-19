@@ -4,4 +4,3 @@ export declare const columnTypeModifiers: {
         select: (val: any) => string;
     };
 };
-//# sourceMappingURL=column-type-modifiers.d.ts.map

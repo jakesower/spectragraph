@@ -3340,7 +3340,7 @@ function createDeepCache() {
 
 const errorKeywordFormatters = {
 	enum: (error, dataVar) =>
-		`[data-prism] ${dataVar}${error.instancePath} ${error.message} (${error.params?.allowedValues?.join(", ")})`,
+		`${dataVar}${error.instancePath} ${error.message} (${error.params?.allowedValues?.join(", ")})`,
 };
 
 /**
@@ -3376,7 +3376,7 @@ function translateAjvErrors(
 		...error,
 		message: errorKeywordFormatters[error.keyword]
 			? errorKeywordFormatters[error.keyword](error, dataVar)
-			: `[data-prism] ${dataVar}${error.instancePath} ${error.message}`,
+			: `${dataVar}${error.instancePath} ${error.message}`,
 		path: error.instancePath ?? error.schemaPath,
 		code: error.keyword,
 		value: lodashEs.get(subject, error.instancePath?.replaceAll("/", ".")?.slice(1)),
@@ -3408,12 +3408,21 @@ var definitions$1 = {
 	},
 	query: {
 		type: "object",
+		required: [
+			"select"
+		],
 		properties: {
 			type: {
 				type: "string"
 			},
 			select: {
-				$ref: "#/definitions/select"
+				anyOf: [
+					{
+						$ref: "#/definitions/select"
+					},
+					{
+					}
+				]
 			}
 		}
 	},
@@ -3494,9 +3503,9 @@ var baseQuerySchema = {
  * @property {string} type - Required type
  */
 
-// these arguments have references that should seldom, if ever, change
 const getResourceSchemaCache = createDeepCache();
-const getResourceSchemaStrictCache = createDeepCache();
+const getResourceSchemaEECache = createDeepCache();
+
 let validateQueryShape;
 
 const isExpressionLike = (obj) =>
@@ -3505,16 +3514,20 @@ const isExpressionLike = (obj) =>
 	Object.keys(obj).length === 1 &&
 	!obj.select;
 
-function getResourceStructureValidator(
-	schema,
-	resourceType,
-	strict,
-	validator,
-	expressionEngine,
-) {
-	let resourceSchemaCache = strict
-		? getResourceSchemaCache(schema, validator, expressionEngine)
-		: getResourceSchemaStrictCache(schema, validator, expressionEngine);
+const isValidAttribute = (attributeName, resourceSchema) =>
+	attributeName in resourceSchema.attributes;
+
+const createErrorReporter =
+	(pathPrefix = "query") =>
+	(message, path, value) => ({
+		message: `[${pathPrefix}/${path.join("/")}] ${message}`,
+		value,
+	});
+
+function getResourceStructureValidator(schema, resourceType, expressionEngine) {
+	let resourceSchemaCache = expressionEngine
+		? getResourceSchemaEECache(schema, expressionEngine)
+		: getResourceSchemaCache(schema);
 
 	let resourceSchemasByType;
 	if (!resourceSchemaCache.value) {
@@ -3525,6 +3538,16 @@ function getResourceStructureValidator(
 		const resourceSchema = resourceSchemasByType.get(resourceType);
 		if (resourceSchema) return resourceSchema;
 	}
+
+	const extraExpressionRules = expressionEngine
+		? {
+				additionalProperties: false,
+				properties: expressionEngine.expressionNames.reduce(
+					(acc, n) => ({ ...acc, [n]: {} }),
+					{},
+				),
+			}
+		: {};
 
 	const ajvSchema = {
 		type: "object",
@@ -3573,15 +3596,7 @@ function getResourceStructureValidator(
 				type: "object",
 				minProperties: 1,
 				maxProperties: 1,
-				...(strict
-					? {
-							additionalProperties: false,
-							properties: expressionEngine.expressionNames.reduce(
-								(acc, n) => ({ ...acc, [n]: {} }),
-								{},
-							),
-						}
-					: {}),
+				...extraExpressionRules,
 			},
 			orderItem: {
 				type: "object",
@@ -3591,9 +3606,7 @@ function getResourceStructureValidator(
 					schema.resources[resourceType].attributes,
 					() => ({}),
 				),
-				additionalProperties: {
-					anyOf: [{ $ref: "#/definitions/expression" }],
-				},
+				additionalProperties: false,
 				errorMessage: {
 					maxProperties:
 						'must have exactly one key with the name of an attribute and a value of "asc" or "desc"',
@@ -3603,150 +3616,228 @@ function getResourceStructureValidator(
 			},
 		},
 	};
-	const compiled = validator.compile(ajvSchema);
+	const compiled = defaultValidator.compile(ajvSchema);
 
 	resourceSchemasByType.set(resourceType, compiled);
 	return compiled;
 }
 
 /**
+ * Validates semantic aspects (relationships, attributes, expressions)
+ *
+ * @param {Object} schema - The schema object
+ * @param {Object} query - The query to validate
+ * @param {string} type - Resource type
+ * @param {Array} path - Current validation path
+ * @param {Object} expressionEngine - Validation functions
+ * @return {{errors: Array, isValid: boolean}}
+ */
+function validateSemantics(schema, query, type, path, expressionEngine) {
+	const errors = [];
+	const addError = (message, path, value) => {
+		errors.push(createErrorReporter()(message, path, value));
+	};
+
+	const isValidExpression = expressionEngine
+		? expressionEngine.isExpression
+		: isExpressionLike;
+
+	const resSchema = schema.resources[type];
+
+	// Validate where clause semantics
+	if (query.where) {
+		if (
+			!isValidExpression(query.where) &&
+			Object.keys(query.where).some((k) => !(k in resSchema.attributes))
+		) {
+			addError(
+				"Invalid where clause: unknown attribute names. Use valid attributes or an expression.",
+				[...path, "where"],
+				query.where,
+			);
+		}
+	}
+
+	// Validate select semantics
+	const validateSelectObject = (selectObj, prevPath) => {
+		Object.entries(selectObj).forEach(([key, val]) => {
+			const currentPath = [...prevPath, key];
+
+			if (key === "*") return;
+
+			if (key in resSchema.relationships) {
+				// Validate that relationship points to a valid subquery, not an attribute
+				if (typeof val === "string") {
+					addError(
+						`Invalid value for relationship "${key}": expected object, got string "${val}".`,
+						currentPath,
+						val,
+					);
+				}
+				return;
+			}
+
+			if (Array.isArray(val)) {
+				addError(
+					`Invalid selection "${key}": arrays not allowed in object selects.`,
+					currentPath,
+				);
+				return;
+			}
+
+			if (typeof val === "object") {
+				if (!isValidExpression(val)) {
+					addError(
+						`Invalid selection "${key}": not a valid relationship name. Object values must be expressions or subqueries.`,
+						currentPath,
+					);
+				}
+				return;
+			}
+
+			if (typeof val === "string") {
+				if (!isValidAttribute(val, resSchema)) {
+					addError(
+						`Invalid attribute "${val}": not a valid attribute name.`,
+						currentPath,
+						val,
+					);
+				}
+			}
+		});
+	};
+
+	const validateSelectArray = (selectArray) => {
+		selectArray.forEach((val, idx) => {
+			const currentPath = [...path, "select", idx];
+
+			if (val === "*") return;
+
+			if (Array.isArray(val)) {
+				addError(
+					"Invalid selection: nested arrays not allowed.",
+					currentPath,
+					val,
+				);
+				return;
+			}
+
+			if (typeof val === "object") {
+				validateSelectObject(val, currentPath);
+				return;
+			}
+
+			if (typeof val === "string") {
+				if (!isValidAttribute(val, resSchema)) {
+					addError(
+						`Invalid attribute "${val}" in select array: use "*" or a valid attribute name.`,
+						currentPath,
+						val,
+					);
+				}
+			}
+		});
+	};
+
+	if (query.select === "*") return { errors, isValid: true };
+
+	if (Array.isArray(query.select)) validateSelectArray(query.select);
+	else if (typeof query.select === "object")
+		{validateSelectObject(query.select, [...path, "select"]);}
+	else {
+		addError(
+			'Invalid select value: must be "*", an object, or an array.',
+			[...path, "select"],
+			query.select,
+		);
+	}
+
+	return { errors, isValid: errors.length === 0 };
+}
+
+/**
  * Validates that a query is valid against the schema
+ *
  * @param {Object} schema - The schema object
  * @param {RootQuery} query - The query to validate
  * @param {Object} [options]
  * @param {Object} [options.expressionEngine] - a @data-prism/graph expression engine
- * @param {Ajv} [options.validator] - The validator instance to use
- * @param {boolean} [options.strict=false] - The validator and expression engine will be used in validation
  * @return {import('./lib/helpers.js').StandardError[]}
  */
 function validateQuery(schema, rootQuery, options = {}) {
-	const {
-		expressionEngine = expressions.defaultExpressionEngine,
-		validator = defaultValidator,
-		strict = false,
-	} = options;
+	const { expressionEngine } = options;
 
-	if (!validateQueryShape)
-		validateQueryShape = defaultValidator.compile(baseQuerySchema);
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
 
-	if (typeof schema !== "object")
-		return [{ message: "[data-prism] schema must be an object" }];
-	if (typeof expressionEngine !== "object")
+	if (typeof rootQuery !== "object") {
+		return [
+			{ message: "Invalid query: expected object, got " + typeof rootQuery },
+		];
+	}
+
+	if (expressionEngine && typeof expressionEngine !== "object") {
 		return [{ message: "[data-prism] expressionEngine must be an object" }];
-	if (typeof validator !== "object")
-		return [{ message: "[data-prism] validator must be an object" }];
-	if (typeof rootQuery !== "object")
-		return [{ message: "[data-prism] query must be an object" }];
-	if (!rootQuery.type)
-		return [{ message: "[data-prism] query must have a type" }];
 
+	}
+	if (!rootQuery.type) {
+		return [{ message: "Missing query type: required for validation" }];
+
+	}
 	// Shape validation
-	if (!validateQueryShape(rootQuery) > 0) return validateQueryShape.errors;
+	if (!validateQueryShape)
+		{validateQueryShape = defaultValidator.compile(baseQuerySchema);}
+	const shapeResult = validateQueryShape(rootQuery);
+	if (!shapeResult) return validateQueryShape.errors;
 
 	const errors = [];
-	const addError = (message, path, value) => {
-		errors.push({
-			message: `[data-prism] [query/${path.join("/")}] ${message}`,
-			value,
-		});
-	};
-
 	const go = (query, type, path) => {
-		const resSchema = schema.resources[type];
-		const validateStructure = getResourceStructureValidator(
+		const validator = getResourceStructureValidator(
 			schema,
 			type,
-			strict,
-			validator,
 			expressionEngine,
 		);
 
-		if (!validateStructure(query)) {
-			translateAjvErrors(validateStructure.errors, query, "query").forEach(
-				(err) => {
-					errors.push(err);
-				},
+		// Structure validation first
+		const structureIsValid = validator(query);
+		if (!structureIsValid) {
+			translateAjvErrors(validator.errors, query, "query").forEach((err) =>
+				errors.push(err),
 			);
 			if (typeof query.select !== "object") return;
 		}
 
-		const validateSelectObject = (selectObj, prevPath) => {
-			Object.entries(selectObj).forEach(([key, val]) => {
-				const curPath = [...prevPath, key];
-
-				if (key === "*") return;
-
-				if (key in resSchema.relationships)
-					go(val, resSchema.relationships[key].type, curPath);
-				else if (Array.isArray(val))
-					addError("selections within an object may not be arrays", curPath);
-				else if (typeof val === "object") {
-					if (
-						(strict && !expressionEngine.isExpression(val)) ||
-						(!strict && !isExpressionLike(val))
-					) {
-						addError(
-							`selections with objects as their values must either be valid data prism expressions or subqueries with a valid relationship as the key (${key} is not a valid relationship)`,
-							curPath,
-						);
-					}
-				} else if (typeof val === "string") {
-					if (!Object.keys(resSchema.attributes).includes(val)) {
-						addError(
-							`selections that are strings must be the name of an attribute -- "${val}" is not`,
-							curPath,
-							val,
-						);
-					}
-				}
-				// if none of these trigger, the selection is valid
-			});
-		};
-
-		const validateSelectArray = (selectArray) => {
-			selectArray.forEach((val, idx) => {
-				const curPath = [...path, "select", idx];
-
-				if (val === "*") return;
-
-				if (Array.isArray(val)) {
-					addError(
-						"selections within an array may not be arrays",
-						curPath,
-						val,
-					);
-				} else if (typeof val === "object") validateSelectObject(val, curPath);
-				else if (typeof val === "string") {
-					if (!Object.keys(resSchema.attributes).includes(val)) {
-						addError(
-							`selections within an array that are strings must be "*" or the name of an attribute -- "${val}" is not`,
-							curPath,
-							val,
-						);
-					}
-				}
-				// if none of these trigger, the selection is valid
-			});
-		};
-
-		if (query.select === "*") return;
-		if (Array.isArray(query.select)) return validateSelectArray(query.select);
-		if (typeof query.select === "object")
-			return validateSelectObject(query.select, [...path, "select"]);
-
-		addError(
-			`selections must be one of { "*": true }, { "someKey": an expression }, { "someKey": (one of "${Object.keys(resSchema.attributes).join('", "')}") }, or ({ "${Object.keys(resSchema.relationships).join('" | "')}": subquery })`,
-			[...path, "select"],
-			query.select,
+		// Semantic validation second
+		const semanticResult = validateSemantics(
+			schema,
+			query,
+			type,
+			path,
+			expressionEngine,
 		);
+		errors.push(...semanticResult.errors);
+
+		// Recurse into relationships
+		if (typeof query.select === "object" && !Array.isArray(query.select)) {
+			const resSchema = schema.resources[type];
+			Object.entries(query.select).forEach(([key, val]) => {
+				if (key in resSchema.relationships && typeof val === "object")
+					{go(val, resSchema.relationships[key].type, [...path, key]);}
+			});
+		}
+
+		return errors;
 	};
 
-	go(rootQuery, rootQuery.type, []);
-	return errors;
+	return go(rootQuery, rootQuery.type, []);
 }
 
 /**
  * Normalizes a query by expanding shorthand syntax and ensuring consistent structure
+ *
  * @param {Object} schema - The schema object
  * @param {RootQuery} rootQuery - The query to normalize
  * @returns {NormalQuery} The normalized query
@@ -3754,31 +3845,37 @@ function validateQuery(schema, rootQuery, options = {}) {
 function normalizeQuery(schema, rootQuery) {
 	ensure(validateQuery)(schema, rootQuery);
 
-	const stringToProp = (str) => ({
-		[str]: str,
-	});
-
 	const go = (query, type) => {
 		const { select } = query;
+		const resSchema = schema.resources[type];
 
-		const selectWithExpandedStar =
-			select === "*" ? Object.keys(schema.resources[type].attributes) : select;
+		const selectWithExpandedStar = select === "*" 
+			? Object.keys(resSchema.attributes) 
+			: select;
 
 		const selectObj = Array.isArray(selectWithExpandedStar)
-			? selectWithExpandedStar.reduce((selectObj, item) => {
-					const subObj = typeof item === "string" ? stringToProp(item) : item;
-					return { ...selectObj, ...subObj };
-				}, {})
+			? (() => {
+				const result = {};
+				for (const item of selectWithExpandedStar) {
+					if (typeof item === "string") {
+						result[item] = item;
+					} else {
+						Object.assign(result, item);
+					}
+				}
+				return result;
+			})()
 			: select;
 
 		const selectWithStar = selectObj["*"]
-			? {
-					...Object.keys(schema.resources[type].attributes).reduce(
-						(acc, attr) => ({ ...acc, ...stringToProp(attr) }),
-						{},
-					),
-					...lodashEs.omit(selectObj, ["*"]),
+			? (() => {
+				const result = {};
+				for (const attr of Object.keys(resSchema.attributes)) {
+					result[attr] = attr;
 				}
+				Object.assign(result, lodashEs.omit(selectObj, ["*"]));
+				return result;
+			})()
 			: selectObj;
 
 		const selectWithSubqueries = lodashEs.mapValues(selectWithStar, (sel, key) => {
@@ -3893,6 +3990,7 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 							not: true,
 							errorMessage:
 								"attributes must not have extra properties; extra property is ${0#}",
+							// errorMessage: "Unknown attribute \"${0#}\": not defined in schema",
 						},
 					}),
 		},
@@ -3941,6 +4039,7 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 };
 const getCreateResourceCache = createDeepCache();
 const getUpdateResourceCache = createDeepCache();
+const getMergeResourceCache = createDeepCache();
 
 /**
  * Validates a create resource operation
@@ -3953,13 +4052,23 @@ const getUpdateResourceCache = createDeepCache();
 function validateCreateResource(schema, resource, options = {}) {
 	const { validator = defaultValidator } = options;
 
-	if (typeof schema !== "object")
-		return [{ message: "[data-prism] schema must be an object" }];
-	if (typeof validator !== "object")
-		return [{ message: "[data-prism] validator must be an object" }];
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
+	if (typeof validator !== "object") {
+		return [
+			{
+				message: "Invalid validator: expected object, got " + typeof validator,
+			},
+		];
+	}
 	if (!resource.type || !(resource.type in schema.resources)) {
 		return [
-			{ message: `[data-prism] ${resource.type} is not a valid resource type` },
+			{
+				message: `Invalid resource type "${resource.type}": not defined in schema`,
+			},
 		];
 	}
 
@@ -3974,10 +4083,12 @@ function validateCreateResource(schema, resource, options = {}) {
 	if (!compiledValidator) {
 		const resSchema = schema.resources[resource.type];
 		const required = ["type"];
-		if ((resSchema.requiredAttributes ?? []).length > 0)
+		if ((resSchema.requiredAttributes ?? []).length > 0) {
 			required.push("attributes");
-		if ((resSchema.requiredRelationships ?? []).length > 0)
+		}
+		if ((resSchema.requiredRelationships ?? []).length > 0) {
 			required.push("relationships");
+		}
 
 		compiledValidator = validator.compile({
 			type: "object",
@@ -4004,13 +4115,23 @@ function validateCreateResource(schema, resource, options = {}) {
 function validateUpdateResource(schema, resource, options = {}) {
 	const { validator = defaultValidator } = options;
 
-	if (typeof schema !== "object")
-		return [{ message: "[data-prism] schema must be an object" }];
-	if (typeof validator !== "object")
-		return [{ message: "[data-prism] validator must be an object" }];
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
+	if (typeof validator !== "object") {
+		return [
+			{
+				message: "Invalid validator: expected object, got " + typeof validator,
+			},
+		];
+	}
 	if (!resource.type || !(resource.type in schema.resources)) {
 		return [
-			{ message: `[data-prism] ${resource.type} is not a valid resource type` },
+			{
+				message: `Invalid resource type "${resource.type}": not defined in schema`,
+			},
 		];
 	}
 
@@ -4024,10 +4145,8 @@ function validateUpdateResource(schema, resource, options = {}) {
 	let compiledValidator = schemaCache.get(resource.type);
 	if (!compiledValidator) {
 		const resSchema = schema.resources[resource.type];
-		if ((resSchema.requiredAttributes ?? []).length > 0)
-			;
-		if ((resSchema.requiredRelationships ?? []).length > 0)
-			;
+		if ((resSchema.requiredAttributes ?? []).length > 0) ;
+		if ((resSchema.requiredRelationships ?? []).length > 0) ;
 
 		compiledValidator = validator.compile({
 			type: "object",
@@ -4050,16 +4169,182 @@ function validateUpdateResource(schema, resource, options = {}) {
  * @returns {Array} Array of validation errors
  */
 function validateDeleteResource(schema, resource) {
-	if (typeof schema !== "object")
-		return [{ message: "[data-prism] schema must be an object" }];
-	if (typeof resource !== "object")
-		return [{ message: "[data-prism] resource must be an object" }];
-	if (!resource.type || !(resource.type in schema.resources))
-		return [{ message: "[data-prism] resource must have a valid type" }];
-	if (!resource.id)
-		return [{ message: "[data-prism] resource must have a valid ID" }];
-
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
+	if (typeof resource !== "object") {
+		return [
+			{ message: "Invalid resource: expected object, got " + typeof resource },
+		];
+	}
+	if (!resource.type || !(resource.type in schema.resources)) {
+		return [
+			{
+				message: `Invalid resource type "${resource.type}": not defined in schema`,
+			},
+		];
+	}
+	if (!resource.id) {
+		return [{ message: "Missing resource ID: required for delete operation" }];
+	}
 	return [];
+}
+
+/**
+ * Validates a resource tree that will be merged into a graph
+ *
+ * @param {import('./schema.js').Schema} schema - The schema to validate against
+ * @param {*} resource - The resource tree to validate
+ * @param {Object} [options]
+ * @param {Ajv} [options.validator] - The validator instance to use
+ * @returns {import('ajv').DefinedError[]} Array of validation errors
+ */
+function validateMergeResource(schema, resource, options = {}) {
+	const { validator = defaultValidator } = options;
+
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
+	if (typeof validator !== "object") {
+		return [
+			{
+				message: "Invalid validator: expected object, got " + typeof validator,
+			},
+		];
+	}
+	if (!resource.type || !(resource.type in schema.resources)) {
+		return [
+			{
+				message: `Invalid resource type "${resource.type}": not defined in schema`,
+			},
+		];
+	}
+
+	const cache = getMergeResourceCache(schema, validator);
+	let schemaCache = cache.value;
+	if (!schemaCache) {
+		schemaCache = new Map(); // Cache by resource type
+		cache.set(schemaCache);
+	}
+
+	let compiledValidators = schemaCache.get(resource.type);
+	if (!compiledValidators) {
+		const toOneRefOfType = (type, required) => ({
+			anyOf: [
+				...(required ? [] : [{ type: "null" }]),
+				{
+					type: "object",
+					required: ["type", "id"],
+					additionalProperties: false,
+					properties: { type: { const: type }, id: { type: "string" } },
+				},
+				{ $ref: `#/definitions/create/${type}` },
+				{ $ref: `#/definitions/update/${type}` },
+			],
+		});
+		const toManyRefOfType = (type) => ({
+			type: "array",
+			items: toOneRefOfType(type, true),
+		});
+
+		const definitions = { create: {}, update: {} };
+		Object.entries(schema.resources).forEach(([resName, resSchema]) => {
+			const required = ["type"];
+			if ((resSchema.requiredAttributes ?? []).length > 0) {
+				required.push("attributes");
+			}
+			if ((resSchema.requiredRelationships ?? []).length > 0) {
+				required.push("relationships");
+			}
+
+			const requiredRelationships = resSchema.requiredRelationships ?? [];
+
+			definitions.create[resName] = {
+				type: "object",
+				required,
+				additionalProperties: false,
+				properties: {
+					type: { const: resName },
+					new: { type: "boolean", const: true },
+					attributes: {
+						type: "object",
+						required: resSchema.requiredAttributes,
+						additionalProperties: false,
+						properties: resSchema.attributes,
+					},
+					relationships: {
+						type: "object",
+						required: requiredRelationships,
+						additionalProperties: false,
+						properties: lodashEs.mapValues(
+							resSchema.relationships,
+							(relSchema, resName) =>
+								relSchema.cardinality === "one"
+									? requiredRelationships.includes(resName)
+										? toOneRefOfType(relSchema.type, true)
+										: toOneRefOfType(relSchema.type, false)
+									: toManyRefOfType(relSchema.type),
+						),
+					},
+				},
+			};
+
+			definitions.update[resName] = {
+				type: "object",
+				required: ["type", "id"],
+				additionalProperties: false,
+				properties: {
+					type: { const: resName },
+					id: { type: "string" },
+					new: { type: "boolean", const: false },
+					attributes: {
+						type: "object",
+						additionalProperties: false,
+						properties: lodashEs.mapValues(resSchema.attributes, (a) =>
+							lodashEs.omit(a, ["required"]),
+						),
+					},
+					relationships: {
+						type: "object",
+						additionalProperties: false,
+						properties: lodashEs.mapValues(resSchema.relationships, (relSchema) =>
+							relSchema.cardinality === "one"
+								? relSchema.required
+									? toOneRefOfType(relSchema.type, true)
+									: toOneRefOfType(relSchema.type, false)
+								: toManyRefOfType(relSchema.type),
+						),
+					},
+				},
+			};
+		});
+
+		compiledValidators = {
+			create: validator.compile({
+				$ref: `#/definitions/create/${resource.type}`,
+				definitions,
+			}),
+			update: validator.compile({
+				$ref: `#/definitions/update/${resource.type}`,
+				definitions,
+			}),
+		};
+
+		schemaCache.set(resource.type, compiledValidators);
+	}
+
+	const compiledValidator =
+		resource.id && !resource.new
+			? compiledValidators.update
+			: compiledValidators.create;
+
+	return compiledValidator(resource)
+		? []
+		: translateAjvErrors(compiledValidator.errors, resource, "resource");
 }
 
 var $schema = "http://json-schema.org/draft-07/schema#";
@@ -4280,9 +4565,10 @@ const getValidateSchemaCache = createDeepCache();
 function validateSchema(schema, options = {}) {
 	const { validator = defaultValidator } = options;
 
-	if (typeof schema !== "object")
-		return [{ message: "[data-prism] schema must be an object" }];
+	if (typeof schema !== "object") {
+		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
 
+	}
 	const validatorCache = getValidateSchemaCache(schema, validator);
 	if (validatorCache.hit) return validatorCache.value;
 
@@ -4300,7 +4586,7 @@ function validateSchema(schema, options = {}) {
 				validator.compile(attrSchema);
 			} catch (err) {
 				attributeSchemaErrors.push({
-					message: `[data-prism] there was a problem compiling the schema for ${resName}.${attrName}: ${err.message}`,
+					message: `Invalid attribute schema "${resName}.${attrName}": ${err.message}`,
 				});
 			}
 		}),
@@ -4346,7 +4632,7 @@ function validateSchema(schema, options = {}) {
 				properties: {
 					type: {
 						enum: Object.keys(schema.resources),
-						errorMessage: `must reference a valid resource type defined in the schema -- found \${0}, looking for one of ("${Object.keys(schema.resources).join('", "')}")`,
+						errorMessage: `Invalid resource type "\${0}": use one of (${Object.keys(schema.resources).join(", ")})`,
 					},
 				},
 			},
@@ -4381,7 +4667,7 @@ function buildWhereExpression(whereClause, expressionEngine) {
 
 	const whereExpressions = Object.entries(whereClause).map(
 		([propPath, propVal]) => ({
-			$compose: [
+			$pipe: [
 				{ $get: propPath },
 				expressionEngine.isExpression(propVal) ? propVal : { $eq: propVal },
 			],
@@ -4393,11 +4679,14 @@ function buildWhereExpression(whereClause, expressionEngine) {
 		: whereExpressions[0];
 }
 
+// import { mapValues } from "lodash-es";
+// import { defaultExpressionEngine } from "@data-prism/expressions";
+
 /**
  * @typedef {Object<string, any>} Projection
  */
 
-const TERMINAL_EXPRESSIONS = ["$get", "$prop", "$literal"];
+const TERMINAL_EXPRESSIONS = new Set(["$get", "$prop", "$literal"]);
 
 /**
  * @param {any} expression
@@ -4405,47 +4694,82 @@ const TERMINAL_EXPRESSIONS = ["$get", "$prop", "$literal"];
  * @returns {any}
  */
 function distributeStrings(expression, expressionEngine) {
-	const { isExpression } = expressionEngine;
+	// const { isExpression } = expressionEngine;
 
 	if (typeof expression === "string") {
 		const [iteratee, ...rest] = expression.split(".$.");
 		if (rest.length === 0) return { $get: expression };
 
 		return {
-			$compose: [
+			$pipe: [
 				{ $get: iteratee },
-				{ $flatMap: distributeStrings(rest.join(".$."), expressionEngine) },
+				{ $flatMap: distributeStrings(rest.join(".$.")) },
 				{ $filter: { $isDefined: {} } },
 			],
 		};
 	}
 
-	if (!isExpression(expression)) {
-		return Array.isArray(expression)
-			? expression.map(distributeStrings)
-			: typeof expression === "object"
-				? lodashEs.mapValues(expression, distributeStrings)
-				: expression;
-	}
-
 	const [expressionName, expressionArgs] = Object.entries(expression)[0];
 
-	return TERMINAL_EXPRESSIONS.includes(expressionName)
+	return TERMINAL_EXPRESSIONS.has(expressionName)
 		? expression
-		: { [expressionName]: distributeStrings(expressionArgs, expressionEngine) };
+		: { [expressionName]: distributeStrings(expressionArgs) };
 }
+
+// /**
+//  * Takes a query and returns the fields that will need to be fetched to ensure
+//  * all expressions within the query are usable.
+//  *
+//  * @param {Projection} projection - Projection
+//  * @returns {Object}
+//  */
+// export function projectionQueryProperties(projection) {
+// 	const { isExpression } = defaultExpressionEngine;
+// 	const projectionTerminalExpressions = ["$literal", "$prop"];
+
+// 	const go = (val) => {
+// 		if (isExpression(val)) {
+// 			const [exprName, exprVal] = Object.entries(val)[0];
+// 			if (projectionTerminalExpressions.includes(exprName)) return [];
+
+// 			return go(exprVal);
+// 		}
+
+// 		if (Array.isArray(val)) return val.map(go);
+
+// 		if (typeof val === "object") return Object.values(val).map(go);
+
+// 		return [val.split(".").filter((v) => v !== "$")];
+// 	};
+
+// 	// mutates!
+// 	const makePath = (obj, path) => {
+// 		const [head, ...tail] = path;
+
+// 		if (tail.length === 0) {
+// 			obj[head] = head;
+// 			return;
+// 		}
+
+// 		if (!obj[head]) obj[head] = { properties: {} };
+// 		makePath(obj[head].properties, tail);
+// 	};
+
+// 	const propertyPaths = Object.values(projection).flatMap(go);
+// 	const query = {};
+// 	propertyPaths.forEach((path) => makePath(query, path));
+
+// 	return query;
+// }
 
 /**
  * @param {import('@data-prism/expressions').Expression} expression
  * @param {any} expressionEngine
  * @returns {function(any): any}
  */
-function createExpressionProjector(
-	expression,
-	expressionEngine,
-) {
+function createExpressionProjector(expression, expressionEngine) {
 	const { apply } = expressionEngine;
-	const expr = distributeStrings(expression, expressionEngine);
+	const expr = distributeStrings(expression);
 
 	return (result) => apply(expr, result);
 }
@@ -4579,9 +4903,9 @@ function runQuery(rootQuery, data) {
 
 							const [head, ...tail] = path;
 
-							if (head === "$")
+							if (head === "$") {
 								return curValue.map((v) => extractPath(v, tail));
-
+							}
 							if (!(head in curValue)) return undefined;
 
 							return extractPath(curValue?.[head], tail);
@@ -4795,154 +5119,378 @@ const ensureValidQuery = ensure(validateQuery);
 const ensureValidCreateResource = ensure(validateCreateResource);
 const ensureValidUpdateResource = ensure(validateUpdateResource);
 const ensureValidDeleteResource = ensure(validateDeleteResource);
+const ensureValidMergeResource = ensure(validateMergeResource);
 
-// WARNING: MUTATES storeGraph
 /**
- * @param {import('@data-prism/core').NormalResource} resource
- * @param {Object} context
- * @param {import('@data-prism/core').Schema} context.schema
- * @param {import('@data-prism/core').Graph} context.storeGraph
- * @returns {import('@data-prism/core').NormalResource}
+ * @typedef {import('@data-prism/core').Schema} Schema
+ * @typedef {import('@data-prism/core').Graph} Graph
+ * @typedef {import('@data-prism/core').NormalResource} NormalResource
+ * @typedef {import('@data-prism/core').CreateResource} CreateResource
+ * @typedef {import('@data-prism/core').UpdateResource} UpdateResource
+ * @typedef {import('@data-prism/core').Ref} Ref
+ */
+
+/**
+ * @typedef {'one' | 'many'} RelationshipCardinality
+ */
+
+/**
+ * @typedef {Object} RelationshipSchema
+ * @property {string} type - The target resource type
+ * @property {RelationshipCardinality} cardinality - Whether the relationship is to-one or to-many
+ * @property {string} [inverse] - The name of the inverse relationship on the target resource
+ */
+
+/**
+ * @typedef {Object} ResourceSchema
+ * @property {Object<string, RelationshipSchema>} relationships - Map of relationship names to their schemas
+ */
+
+/**
+ * @typedef {Object} RelationshipUpdateContext
+ * @property {Schema} schema - The complete schema definition
+ * @property {Graph} storeGraph - The graph data structure being modified
+ */
+
+/**
+ * Updates all inverse relationships for a single relationship on a resource.
+ * Handles both one-to-one and one-to-many cardinalities appropriately.
+ *
+ * WARNING: MUTATES storeGraph
+ *
+ * @param {NormalResource} sourceRes - The resource whose relationship is being updated
+ * @param {string} relName - Name of the relationship being updated
+ * @param {Ref | Ref[] | null} relValue - The new relationship value
+ * @param {RelationshipUpdateContext} context - Context containing schema and storeGraph
+ */
+function updateInverseRelationships(
+	sourceRes,
+	relName,
+	relValue,
+	context,
+) {
+	const { schema, storeGraph } = context;
+	const sourceResSchema = schema.resources[sourceRes.type];
+	const relationshipSchema = sourceResSchema.relationships[relName];
+
+	// Skip if no inverse relationship is defined
+	if (!relationshipSchema?.inverse) return;
+
+	const { inverse: inverseRelName, type: targetType } = relationshipSchema;
+	const targetResourceSchema = schema.resources[targetType];
+	const inverseRelationshipSchema =
+		targetResourceSchema.relationships[inverseRelName];
+
+	const targetRefs =
+		relValue === null ? [] : Array.isArray(relValue) ? relValue : [relValue];
+
+	if (inverseRelationshipSchema.cardinality === "one") {
+		// Handle one-to-one relationships
+		targetRefs.forEach((targetRef) => {
+			const targetResource = storeGraph[targetRef.type][targetRef.id];
+			const currentInverseRef = targetResource.relationships[inverseRelName];
+
+			// Clean up previous relationship if target resource had a different inverse reference
+			if (currentInverseRef && currentInverseRef.id !== sourceRes.id) {
+				const previousResource =
+					storeGraph[currentInverseRef.type][currentInverseRef.id];
+				if (previousResource) {
+					// Remove the target from the previous resource's relationship
+					if (relationshipSchema.cardinality === "one") {
+						previousResource.relationships[relName] = null;
+					} else {
+						// For many-cardinality, filter out the target reference
+						const currentRefs = previousResource.relationships[relName] || [];
+						previousResource.relationships[relName] = currentRefs.filter(
+							(ref) => ref.id !== targetRef.id,
+						);
+					}
+				}
+			}
+
+			// Set the new inverse reference
+			targetResource.relationships[inverseRelName] = {
+				type: sourceRes.type,
+				id: sourceRes.id,
+			};
+		});
+	} else {
+		// Handle one-to-many relationships
+		targetRefs.forEach((targetRef) => {
+			const targetResource = storeGraph[targetRef.type][targetRef.id];
+			const currentInverseRefs =
+				targetResource.relationships[inverseRelName] || [];
+
+			// Check if source is already referenced to avoid duplicates
+			const isAlreadyReferenced = currentInverseRefs.some(
+				(ref) => ref.id === sourceRes.id,
+			);
+
+			if (!isAlreadyReferenced) {
+				targetResource.relationships[inverseRelName] = [
+					...currentInverseRefs,
+					{ type: sourceRes.type, id: sourceRes.id },
+				];
+			}
+		});
+	}
+}
+
+/**
+ * Updates all inverse relationships for a resource by processing each relationship.
+ * This is a convenience function that iterates over all relationships on a resource.
+ *
+ * WARNING: MUTATES storeGraph
+ *
+ * @param {NormalResource} resource - The resource whose relationships need inverse updates
+ * @param {RelationshipUpdateContext} context - Context containing schema and storeGraph
+ */
+function updateAllInverseRelationships(resource, context) {
+	if (!resource.relationships) return;
+
+	Object.entries(resource.relationships).forEach(([relName, relValue]) => {
+		updateInverseRelationships(resource, relName, relValue, context);
+	});
+}
+
+/**
+ * Cleans up inverse relationships when a resource is being deleted.
+ * Removes references to the deleted resource from all related resources.
+ *
+ * WARNING: MUTATES storeGraph
+ *
+ * @param {NormalResource} deletedRes - The resource being deleted
+ * @param {RelationshipUpdateContext} context - Context containing schema and storeGraph
+ */
+function cleanupInverseRelationships(deletedRes, context) {
+	const { schema, storeGraph } = context;
+	const resourceSchema = schema.resources[deletedRes.type];
+
+	if (!deletedRes.relationships) return;
+
+	Object.entries(deletedRes.relationships).forEach(([relName, relValue]) => {
+		const relationshipSchema = resourceSchema.relationships[relName];
+
+		if (!relationshipSchema?.inverse) {
+			return;
+		}
+
+		const { inverse: inverseRelName, type: targetType } = relationshipSchema;
+		const targetResourceSchema = schema.resources[targetType];
+		const inverseRelationshipSchema =
+			targetResourceSchema.relationships[inverseRelName];
+
+		const targetRefs =
+			relValue === null ? [] : Array.isArray(relValue) ? relValue : [relValue];
+
+		targetRefs.forEach((targetRef) => {
+			const targetResource = storeGraph[targetRef.type][targetRef.id];
+			if (!targetResource) {
+				return;
+			}
+
+			if (inverseRelationshipSchema.cardinality === "one") {
+				targetResource.relationships[inverseRelName] = null;
+			} else {
+				const currentRefs = targetResource.relationships[inverseRelName] || [];
+				targetResource.relationships[inverseRelName] = currentRefs.filter(
+					(ref) => ref.id !== deletedRes.id,
+				);
+			}
+		});
+	});
+}
+
+/**
+ * Creates or updates a resource in the store and maintains inverse relationships.
+ * Updates related resources to ensure bidirectional relationship consistency.
+ * Handles both one-to-one and one-to-many relationship cardinalities.
+ *
+ * WARNING: MUTATES storeGraph
+ *
+ * @param {import('@data-prism/core').NormalResource} resource - The normalized resource to create or update
+ * @param {import('./memory-store.js').MemoryStoreContext} context - Context object containing schema and storeGraph
+ * @returns {import('@data-prism/core').NormalResource} The created or updated resource
  */
 function createOrUpdate(resource, context) {
-	const { schema, storeGraph } = context;
-	const { type } = resource;
+	const { storeGraph } = context;
 
-	const resSchema = schema.resources[resource.type];
-
-	Object.entries(resource.relationships).forEach(([relName, related]) => {
-		const relSchema = resSchema.relationships[relName];
-		const { inverse, type: relType } = relSchema;
-		if (inverse) {
-			const inverseResSchema = schema.resources[relType];
-			const inverseRel = inverseResSchema.relationships[inverse];
-
-			/** @type {import('@data-prism/core').Ref[]} */
-			const refs =
-				related === null ? [] : Array.isArray(related) ? related : [related];
-
-			if (inverseRel.cardinality === "one") {
-				refs.forEach((ref) => {
-					/** @type {import('@data-prism/core').Ref | null} */
-					const currentInverseRef =
-						storeGraph[relType][ref.id].relationships[inverse];
-
-					if (currentInverseRef && currentInverseRef.id !== ref.id) {
-						if (relSchema.cardinality === "one") {
-							storeGraph[type][currentInverseRef.id].relationships[relName] =
-								null;
-						} else {
-							storeGraph[type][currentInverseRef.id].relationships[relName] =
-								storeGraph[type][currentInverseRef.id].relationships[
-									relName
-								].filter((r) => r.id !== storeGraph[relType][ref.id].id);
-						}
-					}
-
-					storeGraph[relType][ref.id].relationships[inverse] = {
-						type: resource.type,
-						id: resource.id,
-					};
-				});
-			} else {
-				refs.forEach((ref) => {
-					const isRedundantRef = (
-						storeGraph[ref.type][ref.id].relationships[inverse] ?? []
-					).some((r) => r.id === resource.id);
-
-					if (!isRedundantRef) {
-						(storeGraph[ref.type][ref.id].relationships[inverse] ?? []).push({
-							type: resource.type,
-							id: resource.id,
-						});
-					}
-				});
-			}
-		}
-	});
-
+	// Store the resource first
 	storeGraph[resource.type][resource.id] = resource;
+
+	// Update all inverse relationships
+	updateAllInverseRelationships(resource, context);
 
 	return resource;
 }
 
 /**
- * @typedef {Object} DeleteResource
- * @property {string} type
- * @property {string} id
- * @property {Object<string, unknown>} [attributes]
- * @property {Object<string, import('@data-prism/core').Ref | import('@data-prism/core').Ref[]>} [relationships]
- */
-
-// WARNING: MUTATES storeGraph
-/**
- * @param {DeleteResource} resource
- * @param {Object} context
- * @param {import('@data-prism/core').Schema} context.schema
- * @param {import('@data-prism/core').Graph} context.storeGraph
- * @returns {DeleteResource}
+ * Deletes a resource from the store and cleans up all inverse relationships.
+ * Ensures referential integrity by removing references to the deleted resource
+ * from all related resources.
+ *
+ * WARNING: MUTATES storeGraph
+ *
+ * @param {import('@data-prism/core').DeleteResource} resource - The resource to delete
+ * @param {import('./memory-store.js').MemoryStoreContext} context - Context object containing schema and storeGraph
+ * @returns {import('@data-prism/core').DeleteResource} The deleted resource
  */
 function deleteAction(resource, context) {
-	const { schema, storeGraph } = context;
+	const { storeGraph } = context;
 	const { type, id } = resource;
-	const resSchema = schema.resources[resource.type];
-	/** @type {import('@data-prism/core').NormalResource} */
+
 	const existingRes = storeGraph[type][id];
 
-	Object.entries(existingRes.relationships).forEach(([relName, related]) => {
-		const relSchema = resSchema.relationships[relName];
-		const { inverse, type: relType } = relSchema;
-		if (inverse) {
-			const inverseResSchema = schema.resources[relType];
-			const inverseRel = inverseResSchema.relationships[inverse];
+	// Clean up inverse relationships before deleting
+	cleanupInverseRelationships(existingRes, context);
 
-			/** @type {import('@data-prism/core').Ref[]} */
-			const refs =
-				related === null ? [] : Array.isArray(related) ? related : [related];
-
-			if (inverseRel.cardinality === "one") {
-				refs.forEach((ref) => {
-					storeGraph[relType][ref.id].relationships[inverse] = null;
-				});
-			} else {
-				refs.forEach((ref) => {
-					storeGraph[relType][ref.id].relationships[inverse] = (
-						storeGraph[relType][ref.id].relationships[inverse] ?? []
-					).filter((r) => r.id !== resource.id);
-				});
-			}
-		}
-	});
-
+	// Remove the resource from the store
 	delete storeGraph[type][id];
 
 	return resource;
 }
 
-// Note: validateResourceTree was removed, so we'll skip validation for now
-// since the core function has different expectations for tree structures
-
 /**
- * @typedef {Object} Context
- * @property {import('@data-prism/core').Schema} schema
- * @property {Ajv} validator
- * @property {import('./memory-store.js').MemoryStore} store
- * @property {import('@data-prism/core').Graph} storeGraph
+ * @typedef {import('./memory-store.js').MemoryStoreContext} Context
  */
 
 /**
- * @param {import('./memory-store.js').NormalResourceTree} resourceTree
- * @param {Context} context
- * @returns {import('./memory-store.js').NormalResourceTree}
+ * Checks if a relationship value contains nested resources (with attributes/relationships)
+ * rather than simple references. Nested resources handle their own inverse relationships.
+ *
+ * @param {import('@data-prism/core').Ref | import('@data-prism/core').Ref[] | null} relValue - The relationship value to check
+ * @returns {boolean} True if the relationship contains nested resources
  */
-function splice(resourceTree, context) {
+function containsNestedResources(relValue) {
+	if (!relValue) return false;
+
+	return Array.isArray(relValue)
+		? relValue.some((r) => r.attributes || r.relationships)
+		: relValue.attributes || relValue.relationships;
+}
+
+/**
+ * Recursively processes a resource tree, handling inverse relationships and store updates.
+ * Orchestrates the complete resource processing pipeline.
+ *
+ * WARNING: MUTATES storeGraph
+ *
+ * @param {import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource} resource - The resource to process
+ * @param {import('@data-prism/core').NormalResource | null} parent - The parent resource (for inverse relationship handling)
+ * @param {any} parentRelSchema - The parent relationship schema definition
+ * @param {Context} context - Context object containing schema, store, and storeGraph
+ * @returns {import('@data-prism/core').NormalResource} The processed resource with all nested relationships
+ */
+function processResourceTree(resource, parent, parentRelSchema, context) {
 	const { schema, store, storeGraph } = context;
-	// Skip validation for now since splice handles tree structures
-	// that the core validation doesn't support
+	const resSchema = schema.resources[resource.type];
+	const resourceCopy = structuredClone(resource);
+
+	// Handle inverse relationships from parent
+	if (parent && parentRelSchema?.inverse) {
+		const { inverse } = parentRelSchema;
+		resourceCopy.relationships = resourceCopy.relationships ?? {};
+		resourceCopy.relationships[inverse] = { type: parent.type, id: parent.id };
+	}
+
+	// Prepare resource for storage and get existing reference
+	const existing = store.getOne(resource.type, resource.id);
+	const resultId = resource.id ?? existing?.id ?? uuid.v4();
+
+	// Optimize: Build final resource in-place to avoid intermediate objects
+	const finalResource = existing
+		? {
+				type: resourceCopy.type,
+				id: resultId,
+				attributes: { ...existing.attributes, ...resourceCopy.attributes },
+				relationships: {
+					...existing.relationships,
+					...resourceCopy.relationships,
+				},
+			}
+		: {
+				type: resourceCopy.type,
+				id: resultId,
+				attributes: resourceCopy.attributes ?? {},
+				relationships: {
+					...lodashEs.mapValues(resSchema.relationships, (r) =>
+						r.cardinality === "one" ? null : [],
+					),
+					...resourceCopy.relationships,
+				},
+			};
+
+	// Normalize relationship references inline (avoid extra function call)
+	const normalizedForStore = {
+		...finalResource,
+		relationships: lodashEs.mapValues(finalResource.relationships, (rel, relName) => {
+			const relSchema = resSchema.relationships[relName];
+			if (!rel) return rel;
+			return Array.isArray(rel)
+				? rel.map((r) => ({ type: relSchema.type, id: r.id }))
+				: { type: relSchema.type, id: rel.id };
+		}),
+	};
+
+	// Store the normalized resource
+	storeGraph[resource.type][resultId] = normalizedForStore;
+
+	// Process nested relationships (this handles complex trees)
+	const processedRelationships = lodashEs.mapValues(
+		finalResource.relationships ?? {},
+		(rel, relName) => {
+			const relSchema = resSchema.relationships[relName];
+
+			// Process nested resources first
+			const step = (relRes) =>
+				containsNestedResources(relRes)
+					? processResourceTree(relRes, finalResource, relSchema, context)
+					: relRes;
+
+			const result = utils.applyOrMap(rel, step);
+
+			// Update normalized references in store
+			storeGraph[finalResource.type][finalResource.id].relationships[relName] =
+				utils.applyOrMap(result, (r) => ({ type: relSchema.type, id: r.id }));
+
+			return result;
+		},
+	);
+
+	// Update inverse relationships for any simple refs (not nested resources)
+	Object.entries(finalResource.relationships ?? {}).forEach(
+		([relName, rel]) => {
+			// Only update inverses for simple refs, not nested resources
+			if (rel && !containsNestedResources(rel)) {
+				updateInverseRelationships(finalResource, relName, rel, context);
+			}
+		},
+	);
+
+	return { ...finalResource, relationships: processedRelationships };
+}
+
+/**
+ * Merges a resource tree into the store, creating or updating resources and their relationships.
+ * Handles nested resources and maintains referential integrity through inverse relationship updates.
+ *
+ * WARNING: MUTATES storeGraph
+ *
+ * @param {import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource} resourceTree - The resource tree to merge into the store
+ * @param {Context} context - Context object containing schema, validator, store, and storeGraph
+ * @returns {import('@data-prism/core').NormalResource} The processed resource tree with all nested resources created/updated
+ */
+function merge(resourceTree, context) {
+	const { schema, validator, store } = context;
+
+	ensureValidMergeResource(schema, resourceTree, { validator });
 
 	/**
-	 * @param {import('./memory-store.js').NormalResourceTree} res
-	 * @returns {import('@data-prism/core').Ref[]}
+	 * Recursively extracts all expected existing resource references from a resource tree.
+	 * Used to validate that all referenced resources already exist in the store.
+	 *
+	 * @param {import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource} res - The resource to extract references from
+	 * @returns {import('@data-prism/core').Ref[]} Array of resource references that should exist
 	 */
 	const expectedExistingResources = (res) => {
 		const related = Object.values(res.relationships ?? {}).flatMap((rel) =>
@@ -4971,115 +5519,8 @@ function splice(resourceTree, context) {
 		);
 	}
 
-	/**
-	 * @param {import('./memory-store.js').NormalResourceTree} res
-	 * @param {import('./memory-store.js').NormalResourceTree | null} [parent=null]
-	 * @param {any} [parentRelSchema=null]
-	 * @returns {import('./memory-store.js').NormalResourceTree}
-	 */
-	const go = (res, parent = null, parentRelSchema = null) => {
-		const resSchema = schema.resources[res.type];
-		const resCopy = structuredClone(res);
-		const inverse = parentRelSchema?.inverse;
-
-		if (parent && inverse) {
-			const relSchema = resSchema.relationships[inverse];
-			resCopy.relationships = resCopy.relationships ?? {};
-			if (
-				relSchema.cardinality === "many" &&
-				!(resCopy.relationships[inverse] ?? []).some((r) => r.id === res.id)
-			) {
-				resCopy.relationships[inverse] = [
-					...(resCopy.relationships[inverse] ?? []),
-					{ type: parent.type, id: parent.id },
-				];
-			} else if (relSchema.cardinality === "one") {
-				const existing = store.getOne(parent.type, parent.id);
-				/** @type {import('@data-prism/core').Ref} */
-				const existingRef = existing?.relationships?.[inverse];
-
-				if (existingRef && existingRef.id !== parent.id) {
-					storeGraph[existing.type][existing.id] = {
-						...existing,
-						relationships: { ...existing.relationships, [inverse]: null },
-					};
-				}
-
-				resCopy.relationships[inverse] = { type: parent.type, id: parent.id };
-			}
-		}
-
-		const existing = store.getOne(res.type, res.id);
-		/** @type {string} */
-		const resultId = res.id ?? existing?.id ?? uuid.v4();
-		const prepped = res.id
-			? {
-					type: resCopy.type,
-					id: resultId,
-					attributes: { ...existing.attributes, ...resCopy.attributes },
-					relationships: {
-						...existing.relationships,
-						...resCopy.relationships,
-					},
-				}
-			: {
-					type: resCopy.type,
-					id: resultId,
-					attributes: resCopy.attributes ?? {},
-					relationships: {
-						...lodashEs.mapValues(resSchema.relationships, (r) =>
-							r.cardinality === "one" ? null : [],
-						),
-						...resCopy.relationships,
-					},
-				};
-
-		const normalized = {
-			...prepped,
-			relationships: lodashEs.pick(prepped.relationships, ["type", "id"]),
-		};
-
-		storeGraph[res.type][resultId] = existing
-			? {
-					...normalized,
-					attributes: { ...existing.attributes, ...normalized.attributes },
-					relationships: {
-						...existing.relationships,
-						...normalized.relationships,
-					},
-				}
-			: normalized;
-
-		const preppedRels = lodashEs.mapValues(
-			prepped.relationships ?? {},
-			(rel, relName) => {
-				const relSchema = resSchema.relationships[relName];
-				const step = (relRes) =>
-					relRes.attributes || relRes.relationships
-						? go(relRes, prepped, relSchema)
-						: relRes;
-
-				const result = utils.applyOrMap(rel, step);
-				storeGraph[res.type][resultId].relationships[relName] = utils.applyOrMap(
-					result,
-					(r) => ({ type: relSchema.type, id: r.id }),
-				);
-
-				return result;
-			},
-		);
-
-		return { ...prepped, relationships: preppedRels };
-	};
-
-	return go(resourceTree, null, null);
+	return processResourceTree(resourceTree, null, null, context);
 }
-
-/**
- * @typedef {Object} Ref
- * @property {string} type
- * @property {string} id
- */
 
 /**
  * @typedef {Object} NormalResourceTree
@@ -5091,54 +5532,49 @@ function splice(resourceTree, context) {
 
 /**
  * @typedef {Object} MemoryStoreConfig
- * @property {import('@data-prism/core').Graph} [initialData]
- * @property {Ajv} [validator]
+ * @property {import('@data-prism/core').Graph} [initialData] - Initial graph data to populate the store
+ * @property {Ajv} [validator] - Custom AJV validator instance (defaults to createValidator())
  */
 
 /**
- * @typedef {Object} CreateResource
- * @property {string} type
- * @property {string} [id]
- * @property {boolean} [new]
- * @property {Object<string, unknown>} [attributes]
- * @property {Object<string, Ref | Ref[] | null>} [relationships]
+ * @typedef {Object} MemoryStoreContext
+ * @property {import('@data-prism/core').Schema} schema - The schema defining resource types and relationships
+ * @property {Ajv} [validator] - AJV validator instance for resource validation
+ * @property {MemoryStore} [store] - The memory store instance
+ * @property {import('@data-prism/core').Graph} storeGraph - The graph data structure containing all resources
  */
 
-/**
- * @typedef {Object} UpdateResource
- * @property {string} type
- * @property {string} id
- * @property {Object<string, unknown>} [attributes]
- * @property {Object<string, Ref | Ref[] | null>} [relationships]
- */
+
 
 /**
  * @typedef {Object} Store
  * @property {function(string, string): import('@data-prism/core').NormalResource} getOne
- * @property {function(CreateResource): import('@data-prism/core').NormalResource} create
- * @property {function(UpdateResource): import('@data-prism/core').NormalResource} update
- * @property {function(CreateResource | UpdateResource): import('@data-prism/core').NormalResource} upsert
- * @property {function(import('./delete.js').DeleteResource): import('./delete.js').DeleteResource} delete
+ * @property {function(import('@data-prism/core').CreateResource): import('@data-prism/core').NormalResource} create
+ * @property {function(import('@data-prism/core').UpdateResource): import('@data-prism/core').NormalResource} update
+ * @property {function(import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource): import('@data-prism/core').NormalResource} upsert
+ * @property {function(import('@data-prism/core').DeleteResource): import('@data-prism/core').DeleteResource} delete
  * @property {function(import('@data-prism/core').RootQuery): any} query
- * @property {function(NormalResourceTree): NormalResourceTree} splice
+ * @property {function(NormalResourceTree): NormalResourceTree} merge
  */
 
 /**
  * @typedef {Store & {
- *   linkInverses: function(): void,
- *   merge: function(import('@data-prism/core').Graph): void
+ *   linkInverses: function(): void
  * }} MemoryStore
  */
 
 /**
- * @param {import('@data-prism/core').Schema} schema
- * @param {MemoryStoreConfig} [config={}]
- * @returns {MemoryStore}
+ * Creates a new in-memory store instance that implements the data-prism store interface.
+ * Provides CRUD operations, querying, and relationship management for graph data.
+ * 
+ * @param {import('@data-prism/core').Schema} schema - The schema defining resource types and relationships
+ * @param {MemoryStoreConfig} [config={}] - Configuration options for the store
+ * @returns {MemoryStore} A new memory store instance
  */
 function createMemoryStore(schema, config = {}) {
 	const { initialData = {}, validator = createValidator() } = config;
 
-	ensureValidSchema(schema);
+	ensureValidSchema(schema, { validator });
 
 	let storeGraph = mergeGraphs(createEmptyGraph(schema), initialData);
 
@@ -5158,7 +5594,6 @@ function createMemoryStore(schema, config = {}) {
 
 		ensureValidCreateResource(schema, resource, validator);
 
-		/** @type {import('@data-prism/core').NormalResource} */
 		const normalRes = {
 			attributes: { ...(resource.attributes ?? {}), [idAttribute]: newId },
 			relationships: lodashEs.mapValues(
@@ -5179,8 +5614,6 @@ function createMemoryStore(schema, config = {}) {
 		ensureValidUpdateResource(schema, resource, validator);
 
 		const existingRes = storeGraph[resource.type][resource.id];
-
-		/** @type {import('@data-prism/core').NormalResource} */
 		const normalRes = {
 			...resource,
 			attributes: { ...existingRes.attributes, ...resource.attributes },
@@ -5206,10 +5639,7 @@ function createMemoryStore(schema, config = {}) {
 		return deleteAction(resource, { schema, storeGraph });
 	};
 
-	const merge = (graph) => {
-		storeGraph = mergeGraphs(storeGraph, graph);
-	};
-
+	// WARNING: MUTATES storeGraph
 	const linkStoreInverses = () => {
 		storeGraph = linkInverses(storeGraph, schema);
 	};
@@ -5223,10 +5653,9 @@ function createMemoryStore(schema, config = {}) {
 		update,
 		upsert,
 		delete: delete_,
-		merge,
 		query: runQuery,
-		splice(resource) {
-			return splice(resource, { schema, store: this, storeGraph });
+		merge(resource) {
+			return merge(resource, { schema, validator, store: this, storeGraph });
 		},
 	};
 }

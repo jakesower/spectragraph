@@ -4,4 +4,3 @@ export declare function update(resource: any, context: any): Promise<{
     attributes: Partial<{}>;
     relationships: any;
 }>;
-//# sourceMappingURL=update.d.ts.map

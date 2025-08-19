@@ -4,4 +4,3 @@ type Config = {
 };
 export declare function formatRequest(schema: any, config: Config, query: RootQuery): string;
 export {};
-//# sourceMappingURL=format-request.d.ts.map

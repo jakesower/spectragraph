@@ -4,4 +4,3 @@ export declare function create(resource: any, context: any): Promise<{
     attributes: Partial<{}>;
     relationships: any;
 }>;
-//# sourceMappingURL=create.d.ts.map

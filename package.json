@@ -9,8 +9,8 @@
 	"scripts": {
 		"changeset": "changeset",
 		"version-packages": "changeset version",
-		"release": "changeset publish",
-		"build": "npm run build --workspaces",
+		"release": "npm run build && changeset publish",
+		"build": "npm run build --workspaces --workspace=@data-prism/core --workspace=@data-prism/expressions --workspace=@data-prism/utils --workspace=@data-prism/memory-store --workspace=@data-prism/sqlite-store",
 		"test": "npm run test --workspaces",
 		"lint": "npm run lint --workspaces",
 		"lint-fix": "npm run lint --workspaces -- --fix"

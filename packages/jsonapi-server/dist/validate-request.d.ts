@@ -12,4 +12,3 @@ export declare function validateRequest(schema: Schema, body: Body): {
     description: string;
 }[];
 export {};
-//# sourceMappingURL=validate-request.d.ts.map

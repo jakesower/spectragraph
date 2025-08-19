@@ -360,7 +360,7 @@ const comparativeDefinitions = {
 const $count = {
 	name: "$count",
 	apply(operand) {
-		return operand.length;
+		return this.evaluate(operand);
 	},
 	evaluate: (operand) => operand.length,
 	schema: {
@@ -372,9 +372,7 @@ const $count = {
 const $max = {
 	name: "$max",
 	apply(operand) {
-		return operand.length === 0
-			? undefined
-			: operand.reduce((max, v) => Math.max(max, v));
+		return this.evaluate(operand);
 	},
 	evaluate: (operand) =>
 		operand.length === 0
@@ -388,9 +386,7 @@ const $max = {
 const $min = {
 	name: "$min",
 	apply(operand) {
-		return operand.length === 0
-			? undefined
-			: operand.reduce((min, v) => Math.min(min, v));
+		return this.evaluate(operand);
 	},
 	evaluate: (operand) =>
 		operand.length === 0
@@ -404,7 +400,7 @@ const $min = {
 const $sum = {
 	name: "$sum",
 	apply(operand) {
-		return operand.reduce((sum, v) => sum + v, 0);
+		return this.evaluate(operand);
 	},
 	evaluate: (operand) => operand.reduce((sum, v) => sum + v, 0),
 	schema: {
@@ -415,9 +411,7 @@ const $sum = {
 const $mean = {
 	name: "$mean",
 	apply(operand) {
-		return operand.length === 0
-			? undefined
-			: operand.reduce((sum, v) => sum + v, 0) / operand.length;
+		return this.evaluate(operand);
 	},
 	evaluate: (operand) =>
 		operand.length === 0
@@ -431,12 +425,7 @@ const $mean = {
 const $median = {
 	name: "$median",
 	apply(operand) {
-		if (operand.length === 0) return undefined;
-		const sorted = [...operand].sort((a, b) => a - b);
-		const mid = Math.floor(sorted.length / 2);
-		return sorted.length % 2 === 0
-			? (sorted[mid - 1] + sorted[mid]) / 2
-			: sorted[mid];
+		return this.evaluate(operand);
 	},
 	evaluate: (operand) => {
 		if (operand.length === 0) return undefined;
@@ -454,31 +443,7 @@ const $median = {
 const $mode = {
 	name: "$mode",
 	apply(operand) {
-		if (operand.length === 0) return undefined;
-
-		const counts = new Map();
-		for (const value of operand) {
-			counts.set(value, (counts.get(value) || 0) + 1);
-		}
-
-		let maxCount = 0;
-		const modes = [];
-		for (const [value, count] of counts) {
-			if (count > maxCount) {
-				maxCount = count;
-				modes.length = 0;
-				modes.push(value);
-			} else if (count === maxCount) {
-				modes.push(value);
-			}
-		}
-
-		// Return undefined if all values appear exactly once (no mode)
-		if (maxCount === 1) return undefined;
-		// Single mode
-		if (modes.length === 1) return modes[0];
-		// Multiple modes  
-		return modes;
+		return this.evaluate(operand);
 	},
 	evaluate: (operand) => {
 		if (operand.length === 0) return undefined;
@@ -511,29 +476,8 @@ const $mode = {
 
 const $quantile = {
 	name: "$quantile",
-	apply({ values, k, n }) {
-		if (!Array.isArray(values) || values.length === 0) return undefined;
-		if (typeof k !== "number" || typeof n !== "number") {
-			throw new Error("k and n must be numbers");
-		}
-		if (k < 0 || k > n || n <= 0) {
-			throw new Error("k must be between 0 and n, and n must be positive");
-		}
-		if (k === 0) return Math.min(...values);
-		if (k === n) return Math.max(...values);
-
-		const sorted = [...values].sort((a, b) => a - b);
-		const index = (k / n) * (sorted.length - 1);
-		const lower = Math.floor(index);
-		const upper = Math.ceil(index);
-
-		if (lower === upper) {
-			return sorted[lower];
-		}
-
-		// Linear interpolation
-		const weight = index - lower;
-		return sorted[lower] * (1 - weight) + sorted[upper] * weight;
+	apply(operand) {
+		return this.evaluate(operand);
 	},
 	evaluate: ({ values, k, n }) => {
 		if (!Array.isArray(values) || values.length === 0) return undefined;

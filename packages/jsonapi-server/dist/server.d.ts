@@ -13,4 +13,3 @@ export declare function createJSONAPIHandlers(schema: Schema, store: any): Serve
 export declare function applySchemaRoutes(schema: Schema, store: any, app: any): void;
 export declare function createServer(schema: any, store: any, options?: Options): void;
 export {};
-//# sourceMappingURL=server.d.ts.map

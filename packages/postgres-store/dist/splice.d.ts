@@ -7,4 +7,3 @@ type ExtendedContext = Context & {
 };
 export declare function splice(resource: NormalResourceTree, context: ExtendedContext): Promise<NormalResourceTree>;
 export {};
-//# sourceMappingURL=splice.d.ts.map

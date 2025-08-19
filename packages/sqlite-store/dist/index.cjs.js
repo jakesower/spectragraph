@@ -10836,12 +10836,21 @@ var definitions$1 = {
 	},
 	query: {
 		type: "object",
+		required: [
+			"select"
+		],
 		properties: {
 			type: {
 				type: "string"
 			},
 			select: {
-				$ref: "#/definitions/select"
+				anyOf: [
+					{
+						$ref: "#/definitions/select"
+					},
+					{
+					}
+				]
 			}
 		}
 	},
@@ -10923,6 +10932,7 @@ var baseQuerySchema = {
  */
 
 const getResourceSchemaCache = createDeepCache();
+const getResourceSchemaEECache = createDeepCache();
 
 let validateQueryShape;
 
@@ -10942,8 +10952,10 @@ const createErrorReporter =
 		value,
 	});
 
-function getResourceStructureValidator(schema, resourceType) {
-	let resourceSchemaCache = getResourceSchemaCache(schema);
+function getResourceStructureValidator(schema, resourceType, expressionEngine) {
+	let resourceSchemaCache = expressionEngine
+		? getResourceSchemaEECache(schema, expressionEngine)
+		: getResourceSchemaCache(schema);
 
 	let resourceSchemasByType;
 	if (!resourceSchemaCache.value) {
@@ -10954,6 +10966,16 @@ function getResourceStructureValidator(schema, resourceType) {
 		const resourceSchema = resourceSchemasByType.get(resourceType);
 		if (resourceSchema) return resourceSchema;
 	}
+
+	const extraExpressionRules = expressionEngine
+		? {
+				additionalProperties: false,
+				properties: expressionEngine.expressionNames.reduce(
+					(acc, n) => ({ ...acc, [n]: {} }),
+					{},
+				),
+			}
+		: {};
 
 	const ajvSchema = {
 		type: "object",
@@ -10966,7 +10988,7 @@ function getResourceStructureValidator(schema, resourceType) {
 			offset: { type: "integer", minimum: 0 },
 			where: {
 				anyOf: [
-					{ $ref: "#/definitions/expressionLike" },
+					{ $ref: "#/definitions/expression" },
 					{
 						type: "object",
 						properties: lodashEs.mapValues(
@@ -10998,10 +11020,11 @@ function getResourceStructureValidator(schema, resourceType) {
 			},
 		},
 		definitions: {
-			expressionLike: {
+			expression: {
 				type: "object",
 				minProperties: 1,
 				maxProperties: 1,
+				...extraExpressionRules,
 			},
 			orderItem: {
 				type: "object",
@@ -11034,15 +11057,18 @@ function getResourceStructureValidator(schema, resourceType) {
  * @param {Object} query - The query to validate
  * @param {string} type - Resource type
  * @param {Array} path - Current validation path
- * @param {Object} validationFns - Validation functions
+ * @param {Object} expressionEngine - Validation functions
  * @return {{errors: Array, isValid: boolean}}
  */
-function validateSemantics(schema, query, type, path, validationFns) {
-	const { isValidExpression, skipStringValidation } = validationFns;
+function validateSemantics(schema, query, type, path, expressionEngine) {
 	const errors = [];
 	const addError = (message, path, value) => {
 		errors.push(createErrorReporter()(message, path, value));
 	};
+
+	const isValidExpression = expressionEngine
+		? expressionEngine.isExpression
+		: isExpressionLike;
 
 	const resSchema = schema.resources[type];
 
@@ -11097,7 +11123,7 @@ function validateSemantics(schema, query, type, path, validationFns) {
 				return;
 			}
 
-			if (typeof val === "string" && !skipStringValidation) {
+			if (typeof val === "string") {
 				if (!isValidAttribute(val, resSchema)) {
 					addError(
 						`Invalid attribute "${val}": not a valid attribute name.`,
@@ -11129,7 +11155,7 @@ function validateSemantics(schema, query, type, path, validationFns) {
 				return;
 			}
 
-			if (typeof val === "string" && !skipStringValidation) {
+			if (typeof val === "string") {
 				if (!isValidAttribute(val, resSchema)) {
 					addError(
 						`Invalid attribute "${val}" in select array: use "*" or a valid attribute name.`,
@@ -11145,10 +11171,10 @@ function validateSemantics(schema, query, type, path, validationFns) {
 
 	if (Array.isArray(query.select)) validateSelectArray(query.select);
 	else if (typeof query.select === "object")
-		validateSelectObject(query.select, [...path, "select"]);
-	else if (!skipStringValidation) {
+		{validateSelectObject(query.select, [...path, "select"]);}
+	else {
 		addError(
-			"Invalid select value: must be \"*\", an object, or an array.",
+			'Invalid select value: must be "*", an object, or an array.',
 			[...path, "select"],
 			query.select,
 		);
@@ -11158,30 +11184,54 @@ function validateSemantics(schema, query, type, path, validationFns) {
 }
 
 /**
- * Private function that orchestrates validation phases
+ * Validates that a query is valid against the schema
  *
  * @param {Object} schema - The schema object
- * @param {RootQuery} rootQuery - The query to validate
- * @param {Object} validationFns - Validation functions
+ * @param {RootQuery} query - The query to validate
+ * @param {Object} [options]
+ * @param {Object} [options.expressionEngine] - a @data-prism/graph expression engine
  * @return {import('./lib/helpers.js').StandardError[]}
  */
-function validateQueryStructure(schema, rootQuery, validationFns) {
+function validateQuery(schema, rootQuery, options = {}) {
+	const { expressionEngine } = options;
+
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
+
+	if (typeof rootQuery !== "object") {
+		return [
+			{ message: "Invalid query: expected object, got " + typeof rootQuery },
+		];
+	}
+
+	if (expressionEngine && typeof expressionEngine !== "object") {
+		return [{ message: "[data-prism] expressionEngine must be an object" }];
+
+	}
+	if (!rootQuery.type) {
+		return [{ message: "Missing query type: required for validation" }];
+
+	}
+	// Shape validation
+	if (!validateQueryShape)
+		{validateQueryShape = defaultValidator.compile(baseQuerySchema);}
+	const shapeResult = validateQueryShape(rootQuery);
+	if (!shapeResult) return validateQueryShape.errors;
+
 	const errors = [];
-	// Cache structure validators to avoid repeated calls
-	const structureValidators = new Map();
-
 	const go = (query, type, path) => {
-		// Structural validation first
-		if (!structureValidators.has(type)) {
-			structureValidators.set(
-				type,
-				getResourceStructureValidator(schema, type),
-			);
-		}
-		const validator = structureValidators.get(type);
+		const validator = getResourceStructureValidator(
+			schema,
+			type,
+			expressionEngine,
+		);
 
-		const structuralIsValid = validator(query);
-		if (!structuralIsValid) {
+		// Structure validation first
+		const structureIsValid = validator(query);
+		if (!structureIsValid) {
 			translateAjvErrors(validator.errors, query, "query").forEach((err) =>
 				errors.push(err),
 			);
@@ -11194,7 +11244,7 @@ function validateQueryStructure(schema, rootQuery, validationFns) {
 			query,
 			type,
 			path,
-			validationFns,
+			expressionEngine,
 		);
 		errors.push(...semanticResult.errors);
 
@@ -11203,38 +11253,14 @@ function validateQueryStructure(schema, rootQuery, validationFns) {
 			const resSchema = schema.resources[type];
 			Object.entries(query.select).forEach(([key, val]) => {
 				if (key in resSchema.relationships && typeof val === "object")
-					go(val, resSchema.relationships[key].type, [...path, key]);
+					{go(val, resSchema.relationships[key].type, [...path, key]);}
 			});
 		}
+
+		return errors;
 	};
 
-	go(rootQuery, rootQuery.type, []);
-	return errors;
-}
-
-/**
- * Validates that a query is valid against the schema
- *
- * @param {Object} schema - The schema object
- * @param {RootQuery} query - The query to validate
- * @return {import('./lib/helpers.js').StandardError[]}
- */
-function validateQuery(schema, rootQuery) {
-	if (!validateQueryShape)
-		validateQueryShape = defaultValidator.compile(baseQuerySchema);
-
-	if (typeof schema !== "object")
-		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
-	if (typeof rootQuery !== "object")
-		return [{ message: "Invalid query: expected object, got " + typeof rootQuery }];
-	if (!rootQuery.type) return [{ message: "Missing query type: required for validation" }];
-
-	// Shape validation
-	if (!validateQueryShape(rootQuery) > 0) return validateQueryShape.errors;
-
-	return validateQueryStructure(schema, rootQuery, {
-		isValidExpression: isExpressionLike,
-	});
+	return go(rootQuery, rootQuery.type, []);
 }
 
 /**
@@ -11247,31 +11273,37 @@ function validateQuery(schema, rootQuery) {
 function normalizeQuery(schema, rootQuery) {
 	ensure(validateQuery)(schema, rootQuery);
 
-	const stringToProp = (str) => ({
-		[str]: str,
-	});
-
 	const go = (query, type) => {
 		const { select } = query;
+		const resSchema = schema.resources[type];
 
-		const selectWithExpandedStar =
-			select === "*" ? Object.keys(schema.resources[type].attributes) : select;
+		const selectWithExpandedStar = select === "*" 
+			? Object.keys(resSchema.attributes) 
+			: select;
 
 		const selectObj = Array.isArray(selectWithExpandedStar)
-			? selectWithExpandedStar.reduce((selectObj, item) => {
-					const subObj = typeof item === "string" ? stringToProp(item) : item;
-					return { ...selectObj, ...subObj };
-				}, {})
+			? (() => {
+				const result = {};
+				for (const item of selectWithExpandedStar) {
+					if (typeof item === "string") {
+						result[item] = item;
+					} else {
+						Object.assign(result, item);
+					}
+				}
+				return result;
+			})()
 			: select;
 
 		const selectWithStar = selectObj["*"]
-			? {
-					...Object.keys(schema.resources[type].attributes).reduce(
-						(acc, attr) => ({ ...acc, ...stringToProp(attr) }),
-						{},
-					),
-					...lodashEs.omit(selectObj, ["*"]),
+			? (() => {
+				const result = {};
+				for (const attr of Object.keys(resSchema.attributes)) {
+					result[attr] = attr;
 				}
+				Object.assign(result, lodashEs.omit(selectObj, ["*"]));
+				return result;
+			})()
 			: selectObj;
 
 		const selectWithSubqueries = lodashEs.mapValues(selectWithStar, (sel, key) => {
@@ -11573,7 +11605,7 @@ function buildWhereExpression(whereClause, expressionEngine) {
 
 	const whereExpressions = Object.entries(whereClause).map(
 		([propPath, propVal]) => ({
-			$compose: [
+			$pipe: [
 				{ $get: propPath },
 				expressionEngine.isExpression(propVal) ? propVal : { $eq: propVal },
 			],
@@ -11585,11 +11617,14 @@ function buildWhereExpression(whereClause, expressionEngine) {
 		: whereExpressions[0];
 }
 
+// import { mapValues } from "lodash-es";
+// import { defaultExpressionEngine } from "@data-prism/expressions";
+
 /**
  * @typedef {Object<string, any>} Projection
  */
 
-const TERMINAL_EXPRESSIONS = ["$get", "$prop", "$literal"];
+const TERMINAL_EXPRESSIONS = new Set(["$get", "$prop", "$literal"]);
 
 /**
  * @param {any} expression
@@ -11597,47 +11632,82 @@ const TERMINAL_EXPRESSIONS = ["$get", "$prop", "$literal"];
  * @returns {any}
  */
 function distributeStrings(expression, expressionEngine) {
-	const { isExpression } = expressionEngine;
+	// const { isExpression } = expressionEngine;
 
 	if (typeof expression === "string") {
 		const [iteratee, ...rest] = expression.split(".$.");
 		if (rest.length === 0) return { $get: expression };
 
 		return {
-			$compose: [
+			$pipe: [
 				{ $get: iteratee },
-				{ $flatMap: distributeStrings(rest.join(".$."), expressionEngine) },
+				{ $flatMap: distributeStrings(rest.join(".$.")) },
 				{ $filter: { $isDefined: {} } },
 			],
 		};
 	}
 
-	if (!isExpression(expression)) {
-		return Array.isArray(expression)
-			? expression.map(distributeStrings)
-			: typeof expression === "object"
-				? lodashEs.mapValues(expression, distributeStrings)
-				: expression;
-	}
-
 	const [expressionName, expressionArgs] = Object.entries(expression)[0];
 
-	return TERMINAL_EXPRESSIONS.includes(expressionName)
+	return TERMINAL_EXPRESSIONS.has(expressionName)
 		? expression
-		: { [expressionName]: distributeStrings(expressionArgs, expressionEngine) };
+		: { [expressionName]: distributeStrings(expressionArgs) };
 }
+
+// /**
+//  * Takes a query and returns the fields that will need to be fetched to ensure
+//  * all expressions within the query are usable.
+//  *
+//  * @param {Projection} projection - Projection
+//  * @returns {Object}
+//  */
+// export function projectionQueryProperties(projection) {
+// 	const { isExpression } = defaultExpressionEngine;
+// 	const projectionTerminalExpressions = ["$literal", "$prop"];
+
+// 	const go = (val) => {
+// 		if (isExpression(val)) {
+// 			const [exprName, exprVal] = Object.entries(val)[0];
+// 			if (projectionTerminalExpressions.includes(exprName)) return [];
+
+// 			return go(exprVal);
+// 		}
+
+// 		if (Array.isArray(val)) return val.map(go);
+
+// 		if (typeof val === "object") return Object.values(val).map(go);
+
+// 		return [val.split(".").filter((v) => v !== "$")];
+// 	};
+
+// 	// mutates!
+// 	const makePath = (obj, path) => {
+// 		const [head, ...tail] = path;
+
+// 		if (tail.length === 0) {
+// 			obj[head] = head;
+// 			return;
+// 		}
+
+// 		if (!obj[head]) obj[head] = { properties: {} };
+// 		makePath(obj[head].properties, tail);
+// 	};
+
+// 	const propertyPaths = Object.values(projection).flatMap(go);
+// 	const query = {};
+// 	propertyPaths.forEach((path) => makePath(query, path));
+
+// 	return query;
+// }
 
 /**
  * @param {import('@data-prism/expressions').Expression} expression
  * @param {any} expressionEngine
  * @returns {function(any): any}
  */
-function createExpressionProjector(
-	expression,
-	expressionEngine,
-) {
+function createExpressionProjector(expression, expressionEngine) {
 	const { apply } = expressionEngine;
-	const expr = distributeStrings(expression, expressionEngine);
+	const expr = distributeStrings(expression);
 
 	return (result) => apply(expr, result);
 }
@@ -11771,9 +11841,9 @@ function runQuery$1(rootQuery, data) {
 
 							const [head, ...tail] = path;
 
-							if (head === "$")
+							if (head === "$") {
 								return curValue.map((v) => extractPath(v, tail));
-
+							}
 							if (!(head in curValue)) return undefined;
 
 							return extractPath(curValue?.[head], tail);

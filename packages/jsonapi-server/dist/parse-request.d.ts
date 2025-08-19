@@ -8,4 +8,3 @@ export declare function parseRequest(schema: Schema, params: any): {
     id?: any;
     type?: any;
 };
-//# sourceMappingURL=parse-request.d.ts.map

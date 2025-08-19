@@ -18,4 +18,3 @@ export declare function upsert(resource: any, context: any): Promise<{
     attributes: Pick<any, string>;
     relationships: any;
 }>;
-//# sourceMappingURL=upsert.d.ts.map

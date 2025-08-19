@@ -23,7 +23,7 @@
  * applyOrMap(undefined, x => x * 2)   // Returns: undefined
  */
 function applyOrMap(itemItemsOrNull, fn) {
-	if (itemItemsOrNull == null) return itemItemsOrNull;
+	if (itemItemsOrNull === null || itemItemsOrNull === undefined) return itemItemsOrNull;
 
 	return Array.isArray(itemItemsOrNull) ? itemItemsOrNull.map(fn) : fn(itemItemsOrNull);
 }
@@ -45,7 +45,7 @@ function applyOrMap(itemItemsOrNull, fn) {
  * applyOrMapAsync(undefined, async x => x * 2)         // Returns: undefined
  */
 function applyOrMapAsync(itemItemsOrNull, asyncFn) {
-	if (itemItemsOrNull == null) return itemItemsOrNull;
+	if (itemItemsOrNull === null || itemItemsOrNull === undefined) return itemItemsOrNull;
 
 	return Array.isArray(itemItemsOrNull)
 		? Promise.all(itemItemsOrNull.map(asyncFn))

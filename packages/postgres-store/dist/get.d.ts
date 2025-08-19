@@ -7,4 +7,3 @@ export type GetContext = Context & {
 };
 export declare function getOne(type: string, id: string, context: GetContext): Promise<Resource>;
 export declare function getAll(type: string, context: GetContext): Promise<Resource[]>;
-//# sourceMappingURL=get.d.ts.map

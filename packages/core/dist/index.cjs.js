@@ -4861,7 +4861,7 @@ function buildWhereExpression(whereClause, expressionEngine) {
 
 	const whereExpressions = Object.entries(whereClause).map(
 		([propPath, propVal]) => ({
-			$compose: [
+			$pipe: [
 				{ $get: propPath },
 				expressionEngine.isExpression(propVal) ? propVal : { $eq: propVal },
 			],
@@ -4880,7 +4880,7 @@ function buildWhereExpression(whereClause, expressionEngine) {
  * @typedef {Object<string, any>} Projection
  */
 
-const TERMINAL_EXPRESSIONS = ["$get", "$prop", "$literal"];
+const TERMINAL_EXPRESSIONS = new Set(["$get", "$prop", "$literal"]);
 
 /**
  * @param {any} expression
@@ -4895,7 +4895,7 @@ function distributeStrings(expression, expressionEngine) {
 		if (rest.length === 0) return { $get: expression };
 
 		return {
-			$compose: [
+			$pipe: [
 				{ $get: iteratee },
 				{ $flatMap: distributeStrings(rest.join(".$.")) },
 				{ $filter: { $isDefined: {} } },
@@ -4905,7 +4905,7 @@ function distributeStrings(expression, expressionEngine) {
 
 	const [expressionName, expressionArgs] = Object.entries(expression)[0];
 
-	return expressionName in TERMINAL_EXPRESSIONS
+	return TERMINAL_EXPRESSIONS.has(expressionName)
 		? expression
 		: { [expressionName]: distributeStrings(expressionArgs) };
 }

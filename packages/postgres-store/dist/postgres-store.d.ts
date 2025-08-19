@@ -84,4 +84,3 @@ export type PostgresStore = {
 };
 export declare function createPostgresStore(schema: Schema, config: Config): PostgresStore;
 export {};
-//# sourceMappingURL=postgres-store.d.ts.map
