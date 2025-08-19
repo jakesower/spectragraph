@@ -23,8 +23,8 @@
 	},
 	"private": false,
 	"dependencies": {
-		"@data-prism/expressions": "^0.0.12",
-		"@data-prism/utils": "^0.0.6",
+		"@data-prism/expressions": "^0.0.14",
+		"@data-prism/utils": "^0.0.7",
 		"ajv": "^8.17.1",
 		"data-prism": "^0.0.34",
 		"lodash-es": "^4.17.21",

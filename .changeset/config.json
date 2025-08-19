@@ -9,8 +9,7 @@
 	"ignore": [
 		"@data-prism/postgres-store",
 		"@data-prism/jsonapi-store",
-		"@data-prism/jsonapi-server",
-    "data-prism"
+		"@data-prism/jsonapi-server"
 	],
 	"bumpVersions": [
 		{
