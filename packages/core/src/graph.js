@@ -1,4 +1,4 @@
-import { mapValues } from "lodash-es";
+import { mapValues, uniq } from "lodash-es";
 import { validateSchema } from "./schema.js";
 import { applyOrMap } from "@data-prism/utils";
 import { normalizeResource } from "./resource.js";
@@ -102,9 +102,36 @@ export function linkInverses(schema, graph) {
  * @returns {Graph} Merged graph
  */
 export function mergeGraphs(left, right) {
-	const output = structuredClone(left);
-	Object.entries(right).forEach(([resourceType, resources]) => {
-		output[resourceType] = { ...resources, ...(left[resourceType] ?? {}) };
+	const output = {};
+	const allTypes = uniq([...Object.keys(left), ...Object.keys(right)]);
+	allTypes.forEach((type) => {
+		const leftResources = left[type] ?? {};
+		const rightResources = right[type] ?? {};
+
+		if (Object.keys(rightResources).length === 0) {
+			output[type] = leftResources;
+			return;
+		}
+
+		if (Object.keys(leftResources).length === 0) {
+			output[type] = rightResources;
+			return;
+		}
+
+		const allIds = uniq([
+			...Object.keys(leftResources),
+			...Object.keys(rightResources),
+		]);
+
+		const nextResources = {};
+		allIds.forEach((id) => {
+			nextResources[id] = mergeResources(
+				leftResources[id] ?? { type, id },
+				rightResources[id] ?? { type, id },
+			);
+		});
+
+		output[type] = nextResources;
 	});
 
 	return output;

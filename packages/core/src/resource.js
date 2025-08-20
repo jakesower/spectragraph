@@ -30,6 +30,14 @@ import { buildAttribute } from "./resource-helpers.js";
 
 /**
  * @typedef {BaseResource & {
+ *   id?: string,
+ *   attributes?: Object<string, *>,
+ *   relationships?: Object<string, Ref|Ref[]|null>,
+ * }} PartialNormalResource
+ */
+
+/**
+ * @typedef {BaseResource & {
  *   id?: number|string,
  *   new?: true,
  *   attributes?: Object<string, *>,
@@ -282,6 +290,37 @@ export function createResource(schema, partialResource = {}) {
 		...partialResource,
 		attributes: { ...builtAttributes, [resSchema.idAttribute ?? "id"]: id },
 		relationships: builtRelationships,
+	};
+}
+
+/**
+ * Creates a normalized resource with schema defaults applied
+ * @param {import('./schema.js').Schema} schema - The schema to use for defaults
+ * @param {PartialNormalResource} left - One resource to merge
+ * @param {PartialNormalResource} right - The other resource to merge
+ * @returns {PartialNormalResource} A partial normalized resource with the id, attributes, and relationships from left and right merged
+ */
+export function mergeResources(left, right) {
+	if (left.type !== right.type) {
+		throw new Error({
+			message: "only resources of the same type can be merged",
+		});
+	}
+
+	if (left.id && right.id && left.id !== right.id) {
+		throw new Error({
+			message: "only resources with the same ID can be merged",
+		});
+	}
+
+	return {
+		type: left.type,
+		id: left.id ?? right.id,
+		attributes: { ...(left.attributes ?? {}), ...(right.attributes ?? {}) },
+		relationships: {
+			...(left.relationships ?? {}),
+			...(right.relationships ?? {}),
+		},
 	};
 }
 

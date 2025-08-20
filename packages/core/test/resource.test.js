@@ -7,6 +7,7 @@ import {
 	validateMergeResource,
 	validateUpdateResource,
 	createResource,
+	mergeResources,
 } from "../src/resource.js";
 import { soccerSchema, geojsonSchema } from "@data-prism/test-fixtures";
 
@@ -874,19 +875,23 @@ describe("createResource", () => {
 		it("applies patternProperties defaults based on property name patterns", () => {
 			const result = createResource(soccerSchema, {
 				type: "teams",
-				attributes: { 
-					sponsors: { 
+				attributes: {
+					sponsors: {
 						local_bakery: { name: "Local Bakery" },
 						global_tech: { name: "Global Tech Corp" },
 						randomSponsor: { name: "Random Sponsor" },
-					}, 
+					},
 				},
 			});
 
 			expect(result.attributes.sponsors).toEqual({
 				FIFA: { amount: 50 },
 				local_bakery: { name: "Local Bakery", amount: 5000, region: "local" },
-				global_tech: { name: "Global Tech Corp", amount: 25000000, region: "global" },
+				global_tech: {
+					name: "Global Tech Corp",
+					amount: 25000000,
+					region: "global",
+				},
 				randomSponsor: { name: "Random Sponsor", amount: 10000000 },
 			});
 		});
@@ -1102,6 +1107,404 @@ describe("createResource", () => {
 			expect(result.attributes.awayScore).toBe(1);
 			// defaults should still be applied
 			expect(result.attributes.status).toBe("scheduled");
+		});
+	});
+});
+
+describe("mergeResources", () => {
+	describe("basic functionality", () => {
+		it("merges two resources of the same type with different attributes", () => {
+			const left = {
+				type: "fields",
+				id: "field-1",
+				attributes: { name: "Field A", surface: "grass" },
+				relationships: {},
+			};
+			const right = {
+				type: "fields",
+				id: "field-1",
+				attributes: { capacity: 5000, amenities: ["parking"] },
+				relationships: {},
+			};
+
+			const result = mergeResources(left, right);
+
+			expect(result).toEqual({
+				type: "fields",
+				id: "field-1",
+				attributes: {
+					name: "Field A",
+					surface: "grass",
+					capacity: 5000,
+					amenities: ["parking"],
+				},
+				relationships: {},
+			});
+		});
+
+		it("merges two resources where right overrides left attributes", () => {
+			const left = {
+				type: "teams",
+				id: "team-1",
+				attributes: { name: "Original Name", founded: 2000 },
+				relationships: {},
+			};
+			const right = {
+				type: "teams",
+				id: "team-1",
+				attributes: { name: "Updated Name", active: true },
+				relationships: {},
+			};
+
+			const result = mergeResources(left, right);
+
+			expect(result).toEqual({
+				type: "teams",
+				id: "team-1",
+				attributes: {
+					name: "Updated Name", // right overrides left
+					founded: 2000, // from left
+					active: true, // from right
+				},
+				relationships: {},
+			});
+		});
+
+		it("merges resources with different relationships", () => {
+			const left = {
+				type: "games",
+				attributes: {},
+				relationships: {
+					homeTeam: { type: "teams", id: "team-1" },
+				},
+			};
+			const right = {
+				type: "games",
+				attributes: {},
+				relationships: {
+					awayTeam: { type: "teams", id: "team-2" },
+				},
+			};
+
+			const result = mergeResources(left, right);
+
+			expect(result).toEqual({
+				type: "games",
+				id: undefined,
+				attributes: {},
+				relationships: {
+					homeTeam: { type: "teams", id: "team-1" },
+					awayTeam: { type: "teams", id: "team-2" },
+				},
+			});
+		});
+
+		it("merges resources where right overrides left relationships", () => {
+			const left = {
+				type: "teams",
+				attributes: {},
+				relationships: {
+					homeField: { type: "fields", id: "field-1" },
+				},
+			};
+			const right = {
+				type: "teams",
+				attributes: {},
+				relationships: {
+					homeField: { type: "fields", id: "field-2" }, // overrides left
+				},
+			};
+
+			const result = mergeResources(left, right);
+
+			expect(result).toEqual({
+				type: "teams",
+				id: undefined,
+				attributes: {},
+				relationships: {
+					homeField: { type: "fields", id: "field-2" },
+				},
+			});
+		});
+	});
+
+	describe("ID handling", () => {
+		it("uses left ID when right has no ID", () => {
+			const left = { type: "fields", id: "left-id", attributes: {} };
+			const right = { type: "fields", attributes: {} };
+
+			const result = mergeResources(left, right);
+
+			expect(result.id).toBe("left-id");
+		});
+
+		it("uses right ID when left has no ID", () => {
+			const left = { type: "fields", attributes: {} };
+			const right = { type: "fields", id: "right-id", attributes: {} };
+
+			const result = mergeResources(left, right);
+
+			expect(result.id).toBe("right-id");
+		});
+
+		it("uses shared ID when both have the same ID", () => {
+			const left = { type: "fields", id: "same-id", attributes: {} };
+			const right = { type: "fields", id: "same-id", attributes: {} };
+
+			const result = mergeResources(left, right);
+
+			expect(result.id).toBe("same-id");
+		});
+
+		it("leaves ID undefined when both resources have no ID", () => {
+			const left = { type: "fields", attributes: {} };
+			const right = { type: "fields", attributes: {} };
+
+			const result = mergeResources(left, right);
+
+			expect(result.id).toBeUndefined();
+		});
+	});
+
+	describe("optional properties handling", () => {
+		it("handles undefined attributes gracefully", () => {
+			const left = { type: "fields", id: "1" };
+			const right = { type: "fields", attributes: { name: "Test" } };
+
+			const result = mergeResources(left, right);
+
+			expect(result.attributes).toEqual({ name: "Test" });
+		});
+
+		it("handles undefined relationships gracefully", () => {
+			const left = { type: "fields", id: "1" };
+			const right = {
+				type: "fields",
+				relationships: { teams: [] },
+			};
+
+			const result = mergeResources(left, right);
+
+			expect(result.relationships).toEqual({ teams: [] });
+		});
+
+		it("handles both resources having undefined attributes and relationships", () => {
+			const left = { type: "fields", id: "1" };
+			const right = { type: "fields" };
+
+			const result = mergeResources(left, right);
+
+			expect(result).toEqual({
+				type: "fields",
+				id: "1",
+				attributes: {},
+				relationships: {},
+			});
+		});
+	});
+
+	describe("error handling", () => {
+		it("throws error when resource types don't match", () => {
+			const left = { type: "fields", attributes: {} };
+			const right = { type: "teams", attributes: {} };
+
+			expect(() => mergeResources(left, right)).toThrow();
+		});
+
+		it("throws error when IDs are different and both are present", () => {
+			const left = { type: "fields", id: "field-1", attributes: {} };
+			const right = { type: "fields", id: "field-2", attributes: {} };
+
+			expect(() => mergeResources(left, right)).toThrow();
+		});
+
+		it("includes error message for type mismatch", () => {
+			const left = { type: "fields", attributes: {} };
+			const right = { type: "teams", attributes: {} };
+
+			expect(() => mergeResources(left, right)).toThrow();
+		});
+
+		it("includes error message for ID mismatch", () => {
+			const left = { type: "fields", id: "field-1", attributes: {} };
+			const right = { type: "fields", id: "field-2", attributes: {} };
+
+			expect(() => mergeResources(left, right)).toThrow();
+		});
+	});
+
+	describe("complex scenarios", () => {
+		it("merges complex nested attributes", () => {
+			const left = {
+				type: "games",
+				attributes: {
+					bookings: {
+						homeTeam: [{ card: "yellow", playerNumber: 1 }],
+					},
+				},
+			};
+			const right = {
+				type: "games",
+				attributes: {
+					bookings: {
+						awayTeam: [{ card: "red", playerNumber: 5 }],
+					},
+				},
+			};
+
+			const result = mergeResources(left, right);
+
+			expect(result.attributes.bookings).toEqual({
+				awayTeam: [{ card: "red", playerNumber: 5 }],
+			});
+		});
+
+		it("merges array relationships", () => {
+			const left = {
+				type: "fields",
+				relationships: {
+					teams: [{ type: "teams", id: "team-1" }],
+				},
+			};
+			const right = {
+				type: "fields",
+				relationships: {
+					teams: [
+						{ type: "teams", id: "team-2" },
+						{ type: "teams", id: "team-3" },
+					],
+				},
+			};
+
+			const result = mergeResources(left, right);
+
+			expect(result.relationships.teams).toEqual([
+				{ type: "teams", id: "team-2" },
+				{ type: "teams", id: "team-3" },
+			]);
+		});
+
+		it("handles null values in attributes", () => {
+			const left = {
+				type: "games",
+				attributes: { status: "scheduled", notes: null },
+			};
+			const right = {
+				type: "games",
+				attributes: { status: "completed", attendance: 1000 },
+			};
+
+			const result = mergeResources(left, right);
+
+			expect(result.attributes).toEqual({
+				status: "completed",
+				notes: null,
+				attendance: 1000,
+			});
+		});
+
+		it("handles null values in relationships", () => {
+			const left = {
+				type: "games",
+				relationships: {
+					homeTeam: null,
+					referee: { type: "referees", id: "ref-1" },
+				},
+			};
+			const right = {
+				type: "games",
+				relationships: { awayTeam: { type: "teams", id: "team-2" } },
+			};
+
+			const result = mergeResources(left, right);
+
+			expect(result.relationships).toEqual({
+				homeTeam: null,
+				referee: { type: "referees", id: "ref-1" },
+				awayTeam: { type: "teams", id: "team-2" },
+			});
+		});
+	});
+
+	describe("real-world use cases", () => {
+		it("merges partial updates with existing resource data", () => {
+			const existing = {
+				type: "teams",
+				id: "team-1",
+				attributes: {
+					name: "Original Team",
+					founded: 2000,
+					active: true,
+					homeColor: "blue",
+					awayColor: "white",
+				},
+				relationships: {
+					homeField: { type: "fields", id: "field-1" },
+				},
+			};
+			const update = {
+				type: "teams",
+				id: "team-1",
+				attributes: {
+					name: "Updated Team Name",
+					founded: 2001, // corrected founding year
+				},
+			};
+
+			const result = mergeResources(existing, update);
+
+			expect(result).toEqual({
+				type: "teams",
+				id: "team-1",
+				attributes: {
+					name: "Updated Team Name", // updated
+					founded: 2001, // updated
+					active: true, // preserved
+					homeColor: "blue", // preserved
+					awayColor: "white", // preserved
+				},
+				relationships: {
+					homeField: { type: "fields", id: "field-1" }, // preserved
+				},
+			});
+		});
+
+		it("merges default values with user input", () => {
+			const defaults = {
+				type: "fields",
+				attributes: {
+					surface: "grass",
+					capacity: 5000,
+					amenities: [],
+				},
+				relationships: {
+					teams: [],
+				},
+			};
+			const userInput = {
+				type: "fields",
+				id: "custom-field",
+				attributes: {
+					name: "Custom Field Name",
+					capacity: 8000, // override default
+				},
+			};
+
+			const result = mergeResources(defaults, userInput);
+
+			expect(result).toEqual({
+				type: "fields",
+				id: "custom-field",
+				attributes: {
+					name: "Custom Field Name",
+					surface: "grass", // from defaults
+					capacity: 8000, // overridden
+					amenities: [], // from defaults
+				},
+				relationships: {
+					teams: [], // from defaults
+				},
+			});
 		});
 	});
 });

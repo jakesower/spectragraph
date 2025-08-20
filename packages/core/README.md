@@ -296,6 +296,45 @@ const normalized = normalizeResource(schema, "teams", flatTeam);
 // Returns normalized resource with attributes and relationships separated
 ```
 
+#### `mergeResources(left, right)`
+
+Merges two partial resources of the same type, combining their attributes and relationships. The right resource takes precedence for conflicting attribute keys.
+
+**Parameters:**
+
+- `left` (PartialNormalResource) - The first resource to merge
+- `right` (PartialNormalResource) - The second resource to merge
+
+**Returns:** Merged PartialNormalResource with combined attributes and relationships
+
+**Throws:** Error if resources are of different types or have conflicting IDs
+
+```javascript
+import { mergeResources } from "@data-prism/core";
+
+const existing = {
+	type: "teams",
+	id: "team-1",
+	attributes: { name: "Old Name", founded: 2000 },
+	relationships: { homeField: { type: "fields", id: "field-1" } },
+};
+
+const update = {
+	type: "teams",
+	id: "team-1",
+	attributes: { name: "New Name", active: true }, // name will override
+};
+
+const merged = mergeResources(existing, update);
+// Returns:
+// {
+//   type: "teams",
+//   id: "team-1", 
+//   attributes: { name: "New Name", founded: 2000, active: true },
+//   relationships: { homeField: { type: "fields", id: "field-1" } }
+// }
+```
+
 #### `createGraphFromResources(schema, resourceType, resources)`
 
 Creates a complete graph from an array of resource objects, recursively processing nested relationships. **This function is particularly useful for handling nested resources.**

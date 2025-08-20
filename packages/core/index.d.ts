@@ -190,6 +190,12 @@ export interface NormalResource extends BaseResource {
 	relationships: { [k: string]: Ref | Ref[] | null };
 }
 
+export interface PartialNormalResource extends BaseResource {
+	id?: string;
+	attributes?: { [k: string]: unknown };
+	relationships?: { [k: string]: Ref | Ref[] | null };
+}
+
 export interface CreateResource extends BaseResource {
 	id?: number | string;
 	new?: true;
@@ -362,6 +368,18 @@ export function normalizeResource(
 	resourceType: string,
 	resource: { [k: string]: unknown },
 ): NormalResource;
+
+/**
+ * Merges two partial resources of the same type, combining their attributes and relationships
+ * @param left - The first resource to merge
+ * @param right - The second resource to merge
+ * @returns Merged resource with combined attributes and relationships
+ * @throws Error if resources are of different types or have conflicting IDs
+ */
+export function mergeResources(
+	left: PartialNormalResource,
+	right: PartialNormalResource,
+): PartialNormalResource;
 
 /**
  * Creates a new validator instance

@@ -5,7 +5,11 @@ import {
 	linkInverses,
 	mergeGraphs,
 } from "../src/graph.js";
-import { careBearSchema, careBearData, careBearDataFlat as flatCareBearData } from "@data-prism/test-fixtures";
+import {
+	careBearSchema,
+	careBearData,
+	careBearDataFlat as flatCareBearData,
+} from "@data-prism/test-fixtures";
 
 describe("linkInverses", () => {
 	it("doesn't change anything for an already linked graph", () => {
@@ -80,7 +84,6 @@ describe("mergeGraphs", () => {
 		const left = {
 			bears: pick(careBearData.bears, ["1"]),
 			powers: careBearData.powers,
-			companions: careBearData.companions,
 		};
 
 		const right = {
@@ -91,6 +94,31 @@ describe("mergeGraphs", () => {
 		const merged = mergeGraphs(left, right);
 
 		expect(merged).toEqual(careBearData);
+	});
+
+	it("merges resources with different attributes available", () => {
+		const left = {
+			bears: {
+				1: { type: "bears", id: "1", attributes: { name: "Tenderheart Bear" } },
+			},
+		};
+
+		const right = {
+			bears: {
+				1: {
+					type: "bears",
+					id: "1",
+					attributes: { bellyBadge: "red heart with pink outline" },
+				},
+			},
+		};
+
+		const merged = mergeGraphs(left, right);
+
+		expect(merged.bears["1"].attributes).toEqual({
+			name: "Tenderheart Bear",
+			bellyBadge: "red heart with pink outline",
+		});
 	});
 });
 
