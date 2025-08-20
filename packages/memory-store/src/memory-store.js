@@ -6,7 +6,7 @@ import {
 	normalizeQuery,
 	createEmptyGraph,
 	linkInverses,
-	mergeGraphs,
+	mergeGraphsDeep,
 	queryGraph,
 	createValidator,
 	ensureValidCreateResource,
@@ -72,7 +72,7 @@ export function createMemoryStore(schema, config = {}) {
 
 	ensureValidSchema(schema, { validator });
 
-	let storeGraph = mergeGraphs(createEmptyGraph(schema), initialData);
+	let storeGraph = mergeGraphsDeep(createEmptyGraph(schema), initialData);
 
 	const runQuery = (query) => {
 		const normalQuery = normalizeQuery(schema, query);

@@ -166,7 +166,7 @@ const emptyGraph = createEmptyGraph(schema);
 
 #### `linkInverses(schema, graph)`
 
-Links inverse relationships in a graph, filling in missing relationship data where possible. Queries will not work without relationships going in the direction of the query, so it's important to use this if you're constructing a graph from semi-connected pieces. This is commonly used with `mergeGraphs`.
+Links inverse relationships in a graph, filling in missing relationship data where possible. Queries will not work without relationships going in the direction of the query, so it's important to use this if you're constructing a graph from semi-connected pieces. This is commonly used with `mergeGraphsDeep`.
 
 **Parameters:**
 
@@ -183,19 +183,36 @@ const linkedGraph = linkInverses(schema, graph);
 
 #### `mergeGraphs(left, right)`
 
-Merges two graphs together, combining resources from both.
+Merges two graphs together by combining resource collections. Right graph takes precedence for resources with conflicting IDs.
+
+**Parameters:**
+
+- `left` (Graph) - The left graph
+- `right` (Graph) - The right graph (takes precedence for conflicts)
+
+**Returns:** Merged graph with combined resource collections
+
+```javascript
+import { mergeGraphs } from "@data-prism/core";
+
+const combined = mergeGraphs(graph1, graph2);
+```
+
+#### `mergeGraphsDeep(left, right)`
+
+Merges two graphs together, merging individual resources with matching IDs using `mergeResources()`.
 
 **Parameters:**
 
 - `left` (Graph) - The left graph
 - `right` (Graph) - The right graph
 
-**Returns:** Merged graph (right takes precedence for conflicting resources, but if this is an issue, you're doing something wrong)
+**Returns:** Merged graph with resources intelligently merged
 
 ```javascript
-import { mergeGraphs } from "@data-prism/core";
+import { mergeGraphsDeep } from "@data-prism/core";
 
-const combined = mergeGraphs(graph1, graph2);
+const combined = mergeGraphsDeep(graph1, graph2);
 ```
 
 ### Query Functions

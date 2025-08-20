@@ -4,6 +4,7 @@ import {
 	createGraphFromResources,
 	linkInverses,
 	mergeGraphs,
+	mergeGraphsDeep,
 } from "../src/graph.js";
 import {
 	careBearSchema,
@@ -71,11 +72,91 @@ describe("mergeGraphs", () => {
 		expect(merged).toEqual(pick(careBearData, ["bears", "homes"]));
 	});
 
+	it("merges graphs where right takes precedence for conflicting IDs", () => {
+		const leftBear = {
+			type: "bears",
+			id: "1",
+			attributes: { name: "Left Bear" },
+			relationships: {},
+		};
+		const rightBear = {
+			type: "bears",
+			id: "1",
+			attributes: { name: "Right Bear" },
+			relationships: {},
+		};
+
+		const left = { bears: { "1": leftBear } };
+		const right = { bears: { "1": rightBear } };
+
+		const merged = mergeGraphs(left, right);
+
+		expect(merged.bears["1"]).toEqual(rightBear);
+	});
+
+	it("combines non-conflicting resources from both graphs", () => {
+		const left = { bears: pick(careBearData.bears, ["1", "2"]) };
+		const right = { bears: pick(careBearData.bears, ["3", "4"]) };
+
+		const merged = mergeGraphs(left, right);
+
+		expect(merged.bears).toEqual(pick(careBearData.bears, ["1", "2", "3", "4"]));
+	});
+
+	it("handles empty graphs", () => {
+		const left = {};
+		const right = { bears: careBearData.bears };
+
+		const merged = mergeGraphs(left, right);
+
+		expect(merged).toEqual({ bears: careBearData.bears });
+	});
+
+	it("handles empty right graph", () => {
+		const left = { bears: careBearData.bears };
+		const right = {};
+
+		const merged = mergeGraphs(left, right);
+
+		expect(merged).toEqual({ bears: careBearData.bears });
+	});
+
+	it("handles mixed scenarios with partial conflicts", () => {
+		const left = {
+			bears: pick(careBearData.bears, ["1"]),
+			homes: careBearData.homes,
+		};
+
+		const right = {
+			bears: pick(careBearData.bears, ["2", "3"]),
+			powers: careBearData.powers,
+		};
+
+		const merged = mergeGraphs(left, right);
+
+		expect(merged).toEqual({
+			bears: pick(careBearData.bears, ["1", "2", "3"]),
+			homes: careBearData.homes,
+			powers: careBearData.powers,
+		});
+	});
+});
+
+describe("mergeGraphsDeep", () => {
+	it("merges graphs with different resource types", () => {
+		const left = { bears: careBearData.bears };
+		const right = { homes: careBearData.homes };
+
+		const merged = mergeGraphsDeep(left, right);
+
+		expect(merged).toEqual(pick(careBearData, ["bears", "homes"]));
+	});
+
 	it("merges graphs with resources of the same type", () => {
 		const left = { bears: pick(careBearData.bears, ["1"]) };
 		const right = { bears: omit(careBearData.bears, ["1"]) };
 
-		const merged = mergeGraphs(left, right);
+		const merged = mergeGraphsDeep(left, right);
 
 		expect(merged).toEqual(pick(careBearData, ["bears"]));
 	});
@@ -91,7 +172,7 @@ describe("mergeGraphs", () => {
 			homes: careBearData.homes,
 		};
 
-		const merged = mergeGraphs(left, right);
+		const merged = mergeGraphsDeep(left, right);
 
 		expect(merged).toEqual(careBearData);
 	});
@@ -113,7 +194,7 @@ describe("mergeGraphs", () => {
 			},
 		};
 
-		const merged = mergeGraphs(left, right);
+		const merged = mergeGraphsDeep(left, right);
 
 		expect(merged.bears["1"].attributes).toEqual({
 			name: "Tenderheart Bear",

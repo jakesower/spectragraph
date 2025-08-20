@@ -5,6 +5,7 @@ export {
 	createEmptyGraph,
 	createGraphFromResources,
 	mergeGraphs,
+	mergeGraphsDeep,
 } from "./graph.js";
 export { queryGraph } from "./graph/query-graph.js";
 export {
