@@ -313,12 +313,20 @@ export function createEmptyGraph(schema: Schema): Graph;
 export function linkInverses(schema: Schema, graph: Graph): Graph;
 
 /**
- * Merges two graphs together
+ * Merges two graphs together by combining resource collections
  * @param left - The left graph
- * @param right - The right graph
+ * @param right - The right graph (takes precedence for conflicting IDs)
  * @returns Merged graph
  */
 export function mergeGraphs(left: Graph, right: Graph): Graph;
+
+/**
+ * Merges two graphs together, merging individual resources with matching IDs
+ * @param left - The left graph
+ * @param right - The right graph
+ * @returns Merged graph with resources merged using mergeResources
+ */
+export function mergeGraphsDeep(left: Graph, right: Graph): Graph;
 
 /**
  * Creates a complete graph from an array of resource objects, recursively processing nested relationships

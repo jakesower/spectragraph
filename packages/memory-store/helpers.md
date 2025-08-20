@@ -235,10 +235,10 @@ const bearsMapper = { home: "abode" };
 
 Mappers allow for a great deal of flexibility and will hopefully streamline the process of normalizing resources by focusing on what needs to be changed to make things fit.
 
-### `mergeGraphs`
+### `mergeGraphsDeep`
 
 ```javascript
-mergeGraphs(leftGraph, rightGraph);
+mergeGraphsDeep(leftGraph, rightGraph);
 ```
 
 This creates a new graph with all of the resources from both graphs combined. Note that it does not combine resources themselves, rather it treats resources of the same type and the same ID as being the same.

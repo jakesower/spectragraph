@@ -153,10 +153,10 @@ Here we have an entire graph that contains all of the information from the API d
 
 You may notice that the graph is incomplete. That is, there are refs to resources not in the graph, e.g. at `bears.relationships.powers` as well as missing data, e.g. `homes.relationships.residents`. This is unavoidable given the API data. However, this may be sufficient to fulfill a query. Alternatively, there may be other graphs that come from elsewhere that can be merged into the current graph to complete the data.
 
-### `mergeGraphs`
+### `mergeGraphsDeep`
 
 ```javascript
-mergeGraphs(leftGraph, rightGraph);
+mergeGraphsDeep(leftGraph, rightGraph);
 ```
 
 This creates a new graph with all of the resources from both graphs combined. Note that it does not combine resources themselves, rather it treats resources of the same type and the same ID as being the same.

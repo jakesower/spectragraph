@@ -95,13 +95,29 @@ export function linkInverses(schema, graph) {
 }
 
 /**
- * Merges two graphs together
+ * Merges two graphs together by combining resource collections. 
+ * Right graph takes precedence for resources with conflicting IDs.
  *
- * @param {Graph} left - The left graph
+ * @param {Graph} left - The left graph  
  * @param {Graph} right - The right graph
  * @returns {Graph} Merged graph
  */
 export function mergeGraphs(left, right) {
+	const output = structuredClone(left);
+	Object.entries(right).forEach(([resourceType, resources]) => {
+		output[resourceType] = { ...(left[resourceType] ?? {}), ...resources };
+	});
+	return output;
+}
+
+/**
+ * Merges two graphs together, merging individual resources with matching IDs using mergeResources().
+ *
+ * @param {Graph} left - The left graph
+ * @param {Graph} right - The right graph  
+ * @returns {Graph} Merged graph
+ */
+export function mergeGraphsDeep(left, right) {
 	const output = {};
 	const allTypes = uniq([...Object.keys(left), ...Object.keys(right)]);
 	allTypes.forEach((type) => {
