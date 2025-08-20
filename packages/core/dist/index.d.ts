@@ -190,6 +190,12 @@ export interface NormalResource extends BaseResource {
 	relationships: { [k: string]: Ref | Ref[] | null };
 }
 
+export interface PartialNormalResource extends BaseResource {
+	id?: string;
+	attributes?: { [k: string]: unknown };
+	relationships?: { [k: string]: Ref | Ref[] | null };
+}
+
 export interface CreateResource extends BaseResource {
 	id?: number | string;
 	new?: true;
@@ -307,12 +313,20 @@ export function createEmptyGraph(schema: Schema): Graph;
 export function linkInverses(schema: Schema, graph: Graph): Graph;
 
 /**
- * Merges two graphs together
+ * Merges two graphs together by combining resource collections
  * @param left - The left graph
- * @param right - The right graph
+ * @param right - The right graph (takes precedence for conflicting IDs)
  * @returns Merged graph
  */
 export function mergeGraphs(left: Graph, right: Graph): Graph;
+
+/**
+ * Merges two graphs together, merging individual resources with matching IDs
+ * @param left - The left graph
+ * @param right - The right graph
+ * @returns Merged graph with resources merged using mergeResources
+ */
+export function mergeGraphsDeep(left: Graph, right: Graph): Graph;
 
 /**
  * Creates a complete graph from an array of resource objects, recursively processing nested relationships
@@ -362,6 +376,18 @@ export function normalizeResource(
 	resourceType: string,
 	resource: { [k: string]: unknown },
 ): NormalResource;
+
+/**
+ * Merges two partial resources of the same type, combining their attributes and relationships
+ * @param left - The first resource to merge
+ * @param right - The second resource to merge
+ * @returns Merged resource with combined attributes and relationships
+ * @throws Error if resources are of different types or have conflicting IDs
+ */
+export function mergeResources(
+	left: PartialNormalResource,
+	right: PartialNormalResource,
+): PartialNormalResource;
 
 /**
  * Creates a new validator instance

@@ -170,7 +170,7 @@ export function reduceSchemalessQuery<T>(
 // Graph functions
 export function createEmptyGraph(schema: Schema): Graph;
 export function linkInverses(graph: Graph, schema: Schema): Graph;
-export function mergeGraphs(left: Graph, right: Graph): Graph;
+export function mergeGraphsDeep(left: Graph, right: Graph): Graph;
 export function createQueryGraph(graph: Graph): any;
 export function queryGraph(graph: Graph, query: RootQuery): Result;
 

@@ -11353,6 +11353,14 @@ function normalizeQuery(schema, rootQuery) {
 
 /**
  * @typedef {BaseResource & {
+ *   id?: string,
+ *   attributes?: Object<string, *>,
+ *   relationships?: Object<string, Ref|Ref[]|null>,
+ * }} PartialNormalResource
+ */
+
+/**
+ * @typedef {BaseResource & {
  *   id?: number|string,
  *   new?: true,
  *   attributes?: Object<string, *>,

@@ -1,5 +1,5 @@
 import { v4 } from 'uuid';
-import { mapValues, merge as merge$1, omit, uniqBy, get, orderBy } from 'lodash-es';
+import { uniq, mapValues, merge as merge$1, omit, uniqBy, get, orderBy } from 'lodash-es';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import { applyOrMap } from '@data-prism/utils';
@@ -3923,6 +3923,14 @@ function normalizeQuery(schema, rootQuery) {
 
 /**
  * @typedef {BaseResource & {
+ *   id?: string,
+ *   attributes?: Object<string, *>,
+ *   relationships?: Object<string, Ref|Ref[]|null>,
+ * }} PartialNormalResource
+ */
+
+/**
+ * @typedef {BaseResource & {
  *   id?: number|string,
  *   new?: true,
  *   attributes?: Object<string, *>,
@@ -5097,19 +5105,54 @@ function linkInverses(schema, graph) {
 }
 
 /**
- * Merges two graphs together
+ * Merges two graphs together, merging individual resources with matching IDs using mergeResources().
  *
  * @param {Graph} left - The left graph
- * @param {Graph} right - The right graph
+ * @param {Graph} right - The right graph  
  * @returns {Graph} Merged graph
  */
-function mergeGraphs(left, right) {
-	const output = structuredClone(left);
-	Object.entries(right).forEach(([resourceType, resources]) => {
-		output[resourceType] = { ...resources, ...(left[resourceType] ?? {}) };
+function mergeGraphsDeep(left, right) {
+	const output = {};
+	const allTypes = uniq([...Object.keys(left), ...Object.keys(right)]);
+	allTypes.forEach((type) => {
+		const leftResources = left[type] ?? {};
+		const rightResources = right[type] ?? {};
+
+		if (Object.keys(rightResources).length === 0) {
+			output[type] = leftResources;
+			return;
+		}
+
+		if (Object.keys(leftResources).length === 0) {
+			output[type] = rightResources;
+			return;
+		}
+
+		const allIds = uniq([
+			...Object.keys(leftResources),
+			...Object.keys(rightResources),
+		]);
+
+		const nextResources = {};
+		allIds.forEach((id) => {
+			nextResources[id] = mergeResources(
+				leftResources[id] ?? { type, id },
+				rightResources[id] ?? { },
+			);
+		});
+
+		output[type] = nextResources;
 	});
 
 	return output;
+}
+
+function mergeResources(left, right = { attributes: {}, relationships: {} }) {
+	return {
+		...left,
+		attributes: { ...left.attributes, ...right.attributes },
+		relationships: { ...left.relationships, ...right.relationships },
+	};
 }
 
 const ensureValidSchema = ensure(validateSchema);
@@ -5574,7 +5617,7 @@ function createMemoryStore(schema, config = {}) {
 
 	ensureValidSchema(schema, { validator });
 
-	let storeGraph = mergeGraphs(createEmptyGraph(schema), initialData);
+	let storeGraph = mergeGraphsDeep(createEmptyGraph(schema), initialData);
 
 	const runQuery = (query) => {
 		const normalQuery = normalizeQuery(schema, query);

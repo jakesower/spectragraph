@@ -3966,6 +3966,14 @@ function buildAttribute(attrSchema, curValue) {
 
 /**
  * @typedef {BaseResource & {
+ *   id?: string,
+ *   attributes?: Object<string, *>,
+ *   relationships?: Object<string, Ref|Ref[]|null>,
+ * }} PartialNormalResource
+ */
+
+/**
+ * @typedef {BaseResource & {
  *   id?: number|string,
  *   new?: true,
  *   attributes?: Object<string, *>,
@@ -4160,6 +4168,37 @@ function createResource(schema, partialResource = {}) {
 		...partialResource,
 		attributes: { ...builtAttributes, [resSchema.idAttribute ?? "id"]: id },
 		relationships: builtRelationships,
+	};
+}
+
+/**
+ * Creates a normalized resource with schema defaults applied
+ * @param {import('./schema.js').Schema} schema - The schema to use for defaults
+ * @param {PartialNormalResource} left - One resource to merge
+ * @param {PartialNormalResource} right - The other resource to merge
+ * @returns {PartialNormalResource} A partial normalized resource with the id, attributes, and relationships from left and right merged
+ */
+function mergeResources$1(left, right) {
+	if (left.type !== right.type) {
+		throw new Error({
+			message: "only resources of the same type can be merged",
+		});
+	}
+
+	if (left.id && right.id && left.id !== right.id) {
+		throw new Error({
+			message: "only resources with the same ID can be merged",
+		});
+	}
+
+	return {
+		type: left.type,
+		id: left.id ?? right.id,
+		attributes: { ...(left.attributes ?? {}), ...(right.attributes ?? {}) },
+		relationships: {
+			...(left.relationships ?? {}),
+			...(right.relationships ?? {}),
+		},
 	};
 }
 
@@ -5293,16 +5332,59 @@ function linkInverses(schema, graph) {
 }
 
 /**
- * Merges two graphs together
+ * Merges two graphs together by combining resource collections. 
+ * Right graph takes precedence for resources with conflicting IDs.
  *
- * @param {Graph} left - The left graph
+ * @param {Graph} left - The left graph  
  * @param {Graph} right - The right graph
  * @returns {Graph} Merged graph
  */
 function mergeGraphs(left, right) {
 	const output = structuredClone(left);
 	Object.entries(right).forEach(([resourceType, resources]) => {
-		output[resourceType] = { ...resources, ...(left[resourceType] ?? {}) };
+		output[resourceType] = { ...(left[resourceType] ?? {}), ...resources };
+	});
+	return output;
+}
+
+/**
+ * Merges two graphs together, merging individual resources with matching IDs using mergeResources().
+ *
+ * @param {Graph} left - The left graph
+ * @param {Graph} right - The right graph  
+ * @returns {Graph} Merged graph
+ */
+function mergeGraphsDeep(left, right) {
+	const output = {};
+	const allTypes = lodashEs.uniq([...Object.keys(left), ...Object.keys(right)]);
+	allTypes.forEach((type) => {
+		const leftResources = left[type] ?? {};
+		const rightResources = right[type] ?? {};
+
+		if (Object.keys(rightResources).length === 0) {
+			output[type] = leftResources;
+			return;
+		}
+
+		if (Object.keys(leftResources).length === 0) {
+			output[type] = rightResources;
+			return;
+		}
+
+		const allIds = lodashEs.uniq([
+			...Object.keys(leftResources),
+			...Object.keys(rightResources),
+		]);
+
+		const nextResources = {};
+		allIds.forEach((id) => {
+			nextResources[id] = mergeResources(
+				leftResources[id] ?? { type, id },
+				rightResources[id] ?? { },
+			);
+		});
+
+		output[type] = nextResources;
 	});
 
 	return output;
@@ -5380,6 +5462,8 @@ exports.ensureValidSchema = ensureValidSchema;
 exports.ensureValidUpdateResource = ensureValidUpdateResource;
 exports.linkInverses = linkInverses;
 exports.mergeGraphs = mergeGraphs;
+exports.mergeGraphsDeep = mergeGraphsDeep;
+exports.mergeResources = mergeResources$1;
 exports.normalizeQuery = normalizeQuery;
 exports.normalizeResource = normalizeResource;
 exports.queryGraph = queryGraph;
