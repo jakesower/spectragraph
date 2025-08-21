@@ -77,6 +77,7 @@ it("implements the $nin expression", () => {
 describe("evaluate functions", () => {
 	const { evaluate } = defaultExpressionEngine;
 
+	// $eq is pure mathematical - no currying needed, same operand for apply and evaluate
 	it("$eq evaluates static comparisons", () => {
 		expect(evaluate({ $eq: [5, 5] })).toBe(true);
 		expect(evaluate({ $eq: [5, 10] })).toBe(false);

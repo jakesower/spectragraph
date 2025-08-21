@@ -74,6 +74,18 @@ describe("$random", () => {
 });
 
 describe("$uuid", () => {
+	// $uuid is nullary - no currying needed
+	describe("evaluate form", () => {
+		const { evaluate } = defaultExpressionEngine;
+
+		it("generates UUID directly", () => {
+			const result = evaluate({ $uuid: null });
+			expect(typeof result).toBe("string");
+			expect(result).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+		});
+	});
+
+	// Existing tests
 	it("generates valid UUID v4 strings", () => {
 		const result1 = apply({ $uuid: null }, {});
 		const result2 = apply({ $uuid: null }, {});

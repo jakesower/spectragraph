@@ -1,5 +1,4 @@
 import { get } from "lodash-es";
-import { NoEvaluationAllowedError } from "../index.js";
 
 const $apply = {
 	name: "$apply",
@@ -10,16 +9,26 @@ const $apply = {
 const $isDefined = {
 	name: "$isDefined",
 	apply: (_, inputData) => inputData !== undefined,
-	evaluate: () => {
-		throw new NoEvaluationAllowedError("$isDefined");
+	evaluate: function(operand) {
+		if (!Array.isArray(operand)) {
+			throw new Error("$isDefined evaluate form requires array operand: [value]");
+		}
+		
+		const [value] = operand;
+		return value !== undefined;
 	},
 };
 
 const $echo = {
 	name: "$echo",
 	apply: (_, inputData) => inputData,
-	evaluate: () => {
-		throw new NoEvaluationAllowedError("$echo");
+	evaluate: function(operand) {
+		if (!Array.isArray(operand)) {
+			throw new Error("$echo evaluate form requires array operand: [value]");
+		}
+		
+		const [value] = operand;
+		return value;
 	},
 };
 
@@ -42,16 +51,26 @@ const $ensurePath = {
 		go(inputData, operand.split("."));
 		return inputData;
 	},
-	evaluate: () => {
-		throw new NoEvaluationAllowedError("$ensurePath");
+	evaluate: function(operand) {
+		if (!Array.isArray(operand)) {
+			throw new Error("$ensurePath evaluate form requires array operand: [object, path]");
+		}
+		
+		const [object, path] = operand;
+		return this.apply(path, object);
 	},
 };
 
 const $get = {
 	name: "$get",
 	apply: (operand, inputData) => get(inputData, operand),
-	evaluate: () => {
-		throw new NoEvaluationAllowedError("$get");
+	evaluate: function(operand) {
+		if (!Array.isArray(operand)) {
+			throw new Error("$get evaluate form requires array operand: [object, path]");
+		}
+		
+		const [object, path] = operand;
+		return this.apply(path, object);
 	},
 };
 
@@ -183,7 +202,7 @@ const $compose = {
 			return apply(expr, acc);
 		}, inputData),
 	evaluate: () => {
-		throw new NoEvaluationAllowedError("$compose");
+		throw new Error("$compose is not a valid expression for evaluation");
 	},
 	controlsEvaluation: true,
 };
@@ -199,7 +218,7 @@ const $pipe = {
 			return apply(expr, acc);
 		}, inputData),
 	evaluate: () => {
-		throw new NoEvaluationAllowedError("$pipe");
+		throw new Error("$pipe is not a valid expression for evaluation");
 	},
 	controlsEvaluation: true,
 };

@@ -24,6 +24,9 @@ const $not = {
 	name: "$not",
 	apply: (operand, inputData, apply) => !apply(operand, inputData),
 	controlsEvaluation: true,
+	evaluate: () => {
+		throw new Error("$not is not a valid expression for evaluation");
+	},
 	schema: { type: "boolean" },
 };
 

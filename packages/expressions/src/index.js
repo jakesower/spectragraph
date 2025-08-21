@@ -7,17 +7,6 @@ import { iterativeDefinitions } from "./definitions/iterative.js";
 import { generativeDefinitions } from "./definitions/generative.js";
 import { temporalDefinitions } from "./definitions/temporal.js";
 
-/**
- * Error thrown when an expression cannot be evaluated without input data context
- */
-export class NoEvaluationAllowedError extends Error {
-	constructor(expressionName) {
-		super(
-			`${expressionName} expressions cannot be evaluated without input data context`,
-		);
-		this.name = "NoEvaluationAllowedError";
-	}
-}
 
 /**
  * @typedef {object} ApplicativeExpression
@@ -147,45 +136,3 @@ export const defaultExpressions = {
 
 export const defaultExpressionEngine =
 	createExpressionEngine(defaultExpressions);
-
-/**
- * Checks if an expression can be evaluated without input data context
- * @param {Expression} expression - The expression to check
- * @param {object} operations - The operations object (defaults to defaultExpressions)
- * @returns {boolean} - True if the expression can be evaluated statically
- */
-export function isEvaluable(expression, operations = defaultExpressions) {
-	const checkExpression = (expr) => {
-		if (!defaultExpressionEngine.isExpression(expr)) {
-			return Array.isArray(expr)
-				? expr.every(checkExpression)
-				: typeof expr === "object" && expr !== null
-					? Object.values(expr).every(checkExpression)
-					: true;
-		}
-
-		const [name, operand] = Object.entries(expr)[0];
-		const operation = operations[name];
-
-		// Special case: $literal is always evaluable (handled specially in evaluate())
-		if (name === "$literal") return true;
-
-		// If operation doesn't exist or has no evaluate function, it's not evaluable
-		if (!operation || !operation.evaluate) return false;
-
-		// Try to actually evaluate to see if it throws NoEvaluationAllowedError
-		try {
-			// First try a quick evaluation to see if this operation itself throws
-			operation.evaluate(operand, () => null); // Pass dummy evaluate function
-		} catch (e) {
-			if (e instanceof NoEvaluationAllowedError) {
-				return false;
-			}
-			// Other errors, continue checking
-		}
-
-		return checkExpression(operand);
-	};
-
-	return checkExpression(expression);
-}

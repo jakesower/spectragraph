@@ -115,40 +115,6 @@ const $mode = {
 	},
 };
 
-const $quantile = {
-	name: "$quantile",
-	apply(operand) {
-		return this.evaluate(operand);
-	},
-	evaluate: ({ values, k, n }) => {
-		if (!Array.isArray(values) || values.length === 0) return undefined;
-		if (typeof k !== "number" || typeof n !== "number") {
-			throw new Error("k and n must be numbers");
-		}
-		if (k < 0 || k > n || n <= 0) {
-			throw new Error("k must be between 0 and n, and n must be positive");
-		}
-		if (k === 0) return Math.min(...values);
-		if (k === n) return Math.max(...values);
-
-		const sorted = [...values].sort((a, b) => a - b);
-		const index = (k / n) * (sorted.length - 1);
-		const lower = Math.floor(index);
-		const upper = Math.ceil(index);
-
-		if (lower === upper) {
-			return sorted[lower];
-		}
-
-		// Linear interpolation
-		const weight = index - lower;
-		return sorted[lower] * (1 - weight) + sorted[upper] * weight;
-	},
-	schema: {
-		type: "number",
-	},
-};
-
 export const aggregativeDefinitions = {
 	$count,
 	$max,
@@ -156,6 +122,5 @@ export const aggregativeDefinitions = {
 	$median,
 	$min,
 	$mode,
-	$quantile,
 	$sum,
 };
