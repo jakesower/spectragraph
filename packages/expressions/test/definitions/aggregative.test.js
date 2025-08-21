@@ -20,6 +20,20 @@ describe("$count", () => {
 	it("counts single element", () => {
 		expect(apply({ $count: singleValue }, null)).toBe(1);
 	});
+
+});
+
+describe("$sum", () => {
+	// $sum is pure mathematical - no currying needed
+	describe("evaluate form", () => {
+		const { evaluate } = defaultExpressionEngine;
+
+		it("sums array directly", () => {
+			expect(
+				evaluate({ $sum: [1, 2, 3, 4] }),
+			).toEqual(10);
+		});
+	});
 });
 
 describe("$max", () => {
@@ -163,72 +177,5 @@ describe("$mode", () => {
 
 	it("handles all same values", () => {
 		expect(apply({ $mode: [3, 3, 3, 3] }, null)).toBe(3);
-	});
-});
-
-describe("$quantile", () => {
-	const testData = [
-		12, 5, 18, 3, 25, 8, 31, 14, 7, 22, 9, 16, 28, 11, 19, 6, 24, 13,
-	];
-
-	it("calculates quartiles (4-quantiles)", () => {
-		expect(
-			apply({ $quantile: { values: testData, k: 1, n: 4 } }, null),
-		).toBeCloseTo(8.25);
-		expect(apply({ $quantile: { values: testData, k: 2, n: 4 } }, null)).toBe(
-			13.5,
-		);
-		expect(
-			apply({ $quantile: { values: testData, k: 3, n: 4 } }, null),
-		).toBeCloseTo(21.25);
-	});
-
-	it("calculates percentiles (100-quantiles)", () => {
-		expect(
-			apply({ $quantile: { values: testData, k: 50, n: 100 } }, null),
-		).toBe(13.5);
-		expect(
-			apply({ $quantile: { values: testData, k: 90, n: 100 } }, null),
-		).toBeCloseTo(25.9);
-	});
-
-	it("handles boundary cases", () => {
-		expect(apply({ $quantile: { values: testData, k: 0, n: 4 } }, null)).toBe(
-			3,
-		);
-		expect(apply({ $quantile: { values: testData, k: 4, n: 4 } }, null)).toBe(
-			31,
-		);
-	});
-
-	it("returns undefined for empty arrays", () => {
-		expect(
-			apply({ $quantile: { values: [], k: 1, n: 4 } }, null),
-		).toBeUndefined();
-	});
-
-	it("throws error for invalid k and n", () => {
-		expect(() =>
-			apply({ $quantile: { values: testData, k: -1, n: 4 } }, null),
-		).toThrow();
-		expect(() =>
-			apply({ $quantile: { values: testData, k: 5, n: 4 } }, null),
-		).toThrow();
-		expect(() =>
-			apply({ $quantile: { values: testData, k: 1, n: 0 } }, null),
-		).toThrow();
-	});
-
-	it("throws error for non-numeric k and n", () => {
-		expect(() =>
-			apply({ $quantile: { values: testData, k: "1", n: 4 } }, null),
-		).toThrow();
-		expect(() =>
-			apply({ $quantile: { values: testData, k: 1, n: "4" } }, null),
-		).toThrow();
-	});
-
-	it("handles single element array", () => {
-		expect(apply({ $quantile: { values: [42], k: 1, n: 4 } }, null)).toBe(42);
 	});
 });

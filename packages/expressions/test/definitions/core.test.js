@@ -21,6 +21,142 @@ describe("$ensurePath", () => {
 			apply({ $ensurePath: "hello.name" }, { name: "Arnar" });
 		}).toThrowError();
 	});
+
+	describe("evaluate form", () => {
+		const { evaluate } = defaultExpressionEngine;
+
+		it("validates object has a valid path", () => {
+			expect(
+				evaluate({ $ensurePath: [{ name: "Arnar" }, "name"] }),
+			).toEqual({ name: "Arnar" });
+		});
+
+		it("validates object has a valid nested path", () => {
+			expect(
+				evaluate({ $ensurePath: [{ hello: { name: "Arnar" } }, "hello.name"] }),
+			).toEqual({ hello: { name: "Arnar" } });
+		});
+
+		it("throws when object missing a path", () => {
+			expect(() => {
+				evaluate({ $ensurePath: [{ name: "Arnar" }, "hello.name"] });
+			}).toThrowError();
+		});
+
+		it("throws when object missing a nested path", () => {
+			expect(() => {
+				evaluate({ $ensurePath: [{ hello: {} }, "hello.name"] });
+			}).toThrowError();
+		});
+
+		it("works with deeply nested paths", () => {
+			expect(
+				evaluate({ $ensurePath: [{ a: { b: { c: { d: "found" } } } }, "a.b.c.d"] }),
+			).toEqual({ a: { b: { c: { d: "found" } } } });
+		});
+
+		it("throws when deeply nested path is incomplete", () => {
+			expect(() => {
+				evaluate({ $ensurePath: [{ a: { b: { c: {} } } }, "a.b.c.d"] });
+			}).toThrowError();
+		});
+
+		it("throws with non-array operand", () => {
+			expect(() => {
+				evaluate({ $ensurePath: "user.name" });
+			}).toThrowError("$ensurePath evaluate form requires array operand: [object, path]");
+		});
+	});
+});
+
+describe("$isDefined", () => {
+	describe("evaluate form", () => {
+		const { evaluate } = defaultExpressionEngine;
+
+		it("returns true for defined values", () => {
+			expect(evaluate({ $isDefined: ["hello"] })).toBe(true);
+			expect(evaluate({ $isDefined: [0] })).toBe(true);
+			expect(evaluate({ $isDefined: [false] })).toBe(true);
+			expect(evaluate({ $isDefined: [null] })).toBe(true);
+		});
+
+		it("returns false for undefined values", () => {
+			expect(evaluate({ $isDefined: [undefined] })).toBe(false);
+		});
+
+		it("works with complex values", () => {
+			expect(evaluate({ $isDefined: [{ name: "test" }] })).toBe(true);
+			expect(evaluate({ $isDefined: [[1, 2, 3]] })).toBe(true);
+		});
+
+		it("throws with non-array operand", () => {
+			expect(() => {
+				evaluate({ $isDefined: null });
+			}).toThrowError("$isDefined evaluate form requires array operand: [value]");
+		});
+	});
+});
+
+describe("$echo", () => {
+	describe("evaluate form", () => {
+		const { evaluate } = defaultExpressionEngine;
+
+		it("echoes the provided value", () => {
+			expect(
+				evaluate({ $echo: ["hello world"] }),
+			).toEqual("hello world");
+		});
+
+		it("echoes objects", () => {
+			const obj = { name: "Arnar", age: 30 };
+			expect(
+				evaluate({ $echo: [obj] }),
+			).toEqual(obj);
+		});
+
+		it("echoes arrays", () => {
+			const arr = [1, 2, 3];
+			expect(
+				evaluate({ $echo: [arr] }),
+			).toEqual(arr);
+		});
+
+		it("throws with non-array operand", () => {
+			expect(() => {
+				evaluate({ $echo: null });
+			}).toThrowError("$echo evaluate form requires array operand: [value]");
+		});
+	});
+});
+
+describe("$get", () => {
+	describe("evaluate form", () => {
+		const { evaluate } = defaultExpressionEngine;
+
+		it("gets value from object using array syntax", () => {
+			expect(
+				evaluate({ $get: [{ name: "Arnar", age: 30 }, "name"] }),
+			).toEqual("Arnar");
+		});
+
+		it("gets nested value from object", () => {
+			expect(
+				evaluate({ $get: [{ user: { name: "Arnar" } }, "user.name"] }),
+			).toEqual("Arnar");
+		});
+
+		it("throws with non-array operand", () => {
+			expect(() => {
+				evaluate({ $get: "name" });
+			}).toThrowError("$get evaluate form requires array operand: [object, path]");
+		});
+
+		it("throws with object operand", () => {
+			expect(() => {
+				evaluate({ $get: { object: {}, path: "name" } });
+			}).toThrowError("$get evaluate form requires array operand: [object, path]");
+		});
+	});
 });
 
 describe("$if", () => {

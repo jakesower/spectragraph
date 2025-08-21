@@ -201,6 +201,167 @@ describe("mergeGraphsDeep", () => {
 			bellyBadge: "red heart with pink outline",
 		});
 	});
+
+	it("merges resources with different relationships available", () => {
+		const left = {
+			bears: {
+				1: {
+					type: "bears",
+					id: "1",
+					attributes: { name: "Tenderheart Bear" },
+					relationships: { home: { type: "homes", id: "1" } },
+				},
+			},
+		};
+
+		const right = {
+			bears: {
+				1: {
+					type: "bears",
+					id: "1",
+					attributes: { name: "Tenderheart Bear" },
+					relationships: { powers: [{ type: "powers", id: "careBearStare" }] },
+				},
+			},
+		};
+
+		const merged = mergeGraphsDeep(left, right);
+
+		expect(merged.bears["1"].relationships).toEqual({
+			home: { type: "homes", id: "1" },
+			powers: [{ type: "powers", id: "careBearStare" }],
+		});
+	});
+
+	it("merges resources where right overrides left attributes", () => {
+		const left = {
+			bears: {
+				1: {
+					type: "bears",
+					id: "1",
+					attributes: { name: "Old Name", furColor: "tan" },
+					relationships: {},
+				},
+			},
+		};
+
+		const right = {
+			bears: {
+				1: {
+					type: "bears",
+					id: "1",
+					attributes: { name: "New Name", bellyBadge: "heart" },
+					relationships: {},
+				},
+			},
+		};
+
+		const merged = mergeGraphsDeep(left, right);
+
+		expect(merged.bears["1"].attributes).toEqual({
+			name: "New Name", // right overrides left
+			furColor: "tan", // preserved from left
+			bellyBadge: "heart", // added from right
+		});
+	});
+
+	it("merges resources where right overrides left relationships", () => {
+		const left = {
+			bears: {
+				1: {
+					type: "bears",
+					id: "1",
+					attributes: {},
+					relationships: {
+						home: { type: "homes", id: "1" },
+						powers: [{ type: "powers", id: "oldPower" }],
+					},
+				},
+			},
+		};
+
+		const right = {
+			bears: {
+				1: {
+					type: "bears",
+					id: "1",
+					attributes: {},
+					relationships: {
+						powers: [{ type: "powers", id: "newPower" }], // overrides left
+					},
+				},
+			},
+		};
+
+		const merged = mergeGraphsDeep(left, right);
+
+		expect(merged.bears["1"].relationships).toEqual({
+			home: { type: "homes", id: "1" }, // preserved from left
+			powers: [{ type: "powers", id: "newPower" }], // overridden by right
+		});
+	});
+
+	it("handles resources with undefined attributes and relationships", () => {
+		const left = {
+			bears: {
+				1: { type: "bears", id: "1" }, // missing attributes and relationships
+			},
+		};
+
+		const right = {
+			bears: {
+				1: {
+					type: "bears",
+					id: "1",
+					attributes: { name: "Test Bear" },
+					relationships: { home: { type: "homes", id: "1" } },
+				},
+			},
+		};
+
+		const merged = mergeGraphsDeep(left, right);
+
+		expect(merged.bears["1"]).toEqual({
+			type: "bears",
+			id: "1",
+			attributes: { name: "Test Bear" },
+			relationships: { home: { type: "homes", id: "1" } },
+		});
+	});
+
+	it("handles empty graphs gracefully", () => {
+		const left = {};
+		const right = { bears: careBearData.bears };
+
+		const merged = mergeGraphsDeep(left, right);
+
+		expect(merged).toEqual({ bears: careBearData.bears });
+	});
+
+	it("handles empty resource collections gracefully", () => {
+		const left = { bears: {}, homes: careBearData.homes };
+		const right = { bears: pick(careBearData.bears, ["1"]), powers: {} };
+
+		const merged = mergeGraphsDeep(left, right);
+
+		expect(merged).toEqual({
+			bears: pick(careBearData.bears, ["1"]),
+			homes: careBearData.homes,
+			powers: {},
+		});
+	});
+
+	it("preserves resource structure when only one side has a resource type", () => {
+		const left = { bears: careBearData.bears };
+		const right = { homes: careBearData.homes };
+
+		const merged = mergeGraphsDeep(left, right);
+
+		expect(merged).toEqual({
+			bears: careBearData.bears,
+			homes: careBearData.homes,
+		});
+	});
 });
 
 describe("createGraphFromResources", () => {
