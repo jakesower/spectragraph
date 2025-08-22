@@ -43,19 +43,9 @@ import { merge } from "./merge.js";
 
 
 /**
- * @typedef {Object} Store
- * @property {function(string, string): import('@data-prism/core').NormalResource} getOne
- * @property {function(import('@data-prism/core').CreateResource): import('@data-prism/core').NormalResource} create
- * @property {function(import('@data-prism/core').UpdateResource): import('@data-prism/core').NormalResource} update
- * @property {function(import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource): import('@data-prism/core').NormalResource} upsert
- * @property {function(import('@data-prism/core').DeleteResource): import('@data-prism/core').DeleteResource} delete
- * @property {function(import('@data-prism/core').RootQuery): any} query
- * @property {function(NormalResourceTree): NormalResourceTree} merge
- */
-
-/**
- * @typedef {Store & {
- *   linkInverses: function(): void
+ * @typedef {import('@data-prism/core').Store & {
+ *   linkInverses: function(): void,
+ *   merge: function(NormalResourceTree): Promise<NormalResourceTree>
  * }} MemoryStore
  */
 
@@ -142,16 +132,23 @@ export function createMemoryStore(schema, config = {}) {
 
 	return {
 		linkInverses: linkStoreInverses,
-		getOne(type, id) {
-			return storeGraph[type][id] ?? null;
+		async create(resource) {
+			return Promise.resolve(create(resource));
 		},
-		create,
-		update,
-		upsert,
-		delete: delete_,
-		query: runQuery,
-		merge(resource) {
-			return merge(resource, { schema, validator, store: this, storeGraph });
+		async update(resource) {
+			return Promise.resolve(update(resource));
+		},
+		async upsert(resource) {
+			return Promise.resolve(upsert(resource));
+		},
+		async delete(resource) {
+			return Promise.resolve(delete_(resource));
+		},
+		async query(query) {
+			return Promise.resolve(runQuery(query));
+		},
+		async merge(resource) {
+			return Promise.resolve(merge(resource, { schema, validator, store: this, storeGraph }));
 		},
 	};
 }

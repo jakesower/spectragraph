@@ -1,0 +1,26 @@
+{
+	"name": "@data-prism/interface-tests",
+	"version": "0.1.0",
+	"type": "module",
+	"main": "./src/index.js",
+	"scripts": {
+		"lint": ""
+	},
+	"exports": {
+		".": "./src/index.js"
+	},
+	"keywords": [
+		"test",
+		"interface",
+		"data-prism"
+	],
+	"author": "Jake Sower",
+	"private": true,
+	"sideEffects": false,
+	"devDependencies": {
+		"vitest": "^2.0.0"
+	},
+	"dependencies": {
+		"@data-prism/test-fixtures": "*"
+	}
+}

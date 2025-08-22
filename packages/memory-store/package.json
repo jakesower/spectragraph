@@ -23,6 +23,7 @@
 	"keywords": [],
 	"author": "Jake Sower",
 	"devDependencies": {
+		"@data-prism/interface-tests": "*",
 		"@data-prism/test-fixtures": "*",
 		"@rollup/plugin-commonjs": "^28.0.1",
 		"@rollup/plugin-node-resolve": "^16.0.0",
