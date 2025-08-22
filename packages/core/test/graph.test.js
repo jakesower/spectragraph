@@ -10,7 +10,7 @@ import {
 	careBearSchema,
 	careBearData,
 	careBearDataFlat as flatCareBearData,
-} from "@data-prism/test-fixtures";
+} from "../interface-tests/src/index.js";
 
 describe("linkInverses", () => {
 	it("doesn't change anything for an already linked graph", () => {

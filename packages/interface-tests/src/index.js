@@ -14,3 +14,14 @@ export function runInterfaceTests(storeFactory) {
 		runUpsertTests(storeFactory);
 	});
 }
+
+// Re-export fixtures
+export {
+	careBearSchema,
+	soccerSchema,
+	geojsonSchema,
+	jsonApiSchema,
+	jsonSchemaTestingSchema,
+	careBearData,
+	careBearDataFlat,
+} from "./fixtures/index.js";

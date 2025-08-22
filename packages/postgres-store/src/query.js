@@ -140,7 +140,7 @@ export async function query(query, context) {
 	const allResults =
 		(await db.query({ rowMode: "array", text: sql }, vars))?.rows ?? null;
 
-	const hasToManyJoin = Object.keys(normalizeQuery(query).select).some(
+	const hasToManyJoin = Object.keys(normalizeQuery(schema, query).select).some(
 		(k) =>
 			schema.resources[query.type].relationships[k]?.cardinality === "many",
 	);

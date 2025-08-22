@@ -1,4 +1,4 @@
-import { runInterfaceTests } from "../../interface-tests/src/index.js";
+import { runInterfaceTests } from "../interface-tests/src/index.js";
 import Database from "better-sqlite3";
 import { createTables, seed } from "../src/seed.js";
 import { createSQLiteStore } from "../src/sqlite-store.js";

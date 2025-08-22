@@ -1,6 +1,6 @@
 import { expect, it, describe } from "vitest";
 import { queryGraph } from "../../src/graph.js";
-import { careBearSchema, careBearData } from "@data-prism/test-fixtures";
+import { careBearSchema, careBearData } from "../interface-tests/src/index.js";
 
 describe("where clauses", () => {
 	it("filters on an implicit property equality constraint", async () => {

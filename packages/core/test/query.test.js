@@ -1,6 +1,6 @@
 import { expect, it, describe } from "vitest";
 import { normalizeQuery, validateQuery } from "../src/query.js";
-import { careBearSchema } from "@data-prism/test-fixtures";
+import { careBearSchema } from "../interface-tests/src/index.js";
 import { defaultExpressionEngine } from "@data-prism/expressions";
 
 describe("validateQuery", () => {

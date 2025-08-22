@@ -21,6 +21,5 @@
 		"vitest": "^2.0.0"
 	},
 	"dependencies": {
-		"@data-prism/test-fixtures": "*"
 	}
 }

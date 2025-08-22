@@ -9,7 +9,7 @@ import {
 	createResource,
 	mergeResources,
 } from "../src/resource.js";
-import { soccerSchema, geojsonSchema } from "@data-prism/test-fixtures";
+import { soccerSchema, geojsonSchema } from "../interface-tests/src/index.js";
 
 const geojsonDPSchema = structuredClone(soccerSchema);
 geojsonDPSchema.resources.fields.attributes.location = {
