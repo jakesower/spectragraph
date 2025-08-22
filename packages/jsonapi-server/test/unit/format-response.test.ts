@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
-import { Schema, createMemoryStore } from "data-prism";
+import { Schema, createMemoryStore } from "@data-prism/core"
 import careBearSchema from "../fixtures/care-bears.schema.json";
 import jsonApiSchema from "../fixtures/json-api-schema.json";
 import { formatResponse } from "../../src/format-response";

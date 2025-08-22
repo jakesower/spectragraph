@@ -1,4 +1,4 @@
-import { Schema, queryGraph } from "data-prism";
+import { Schema, queryGraph } from "@data-prism/core"
 import { mapValues } from "lodash-es";
 
 export function parseResponse(schema: Schema, query, response) {

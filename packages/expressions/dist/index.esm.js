@@ -9,16 +9,26 @@ const $apply = {
 const $isDefined = {
 	name: "$isDefined",
 	apply: (_, inputData) => inputData !== undefined,
-	evaluate: () => {
-		throw new NoEvaluationAllowedError("$isDefined");
+	evaluate: function(operand) {
+		if (!Array.isArray(operand)) {
+			throw new Error("$isDefined evaluate form requires array operand: [value]");
+		}
+		
+		const [value] = operand;
+		return value !== undefined;
 	},
 };
 
 const $echo = {
 	name: "$echo",
 	apply: (_, inputData) => inputData,
-	evaluate: () => {
-		throw new NoEvaluationAllowedError("$echo");
+	evaluate: function(operand) {
+		if (!Array.isArray(operand)) {
+			throw new Error("$echo evaluate form requires array operand: [value]");
+		}
+		
+		const [value] = operand;
+		return value;
 	},
 };
 
@@ -41,16 +51,26 @@ const $ensurePath = {
 		go(inputData, operand.split("."));
 		return inputData;
 	},
-	evaluate: () => {
-		throw new NoEvaluationAllowedError("$ensurePath");
+	evaluate: function(operand) {
+		if (!Array.isArray(operand)) {
+			throw new Error("$ensurePath evaluate form requires array operand: [object, path]");
+		}
+		
+		const [object, path] = operand;
+		return this.apply(path, object);
 	},
 };
 
 const $get = {
 	name: "$get",
 	apply: (operand, inputData) => get(inputData, operand),
-	evaluate: () => {
-		throw new NoEvaluationAllowedError("$get");
+	evaluate: function(operand) {
+		if (!Array.isArray(operand)) {
+			throw new Error("$get evaluate form requires array operand: [object, path]");
+		}
+		
+		const [object, path] = operand;
+		return this.apply(path, object);
 	},
 };
 
@@ -182,7 +202,7 @@ const $compose = {
 			return apply(expr, acc);
 		}, inputData),
 	evaluate: () => {
-		throw new NoEvaluationAllowedError("$compose");
+		throw new Error("$compose is not a valid expression for evaluation");
 	},
 	controlsEvaluation: true,
 };
@@ -198,7 +218,7 @@ const $pipe = {
 			return apply(expr, acc);
 		}, inputData),
 	evaluate: () => {
-		throw new NoEvaluationAllowedError("$pipe");
+		throw new Error("$pipe is not a valid expression for evaluation");
 	},
 	controlsEvaluation: true,
 };
@@ -243,6 +263,9 @@ const $not = {
 	name: "$not",
 	apply: (operand, inputData, apply) => !apply(operand, inputData),
 	controlsEvaluation: true,
+	evaluate: () => {
+		throw new Error("$not is not a valid expression for evaluation");
+	},
 	schema: { type: "boolean" },
 };
 
@@ -472,40 +495,6 @@ const $mode = {
 	},
 };
 
-const $quantile = {
-	name: "$quantile",
-	apply(operand) {
-		return this.evaluate(operand);
-	},
-	evaluate: ({ values, k, n }) => {
-		if (!Array.isArray(values) || values.length === 0) return undefined;
-		if (typeof k !== "number" || typeof n !== "number") {
-			throw new Error("k and n must be numbers");
-		}
-		if (k < 0 || k > n || n <= 0) {
-			throw new Error("k must be between 0 and n, and n must be positive");
-		}
-		if (k === 0) return Math.min(...values);
-		if (k === n) return Math.max(...values);
-
-		const sorted = [...values].sort((a, b) => a - b);
-		const index = (k / n) * (sorted.length - 1);
-		const lower = Math.floor(index);
-		const upper = Math.ceil(index);
-
-		if (lower === upper) {
-			return sorted[lower];
-		}
-
-		// Linear interpolation
-		const weight = index - lower;
-		return sorted[lower] * (1 - weight) + sorted[upper] * weight;
-	},
-	schema: {
-		type: "number",
-	},
-};
-
 const aggregativeDefinitions = {
 	$count,
 	$max,
@@ -513,23 +502,31 @@ const aggregativeDefinitions = {
 	$median,
 	$min,
 	$mode,
-	$quantile,
 	$sum,
 };
 
 const $filter = {
 	apply: (operand, inputData, apply) => inputData.filter((item) => apply(operand, item)),
 	controlsEvaluation: true,
+	evaluate: () => {
+		throw new Error("$filter is not a valid expression for evaluation");
+	},
 };
 
 const $flatMap = {
 	apply: (operand, inputData, apply) => inputData.flatMap((item) => apply(operand, item)),
 	controlsEvaluation: true,
+	evaluate: () => {
+		throw new Error("$flatMap is not a valid expression for evaluation");
+	},
 };
 
 const $map = {
 	apply: (operand, inputData, apply) => inputData.map((item) => apply(operand, item)),
 	controlsEvaluation: true,
+	evaluate: () => {
+		throw new Error("$map is not a valid expression for evaluation");
+	},
 };
 
 const iterativeDefinitions = {
@@ -645,18 +642,6 @@ const temporalDefinitions = {
 	$nowUTC,
 	$timestamp,
 };
-
-/**
- * Error thrown when an expression cannot be evaluated without input data context
- */
-class NoEvaluationAllowedError extends Error {
-	constructor(expressionName) {
-		super(
-			`${expressionName} expressions cannot be evaluated without input data context`,
-		);
-		this.name = "NoEvaluationAllowedError";
-	}
-}
 
 /**
  * @typedef {object} ApplicativeExpression
@@ -787,46 +772,4 @@ const defaultExpressions = {
 const defaultExpressionEngine =
 	createExpressionEngine(defaultExpressions);
 
-/**
- * Checks if an expression can be evaluated without input data context
- * @param {Expression} expression - The expression to check
- * @param {object} operations - The operations object (defaults to defaultExpressions)
- * @returns {boolean} - True if the expression can be evaluated statically
- */
-function isEvaluable(expression, operations = defaultExpressions) {
-	const checkExpression = (expr) => {
-		if (!defaultExpressionEngine.isExpression(expr)) {
-			return Array.isArray(expr)
-				? expr.every(checkExpression)
-				: typeof expr === "object" && expr !== null
-					? Object.values(expr).every(checkExpression)
-					: true;
-		}
-
-		const [name, operand] = Object.entries(expr)[0];
-		const operation = operations[name];
-
-		// Special case: $literal is always evaluable (handled specially in evaluate())
-		if (name === "$literal") return true;
-
-		// If operation doesn't exist or has no evaluate function, it's not evaluable
-		if (!operation || !operation.evaluate) return false;
-
-		// Try to actually evaluate to see if it throws NoEvaluationAllowedError
-		try {
-			// First try a quick evaluation to see if this operation itself throws
-			operation.evaluate(operand, () => null); // Pass dummy evaluate function
-		} catch (e) {
-			if (e instanceof NoEvaluationAllowedError) {
-				return false;
-			}
-			// Other errors, continue checking
-		}
-
-		return checkExpression(operand);
-	};
-
-	return checkExpression(expression);
-}
-
-export { NoEvaluationAllowedError, createExpressionEngine, defaultExpressionEngine, defaultExpressions, isEvaluable };
+export { createExpressionEngine, defaultExpressionEngine, defaultExpressions };

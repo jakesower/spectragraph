@@ -2,7 +2,7 @@ import Ajv from "ajv";
 import addFormats from "ajv-formats";
 import jsonApiRequestSchema from "../fixtures/json-api-request.schema.json" with { type: "json" };
 import { CreateRequest } from "./create.js";
-import { Schema } from "data-prism";
+import { Schema } from "@data-prism/core"
 
 type Body = CreateRequest;
 

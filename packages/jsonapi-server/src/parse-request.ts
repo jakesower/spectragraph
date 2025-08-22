@@ -1,4 +1,4 @@
-import { Schema } from "data-prism";
+import { Schema } from "@data-prism/core"
 import { defaultExpressionEngine } from "@data-prism/expressions";
 import JSON5 from "json5";
 import { mapValues, pickBy, uniq } from "lodash-es";

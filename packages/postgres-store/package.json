@@ -2,20 +2,29 @@
 	"name": "@data-prism/postgres-store",
 	"version": "0.0.23",
 	"type": "module",
-	"main": "./dist/postgres-store.js",
+	"main": "./dist/postgres-store.cjs.js",
+	"module": "./dist/postgres-store.esm.js",
 	"types": "./dist/postgres-store.d.ts",
 	"exports": {
-		".": "./dist/postgres-store.js"
+		".": {
+			"types": "./dist/postgres-store.d.ts",
+			"import": "./dist/postgres-store.esm.js",
+			"require": "./dist/postgres-store.cjs.js"
+		}
 	},
 	"scripts": {
-		"build": "tsc -p ./tsconfig.json",
+		"build": "npm run clean && rollup -c && cp postgres-store.d.ts dist/",
+		"clean": "rm -rf dist",
 		"test": "NODE_ENV=test vitest --no-file-parallelism"
 	},
 	"keywords": [],
 	"author": "Jake Sower",
 	"devDependencies": {
-		"@types/pg": "^8.11.9",
-		"typescript": "^5.6.2",
+		"@rollup/plugin-commonjs": "^28.0.1",
+		"@rollup/plugin-json": "^6.1.0",
+		"@rollup/plugin-node-resolve": "^16.0.0",
+		"rollup": "^4.28.1",
+		"testcontainers": "^10.15.0",
 		"vitest": "^3.2.4"
 	},
 	"publishConfig": {
@@ -23,10 +32,10 @@
 	},
 	"private": true,
 	"dependencies": {
-		"@data-prism/expressions": "^0.0.14",
+		"@data-prism/core": "0.1.6",
+		"@data-prism/expressions": "^0.0.15",
 		"@data-prism/utils": "^0.0.7",
 		"ajv": "^8.17.1",
-		"data-prism": "^0.0.34",
 		"lodash-es": "^4.17.21",
 		"pg": "^8.12.0",
 		"vite": "7.0.6"

@@ -1,4 +1,4 @@
-import { Schema, createMemoryStore } from "data-prism";
+import { Schema, createMemoryStore } from "@data-prism/core"
 import { expect, it } from "vitest";
 import careBearSchema from "../fixtures/care-bears.schema.json";
 import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line

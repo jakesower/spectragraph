@@ -1,0 +1,122 @@
+import { mapValues, snakeCase } from "lodash-es";
+import { flatMapQuery } from "./helpers/query-helpers.js";
+import { columnTypeModifiers } from "./column-type-modifiers.js";
+
+/**
+ * @typedef {Object} SelectClauseItem
+ * @property {string} value - The select clause value
+ */
+
+/**
+ * @typedef {Object} GraphExtractContext
+ * @property {import('data-prism').Schema} schema - The schema
+ * @property {import('data-prism').RootQuery} query - The root query
+ */
+
+/**
+ * @typedef {Object.<string, Object.<string, import('./postgres-store.js').Resource>>} Graph
+ */
+
+/**
+ * Extracts a resource graph from raw SQL query results
+ * @param {any[][]} rawResults - Raw SQL query results
+ * @param {SelectClauseItem[]} selectClause - The select clause items
+ * @param {GraphExtractContext} context - Extract context with schema and query
+ * @returns {Graph} The extracted resource graph organized by type and ID
+ */
+export function extractGraph(rawResults, selectClause, context) {
+	const { schema, query: rootQuery } = context;
+	const graph = mapValues(schema.resources, () => ({}));
+
+	const extractors = flatMapQuery(schema, rootQuery, (_, info) => {
+		const { parent, parentQuery, parentRelationship, attributes, type } = info;
+		const resSchema = schema.resources[type];
+		const { idAttribute = "id" } = resSchema;
+
+		const selectAttributeMap = {};
+		selectClause.forEach((attr, idx) => {
+			selectAttributeMap[attr.value] = idx;
+		});
+
+		const parentType = parent?.type;
+		const parentRelDef =
+			parentQuery &&
+			schema.resources[parentType].relationships[parentRelationship];
+
+		const pathStr = info.path.length > 0 ? `$${info.path.join("$")}` : "";
+		const idPath = `${rootQuery.type}${pathStr}.${snakeCase(idAttribute)}`;
+		const idIdx = selectAttributeMap[idPath];
+
+		return (result) => {
+			const id = result[idIdx];
+
+			if (parentQuery) {
+				const parentResSchema = schema.resources[parentType];
+				const parentPathStr =
+					info.path.length > 1 ? `$${info.path.slice(0, -1).join("$")}` : "";
+				const parentIdAttribute = parentResSchema.idAttribute ?? "id";
+				const parentIdPath = `${rootQuery.type}${parentPathStr}.${snakeCase(
+					parentIdAttribute,
+				)}`;
+				const parentIdIdx = selectAttributeMap[parentIdPath];
+				const parentId = result[parentIdIdx];
+
+				if (!graph[parentType][parentId]) {
+					graph[parentType][parentId] = {
+						[idAttribute]: parentId,
+						id: parentId,
+						type: parentType,
+						attributes: {},
+						relationships: {},
+					};
+				}
+				const parent = graph[parentType][parentId];
+
+				if (parentRelDef.cardinality === "one") {
+					parent.relationships[parentRelationship] = id ? { id, type } : null;
+				} else {
+					parent.relationships[parentRelationship] =
+						parent.relationships[parentRelationship] ?? [];
+
+					if (
+						!parent.relationships[parentRelationship].some((r) => r.id === id)
+					) {
+						if (id !== null) {
+							parent.relationships[parentRelationship].push({ type, id });
+						}
+					}
+				}
+			}
+
+			if (!id) return;
+
+			graph[type][id] = graph[type][id] ?? {
+				id,
+				type,
+				attributes: {},
+				relationships: {},
+			};
+
+			if (attributes.length > 0) {
+				attributes.forEach((attr) => {
+					const fullAttrPath = `${rootQuery.type}${pathStr}.${snakeCase(attr)}`;
+					const resultIdx = selectAttributeMap[fullAttrPath];
+					const attrType = resSchema.attributes[attr]?.type;
+
+					graph[type][id].attributes[attr] = columnTypeModifiers[attrType]
+						? columnTypeModifiers[attrType].extract(result[resultIdx])
+						: result[resultIdx];
+				});
+			} else {
+				graph[type][id].id = id;
+				graph[type][id].type = type;
+			}
+		};
+	});
+
+	rawResults.forEach((row) =>
+		extractors.forEach((extractor) => extractor(row)),
+	);
+
+	return graph;
+}

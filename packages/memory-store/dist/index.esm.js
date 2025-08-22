@@ -3620,137 +3620,23 @@ function getResourceStructureValidator(schema, resourceType, expressionEngine) {
 	return compiled;
 }
 
-/**
- * Validates semantic aspects (relationships, attributes, expressions)
- *
- * @param {Object} schema - The schema object
- * @param {Object} query - The query to validate
- * @param {string} type - Resource type
- * @param {Array} path - Current validation path
- * @param {Object} expressionEngine - Validation functions
- * @return {{errors: Array, isValid: boolean}}
- */
-function validateSemantics(schema, query, type, path, expressionEngine) {
+function validateStructure(schema, query, type, expressionEngine) {
 	const errors = [];
-	const addError = (message, path, value) => {
-		errors.push(createErrorReporter()(message, path, value));
-	};
+	const validator = getResourceStructureValidator(
+		schema,
+		type,
+		expressionEngine,
+	);
 
-	const isValidExpression = expressionEngine
-		? expressionEngine.isExpression
-		: isExpressionLike;
-
-	const resSchema = schema.resources[type];
-
-	// Validate where clause semantics
-	if (query.where) {
-		if (
-			!isValidExpression(query.where) &&
-			Object.keys(query.where).some((k) => !(k in resSchema.attributes))
-		) {
-			addError(
-				"Invalid where clause: unknown attribute names. Use valid attributes or an expression.",
-				[...path, "where"],
-				query.where,
-			);
-		}
-	}
-
-	// Validate select semantics
-	const validateSelectObject = (selectObj, prevPath) => {
-		Object.entries(selectObj).forEach(([key, val]) => {
-			const currentPath = [...prevPath, key];
-
-			if (key === "*") return;
-
-			if (key in resSchema.relationships) {
-				// Validate that relationship points to a valid subquery, not an attribute
-				if (typeof val === "string") {
-					addError(
-						`Invalid value for relationship "${key}": expected object, got string "${val}".`,
-						currentPath,
-						val,
-					);
-				}
-				return;
-			}
-
-			if (Array.isArray(val)) {
-				addError(
-					`Invalid selection "${key}": arrays not allowed in object selects.`,
-					currentPath,
-				);
-				return;
-			}
-
-			if (typeof val === "object") {
-				if (!isValidExpression(val)) {
-					addError(
-						`Invalid selection "${key}": not a valid relationship name. Object values must be expressions or subqueries.`,
-						currentPath,
-					);
-				}
-				return;
-			}
-
-			if (typeof val === "string") {
-				if (!isValidAttribute(val, resSchema)) {
-					addError(
-						`Invalid attribute "${val}": not a valid attribute name.`,
-						currentPath,
-						val,
-					);
-				}
-			}
-		});
-	};
-
-	const validateSelectArray = (selectArray) => {
-		selectArray.forEach((val, idx) => {
-			const currentPath = [...path, "select", idx];
-
-			if (val === "*") return;
-
-			if (Array.isArray(val)) {
-				addError(
-					"Invalid selection: nested arrays not allowed.",
-					currentPath,
-					val,
-				);
-				return;
-			}
-
-			if (typeof val === "object") {
-				validateSelectObject(val, currentPath);
-				return;
-			}
-
-			if (typeof val === "string") {
-				if (!isValidAttribute(val, resSchema)) {
-					addError(
-						`Invalid attribute "${val}" in select array: use "*" or a valid attribute name.`,
-						currentPath,
-						val,
-					);
-				}
-			}
-		});
-	};
-
-	if (query.select === "*") return { errors, isValid: true };
-
-	if (Array.isArray(query.select)) validateSelectArray(query.select);
-	else if (typeof query.select === "object")
-		{validateSelectObject(query.select, [...path, "select"]);}
-	else {
-		addError(
-			'Invalid select value: must be "*", an object, or an array.',
-			[...path, "select"],
-			query.select,
+	// Structure validation first
+	const structureIsValid = validator(query);
+	if (!structureIsValid) {
+		translateAjvErrors(validator.errors, query, "query").forEach((err) =>
+			errors.push(err),
 		);
 	}
 
-	return { errors, isValid: errors.length === 0 };
+	return errors;
 }
 
 /**
@@ -3770,61 +3656,156 @@ function validateQuery(schema, rootQuery, options = {}) {
 			{ message: "Invalid schema: expected object, got " + typeof schema },
 		];
 	}
-
 	if (typeof rootQuery !== "object") {
 		return [
 			{ message: "Invalid query: expected object, got " + typeof rootQuery },
 		];
 	}
-
 	if (expressionEngine && typeof expressionEngine !== "object") {
 		return [{ message: "[data-prism] expressionEngine must be an object" }];
-
 	}
 	if (!rootQuery.type) {
 		return [{ message: "Missing query type: required for validation" }];
-
 	}
+
 	// Shape validation
-	if (!validateQueryShape)
-		{validateQueryShape = defaultValidator.compile(baseQuerySchema);}
+	if (!validateQueryShape) {
+		validateQueryShape = defaultValidator.compile(baseQuerySchema);
+	}
 	const shapeResult = validateQueryShape(rootQuery);
 	if (!shapeResult) return validateQueryShape.errors;
 
 	const errors = [];
+	const addError = (message, path, value) => {
+		errors.push(createErrorReporter()(message, path, value));
+	};
+
 	const go = (query, type, path) => {
-		const validator = getResourceStructureValidator(
-			schema,
-			type,
-			expressionEngine,
-		);
-
-		// Structure validation first
-		const structureIsValid = validator(query);
-		if (!structureIsValid) {
-			translateAjvErrors(validator.errors, query, "query").forEach((err) =>
-				errors.push(err),
-			);
-			if (typeof query.select !== "object") return;
-		}
-
-		// Semantic validation second
-		const semanticResult = validateSemantics(
+		// validate the structure of the resource first
+		const structureErrors = validateStructure(
 			schema,
 			query,
 			type,
-			path,
 			expressionEngine,
 		);
-		errors.push(...semanticResult.errors);
+		if (structureErrors) {
+			errors.push(...structureErrors);
+			if (typeof query !== "object") return errors;
+		}
 
-		// Recurse into relationships
-		if (typeof query.select === "object" && !Array.isArray(query.select)) {
-			const resSchema = schema.resources[type];
-			Object.entries(query.select).forEach(([key, val]) => {
-				if (key in resSchema.relationships && typeof val === "object")
-					{go(val, resSchema.relationships[key].type, [...path, key]);}
+		// Semantic validation second
+		const isValidExpression = expressionEngine
+			? expressionEngine.isExpression
+			: isExpressionLike;
+
+		const resSchema = schema.resources[type];
+
+		// Validate where clause semantics
+		if (query.where) {
+			if (
+				!isValidExpression(query.where) &&
+				Object.keys(query.where).some((k) => !(k in resSchema.attributes))
+			) {
+				addError(
+					"Invalid where clause: unknown attribute names. Use valid attributes or an expression.",
+					[...path, "where"],
+					query.where,
+				);
+			}
+		}
+
+		// Validate select semantics
+		const validateSelectObject = (selectObj, prevPath) => {
+			Object.entries(selectObj).forEach(([key, val]) => {
+				const currentPath = [...prevPath, key];
+
+				if (key === "*") return;
+
+				if (key in resSchema.relationships) {
+					if (typeof val !== "object") {
+						addError(
+							`Invalid value for relationship "${key}": expected object, got ${typeof val} "${val}".`,
+							currentPath,
+							val,
+						);
+					} else {
+						go(val, resSchema.relationships[key].type, [...path, key]);
+					}
+
+					return;
+				}
+
+				if (Array.isArray(val)) {
+					addError(
+						`Invalid selection "${key}": arrays not allowed in object selects.`,
+						currentPath,
+					);
+					return;
+				}
+
+				if (typeof val === "object") {
+					if (!isValidExpression(val)) {
+						addError(
+							`Invalid selection "${key}": not a valid relationship name. Object values must be expressions or subqueries.`,
+							currentPath,
+						);
+					}
+					return;
+				}
+
+				if (typeof val === "string") {
+					if (!isValidAttribute(val, resSchema)) {
+						addError(
+							`Invalid attribute "${val}": not a valid attribute name.`,
+							currentPath,
+							val,
+						);
+					}
+				}
 			});
+		};
+
+		const validateSelectArray = (selectArray) => {
+			selectArray.forEach((val, idx) => {
+				const currentPath = [...path, "select", idx];
+
+				if (val === "*") return;
+
+				if (Array.isArray(val)) {
+					addError(
+						"Invalid selection: nested arrays not allowed.",
+						currentPath,
+						val,
+					);
+					return;
+				}
+
+				if (typeof val === "object") {
+					validateSelectObject(val, currentPath);
+					return;
+				}
+
+				if (typeof val === "string") {
+					if (!isValidAttribute(val, resSchema)) {
+						addError(
+							`Invalid attribute "${val}" in select array: use "*" or a valid attribute name.`,
+							currentPath,
+							val,
+						);
+					}
+				}
+			});
+		};
+
+		if (Array.isArray(query.select)) validateSelectArray(query.select);
+		else if (typeof query.select === "object") {
+			validateSelectObject(query.select, [...path, "select"]);
+		} else if (query.select !== "*") {
+			addError(
+				'Invalid select value: must be "*", an object, or an array.',
+				[...path, "select"],
+				query.select,
+			);
 		}
 
 		return errors;
@@ -3847,33 +3828,32 @@ function normalizeQuery(schema, rootQuery) {
 		const { select } = query;
 		const resSchema = schema.resources[type];
 
-		const selectWithExpandedStar = select === "*" 
-			? Object.keys(resSchema.attributes) 
-			: select;
+		const selectWithExpandedStar =
+			select === "*" ? Object.keys(resSchema.attributes) : select;
 
 		const selectObj = Array.isArray(selectWithExpandedStar)
 			? (() => {
-				const result = {};
-				for (const item of selectWithExpandedStar) {
-					if (typeof item === "string") {
-						result[item] = item;
-					} else {
-						Object.assign(result, item);
+					const result = {};
+					for (const item of selectWithExpandedStar) {
+						if (typeof item === "string") {
+							result[item] = item;
+						} else {
+							Object.assign(result, item);
+						}
 					}
-				}
-				return result;
-			})()
+					return result;
+				})()
 			: select;
 
 		const selectWithStar = selectObj["*"]
 			? (() => {
-				const result = {};
-				for (const attr of Object.keys(resSchema.attributes)) {
-					result[attr] = attr;
-				}
-				Object.assign(result, omit(selectObj, ["*"]));
-				return result;
-			})()
+					const result = {};
+					for (const attr of Object.keys(resSchema.attributes)) {
+						result[attr] = attr;
+					}
+					Object.assign(result, omit(selectObj, ["*"]));
+					return result;
+				})()
 			: selectObj;
 
 		const selectWithSubqueries = mapValues(selectWithStar, (sel, key) => {

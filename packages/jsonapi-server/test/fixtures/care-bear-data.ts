@@ -1,4 +1,4 @@
-import { Graph } from "data-prism";
+import { Graph } from "@data-prism/core"
 
 export const careBearData = {
 	bears: {

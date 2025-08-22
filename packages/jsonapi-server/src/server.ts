@@ -1,5 +1,5 @@
 import express from "express";
-import { Schema } from "data-prism";
+import { Schema } from "@data-prism/core"
 import { create } from "./create.js";
 import { update } from "./update.js";
 import { deleteHandler } from "./delete.js";

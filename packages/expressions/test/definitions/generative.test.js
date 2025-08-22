@@ -81,7 +81,9 @@ describe("$uuid", () => {
 		it("generates UUID directly", () => {
 			const result = evaluate({ $uuid: null });
 			expect(typeof result).toBe("string");
-			expect(result).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+			expect(result).toMatch(
+				/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+			);
 		});
 	});
 

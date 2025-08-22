@@ -1,5 +1,5 @@
 import { mapValues } from "lodash-es";
-import { Schema } from "data-prism";
+import { Schema } from "@data-prism/core"
 import { validateRequest } from "./validate-request.js";
 
 type Ref = { type: string; id: string };
