@@ -43,8 +43,8 @@
 	],
 	"sideEffects": false,
 	"dependencies": {
-		"@data-prism/expressions": "*",
-		"@data-prism/utils": "*",
+		"@data-prism/expressions": "^0.0.15",
+		"@data-prism/utils": "^0.0.7",
 		"ajv": "^8.17.1",
 		"ajv-errors": "^3.0.0",
 		"ajv-formats": "^3.0.1",

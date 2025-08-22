@@ -1,5 +1,6 @@
 import { GenericContainer, Wait } from "testcontainers";
-import { Client } from "pg";
+import pkg from "pg";
+const { Client } = pkg;
 
 /**
  * Global test database container and client
