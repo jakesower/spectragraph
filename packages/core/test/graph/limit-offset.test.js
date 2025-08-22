@@ -1,7 +1,7 @@
 import { expect, it, describe } from "vitest";
 import { queryGraph } from "../../src/graph.js";
 import { ensureValidQueryResult } from "../../src/resource.js";
-import { careBearSchema, careBearData } from "@data-prism/test-fixtures";
+import { careBearSchema, careBearData } from "../interface-tests/src/index.js";
 
 describe("limit/offset", () => {
 	it("fetches a single resource", async () => {

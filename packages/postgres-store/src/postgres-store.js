@@ -128,29 +128,33 @@ export function createPostgresStore(schema, config) {
 		},
 		async create(resource) {
 			const errors = validateCreateResource(schema, resource, { validator });
-			if (errors.length > 0)
+			if (errors.length > 0) {
 				throw new Error("invalid resource", { cause: errors });
+			}
 
 			return create(resource, { config, schema });
 		},
 		async update(resource) {
 			const errors = validateUpdateResource(schema, resource, { validator });
-			if (errors.length > 0)
+			if (errors.length > 0) {
 				throw new Error("invalid resource", { cause: errors });
+			}
 
 			return update(resource, { config, schema });
 		},
 		async upsert(resource) {
 			const errors = validateMergeResource(schema, resource, { validator });
-			if (errors.length > 0)
+			if (errors.length > 0) {
 				throw new Error("invalid resource", { cause: errors });
+			}
 
 			return upsert(resource, { config, schema });
 		},
 		async delete(resource) {
 			const errors = validateDeleteResource(schema, resource);
-			if (errors.length > 0)
+			if (errors.length > 0) {
 				throw new Error("invalid resource", { cause: errors });
+			}
 
 			return deleteResource(resource, { config, schema });
 		},

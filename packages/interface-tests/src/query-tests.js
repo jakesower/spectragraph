@@ -1,5 +1,5 @@
 import { expect, it, describe } from "vitest";
-import { careBearData, careBearSchema } from "@data-prism/test-fixtures";
+import { careBearData, careBearSchema } from "./fixtures/index.js";
 
 export function runQueryTests(storeFactory) {
 	describe("Query Operations", () => {

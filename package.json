@@ -13,7 +13,7 @@
 		"build": "npm run build --workspaces --workspace=@data-prism/core --workspace=@data-prism/expressions --workspace=@data-prism/utils --workspace=@data-prism/memory-store --workspace=@data-prism/sqlite-store",
 		"test": "npm run test --workspaces",
 		"lint": "npm run lint --workspaces",
-		"lint-fix": "npm run lint --workspaces -- --fix"
+		"lint:fix": "npm run lint --workspaces -- --fix"
 	},
 	"devDependencies": {
 		"@changesets/cli": "^2.29.6",
