@@ -1,4 +1,4 @@
-import { forEachQuery, normalizeQuery } from "data-prism";
+import { forEachQuery, normalizeQuery } from "@data-prism/core"
 import { RootQuery } from "data-prism/dist/query";
 import { uniq } from "lodash-es";
 

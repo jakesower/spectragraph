@@ -98,6 +98,26 @@ describe("validateQuery", () => {
 			expect(result.length).toBeGreaterThan(0);
 		});
 
+		it("fails validation when selecting an object containing a string not an attribute", () => {
+			const query = {
+				type: "bears",
+				id: "1",
+				select: { home: { select: { noperz: "noperz" } } },
+			};
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toBeGreaterThan(0);
+		});
+
+		it("fails validation when selecting a deeply nested object containing a string not an attribute", () => {
+			const query = {
+				type: "bears",
+				id: "1",
+				select: ["name", { home: { select: { noperz: "noperz" } } }],
+			};
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toBeGreaterThan(0);
+		});
+
 		it("fails validation when selecting an array containing a string that's a relationship", () => {
 			const query = {
 				type: "bears",

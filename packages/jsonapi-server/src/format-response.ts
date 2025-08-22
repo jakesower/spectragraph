@@ -3,7 +3,7 @@ import {
 	createGraphFromTrees,
 	normalizeQuery,
 	normalizeResource,
-} from "data-prism";
+} from "@data-prism/core"
 import { mapValues, omit } from "lodash-es";
 
 export function formatResponse(schema, query, result) {
