@@ -47,8 +47,8 @@ function processResourceTree(resource, parent, parentRelSchema, context) {
 		resourceCopy.relationships[inverse] = { type: parent.type, id: parent.id };
 	}
 
-	// Prepare resource for storage and get existing reference
-	const existing = store.getOne(resource.type, resource.id);
+	// Prepare resource for storage and get existing reference  
+	const existing = resource.id ? storeGraph[resource.type]?.[resource.id] : null;
 	const resultId = resource.id ?? existing?.id ?? uuidv4();
 
 	// Optimize: Build final resource in-place to avoid intermediate objects
@@ -135,7 +135,7 @@ function processResourceTree(resource, parent, parentRelSchema, context) {
  * @returns {import('@data-prism/core').NormalResource} The processed resource tree with all nested resources created/updated
  */
 export function merge(resourceTree, context) {
-	const { schema, validator, store } = context;
+	const { schema, validator, store, storeGraph } = context;
 
 	ensureValidMergeResource(schema, resourceTree, { validator });
 
@@ -166,7 +166,7 @@ export function merge(resourceTree, context) {
 
 	const missing = expectedExistingResources(resourceTree)
 		.filter((ref) => ref && ref.id)
-		.find(({ type, id }) => !store.getOne(type, id));
+		.find(({ type, id }) => !storeGraph[type]?.[id]);
 	if (missing) {
 		throw new Error(
 			`expected { type: "${missing.type}", id: "${missing.id}" } to already exist in the graph`,

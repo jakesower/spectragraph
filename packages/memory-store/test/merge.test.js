@@ -75,7 +75,7 @@ it("creates resources in a tree and properly relates them", async () => {
 		},
 	});
 
-	const bearResult = store.query({
+	const bearResult = await store.query({
 		type: "bears",
 		id: merged.id,
 		select: ["yearIntroduced", { home: { select: ["name"] } }],

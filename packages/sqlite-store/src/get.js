@@ -1,5 +1,5 @@
 import { mapValues, omit } from "lodash-es";
-import { queryGraph } from "@data-prism/core";
+import { normalizeQuery, queryGraph } from "@data-prism/core";
 import { buildSql, composeClauses } from "./helpers/sql.js";
 import { runQuery } from "./operations/operations.js";
 import { flattenQuery } from "./helpers/query-helpers.js";
@@ -10,14 +10,16 @@ export function get(query, context) {
 	const { schema, config, rootClauses = [] } = context;
 	const { db, resources } = config;
 
-	const resConfig = resources[query.type];
+	const normalQuery = normalizeQuery(schema, query);
+
+	const resConfig = resources[normalQuery.type];
 	const rootTable = resConfig.table;
 
 	const initModifiers = {
 		from: rootTable,
 	};
 
-	return runQuery(query, context, (queryModifiers) => {
+	return runQuery(normalQuery, context, (queryModifiers) => {
 		const composedModifiers = composeClauses([
 			initModifiers,
 			...rootClauses,
@@ -38,7 +40,7 @@ export function get(query, context) {
 		const allResults = statement.all(vars) ?? null;
 
 		const dataGraph = mapValues(schema.resources, () => ({}));
-		const flatQuery = flattenQuery(schema, query);
+		const flatQuery = flattenQuery(schema, normalQuery);
 
 		const buildExtractor = () => {
 			const extractors = flatQuery.flatMap((queryPart) => {
@@ -129,7 +131,7 @@ export function get(query, context) {
 
 		return queryGraph(
 			schema,
-			omit(query, ["limit", "offset", "where"]),
+			omit(normalQuery, ["limit", "offset", "where"]),
 			dataGraph,
 		);
 	});
