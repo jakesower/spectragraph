@@ -1,10 +1,10 @@
 import { expect, it, describe } from "vitest";
 import { careBearSchema } from "./fixtures/index.js";
 
-export function runDeleteTests(storeFactory) {
+export function runDeleteTests(createStore) {
 	describe("Delete Operations", () => {
 		it("deletes a single resource", async () => {
-			const store = storeFactory(careBearSchema);
+			const store = createStore(careBearSchema);
 			const created = await store.create({
 				type: "bears",
 				attributes: {
@@ -30,7 +30,7 @@ export function runDeleteTests(storeFactory) {
 		});
 
 		it("deletes a single resource with a local relationship", async () => {
-			const store = storeFactory(careBearSchema);
+			const store = createStore(careBearSchema);
 			const createdHome = await store.create({
 				type: "homes",
 				attributes: {
@@ -69,7 +69,7 @@ export function runDeleteTests(storeFactory) {
 		});
 
 		it("deletes a single resource with a foreign to-one relationship", async () => {
-			const store = storeFactory(careBearSchema);
+			const store = createStore(careBearSchema);
 			const createdBear = await store.create({
 				type: "bears",
 				attributes: {
@@ -116,7 +116,7 @@ export function runDeleteTests(storeFactory) {
 		});
 
 		it("deletes all many-to-many foreign relationships that belong to a deleted resource", async () => {
-			const store = storeFactory(careBearSchema);
+			const store = createStore(careBearSchema);
 			const createdPower = await store.create({
 				type: "powers",
 				attributes: {

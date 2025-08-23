@@ -1,9 +1,9 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { getClient } from "../get-client.js";
 import { createPostgresStore } from "../../src/postgres-store.js";
-import careBearSchema from "../fixtures/care-bears.schema.json" with { type: "json" };
+import { careBearSchema } from "../../../interface-tests/src/index.js";
 import { careBearConfig } from "../fixtures/care-bear-config.js";
-import { careBearData } from "../fixtures/care-bear-data.js";
+import { careBearData } from "../../../interface-tests/src/index.js";
 import { reset } from "../../scripts/seed.js";
 
 describe("Order Operations", () => {

@@ -170,8 +170,9 @@ export const careBearData = {
 			id: "1",
 			attributes: {
 				name: "Brave Heart Lion",
-				relationships: {},
 			},
+			relationships: {},
 		},
 	},
+	villains: {},
 };

@@ -1,31 +1,115 @@
 import { expect, it, describe } from "vitest";
 import { careBearSchema } from "./fixtures/index.js";
 
-export function runCreateTests(storeFactory) {
-	describe("Create Operations", () => {
-		it("creates a single resource with only attributes", async () => {
-			const store = storeFactory(careBearSchema);
+export function runUpdateTests(createStore) {
+	describe("Update Operations", () => {
+		it("updates a single resource with only attributes", async () => {
+			const store = createStore(careBearSchema);
 			const created = await store.create({
 				type: "bears",
 				attributes: {
-					name: "Grumpy Bear",
-					yearIntroduced: 1982,
-					bellyBadge: "blue storm cloud with raindrops",
-					furColor: "blue",
+					name: "Champ Bear",
+					yearIntroduced: 1984,
+					bellyBadge: "yellow trophy with red heart stamp",
+					furColor: "cerulean",
+				},
+			});
+
+			await store.update({
+				type: "bears",
+				id: created.id,
+				attributes: {
+					bellyBadge: "yellow trophy with red star stamp",
 				},
 			});
 
 			const result = await store.query({
 				type: "bears",
 				id: created.id,
-				select: ["id", "name"],
+				select: ["name", "bellyBadge"],
 			});
 
-			expect(result).toEqual({ id: created.id, name: "Grumpy Bear" });
+			expect(result).toEqual({
+				name: "Champ Bear",
+				bellyBadge: "yellow trophy with red star stamp",
+			});
 		});
 
-		it("creates a single resource with a local relationship", async () => {
-			const store = storeFactory(careBearSchema);
+		it("updates a single resource with multiple attributes", async () => {
+			const store = createStore(careBearSchema);
+			const created = await store.create({
+				type: "bears",
+				attributes: {
+					name: "Bedtime Bear",
+					yearIntroduced: 1984,
+					bellyBadge: "white crescent moon with yellow star",
+					furColor: "turquoise",
+				},
+			});
+
+			await store.update({
+				type: "bears",
+				id: created.id,
+				attributes: {
+					yearIntroduced: 1985,
+					bellyBadge: "white crescent moon with silver star",
+				},
+			});
+
+			const result = await store.query({
+				type: "bears",
+				id: created.id,
+				select: ["name", "yearIntroduced", "bellyBadge"],
+			});
+
+			expect(result).toEqual({
+				name: "Bedtime Bear",
+				yearIntroduced: 1985,
+				bellyBadge: "white crescent moon with silver star",
+			});
+		});
+
+		it("updates a single resource with a local relationship", async () => {
+			const store = createStore(careBearSchema);
+			const createdHome = await store.create({
+				type: "homes",
+				attributes: {
+					name: "Rainbow Falls",
+				},
+			});
+
+			const created = await store.create({
+				type: "bears",
+				attributes: {
+					name: "Good Luck Bear",
+					yearIntroduced: 1982,
+					bellyBadge: "green four-leaf clover",
+					furColor: "green",
+				},
+			});
+
+			await store.update({
+				type: "bears",
+				id: created.id,
+				relationships: {
+					home: { type: "homes", id: createdHome.id },
+				},
+			});
+
+			const result = await store.query({
+				type: "bears",
+				id: created.id,
+				select: ["name", { home: { select: ["name"] } }],
+			});
+
+			expect(result).toEqual({
+				name: "Good Luck Bear",
+				home: { name: "Rainbow Falls" },
+			});
+		});
+
+		it("updates a single resource with a local relationship redundantly", async () => {
+			const store = createStore(careBearSchema);
 			const createdHome = await store.create({
 				type: "homes",
 				attributes: {
@@ -46,6 +130,21 @@ export function runCreateTests(storeFactory) {
 				},
 			});
 
+			await store.update({
+				type: "bears",
+				id: created.id,
+				relationships: {
+					home: { type: "homes", id: createdHome.id },
+				},
+			});
+			await store.update({
+				type: "bears",
+				id: created.id,
+				relationships: {
+					home: { type: "homes", id: createdHome.id },
+				},
+			});
+
 			const result = await store.query({
 				type: "bears",
 				id: created.id,
@@ -58,8 +157,8 @@ export function runCreateTests(storeFactory) {
 			});
 		});
 
-		it("creates a single resource with a foreign to-one relationship", async () => {
-			const store = storeFactory(careBearSchema);
+		it("updates a single resource with a foreign to-one relationship", async () => {
+			const store = createStore(careBearSchema);
 			const createdBear = await store.create({
 				type: "bears",
 				attributes: {
@@ -77,6 +176,11 @@ export function runCreateTests(storeFactory) {
 					caringMeter: 0.95,
 					isInClouds: true,
 				},
+			});
+
+			await store.update({
+				type: "homes",
+				id: createdHome.id,
 				relationships: {
 					residents: [{ type: "bears", id: createdBear.id }],
 				},
@@ -103,8 +207,8 @@ export function runCreateTests(storeFactory) {
 			});
 		});
 
-		it("creates a single resource with a many-to-many relationship", async () => {
-			const store = storeFactory(careBearSchema);
+		it("updates a single resource with a many-to-many relationship", async () => {
+			const store = createStore(careBearSchema);
 			const createdBear = await store.create({
 				type: "bears",
 				attributes: {
@@ -121,6 +225,11 @@ export function runCreateTests(storeFactory) {
 					name: "Care Cousins Call",
 					description: "Just like the Care Bear Stare, but with the cousins.",
 				},
+			});
+
+			await store.update({
+				type: "powers",
+				id: createdPower.id,
 				relationships: {
 					wielders: [{ type: "bears", id: createdBear.id }],
 				},
@@ -147,8 +256,107 @@ export function runCreateTests(storeFactory) {
 			});
 		});
 
+		it("updates a single resource with a many-to-many relationship with redundant updates", async () => {
+			const store = createStore(careBearSchema);
+			const createdBear = await store.create({
+				type: "bears",
+				attributes: {
+					name: "Love-a-Lot Bear",
+					yearIntroduced: 1982,
+					bellyBadge: "two red hearts",
+					furColor: "magenta",
+				},
+			});
+
+			const createdPower = await store.create({
+				type: "powers",
+				attributes: {
+					name: "Care Cousins Call",
+					description: "Just like the Care Bear Stare, but with the cousins.",
+				},
+				relationships: {
+					wielders: [{ type: "bears", id: createdBear.id }],
+				},
+			});
+
+			await store.update({
+				type: "powers",
+				id: createdPower.id,
+				relationships: {
+					wielders: [{ type: "bears", id: createdBear.id }],
+				},
+			});
+			await store.update({
+				type: "powers",
+				id: createdPower.id,
+				relationships: {
+					wielders: [{ type: "bears", id: createdBear.id }],
+				},
+			});
+
+			const powerResult = await store.query({
+				type: "powers",
+				id: createdPower.id,
+				select: ["name", { wielders: { select: ["name"] } }],
+			});
+			expect(powerResult).toEqual({
+				name: "Care Cousins Call",
+				wielders: [{ name: "Love-a-Lot Bear" }],
+			});
+
+			const bearResult = await store.query({
+				type: "bears",
+				id: createdBear.id,
+				select: ["name", { powers: { select: ["name"] } }],
+			});
+			expect(bearResult).toEqual({
+				name: "Love-a-Lot Bear",
+				powers: [{ name: "Care Cousins Call" }],
+			});
+		});
+
+		it("fails to update a single resource with a nonexistent ID", async () => {
+			const store = createStore(careBearSchema);
+			
+			await expect(async () => {
+				await store.update({
+					type: "bears",
+					id: "nonexistent-id",
+					attributes: {
+						name: "Watchful Bear",
+						yearIntroduced: 2019,
+						bellyBadge: "star with swirls",
+						furColor: "pastel green",
+					},
+				});
+			}).rejects.toThrowError();
+		});
+
+		it("fails to update a single resource with an invalid attribute", async () => {
+			const store = createStore(careBearSchema);
+			const created = await store.create({
+				type: "bears",
+				attributes: {
+					name: "Grumpy Bear",
+					yearIntroduced: 1982,
+					bellyBadge: "blue storm cloud with raindrops",
+					furColor: "blue",
+				},
+			});
+
+			await expect(async () => {
+				await store.update({
+					type: "bears",
+					id: created.id,
+					attributes: {
+						bellyBadge: 1999,
+					},
+				});
+			}).rejects.toThrowError();
+		});
+
 		it("removes foreign relationships that are no longer present in the base resource", async () => {
-			const store = storeFactory(careBearSchema);
+			const store = createStore(careBearSchema);
 			const createdHome = await store.create({
 				type: "homes",
 				attributes: {
@@ -194,13 +402,18 @@ export function runCreateTests(storeFactory) {
 				residents: [{ name: "Share Bear" }, { name: "Always There Bear" }],
 			});
 
-			await store.create({
+			const noHeartsCastle = await store.create({
 				type: "homes",
 				attributes: {
 					name: "No Heart's Castle",
 					caringMeter: 0,
 					isInClouds: true,
 				},
+			});
+
+			await store.update({
+				type: "homes",
+				id: noHeartsCastle.id,
 				relationships: {
 					residents: [{ type: "bears", id: shareBear.id }],
 				},
@@ -218,7 +431,7 @@ export function runCreateTests(storeFactory) {
 		});
 
 		it("keeps many-to-many foreign relationships that belong to a second resource", async () => {
-			const store = storeFactory(careBearSchema);
+			const store = createStore(careBearSchema);
 			const createdPower = await store.create({
 				type: "powers",
 				attributes: {
@@ -263,11 +476,16 @@ export function runCreateTests(storeFactory) {
 				wielders: [{ name: "Harmony Bear" }, { name: "Always There Bear" }],
 			});
 
-			await store.create({
+			const createdPower2 = await store.create({
 				type: "powers",
 				attributes: {
 					name: "Fly",
 				},
+			});
+
+			await store.update({
+				type: "powers",
+				id: createdPower2.id,
 				relationships: {
 					wielders: [{ type: "bears", id: harmonyBear.id }],
 				},

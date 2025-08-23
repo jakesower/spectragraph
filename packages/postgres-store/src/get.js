@@ -41,15 +41,15 @@ export async function getOne(type, id, context) {
 
 	/** @type {Array<[string, LocalJoin]>} */
 	const localRelationships = Object.entries(joins).filter(
-		([_, j]) => "localColumn" in j,
+		([, j]) => "localColumn" in j,
 	);
 	/** @type {Array<[string, ForeignJoin]>} */
 	const foreignRelationships = Object.entries(joins).filter(
-		([_, j]) => "foreignColumn" in j,
+		([, j]) => "foreignColumn" in j,
 	);
 	/** @type {Array<[string, ManyToManyJoin]>} */
 	const manyToManyRelationships = Object.entries(joins).filter(
-		([_, j]) => "localJoinColumn" in j,
+		([, j]) => "localJoinColumn" in j,
 	);
 
 	const foreignQueries = includeRelationships
@@ -166,7 +166,7 @@ export async function getAll(type, context) {
 
 	/** @type {Array<[string, LocalJoin]>} */
 	const localRelationships = Object.entries(joins).filter(
-		([_, j]) => "localColumn" in j,
+		([, j]) => "localColumn" in j,
 	);
 
 	const cols = [
@@ -223,11 +223,11 @@ export async function getAll(type, context) {
 	if (includeRelationships) {
 		/** @type {Array<[string, ForeignJoin]>} */
 		const foreignRelationships = Object.entries(joins).filter(
-			([_, j]) => "foreignColumn" in j,
+			([, j]) => "foreignColumn" in j,
 		);
 		/** @type {Array<[string, ManyToManyJoin]>} */
 		const manyToManyRelationships = Object.entries(joins).filter(
-			([_, j]) => "localJoinColumn" in j,
+			([, j]) => "localJoinColumn" in j,
 		);
 
 		const foreignQueries = [

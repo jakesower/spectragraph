@@ -68,5 +68,13 @@ export const careBearSchema = {
 			},
 			relationships: {},
 		},
+		villains: {
+			idAttribute: "id",
+			attributes: {
+				id: { type: "string" },
+				name: { type: "string" },
+			},
+			relationships: {},
+		},
 	},
 };

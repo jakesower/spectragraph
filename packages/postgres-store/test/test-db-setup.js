@@ -23,7 +23,7 @@ export async function startTestDb() {
 		.withEnvironment({
 			POSTGRES_DB: "test_db",
 			POSTGRES_USER: "test_user", 
-			POSTGRES_PASSWORD: "test_password"
+			POSTGRES_PASSWORD: "test_password",
 		})
 		.withExposedPorts(5432)
 		.withWaitStrategy(Wait.forLogMessage("database system is ready to accept connections", 2))
