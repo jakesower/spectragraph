@@ -59,6 +59,22 @@
 					"inverse": "powers"
 				}
 			}
+		},
+		"companions": {
+			"idAttribute": "companionId",
+			"attributes": {
+				"companionId": { "type": "string" },
+				"name": { "type": "string" }
+			},
+			"relationships": {}
+		},
+		"villains": {
+			"idAttribute": "id",
+			"attributes": {
+				"id": { "type": "string" },
+				"name": { "type": "string" }
+			},
+			"relationships": {}
 		}
 	}
 }

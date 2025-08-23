@@ -1,10 +1,10 @@
 import { expect, it, describe } from "vitest";
 import { careBearSchema } from "./fixtures/index.js";
 
-export function runUpsertTests(storeFactory) {
+export function runUpsertTests(createStore) {
 	describe("Upsert Operations", () => {
 		it("creates a single resource with upsert", async () => {
-			const store = storeFactory(careBearSchema);
+			const store = createStore(careBearSchema);
 			const upserted = await store.upsert({
 				type: "bears",
 				attributes: {
@@ -25,7 +25,7 @@ export function runUpsertTests(storeFactory) {
 		});
 
 		it("updates a single resource with upsert", async () => {
-			const store = storeFactory(careBearSchema);
+			const store = createStore(careBearSchema);
 			const created = await store.create({
 				type: "bears",
 				attributes: {
@@ -57,7 +57,7 @@ export function runUpsertTests(storeFactory) {
 		});
 
 		it("upserts a single resource with a local relationship", async () => {
-			const store = storeFactory(careBearSchema);
+			const store = createStore(careBearSchema);
 			const upsertedHome = await store.upsert({
 				type: "homes",
 				attributes: {
@@ -91,7 +91,7 @@ export function runUpsertTests(storeFactory) {
 		});
 
 		it("upserts a single resource with a foreign to-one relationship", async () => {
-			const store = storeFactory(careBearSchema);
+			const store = createStore(careBearSchema);
 			const upsertedBear = await store.upsert({
 				type: "bears",
 				attributes: {
@@ -136,7 +136,7 @@ export function runUpsertTests(storeFactory) {
 		});
 
 		it("upserts a single resource with a many-to-many relationship", async () => {
-			const store = storeFactory(careBearSchema);
+			const store = createStore(careBearSchema);
 			const upsertedBear = await store.upsert({
 				type: "bears",
 				attributes: {
@@ -180,7 +180,7 @@ export function runUpsertTests(storeFactory) {
 		});
 
 		it("upserts a single resource with an ID given", async () => {
-			const store = storeFactory(careBearSchema);
+			const store = createStore(careBearSchema);
 			const customId = "custom-bear-id-123";
 
 			await store.upsert({
@@ -204,7 +204,7 @@ export function runUpsertTests(storeFactory) {
 		});
 
 		it("fails to upsert a single resource with an invalid attribute", async () => {
-			const store = storeFactory(careBearSchema);
+			const store = createStore(careBearSchema);
 			
 			await expect(async () =>
 				store.upsert({

@@ -63,8 +63,8 @@ const QUERY_CLAUSE_EXTRACTORS = {
 		const propExprs = Object.entries(where).map(([propKey, propValOrExpr]) => {
 			if (whereExpressionEngine.isExpression(where)) {
 				// TODO
-				const [operation, args] = Object.entries(where)[0];
-				return whereExpressionEngine.evaluate(where);
+				// const [operation, args] = Object.entries(where)[0];
+				// return whereExpressionEngine.evaluate(where);
 			}
 
 			if (whereExpressionEngine.isExpression(propValOrExpr)) {

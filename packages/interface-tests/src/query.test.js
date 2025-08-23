@@ -1,13 +1,13 @@
 import { expect, it, describe } from "vitest";
 import { careBearData, careBearSchema } from "./fixtures/index.js";
 
-export function runQueryTests(storeFactory) {
+export function runQueryTests(createStore) {
 	describe("Query Operations", () => {
 		it("fetches appropriately on an empty store", async () => {
-			const store = storeFactory(careBearSchema);
+			const store = createStore(careBearSchema);
 			const result = await store.query({
-				type: "bears",
-				id: "1",
+				type: "companions",
+				id: "nonexistent",
 				select: ["name"],
 			});
 
@@ -15,9 +15,9 @@ export function runQueryTests(storeFactory) {
 		});
 
 		it("fetches appropriately on an empty store with multiple resources", async () => {
-			const store = storeFactory(careBearSchema);
+			const store = createStore(careBearSchema);
 			const result = await store.query({
-				type: "bears",
+				type: "villains",
 				select: ["name"],
 			});
 
@@ -25,7 +25,7 @@ export function runQueryTests(storeFactory) {
 		});
 
 		it("fetches a single resource", async () => {
-			const store = storeFactory(careBearSchema, {
+			const store = createStore(careBearSchema, {
 				initialData: careBearData,
 			});
 
@@ -39,7 +39,7 @@ export function runQueryTests(storeFactory) {
 		});
 
 		it("fetches a single resource with specific attributes", async () => {
-			const store = storeFactory(careBearSchema, {
+			const store = createStore(careBearSchema, {
 				initialData: careBearData,
 			});
 
@@ -59,7 +59,7 @@ export function runQueryTests(storeFactory) {
 		});
 
 		it("can initialize with initial data", async () => {
-			const store = storeFactory(careBearSchema, {
+			const store = createStore(careBearSchema, {
 				initialData: { bears: careBearData.bears },
 			});
 
@@ -78,7 +78,7 @@ export function runQueryTests(storeFactory) {
 
 		describe("* notation", () => {
 			it("fetches a single resource with * as a string", async () => {
-				const store = storeFactory(careBearSchema, {
+				const store = createStore(careBearSchema, {
 					initialData: careBearData,
 				});
 
@@ -98,7 +98,7 @@ export function runQueryTests(storeFactory) {
 			});
 
 			it("fetches a single resource with * in an array", async () => {
-				const store = storeFactory(careBearSchema, {
+				const store = createStore(careBearSchema, {
 					initialData: careBearData,
 				});
 
@@ -118,7 +118,7 @@ export function runQueryTests(storeFactory) {
 			});
 
 			it("fetches a single resource with * in an object", async () => {
-				const store = storeFactory(careBearSchema, {
+				const store = createStore(careBearSchema, {
 					initialData: careBearData,
 				});
 

@@ -50,5 +50,9 @@ export const careBearConfig = {
 			table: "companion",
 			idType: "varchar",
 		},
+		villains: {
+			table: "villains",
+			idType: "varchar NOT NULL DEFAULT uuid_generate_v4()",
+		},
 	},
 };

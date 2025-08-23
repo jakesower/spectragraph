@@ -231,5 +231,48 @@ describe("where clauses", () => {
 
 			expect(result).toEqual([{ id: "1" }, { id: "3" }]);
 		});
+
+		it("filters using $eq", () => {
+			const graph = {
+				bears: {
+					3: {
+						id: "3",
+						type: "bears",
+						attributes: { id: "3", bellyBadge: "shooting star" },
+						relationships: {},
+					},
+				},
+				homes: {},
+				powers: {
+					careBearStare: {
+						id: "careBearStare",
+						type: "powers",
+						attributes: { powerId: "careBearStare" },
+						relationships: {
+							wielders: [{ type: "bears", id: "3" }],
+						},
+					},
+				},
+			};
+
+			const query = {
+				type: "powers",
+				id: "careBearStare",
+				select: {
+					powerId: "powerId",
+					wielders: {
+						select: { id: "id" },
+						where: { bellyBadge: { $eq: "shooting star" } },
+						type: "bears",
+					},
+				},
+			};
+
+			const result = queryGraph(careBearSchema, query, graph);
+			expect(result).toEqual({
+				powerId: "careBearStare",
+				wielders: [{ id: "3" }],
+			});
+		});
 	});
 });

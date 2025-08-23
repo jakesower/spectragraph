@@ -1,17 +1,17 @@
 import { describe } from "vitest";
-import { runQueryTests } from "./query-tests.js";
-import { runCreateTests } from "./create-tests.js";
-import { runUpdateTests } from "./update-tests.js";
-import { runDeleteTests } from "./delete-tests.js";
-import { runUpsertTests } from "./upsert-tests.js";
+import { runQueryTests } from "./query.test.js";
+import { runCreateTests } from "./create.test.js";
+import { runUpdateTests } from "./update.test.js";
+import { runDeleteTests } from "./delete.test.js";
+import { runUpsertTests } from "./upsert.test.js";
 
-export function runInterfaceTests(storeFactory) {
+export function runInterfaceTests(createStore) {
 	describe("Store Interface Tests", () => {
-		runQueryTests(storeFactory);
-		runCreateTests(storeFactory);
-		runUpdateTests(storeFactory);
-		runDeleteTests(storeFactory);
-		runUpsertTests(storeFactory);
+		runQueryTests(createStore);
+		runCreateTests(createStore);
+		runUpdateTests(createStore);
+		runDeleteTests(createStore);
+		runUpsertTests(createStore);
 	});
 }
 
