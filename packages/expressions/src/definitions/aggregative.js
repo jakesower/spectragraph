@@ -4,10 +4,6 @@ const $count = {
 		return this.evaluate(operand);
 	},
 	evaluate: (operand) => operand.length,
-	schema: {
-		type: "integer",
-		minimum: 0,
-	},
 };
 
 const $max = {
@@ -19,9 +15,6 @@ const $max = {
 		operand.length === 0
 			? undefined
 			: operand.reduce((max, v) => Math.max(max, v)),
-	schema: {
-		type: "number",
-	},
 };
 
 const $min = {
@@ -33,9 +26,6 @@ const $min = {
 		operand.length === 0
 			? undefined
 			: operand.reduce((min, v) => Math.min(min, v)),
-	schema: {
-		type: "number",
-	},
 };
 
 const $sum = {
@@ -44,9 +34,6 @@ const $sum = {
 		return this.evaluate(operand);
 	},
 	evaluate: (operand) => operand.reduce((sum, v) => sum + v, 0),
-	schema: {
-		type: "number",
-	},
 };
 
 const $mean = {
@@ -58,9 +45,6 @@ const $mean = {
 		operand.length === 0
 			? undefined
 			: operand.reduce((sum, v) => sum + v, 0) / operand.length,
-	schema: {
-		type: "number",
-	},
 };
 
 const $median = {
@@ -75,9 +59,6 @@ const $median = {
 		return sorted.length % 2 === 0
 			? (sorted[mid - 1] + sorted[mid]) / 2
 			: sorted[mid];
-	},
-	schema: {
-		type: "number",
 	},
 };
 
@@ -109,9 +90,6 @@ const $mode = {
 			: modes.length === 1
 				? modes[0]
 				: modes.sort((a, b) => a - b);
-	},
-	schema: {
-		type: ["number", "array"],
 	},
 };
 

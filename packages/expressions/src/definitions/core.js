@@ -9,7 +9,7 @@ const $apply = {
 const $isDefined = {
 	name: "$isDefined",
 	apply: (_, inputData) => inputData !== undefined,
-	evaluate: function (operand) {
+	evaluate(operand) {
 		if (!Array.isArray(operand)) {
 			throw new Error(
 				"$isDefined evaluate form requires array operand: [value]",
@@ -24,7 +24,7 @@ const $isDefined = {
 const $echo = {
 	name: "$echo",
 	apply: (_, inputData) => inputData,
-	evaluate: function (operand) {
+	evaluate(operand) {
 		if (!Array.isArray(operand)) {
 			throw new Error("$echo evaluate form requires array operand: [value]");
 		}
@@ -53,7 +53,7 @@ const $ensurePath = {
 		go(inputData, operand.split("."));
 		return inputData;
 	},
-	evaluate: function (operand) {
+	evaluate(operand) {
 		if (!Array.isArray(operand)) {
 			throw new Error(
 				"$ensurePath evaluate form requires array operand: [object, path]",
@@ -68,7 +68,7 @@ const $ensurePath = {
 const $get = {
 	name: "$get",
 	apply: (operand, inputData) => get(inputData, operand),
-	evaluate: function (operand) {
+	evaluate(operand) {
 		if (!Array.isArray(operand)) {
 			throw new Error(
 				"$get evaluate form requires array operand: [object, path]",
@@ -82,7 +82,7 @@ const $get = {
 
 const $if = {
 	name: "$if",
-	apply: (operand, inputData, apply, isExpression) => {
+	apply: (operand, inputData, { apply, isExpression }) => {
 		if (
 			!isExpression(operand.if) &&
 			operand.if !== true &&
@@ -94,7 +94,7 @@ const $if = {
 		const outcome = apply(operand.if, inputData) ? operand.then : operand.else;
 		return isExpression(outcome) ? apply(outcome, inputData) : outcome;
 	},
-	evaluate: (operand, evaluate) => {
+	evaluate: (operand, { evaluate }) => {
 		const conditionResult =
 			typeof operand.if === "boolean" ? operand.if : evaluate(operand.if);
 		const outcome = conditionResult ? operand.then : operand.else;
@@ -107,7 +107,7 @@ const $if = {
 
 const $case = {
 	name: "$case",
-	apply: (operand, inputData, apply, isExpression) => {
+	apply: (operand, inputData, { apply, isExpression }) => {
 		// Evaluate the value once
 		const value = isExpression(operand.value)
 			? apply(operand.value, inputData)
@@ -143,38 +143,9 @@ const $case = {
 			? apply(operand.default, inputData)
 			: operand.default;
 	},
-	evaluate: (operand, evaluate) => {
-		// Evaluate the value once
-		const value =
-			typeof operand.value === "object" && operand.value !== null
-				? evaluate(operand.value)
-				: operand.value;
-
-		// Check each case
-		for (const caseItem of operand.cases) {
-			let matches = false;
-
-			// Handle both simple equality and complex expressions
-			if (typeof caseItem.when === "object" && caseItem.when !== null) {
-				// For evaluate, we can only handle expressions that work with the value
-				// (not $get which needs inputData context)
-				matches = evaluate(caseItem.when) === value;
-			} else {
-				// Simple equality comparison
-				matches = value === caseItem.when;
-			}
-
-			if (matches) {
-				return typeof caseItem.then === "object" && caseItem.then !== null
-					? evaluate(caseItem.then)
-					: caseItem.then;
-			}
-		}
-
-		// Return default if no case matches
-		return typeof operand.default === "object" && operand.default !== null
-			? evaluate(operand.default)
-			: operand.default;
+	evaluate(operand, context) {
+		const [trueOperand, value] = operand;
+		return this.apply(trueOperand, value, context);
 	},
 	controlsEvaluation: true,
 };
@@ -182,24 +153,27 @@ const $case = {
 const $literal = {
 	name: "$literal",
 	apply: (operand) => operand,
+	evaluate: () => {
+		throw new Error("handled in expressions.js");
+	},
 	controlsEvaluation: true,
 };
 
 const $debug = {
 	name: "$debug",
-	apply: (_, inputData) => {
-		console.log(inputData);
-		return inputData;
+	apply: (evaluatedOperand) => {
+		console.log(evaluatedOperand);
+		return evaluatedOperand;
 	},
-	evaluate: (operand) => {
-		console.log(operand);
-		return operand;
+	evaluate(evaluatedOperand) {
+		console.log(evaluatedOperand);
+		return evaluatedOperand;
 	},
 };
 
 const $compose = {
 	name: "$compose",
-	apply: (operand, inputData, apply, isExpression) =>
+	apply: (operand, inputData, { apply, isExpression }) =>
 		operand.reduceRight((acc, expr) => {
 			if (!isExpression(expr)) {
 				throw new Error(`${JSON.stringify(expr)} is not a valid expression`);
@@ -207,15 +181,13 @@ const $compose = {
 
 			return apply(expr, acc);
 		}, inputData),
-	evaluate: () => {
-		throw new Error("$compose is not a valid expression for evaluation");
-	},
+	evaluate: ([exprs, init], { apply }) => apply({ $compose: exprs }, init),
 	controlsEvaluation: true,
 };
 
 const $pipe = {
 	name: "$pipe",
-	apply: (operand, inputData, apply, isExpression) =>
+	apply: (operand, inputData, { apply, isExpression }) =>
 		operand.reduce((acc, expr) => {
 			if (!isExpression(expr)) {
 				throw new Error(`${JSON.stringify(expr)} is not a valid expression`);
@@ -223,9 +195,7 @@ const $pipe = {
 
 			return apply(expr, acc);
 		}, inputData),
-	evaluate: () => {
-		throw new Error("$pipe is not a valid expression for evaluation");
-	},
+	evaluate: ([exprs, init], { apply }) => apply({ $pipe: exprs }, init),
 	controlsEvaluation: true,
 };
 

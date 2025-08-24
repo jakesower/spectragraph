@@ -2,6 +2,8 @@
 
 A JavaScript expression engine for enhancing Data Prism queries with computed values and conditional logic. Data Prism Expressions provides a JSON-based syntax for creating dynamic where clauses and calculated select fields, extending the core querying capabilities with lightweight programmatic logic.
 
+It is suitable for more general applications that call for simple logic that needs to be written as JSON. It is inspired by the Lisp concept of code being data.
+
 ## Overview
 
 Data Prism Expressions is built around several key principles:
@@ -43,10 +45,10 @@ Expressions are JSON objects that describe computations to be performed on data.
 
 ### Expression Engine
 
-The expression engine compiles and evaluates expressions against data:
+The expression engine evaluates expressions against data:
 
 ```javascript
-import { defaultExpressionEngine, isEvaluable } from "@data-prism/expressions";
+import { defaultExpressionEngine } from "@data-prism/expressions";
 
 const expression = { $gt: 21 };
 const data = 25;
@@ -54,11 +56,9 @@ const data = 25;
 const result = defaultExpressionEngine.apply(expression, data);
 // Returns: true
 
-// Check if expression can be evaluated without input data
-if (isEvaluable({ $sum: [1, 2, 3] })) {
-	const staticResult = defaultExpressionEngine.evaluate({ $sum: [1, 2, 3] });
-	// Returns: 6
-}
+// Evaluate expressions without input data (for static expressions)
+const staticResult = defaultExpressionEngine.evaluate({ $sum: [1, 2, 3] });
+// Returns: 6
 ```
 
 ## API Reference
@@ -119,24 +119,6 @@ const result = engine.apply(expression, data);
 // Returns: 10 (sum of [10, 20])
 ```
 
-#### `compile(expression)`
-
-Compiles an expression into a reusable function.
-
-**Parameters:**
-
-- `expression` (Expression) - The expression to compile
-
-**Returns:** Function that takes data and returns the evaluation result
-
-```javascript
-const expression = { $gt: 18 };
-const compiledFn = engine.compile(expression);
-
-const result1 = compiledFn(25); // true
-const result2 = compiledFn(16); // false
-```
-
 #### `evaluate(expression)`
 
 Evaluates an expression without input data (for static expressions).
@@ -168,92 +150,40 @@ const isExpr1 = engine.isExpression({ $get: "name" }); // true
 const isExpr2 = engine.isExpression({ name: "John" }); // false
 ```
 
-#### `isEvaluable(expression, operations?)`
-
-Tests whether an expression can be evaluated without input data context. This is useful for determining if an expression can be statically evaluated or if it requires runtime data.
-
-**Parameters:**
-
-- `expression` (any) - The expression or value to test
-- `operations` (object, optional) - Custom operations object (defaults to defaultExpressions)
-
-**Returns:** Boolean indicating if the expression can be evaluated statically
-
-```javascript
-import { isEvaluable } from "@data-prism/expressions";
-
-// Static expressions that can be evaluated
-isEvaluable({ $sum: [1, 2, 3] });           // true - no input data needed
-isEvaluable({ $random: {} });               // true - generates value independently  
-isEvaluable({ $eq: [5, 5] });               // true - static comparison
-isEvaluable({ $nowUTC: null });             // true - system time access
-isEvaluable("hello");                       // true - non-expression values are always evaluable
-
-// Dynamic expressions that require input data
-isEvaluable({ $get: "name" });              // false - needs data.name
-isEvaluable({ $echo: null });               // false - returns input data
-isEvaluable({ $compose: [{ $sum: [1,2] }]}); // false - requires data flow
-
-// Complex nested expressions
-isEvaluable({
-  $if: {
-    if: true,
-    then: { $sum: [10, 20] },
-    else: "fallback"
-  }
-}); // true - all parts are static
-
-isEvaluable({
-  $if: {
-    if: { $get: "isActive" },
-    then: "yes", 
-    else: "no"
-  }
-}); // false - condition requires input data
-
-// Arrays and objects
-isEvaluable([1, 2, { $random: {} }]);       // true - all elements evaluable
-isEvaluable([1, 2, { $get: "value" }]);     // false - contains non-evaluable expression
-isEvaluable({ 
-  total: { $sum: [1, 2, 3] },
-  id: { $uuid: null }
-}); // true - all properties evaluable
-```
-
-**Use Cases:**
-
-- **Static optimization**: Pre-compute expressions that don't depend on runtime data
-- **Validation**: Check if expressions are suitable for compilation or caching
-- **Query planning**: Determine which parts of a query can be evaluated at build time
-- **Error prevention**: Avoid runtime errors by checking evaluability before calling `evaluate()`
-
-**Implementation Notes:**
-
-- Returns `true` for non-expression values (strings, numbers, arrays, objects)
-- Recursively checks nested expressions in arrays and objects  
-- Tests actual evaluation to detect expressions that throw `NoEvaluationAllowedError`
-- Handles control flow expressions (`$if`, `$case`) by checking their operands
-- Works with custom operation definitions
-
 ## Built-in Operations
 
 ### Core Operations
 
-#### `$get`
+#### `$apply`
 
-Retrieves a value from the data object using lodash-style path notation.
+Applies the parameters directly (identity for parameters).
 
 ```json
-{ "$get": "name" }          // Gets data.name
-{ "$get": "user.age" }      // Gets data.user.age (nested path)
+{ "$apply": [1, 2, 3] } // Returns [1, 2, 3]
 ```
 
-#### `$literal`
 
-Returns a literal value (useful when you need to pass a value that might be confused with an expression).
+#### `$compose`
+
+Composes multiple expressions together using mathematical composition order (right-to-left). The expressions are applied in the order `f(g(h(x)))` where `[f, g, h]` means `f` applied to the result of `g` applied to the result of `h` applied to `x`.
 
 ```json
-{ "$literal": { "$get": "not-an-expression" } }
+{
+	"$compose": [
+		{ "$map": { "$get": "name" } }, // f: map to names
+		{ "$filter": { "$gt": 18 } }, // g: filter adults
+		{ "$get": "users" } // h: get users
+	]
+}
+```
+
+#### `$debug`
+
+Evaluates an expression, logs the result to console, and returns the result (useful for debugging intermediate values in expression chains).
+
+```json
+{ "$debug": { "$get": "name" } } // Logs the value of data.name, returns data.name
+{ "$debug": { "$sum": [1, 2, 3] } } // Logs 6, returns 6
 ```
 
 #### `$echo`
@@ -264,6 +194,24 @@ Returns the input data unchanged (identity function).
 { "$echo": null } // Returns the entire input data object
 ```
 
+#### `$ensurePath`
+
+Validates that a path exists in the data, throwing an error if not found.
+
+```json
+{ "$ensurePath": "user.profile.email" } // Throws if path doesn't exist
+```
+
+#### `$get`
+
+Retrieves a value from the data object using lodash-style path notation.
+
+```json
+{ "$get": "name" }          // Gets data.name
+{ "$get": "user.age" }      // Gets data.user.age (nested path)
+```
+
+
 #### `$isDefined`
 
 Tests whether the input data is defined (not undefined).
@@ -272,19 +220,31 @@ Tests whether the input data is defined (not undefined).
 { "$isDefined": null } // Returns true if data !== undefined
 ```
 
-#### `$if`
+#### `$literal`
 
-Conditional expression that evaluates different branches based on a condition.
+Returns a literal value (useful when you need to pass a value that might be confused with an expression).
+
+```json
+{ "$literal": { "$get": "not-an-expression" } }
+```
+
+#### `$pipe`
+
+Pipes data through multiple expressions using pipeline order (left-to-right). The expressions are applied in the order `h(g(f(x)))` where `[h, g, f]` means `f` applied to `x`, then `g` applied to that result, then `h` applied to that result.
 
 ```json
 {
-	"$if": {
-		"if": { "$gte": 18 },
-		"then": "Adult",
-		"else": "Minor"
-	}
+	"$pipe": [
+		{ "$get": "users" }, // h: get users
+		{ "$filter": { "$gt": 18 } }, // g: filter adults
+		{ "$map": { "$get": "name" } } // f: map to names
+	]
 }
 ```
+
+**Note**: `$pipe` is often more intuitive as it matches the natural reading order, while `$compose` follows mathematical function composition conventions.
+
+### Conditional Operations
 
 #### `$case`
 
@@ -313,58 +273,18 @@ The `$case` expression evaluates the `value` once and compares it against each `
 
 All parts (`value`, `when`, `then`, `default`) can be expressions or literal values.
 
-#### `$compose`
+#### `$if`
 
-Composes multiple expressions together using mathematical composition order (right-to-left). The expressions are applied in the order `f(g(h(x)))` where `[f, g, h]` means `f` applied to the result of `g` applied to the result of `h` applied to `x`.
-
-```json
-{
-	"$compose": [
-		{ "$map": { "$get": "name" } },     // f: map to names
-		{ "$filter": { "$gt": 18 } },       // g: filter adults
-		{ "$get": "users" }                 // h: get users
-	]
-}
-```
-ë
-#### `$pipe`
-
-Pipes data through multiple expressions using pipeline order (left-to-right). The expressions are applied in the order `f(g(h(x)))` where `[h, g, f]` means `h` applied to `x`, then `g` applied to that result, then `f` applied to that result.
+Conditional expression that evaluates different branches based on a condition.
 
 ```json
 {
-	"$pipe": [
-		{ "$get": "users" },                // h: get users
-		{ "$filter": { "$gt": 18 } },       // g: filter adults
-		{ "$map": { "$get": "name" } }      // f: map to names
-	]
+	"$if": {
+		"if": { "$gte": 18 },
+		"then": "Adult",
+		"else": "Minor"
+	}
 }
-```
-
-**Note**: `$pipe` is often more intuitive as it matches the natural reading order, while `$compose` follows mathematical function composition conventions.
-
-#### `$debug`
-
-Logs the input data to console and returns it unchanged (useful for debugging).
-
-```json
-{ "$debug": null } // Logs data to console, returns data
-```
-
-#### `$ensurePath`
-
-Validates that a path exists in the data, throwing an error if not found.
-
-```json
-{ "$ensurePath": "user.profile.email" } // Throws if path doesn't exist
-```
-
-#### `$apply`
-
-Applies the parameters directly (identity for parameters).
-
-```json
-{ "$apply": [1, 2, 3] } // Returns [1, 2, 3]
 ```
 
 ### Logical Operations
@@ -377,14 +297,6 @@ Logical AND operation - all expressions must be truthy.
 { "$and": [{ "$gt": 18 }, { "$eq": "active" }] }
 ```
 
-#### `$or`
-
-Logical OR operation - at least one expression must be truthy.
-
-```json
-{ "$or": [{ "$eq": "admin" }, { "$eq": "moderator" }] }
-```
-
 #### `$not`
 
 Logical NOT operation - inverts the truthiness of an expression.
@@ -393,55 +305,83 @@ Logical NOT operation - inverts the truthiness of an expression.
 { "$not": { "$eq": true } }
 ```
 
+#### `$or`
+
+Logical OR operation - at least one expression must be truthy.
+
+```json
+{ "$or": [{ "$eq": "admin" }, { "$eq": "moderator" }] }
+```
+
 ### Comparison Operations
 
 All comparison operations use mathematical abbreviations for consistency and brevity.
 
-#### `$eq` / `$ne`
+#### `$eq`
 
-Equality and inequality comparisons using deep equality.
+Equality comparison using deep equality.
 
 ```json
 { "$eq": "published" }  // data === "published"
-{ "$ne": "draft" }      // data !== "draft"
 ```
 
-#### `$lt` / `$lte` / `$gt` / `$gte`
+#### `$gt`
 
-Numeric comparisons (less than, less than or equal, greater than, greater than or equal).
+Greater than comparison.
 
 ```json
 { "$gt": 90 }   // data > 90
-{ "$lte": 3 }   // data <= 3
 ```
 
-#### `$in` / `$nin`
+#### `$gte`
 
-Array membership tests (in / not in).
+Greater than or equal comparison.
+
+```json
+{ "$gte": 18 }  // data >= 18
+```
+
+#### `$in`
+
+Array membership test (in).
 
 ```json
 { "$in": ["tech", "science", "math"] }  // data is in array
+```
+
+#### `$lt`
+
+Less than comparison.
+
+```json
+{ "$lt": 100 }  // data < 100
+```
+
+#### `$lte`
+
+Less than or equal comparison.
+
+```json
+{ "$lte": 3 }   // data <= 3
+```
+
+#### `$ne`
+
+Inequality comparison using deep equality.
+
+```json
+{ "$ne": "draft" }      // data !== "draft"
+```
+
+#### `$nin`
+
+Array membership test (not in).
+
+```json
 { "$nin": ["deleted", "archived"] }     // data is not in array
 ```
 
 ### Aggregative Operations
-
-#### `$sum`
-
-Sum of array values.
-
-```json
-{ "$sum": [1, 2, 3, 4] } // Returns 10
-```
-
-#### `$min` / `$max`
-
-Minimum/maximum of array values.
-
-```json
-{ "$max": [1, 5, 3, 9] }  // Returns 9
-{ "$min": [1, 5, 3, 9] }  // Returns 1
-```
 
 #### `$count`
 
@@ -449,6 +389,14 @@ Count of items in an array.
 
 ```json
 { "$count": [1, 2, 3, 4] } // Returns 4
+```
+
+#### `$max`
+
+Maximum of array values.
+
+```json
+{ "$max": [1, 5, 3, 9] }  // Returns 9
 ```
 
 #### `$mean`
@@ -471,6 +419,14 @@ Median (middle value) of array values.
 ```
 
 Returns `undefined` for empty arrays.
+
+#### `$min`
+
+Minimum of array values.
+
+```json
+{ "$min": [1, 5, 3, 9] }  // Returns 1
+```
 
 #### `$mode`
 
@@ -500,20 +456,45 @@ Calculates quantiles (percentiles, quartiles, etc.) of array values.
 ```
 
 **Parameters:**
+
 - `values`: Array of numeric values
 - `k`: The k-th quantile to calculate (0 ≤ k ≤ n)
 - `n`: The total number of quantiles (e.g., 4 for quartiles, 100 for percentiles)
 
 Returns `undefined` for empty arrays. Uses linear interpolation for non-integer indices.
 
-### Iterative Operations
+#### `$sum`
 
-#### `$map`
-
-Transform each item in an array.
+Sum of array values.
 
 ```json
-{ "$map": { "$get": "name" } } // Maps over array, getting "name" from each item
+{ "$sum": [1, 2, 3, 4] } // Returns 10
+```
+
+### Iterative Operations
+
+#### `$all`
+
+Tests if all elements in an array satisfy a predicate (similar to Array.every).
+
+```json
+{ "$all": { "$gt": 0 } } // Returns true if all items > 0
+```
+
+#### `$any`
+
+Tests if any element in an array satisfies a predicate (similar to Array.some).
+
+```json
+{ "$any": { "$gt": 50 } } // Returns true if any item > 50
+```
+
+#### `$concat`
+
+Concatenates two arrays together.
+
+```json
+{ "$concat": [4, 5] } // With input [1, 2, 3], returns [1, 2, 3, 4, 5]
 ```
 
 #### `$filter`
@@ -524,12 +505,45 @@ Filter array items based on a condition.
 { "$filter": { "$gt": 50 } } // Filters array, keeping items > 50
 ```
 
+#### `$find`
+
+Returns the first element in an array that satisfies a predicate, or undefined if none found.
+
+```json
+{ "$find": { "$eq": "target" } } // Returns first item === "target"
+```
+
 #### `$flatMap`
 
 Transform and flatten array items.
 
 ```json
 { "$flatMap": { "$get": "products" } } // Maps and flattens results
+```
+
+#### `$join`
+
+Joins array elements into a string with a separator.
+
+```json
+{ "$join": ", " } // With input [1, 2, 3], returns "1, 2, 3"
+{ "$join": "" }   // With input ["a", "b", "c"], returns "abc"
+```
+
+#### `$map`
+
+Transform each item in an array.
+
+```json
+{ "$map": { "$get": "name" } } // Maps over array, getting "name" from each item
+```
+
+#### `$reverse`
+
+Returns a new array with elements in reverse order.
+
+```json
+{ "$reverse": {} } // With input [1, 2, 3], returns [3, 2, 1]
 ```
 
 ### Generative Operations
@@ -547,8 +561,9 @@ Generates a random number with optional range and precision control.
 ```
 
 **Parameters:**
+
 - `min` (default: 0): Minimum value (inclusive)
-- `max` (default: 1): Maximum value (exclusive)  
+- `max` (default: 1): Maximum value (exclusive)
 - `precision` (default: null): Decimal places for positive values, or power of 10 for negative values
   - `precision: 2` → 2 decimal places (0.01 precision)
   - `precision: 0` → integers (1.0 precision)
@@ -567,16 +582,6 @@ The operand is ignored - this expression always generates a new UUID.
 
 ### Temporal Operations
 
-#### `$nowUTC`
-
-Returns the current date and time as a UTC RFC3339 string.
-
-```json
-{ "$nowUTC": null } // Returns "2024-01-01T12:00:00.000Z"
-```
-
-The operand is ignored - this expression always returns the current UTC time in RFC3339 format.
-
 #### `$nowLocal`
 
 Returns the current date and time as a local RFC3339 string with timezone offset.
@@ -586,6 +591,16 @@ Returns the current date and time as a local RFC3339 string with timezone offset
 ```
 
 The operand is ignored - this expression returns the current local time with timezone information in RFC3339 format.
+
+#### `$nowUTC`
+
+Returns the current date and time as a UTC RFC3339 string.
+
+```json
+{ "$nowUTC": null } // Returns "2024-01-01T12:00:00.000Z"
+```
+
+The operand is ignored - this expression always returns the current UTC time in RFC3339 format.
 
 #### `$timestamp`
 
@@ -631,13 +646,19 @@ const avgAmount = defaultExpressionEngine.apply({ $mean: orderAmounts }, null);
 // Returns: 81.67
 
 // Get median order amount
-const medianAmount = defaultExpressionEngine.apply({ $median: orderAmounts }, null);
+const medianAmount = defaultExpressionEngine.apply(
+	{ $median: orderAmounts },
+	null,
+);
 // Returns: 75
 
 // Calculate 75th percentile of order amounts
-const p75 = defaultExpressionEngine.apply({ 
-	$quantile: { values: orderAmounts, k: 75, n: 100 } 
-}, null);
+const p75 = defaultExpressionEngine.apply(
+	{
+		$quantile: { values: orderAmounts, k: 75, n: 100 },
+	},
+	null,
+);
 // Returns: 97.5
 
 // Get names of adult users using pipe (left-to-right)
@@ -704,14 +725,20 @@ const ageGroup = defaultExpressionEngine.apply(
 const randomValue = defaultExpressionEngine.apply({ $random: {} }, null);
 // Returns: 0.7234 (random number 0-1)
 
-const randomInt = defaultExpressionEngine.apply({ 
-	$random: { min: 1, max: 100, precision: 0 } 
-}, null);
+const randomInt = defaultExpressionEngine.apply(
+	{
+		$random: { min: 1, max: 100, precision: 0 },
+	},
+	null,
+);
 // Returns: 42 (random integer 1-99)
 
-const randomPrice = defaultExpressionEngine.apply({ 
-	$random: { min: 10, max: 50, precision: 2 } 
-}, null);
+const randomPrice = defaultExpressionEngine.apply(
+	{
+		$random: { min: 10, max: 50, precision: 2 },
+	},
+	null,
+);
 // Returns: 23.45 (random price with 2 decimal places)
 
 const uniqueId = defaultExpressionEngine.apply({ $uuid: null }, null);
@@ -728,45 +755,34 @@ const timestamp = defaultExpressionEngine.apply({ $timestamp: null }, null);
 // Returns: 1704067200000 (current timestamp)
 
 // Use in conditional logic
-const sessionId = defaultExpressionEngine.apply({
-	$if: {
-		if: { $eq: null },
-		then: { $uuid: null },
-		else: { $get: "existingId" }
-	}
-}, { existingId: null });
+const sessionId = defaultExpressionEngine.apply(
+	{
+		$if: {
+			if: { $eq: null },
+			then: { $uuid: null },
+			else: { $get: "existingId" },
+		},
+	},
+	{ existingId: null },
+);
 // Returns: new UUID since existingId is null
 
-// Check if expressions can be evaluated statically
-import { isEvaluable } from "@data-prism/expressions";
-
+// Evaluate static expressions
 const staticExpr = { $sum: [10, 20, 30] };
-const dynamicExpr = { $get: "userAge" };
+const precomputed = defaultExpressionEngine.evaluate(staticExpr);
+console.log("Static result:", precomputed); // 60
 
-if (isEvaluable(staticExpr)) {
-	const precomputed = defaultExpressionEngine.evaluate(staticExpr);
-	console.log("Static result:", precomputed); // 60
-}
-
-if (isEvaluable(dynamicExpr)) {
-	console.log("Can precompute"); 
-} else {
-	console.log("Requires runtime data"); // This will run
-}
-
-// Optimize query expressions
+// Evaluate static query expressions
 const queryExpression = {
 	$if: {
 		if: true, // Static condition
 		then: { $sum: [1, 2, 3] }, // Static calculation
-		else: { $get: "fallbackValue" }
-	}
+		else: { $get: "fallbackValue" },
+	},
 };
 
-if (isEvaluable(queryExpression)) {
-	const optimized = defaultExpressionEngine.evaluate(queryExpression);
-	console.log("Pre-computed result:", optimized); // 6
-}
+const optimized = defaultExpressionEngine.evaluate(queryExpression);
+console.log("Pre-computed result:", optimized); // 6
 ```
 
 ### Query Enhancement
@@ -827,21 +843,21 @@ const result = customEngine.apply({ $titleCase: "paul bunyan" }, null);
 // Returns: "Paul Bunyan"
 ```
 
-### Compiled Expressions for Performance
+### Expressions for Reusable Logic
 
 ```javascript
 import { defaultExpressionEngine } from "@data-prism/expressions";
 
-// Compile once, use many times
-const calculateDiscountPrice = defaultExpressionEngine.compile({
+// Define reusable expression
+const discountPriceExpression = {
 	$if: {
 		if: { $gt: 0 },
 		then: { $sum: ["price", "discount"] },
 		else: { $get: "price" },
 	},
-});
+};
 
-// Use compiled function repeatedly
+// Apply to multiple products
 const products = [
 	{ name: "Laptop", price: 1000, discount: -100 },
 	{ name: "Mouse", price: 50, discount: -2.5 },
@@ -849,7 +865,7 @@ const products = [
 ];
 
 const discountedPrices = products.map((product) =>
-	calculateDiscountPrice(product.discount),
+	defaultExpressionEngine.apply(discountPriceExpression, product),
 );
 // Returns: [900, 47.5, 100]
 ```

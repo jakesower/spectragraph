@@ -1,33 +1,31 @@
 const $and = {
 	name: "$and",
-	apply: (operand, inputData, apply) =>
+	apply: (operand, inputData, { apply }) =>
 		operand.every((subexpr) => apply(subexpr, inputData)),
 	controlsEvaluation: true,
-	evaluate: (operand) => operand.every(Boolean),
-	schema: {
-		type: "boolean",
+	evaluate(operand) {
+		return operand.every(Boolean);
 	},
 };
 
 const $or = {
 	name: "$or",
-	apply: (operand, inputData, apply) =>
+	apply: (operand, inputData, { apply }) =>
 		operand.some((subexpr) => apply(subexpr, inputData)),
 	controlsEvaluation: true,
-	evaluate: (operand) => operand.some(Boolean),
-	schema: {
-		type: "boolean",
+	evaluate(operand) {
+		return operand.some(Boolean);
 	},
 };
 
 const $not = {
 	name: "$not",
-	apply: (operand, inputData, apply) => !apply(operand, inputData),
+	apply: (operand, inputData, { apply }) => !apply(operand, inputData),
 	controlsEvaluation: true,
-	evaluate: () => {
-		throw new Error("$not is not a valid expression for evaluation");
+	evaluate(operand, { evaluate }) {
+		const value = typeof operand === "boolean" ? operand : evaluate(operand);
+		return !value;
 	},
-	schema: { type: "boolean" },
 };
 
 export const logicalDefinitions = {

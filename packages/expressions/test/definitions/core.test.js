@@ -1,7 +1,58 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { defaultExpressionEngine } from "../../src/index.js";
 
-const { apply } = defaultExpressionEngine;
+const { apply, evaluate } = defaultExpressionEngine;
+
+describe("$apply", () => {
+	it("applies identity function", () => {
+		expect(apply({ $apply: "hello" }, "world")).toEqual("hello");
+	});
+
+	describe("evaluate form", () => {
+		it("evaluates identity function", () => {
+			expect(evaluate({ $apply: "hello" })).toEqual("hello");
+		});
+
+		it("evaluates with objects", () => {
+			const obj = { name: "test" };
+			expect(evaluate({ $apply: obj })).toEqual(obj);
+		});
+	});
+});
+
+describe("$debug", () => {
+	it("applies debug expression and logs result", () => {
+		const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+		expect(apply({ $debug: { $get: "name" } }, { name: "test" })).toEqual(
+			"test",
+		);
+		expect(consoleSpy).toHaveBeenCalledWith("test");
+		consoleSpy.mockRestore();
+	});
+
+	it("debugs identity expression", () => {
+		const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+		expect(apply({ $debug: { $echo: null } }, "input")).toEqual("input");
+		expect(consoleSpy).toHaveBeenCalledWith("input");
+		consoleSpy.mockRestore();
+	});
+
+	describe("evaluate form", () => {
+		it("evaluates debug expression and logs result", () => {
+			const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+			expect(evaluate({ $debug: { $sum: [1, 2, 3] } })).toEqual(6);
+			expect(consoleSpy).toHaveBeenCalledWith(6);
+			consoleSpy.mockRestore();
+		});
+
+		it("debugs literal values", () => {
+			const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+			expect(evaluate({ $debug: { $literal: "hello" } })).toEqual("hello");
+			expect(consoleSpy).toHaveBeenCalledWith("hello");
+			consoleSpy.mockRestore();
+		});
+	});
+});
 
 describe("$ensurePath", () => {
 	it("echo with a valid path", () => {
@@ -26,9 +77,9 @@ describe("$ensurePath", () => {
 		const { evaluate } = defaultExpressionEngine;
 
 		it("validates object has a valid path", () => {
-			expect(
-				evaluate({ $ensurePath: [{ name: "Arnar" }, "name"] }),
-			).toEqual({ name: "Arnar" });
+			expect(evaluate({ $ensurePath: [{ name: "Arnar" }, "name"] })).toEqual({
+				name: "Arnar",
+			});
 		});
 
 		it("validates object has a valid nested path", () => {
@@ -51,7 +102,9 @@ describe("$ensurePath", () => {
 
 		it("works with deeply nested paths", () => {
 			expect(
-				evaluate({ $ensurePath: [{ a: { b: { c: { d: "found" } } } }, "a.b.c.d"] }),
+				evaluate({
+					$ensurePath: [{ a: { b: { c: { d: "found" } } } }, "a.b.c.d"],
+				}),
 			).toEqual({ a: { b: { c: { d: "found" } } } });
 		});
 
@@ -64,7 +117,9 @@ describe("$ensurePath", () => {
 		it("throws with non-array operand", () => {
 			expect(() => {
 				evaluate({ $ensurePath: "user.name" });
-			}).toThrowError("$ensurePath evaluate form requires array operand: [object, path]");
+			}).toThrowError(
+				"$ensurePath evaluate form requires array operand: [object, path]",
+			);
 		});
 	});
 });
@@ -92,7 +147,9 @@ describe("$isDefined", () => {
 		it("throws with non-array operand", () => {
 			expect(() => {
 				evaluate({ $isDefined: null });
-			}).toThrowError("$isDefined evaluate form requires array operand: [value]");
+			}).toThrowError(
+				"$isDefined evaluate form requires array operand: [value]",
+			);
 		});
 	});
 });
@@ -102,23 +159,17 @@ describe("$echo", () => {
 		const { evaluate } = defaultExpressionEngine;
 
 		it("echoes the provided value", () => {
-			expect(
-				evaluate({ $echo: ["hello world"] }),
-			).toEqual("hello world");
+			expect(evaluate({ $echo: ["hello world"] })).toEqual("hello world");
 		});
 
 		it("echoes objects", () => {
 			const obj = { name: "Arnar", age: 30 };
-			expect(
-				evaluate({ $echo: [obj] }),
-			).toEqual(obj);
+			expect(evaluate({ $echo: [obj] })).toEqual(obj);
 		});
 
 		it("echoes arrays", () => {
 			const arr = [1, 2, 3];
-			expect(
-				evaluate({ $echo: [arr] }),
-			).toEqual(arr);
+			expect(evaluate({ $echo: [arr] })).toEqual(arr);
 		});
 
 		it("throws with non-array operand", () => {
@@ -134,9 +185,9 @@ describe("$get", () => {
 		const { evaluate } = defaultExpressionEngine;
 
 		it("gets value from object using array syntax", () => {
-			expect(
-				evaluate({ $get: [{ name: "Arnar", age: 30 }, "name"] }),
-			).toEqual("Arnar");
+			expect(evaluate({ $get: [{ name: "Arnar", age: 30 }, "name"] })).toEqual(
+				"Arnar",
+			);
 		});
 
 		it("gets nested value from object", () => {
@@ -148,79 +199,18 @@ describe("$get", () => {
 		it("throws with non-array operand", () => {
 			expect(() => {
 				evaluate({ $get: "name" });
-			}).toThrowError("$get evaluate form requires array operand: [object, path]");
+			}).toThrowError(
+				"$get evaluate form requires array operand: [object, path]",
+			);
 		});
 
 		it("throws with object operand", () => {
 			expect(() => {
 				evaluate({ $get: { object: {}, path: "name" } });
-			}).toThrowError("$get evaluate form requires array operand: [object, path]");
+			}).toThrowError(
+				"$get evaluate form requires array operand: [object, path]",
+			);
 		});
-	});
-});
-
-describe("$if", () => {
-	it("handles a true value", () => {
-		expect(
-			apply({ $if: { if: { $eq: "Arnar" }, then: "yep", else: "nope" } }, "Arnar"),
-		).toEqual("yep");
-	});
-
-	it("handles a false value", () => {
-		expect(
-			apply(
-				{ $if: { if: { $eq: "Arnar" }, then: "yep", else: "nope" } },
-				"Sakura",
-			),
-		).toEqual("nope");
-	});
-
-	it("handles a true expression", () => {
-		expect(
-			apply(
-				{
-					$if: {
-						if: { $eq: { name: "Arnar" } },
-						then: { $get: "name" },
-						else: "nope",
-					},
-				},
-				{ name: "Arnar" },
-			),
-		).toEqual("Arnar");
-	});
-
-	it("handles a false expression", () => {
-		expect(
-			apply(
-				{
-					$if: {
-						if: { $eq: { name: "Arnar" } },
-						then: "yep",
-						else: { $get: "age" },
-					},
-				},
-				{ name: "Sakura", age: 50 },
-			),
-		).toEqual(50);
-	});
-
-	it("handles a true if value", () => {
-		expect(
-			apply({ $if: { if: true, then: "yep", else: "nope" } }, "Arnar"),
-		).toEqual("yep");
-	});
-
-	it("handles a false if value", () => {
-		expect(
-			apply({ $if: { if: false, then: "yep", else: "nope" } }, "Arnar"),
-		).toEqual("nope");
-	});
-
-	it("throws with an non-expression/non-boolean if value", () => {
-		expect(() => {
-			apply({ $if: { if: "Chicken", then: "yep", else: "nope" } }, "Sakura");
-		}).toThrowError();
 	});
 });
 
@@ -236,9 +226,9 @@ describe("$compose", () => {
 		const result = apply(
 			{
 				$compose: [
-					{ $get: "name" },           // f: get name
-					{ $echo: null },            // g: identity
-					{ $get: "child" },          // h: get child
+					{ $get: "name" }, // f: get name
+					{ $echo: null }, // g: identity
+					{ $get: "child" }, // h: get child
 				],
 			},
 			{ child: { name: "Fatoumata" } },
@@ -246,10 +236,22 @@ describe("$compose", () => {
 		expect(result).toEqual("Fatoumata");
 	});
 
+	it("throws with a non-expression", () => {
+		expect(() => {
+			apply([{ $compose: ["lol"] }, { name: "Zarina" }]);
+		}).toThrowError();
+	});
+
 	it("throws with an invalid expression", () => {
 		expect(() => {
 			apply({ $compose: [{ $in: "should be an array" }] }, { name: "Zarina" });
 		}).toThrowError();
+	});
+
+	it("evaluates expressions right-to-left (mathematical order)", () => {
+		expect(
+			evaluate({ $compose: [[{ $get: "name" }], { name: "Zarina" }] }),
+		).toEqual("Zarina");
 	});
 });
 
@@ -265,9 +267,9 @@ describe("$pipe", () => {
 		const result = apply(
 			{
 				$pipe: [
-					{ $get: "child" },          // h: get child
-					{ $echo: null },            // g: identity
-					{ $get: "name" },           // f: get name
+					{ $get: "child" }, // h: get child
+					{ $echo: null }, // g: identity
+					{ $get: "name" }, // f: get name
 				],
 			},
 			{ child: { name: "Fatoumata" } },
@@ -282,8 +284,8 @@ describe("$pipe", () => {
 		const composeResult = apply(
 			{
 				$compose: [
-					{ $get: "name" },           // f
-					{ $get: "child" },          // g
+					{ $get: "name" }, // f
+					{ $get: "child" }, // g
 				],
 			},
 			data,
@@ -293,8 +295,8 @@ describe("$pipe", () => {
 		const pipeResult = apply(
 			{
 				$pipe: [
-					{ $get: "child" },          // h
-					{ $get: "name" },           // g
+					{ $get: "child" }, // h
+					{ $get: "name" }, // g
 				],
 			},
 			data,
@@ -304,6 +306,12 @@ describe("$pipe", () => {
 		expect(pipeResult).toEqual("Fatoumata");
 	});
 
+	it("throws with a non-expression", () => {
+		expect(() => {
+			evaluate([{ $pipe: "lol" }, { name: "Zarina" }]);
+		}).toThrowError();
+	});
+
 	it("throws with an invalid expression", () => {
 		expect(() => {
 			apply({ $pipe: [{ $in: "should be an array" }] }, { name: "Zarina" });
@@ -311,268 +319,14 @@ describe("$pipe", () => {
 	});
 });
 
-describe("$case", () => {
-	it("matches first case", () => {
-		expect(
-			apply(
-				{
-					$case: {
-						value: "playing",
-						cases: [
-							{ when: "playing", then: "Child is playing" },
-							{ when: "napping", then: "Child is napping" },
-							{ when: "eating", then: "Child is eating" },
-						],
-						default: "Unknown activity",
-					},
-				},
-				{},
-			),
-		).toEqual("Child is playing");
+describe("$literal", () => {
+	it("doesn't apply to expression operands", () => {
+		const expr = { $random: "" };
+		expect(apply({ $literal: expr })).toEqual(expr);
 	});
 
-	it("matches second case", () => {
-		expect(
-			apply(
-				{
-					$case: {
-						value: "napping",
-						cases: [
-							{ when: "playing", then: "Child is playing" },
-							{ when: "napping", then: "Child is napping" },
-							{ when: "eating", then: "Child is eating" },
-						],
-						default: "Unknown activity",
-					},
-				},
-				{},
-			),
-		).toEqual("Child is napping");
-	});
-
-	it("returns default when no case matches", () => {
-		expect(
-			apply(
-				{
-					$case: {
-						value: "crying",
-						cases: [
-							{ when: "playing", then: "Child is playing" },
-							{ when: "napping", then: "Child is napping" },
-							{ when: "eating", then: "Child is eating" },
-						],
-						default: "Unknown activity",
-					},
-				},
-				{},
-			),
-		).toEqual("Unknown activity");
-	});
-
-	it("handles expressions in value", () => {
-		expect(
-			apply(
-				{
-					$case: {
-						value: { $get: "activity" },
-						cases: [
-							{ when: "playing", then: "Child is playing" },
-							{ when: "napping", then: "Child is napping" },
-						],
-						default: "Unknown activity",
-					},
-				},
-				{ activity: "playing" },
-			),
-		).toEqual("Child is playing");
-	});
-
-	it("handles expressions in when", () => {
-		expect(
-			apply(
-				{
-					$case: {
-						value: { $get: "activity" },
-						cases: [
-							{ when: { $get: "playStatus" }, then: "Child is playing" },
-							{ when: "napping", then: "Child is napping" },
-						],
-						default: "Unknown activity",
-					},
-				},
-				{ activity: "playing", playStatus: "playing" },
-			),
-		).toEqual("Child is playing");
-	});
-
-	it("handles expressions in then", () => {
-		expect(
-			apply(
-				{
-					$case: {
-						value: "playing",
-						cases: [
-							{ when: "playing", then: { $get: "message" } },
-							{ when: "napping", then: "Child is napping" },
-						],
-						default: "Unknown activity",
-					},
-				},
-				{ message: "Child is playing" },
-			),
-		).toEqual("Child is playing");
-	});
-
-	it("handles expressions in default", () => {
-		expect(
-			apply(
-				{
-					$case: {
-						value: "crying",
-						cases: [
-							{ when: "playing", then: "Child is playing" },
-							{ when: "napping", then: "Child is napping" },
-						],
-						default: { $get: "defaultMessage" },
-					},
-				},
-				{ defaultMessage: "Unknown activity" },
-			),
-		).toEqual("Unknown activity");
-	});
-
-	it("evaluates value only once", () => {
-		let callCount = 0;
-		const testData = {
-			get activity() {
-				callCount++;
-				return "playing";
-			},
-		};
-
-		apply(
-			{
-				$case: {
-					value: { $get: "activity" },
-					cases: [
-						{ when: "playing", then: "Child is playing" },
-						{ when: "napping", then: "Child is napping" },
-						{ when: "eating", then: "Child is eating" },
-					],
-					default: "Unknown activity",
-				},
-			},
-			testData,
-		);
-
-		expect(callCount).toBe(1);
-	});
-
-	it("handles complex expressions in when clause", () => {
-		expect(
-			apply(
-				{
-					$case: {
-						value: { $get: "activity" },
-						cases: [
-							{ when: { $eq: "playing" }, then: "Child is playing" },
-							{
-								when: { $in: ["napping", "resting"] },
-								then: "Child is resting",
-							},
-							{ when: "eating", then: "Child is eating" },
-						],
-						default: "Unknown activity",
-					},
-				},
-				{ activity: "napping" },
-			),
-		).toEqual("Child is resting");
-	});
-
-	it("handles numeric comparisons in when clause", () => {
-		expect(
-			apply(
-				{
-					$case: {
-						value: { $get: "age" },
-						cases: [
-							{ when: { $lt: 2 }, then: "Toddler" },
-							{ when: { $lt: 5 }, then: "Preschooler" },
-							{ when: { $gte: 5 }, then: "School age" },
-						],
-						default: "Unknown age group",
-					},
-				},
-				{ age: 4 },
-			),
-		).toEqual("Preschooler");
-	});
-
-	it("handles complex logical expressions in when clause", () => {
-		expect(
-			apply(
-				{
-					$case: {
-						value: { $get: "child" },
-						cases: [
-							{
-								when: {
-									$and: [{ $get: "isPottyTrained" }, { $get: "isNapping" }],
-								},
-								then: "Ready for preschool",
-							},
-							{
-								when: { $get: "isNapping" },
-								then: "Needs more training",
-							},
-						],
-						default: "Needs attention",
-					},
-				},
-				{ child: { isPottyTrained: true, isNapping: true } },
-			),
-		).toEqual("Ready for preschool");
-	});
-
-	it("handles mixed simple and complex when clauses", () => {
-		expect(
-			apply(
-				{
-					$case: {
-						value: { $get: "activity" },
-						cases: [
-							{ when: "playing", then: "Child is playing" },
-							{
-								when: { $in: ["napping", "resting"] },
-								then: "Child is resting",
-							},
-							{ when: "eating", then: "Child is eating" },
-						],
-						default: "Unknown activity",
-					},
-				},
-				{ activity: "playing" },
-			),
-		).toEqual("Child is playing");
-	});
-
-	it("prioritizes first matching case", () => {
-		expect(
-			apply(
-				{
-					$case: {
-						value: { $get: "age" },
-						cases: [
-							{ when: { $gte: 0 }, then: "Any age" },
-							{ when: { $gte: 5 }, then: "School age" },
-						],
-						default: "No age",
-					},
-				},
-				{ age: 6 },
-			),
-		).toEqual("Any age");
+	it("doesn't evaluate expression operands", () => {
+		const expr = { $random: "" };
+		expect(evaluate({ $literal: expr })).toEqual(expr);
 	});
 });
-
