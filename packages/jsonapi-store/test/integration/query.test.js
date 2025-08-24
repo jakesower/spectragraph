@@ -88,7 +88,7 @@ it("fetches a single resource with a many-to-one relationship", async () => {
 		select: {
 			home: { select: { id: "id" } },
 		},
-	} as const;
+	}
 
 	const result = await store.query(q);
 
@@ -102,7 +102,7 @@ it("fetches a single resource with a one-to-many relationship", async () => {
 		type: "homes",
 		id: "1",
 		select: { residents: { select: { id: "id" } } },
-	} as const;
+	}
 
 	const result = await store.query(q);
 
@@ -116,7 +116,7 @@ it("fetches a single resource with a one-to-many relationship and an implicit re
 		type: "homes",
 		id: "1",
 		select: { residents: { select: ["id"] } },
-	} as const;
+	}
 
 	const result = await store.query(q);
 
@@ -154,7 +154,7 @@ it("fetches a single resource with a subset of props on a relationship", async (
 		type: "bears",
 		id: "1",
 		select: { home: { select: { caringMeter: "caringMeter" } } },
-	} as const;
+	}
 
 	const result = await store.query(q);
 
@@ -238,7 +238,7 @@ it("merges select when resource has different select from different parts of the
 });
 
 it("fails validation for invalid types", async () => {
-	expect(async () => {
+	await expect(async () => {
 		await store.query({ type: "bearz", id: "1" });
 	}).rejects.toThrowError();
 });

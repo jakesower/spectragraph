@@ -14,7 +14,7 @@ describe("Get Tests", () => {
 	beforeEach(async () => {
 		db = getClient();
 		await reset(db, careBearSchema, careBearConfig, careBearData);
-		
+
 		store = createPostgresStore(careBearSchema, {
 			...careBearConfig,
 			db,
@@ -51,9 +51,7 @@ describe("Get Tests", () => {
 	it("gets all resources without relationships", async () => {
 		const result = await store.getAll("bears", { includeRelationships: false });
 		expect(result).toEqual(
-			Object.values(careBearData.bears).map((r) =>
-				omit(r, ["relationships"]),
-			),
+			Object.values(careBearData.bears).map((r) => omit(r, ["relationships"])),
 		);
 	});
 });

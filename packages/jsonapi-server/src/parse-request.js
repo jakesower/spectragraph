@@ -1,4 +1,3 @@
-import { Schema } from "@data-prism/core"
 import { defaultExpressionEngine } from "@data-prism/expressions";
 import JSON5 from "json5";
 import { mapValues, pickBy, uniq } from "lodash-es";
@@ -24,7 +23,13 @@ const castFilterValue = (type, val) => {
 		: casters[type](val);
 };
 
-export function parseRequest(schema: Schema, params) {
+/**
+ * Parses JSON:API request parameters into a Data Prism query
+ * @param {import("@data-prism/core").Schema} schema - The schema defining resources
+ * @param {*} params - Request parameters from Express
+ * @returns {import("@data-prism/core").RootQuery} Parsed query object
+ */
+export function parseRequest(schema, params) {
 	const parsedInclude = params.include?.split(",") ?? [];
 
 	const go = (type, path = []) => {

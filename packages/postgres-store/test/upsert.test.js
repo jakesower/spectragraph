@@ -15,7 +15,7 @@ describe("Upsert Tests", () => {
 	beforeEach(async () => {
 		db = getClient();
 		await reset(db, careBearSchema, careBearConfig, careBearData);
-		
+
 		const validator = createValidator({ schemas: [geojsonSchema] });
 		store = createPostgresStore(careBearSchema, {
 			...careBearConfig,

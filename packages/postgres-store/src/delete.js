@@ -37,7 +37,7 @@ export async function deleteResource(resource, context) {
 	);
 
 	await Promise.all(
-		Object.entries(foreignRelationships).map(async ([relName, val]) => {
+		Object.entries(foreignRelationships).map(async ([relName]) => {
 			const { foreignColumn } = joins[relName];
 			const foreignTable =
 				config.resources[resSchema.relationships[relName].type].table;
@@ -64,7 +64,7 @@ export async function deleteResource(resource, context) {
 			const { joinTable, localJoinColumn } = joins[relName];
 
 			await Promise.all(
-				val.map((v) =>
+				val.map(() =>
 					db.query(
 						`
 							DELETE FROM ${joinTable}

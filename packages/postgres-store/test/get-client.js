@@ -11,7 +11,7 @@ export function getClient() {
 	if (db) {
 		return db;
 	}
-	
+
 	// If not available, create a new connection using environment variables
 	if (process.env.TEST_DB_HOST && process.env.TEST_DB_PORT) {
 		console.log("Creating new test DB connection using environment variables");
@@ -22,19 +22,21 @@ export function getClient() {
 			user: process.env.TEST_DB_USER,
 			password: process.env.TEST_DB_PASSWORD,
 		});
-		
+
 		// Store in globalThis for reuse
 		globalThis.testDb = client;
-		
+
 		// Connect asynchronously but don't wait
-		client.connect().catch(err => {
+		client.connect().catch((err) => {
 			console.error("Failed to connect to test database:", err);
 		});
-		
+
 		return client;
 	}
-	
-	throw new Error("Test database not initialized. Make sure globalSetup is running.");
+
+	throw new Error(
+		"Test database not initialized. Make sure globalSetup is running.",
+	);
 }
 
 /**

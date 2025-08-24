@@ -32,7 +32,7 @@ it("formats a request for a subquery", () => {
 	const request = formatRequest(careBearSchema, config, query);
 
 	expect(request).toStrictEqual(
-		"https://example.lol/homes/1?fields[homes]=id,caringMeter&fields[bears]=id,name&include=residents",
+		"https://example.lol/homes/1?fields[bears]=id,name&fields[homes]=id,caringMeter&include=residents",
 	);
 });
 
@@ -54,7 +54,7 @@ it("formats a request for a nested subquery", () => {
 	const request = formatRequest(careBearSchema, config, query);
 
 	expect(request).toStrictEqual(
-		"https://example.lol/homes/1?fields[homes]=id,caringMeter&fields[bears]=id,name&fields[powers]=name&include=residents,residents.powers",
+		"https://example.lol/homes/1?fields[powers]=name&fields[bears]=id,name&fields[homes]=id,caringMeter&include=residents.powers,residents",
 	);
 });
 
@@ -67,7 +67,7 @@ it("provides correct fields in relationships with the same type", () => {
 	const request = formatRequest(careBearSchema, config, query);
 
 	expect(request).toStrictEqual(
-		"https://example.lol/bears?fields[bears]=id,name&include=bestFriend",
+		"https://example.lol/bears?fields[bears]=name,id&include=bestFriend",
 	);
 });
 
@@ -201,6 +201,6 @@ it("filters on a nested field", () => {
 	const request = formatRequest(careBearSchema, config, query);
 
 	expect(request).toStrictEqual(
-		"https://example.lol/homes?fields[homes]=name&fields[bears]=bellyBadge&include=residents&filter[residents.yearIntroduced][$gt]=2000",
+		"https://example.lol/homes?fields[bears]=bellyBadge&fields[homes]=name&include=residents&filter[residents.yearIntroduced][$gt]=2000",
 	);
 });

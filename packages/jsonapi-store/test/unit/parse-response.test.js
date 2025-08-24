@@ -1,5 +1,5 @@
-import { Schema, createMemoryStore } from "@data-prism/core"
 import { expect, it } from "vitest";
+import { createMemoryStore } from "@data-prism/memory-store";
 import careBearSchema from "../fixtures/care-bears.schema.json";
 import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
 import { parseResponse } from "../../src/parse-response";
@@ -8,11 +8,11 @@ import {
 	allBearsResponse,
 } from "../fixtures/formatted-care-bear-data.js";
 
-const store = createMemoryStore(careBearSchema as Schema, careBearData);
+const store = createMemoryStore(careBearSchema, { initialData: careBearData });
 
 it("parses a response with multiple resources", async () => {
 	const result = parseResponse(
-		careBearSchema as Schema,
+		careBearSchema,
 		{
 			type: "bears",
 			select: Object.keys(careBearSchema.resources.bears.attributes),
@@ -25,7 +25,7 @@ it("parses a response with multiple resources", async () => {
 
 it("parses a response with a single resource", async () => {
 	const result = parseResponse(
-		careBearSchema as Schema,
+		careBearSchema,
 		{
 			type: "bears",
 			id: "1",
@@ -45,7 +45,7 @@ it("parses a response with a single resource", async () => {
 
 it("parses a response with a nested resource", async () => {
 	const result = parseResponse(
-		careBearSchema as Schema,
+		careBearSchema,
 		{
 			type: "bears",
 			id: "1",
@@ -79,7 +79,7 @@ it("parses a response with a nested resource", async () => {
 
 it("parses a response with a nested resource", async () => {
 	const result = parseResponse(
-		careBearSchema as Schema,
+		careBearSchema,
 		{
 			type: "bears",
 			id: "1",
@@ -126,7 +126,7 @@ it("parses a response with a doubly nested resource", async () => {
 		],
 	};
 
-	const result = parseResponse(careBearSchema as Schema, query, {
+	const result = parseResponse(careBearSchema, query, {
 		data: {
 			type: "homes",
 			id: "1",

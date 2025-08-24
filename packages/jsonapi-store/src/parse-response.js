@@ -1,7 +1,14 @@
-import { Schema, queryGraph } from "@data-prism/core"
+import { queryGraph } from "@data-prism/core"
 import { mapValues } from "lodash-es";
 
-export function parseResponse(schema: Schema, query, response) {
+/**
+ * Parses a JSON:API response into Data Prism query results
+ * @param {import("@data-prism/core").Schema} schema - Data Prism schema
+ * @param {import("@data-prism/core").RootQuery} query - Original query
+ * @param {Object} response - JSON:API response object
+ * @returns {*} Query results in Data Prism format
+ */
+export function parseResponse(schema, query, response) {
 	if (response.data === null) return null;
 
 	const graph = mapValues(schema.resources, () => ({}));
@@ -25,5 +32,5 @@ export function parseResponse(schema: Schema, query, response) {
 	dataArray.forEach(extractResource);
 	(response.included ?? []).forEach(extractResource);
 
-	return queryGraph(graph, query);
+	return queryGraph(schema, query, graph);
 }

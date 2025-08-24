@@ -1,22 +1,30 @@
 import { mapValues } from "lodash-es";
-import { Schema } from "@data-prism/core"
 import { validateRequest } from "./validate-request.js";
 
-type Ref = { type: string; id: string };
-export type CreateRequest = {
-	data: {
-		type: string;
-		id?: string;
-		attributes?: { [k: string]: unknown };
-		relationships?: {
-			[k: string]: Ref | Ref[];
-		};
-	};
-};
+/**
+ * @typedef {Object} Ref
+ * @property {string} type - Resource type
+ * @property {string} id - Resource ID
+ */
 
-export function create(schema: Schema, store) {
+/**
+ * @typedef {Object} CreateRequest
+ * @property {Object} data - The resource data
+ * @property {string} data.type - Resource type
+ * @property {string} [data.id] - Resource ID
+ * @property {Object.<string, unknown>} [data.attributes] - Resource attributes
+ * @property {Object.<string, Ref|Ref[]>} [data.relationships] - Resource relationships
+ */
+
+/**
+ * Creates a JSON:API create handler
+ * @param {import("@data-prism/core").Schema} schema - The schema defining resources
+ * @param {*} store - The data store instance
+ * @returns {(req: any, res: any) => Promise<void>} Express request handler
+ */
+export function create(schema, store) {
 	return async (req, res) => {
-		const body: CreateRequest = req.body;
+		const body = req.body;
 		const validationErrors = validateRequest(schema, body);
 		if (validationErrors) {
 			res.statusCode = 400;

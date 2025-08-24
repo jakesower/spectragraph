@@ -1,5 +1,10 @@
 import { mapValues } from "lodash-es";
 
+/**
+ * Creates a JSON:API PATCH handler for updating resources
+ * @param {*} store - The data store instance
+ * @returns {(req: any, res: any) => Promise<void>} Express request handler
+ */
 export function update(store) {
 	return async (req, res) => {
 		try {

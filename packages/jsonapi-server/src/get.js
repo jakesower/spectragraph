@@ -1,6 +1,13 @@
 import { formatResponse } from "./format-response.js";
 import { parseRequest } from "./parse-request.js";
 
+/**
+ * Creates a JSON:API GET handler for a specific resource type
+ * @param {import("@data-prism/core").Schema} schema - The schema defining resources
+ * @param {*} store - The data store instance
+ * @param {string} type - The resource type to handle
+ * @returns {(req: any, res: any) => Promise<void>} Express request handler
+ */
 export function get(schema, store, type) {
 	return async (req, res) => {
 		try {

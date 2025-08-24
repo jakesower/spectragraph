@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
 import careBearSchema from "../fixtures/care-bears.schema.json";
 import { parseRequest } from "../../src/parse-request.js";
-import { Schema } from "@data-prism/core"
 
 describe("requests with no subqueries", () => {
 	it("parses a request for multiple resources", async () => {
-		const query = parseRequest(careBearSchema as Schema, { type: "bears" });
+		const query = parseRequest(careBearSchema, { type: "bears" });
 
 		expect(query).toStrictEqual({
 			type: "bears",
@@ -14,7 +13,7 @@ describe("requests with no subqueries", () => {
 	});
 
 	it("parses a request for a single resource", async () => {
-		const query = parseRequest(careBearSchema as Schema, {
+		const query = parseRequest(careBearSchema, {
 			type: "bears",
 			id: "1",
 		});
@@ -27,7 +26,7 @@ describe("requests with no subqueries", () => {
 	});
 
 	it("limits fields on the root query with the id", () => {
-		const query = parseRequest(careBearSchema as Schema, {
+		const query = parseRequest(careBearSchema, {
 			type: "bears",
 			id: "1",
 			fields: { bears: "name,bellyBadge" },
@@ -41,7 +40,7 @@ describe("requests with no subqueries", () => {
 	});
 
 	it("limits fields on the root query with a nonstandard id", () => {
-		const query = parseRequest(careBearSchema as Schema, {
+		const query = parseRequest(careBearSchema, {
 			type: "powers",
 			id: "careBearStare",
 			fields: { powers: "name,type" },
@@ -56,7 +55,7 @@ describe("requests with no subqueries", () => {
 
 	describe("filter", () => {
 		it("filters fields on a single criterion", () => {
-			const query = parseRequest(careBearSchema as Schema, {
+			const query = parseRequest(careBearSchema, {
 				type: "bears",
 				filter: { yearIntroduced: 1982 },
 			});
@@ -69,7 +68,7 @@ describe("requests with no subqueries", () => {
 		});
 
 		it("filters fields on multiple criteria", () => {
-			const query = parseRequest(careBearSchema as Schema, {
+			const query = parseRequest(careBearSchema, {
 				type: "bears",
 				filter: { yearIntroduced: 1982, bellyBadge: "rainbow" },
 			});
@@ -82,7 +81,7 @@ describe("requests with no subqueries", () => {
 		});
 
 		it("filters with an expression", () => {
-			const query = parseRequest(careBearSchema as Schema, {
+			const query = parseRequest(careBearSchema, {
 				type: "bears",
 				filter: { yearIntroduced: { $lt: 1985 } },
 			});
@@ -95,7 +94,7 @@ describe("requests with no subqueries", () => {
 		});
 
 		it("filters with a string expression", () => {
-			const query = parseRequest(careBearSchema as Schema, {
+			const query = parseRequest(careBearSchema, {
 				type: "bears",
 				filter: { yearIntroduced: "{ $lt: 1985 }" },
 			});
@@ -110,7 +109,7 @@ describe("requests with no subqueries", () => {
 
 	describe("sorting", () => {
 		it("sorts ascending on a single field", () => {
-			const query = parseRequest(careBearSchema as Schema, {
+			const query = parseRequest(careBearSchema, {
 				type: "bears",
 				sort: "yearIntroduced",
 			});
@@ -123,7 +122,7 @@ describe("requests with no subqueries", () => {
 		});
 
 		it("sorts descending on a single field", () => {
-			const query = parseRequest(careBearSchema as Schema, {
+			const query = parseRequest(careBearSchema, {
 				type: "bears",
 				sort: "-yearIntroduced",
 			});
@@ -137,7 +136,7 @@ describe("requests with no subqueries", () => {
 
 		it("doesn't allow sorting on an invalid field", () => {
 			expect(() =>
-				parseRequest(careBearSchema as Schema, {
+				parseRequest(careBearSchema, {
 					type: "bears",
 					sort: "foo",
 				}),
@@ -145,7 +144,7 @@ describe("requests with no subqueries", () => {
 		});
 
 		it("sorts on multiple fields", () => {
-			const query = parseRequest(careBearSchema as Schema, {
+			const query = parseRequest(careBearSchema, {
 				type: "bears",
 				sort: "-yearIntroduced,name",
 			});
@@ -158,7 +157,7 @@ describe("requests with no subqueries", () => {
 		});
 
 		it("sorts on an valid field when a nested resource is requested", () => {
-			const query = parseRequest(careBearSchema as Schema, {
+			const query = parseRequest(careBearSchema, {
 				type: "bears",
 				sort: "yearIntroduced",
 				include: "home",
@@ -181,7 +180,7 @@ describe("requests with no subqueries", () => {
 
 	describe("pagination", () => {
 		it("limits results", () => {
-			const query = parseRequest(careBearSchema as Schema, {
+			const query = parseRequest(careBearSchema, {
 				type: "bears",
 				page: { size: 3 },
 			});
@@ -194,7 +193,7 @@ describe("requests with no subqueries", () => {
 		});
 
 		it("limits and offsets results", () => {
-			const query = parseRequest(careBearSchema as Schema, {
+			const query = parseRequest(careBearSchema, {
 				type: "bears",
 				page: { size: 3, number: 2 },
 			});
@@ -211,7 +210,7 @@ describe("requests with no subqueries", () => {
 
 describe("requests with subqueries", () => {
 	it("parses a request for a nested singular relationship", async () => {
-		const query = parseRequest(careBearSchema as Schema, {
+		const query = parseRequest(careBearSchema, {
 			type: "bears",
 			include: "home",
 		});
@@ -230,7 +229,7 @@ describe("requests with subqueries", () => {
 	});
 
 	it("parses a request for a two relationships", async () => {
-		const query = parseRequest(careBearSchema as Schema, {
+		const query = parseRequest(careBearSchema, {
 			type: "bears",
 			include: "home,powers",
 		});
@@ -254,7 +253,7 @@ describe("requests with subqueries", () => {
 	});
 
 	it("parses a request for a doubly nested relationship", async () => {
-		const query = parseRequest(careBearSchema as Schema, {
+		const query = parseRequest(careBearSchema, {
 			type: "homes",
 			include: "residents,residents.powers",
 		});
@@ -282,7 +281,7 @@ describe("requests with subqueries", () => {
 	});
 
 	it("parses a request for a triply nested relationship", async () => {
-		const query = parseRequest(careBearSchema as Schema, {
+		const query = parseRequest(careBearSchema, {
 			type: "homes",
 			include: "residents,residents.powers,residents.powers.wielders",
 		});
@@ -317,7 +316,7 @@ describe("requests with subqueries", () => {
 	});
 
 	it("parses a request for a relationship of the same type", () => {
-		const query = parseRequest(careBearSchema as Schema, {
+		const query = parseRequest(careBearSchema, {
 			type: "bears",
 			include: "bestFriend",
 		});
@@ -336,7 +335,7 @@ describe("requests with subqueries", () => {
 	});
 
 	it("narrows the fields on a nested resource", async () => {
-		const query = parseRequest(careBearSchema as Schema, {
+		const query = parseRequest(careBearSchema, {
 			type: "bears",
 			include: "home",
 			fields: { homes: "name" },

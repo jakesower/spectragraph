@@ -14,14 +14,12 @@ describe("Create Tests", () => {
 	beforeEach(async () => {
 		db = getClient();
 		await reset(db, careBearSchema, careBearConfig, careBearData);
-		
+
 		store = createPostgresStore(careBearSchema, {
 			...careBearConfig,
 			db,
 		});
 	});
-
-
 
 	it("creates a resource with generated ID", async () => {
 		const created = await store.create({
@@ -41,7 +39,7 @@ describe("Create Tests", () => {
 
 	it("creates a resource with specific ID", async () => {
 		const customId = randomBytes(16).toString("hex");
-		
+
 		const created = await store.create({
 			type: "bears",
 			id: customId,

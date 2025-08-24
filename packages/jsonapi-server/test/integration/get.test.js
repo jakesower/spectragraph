@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import careBearSchema from "../fixtures/care-bears.schema.json";
 import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
 import { parseRequest } from "../../src/parse-request.js";
-import { Schema } from "@data-prism/core"
 import { api, makeRequest } from "../helpers.js";
 import { omit, pick } from "lodash-es";
 
@@ -398,7 +397,7 @@ describe("requests with subqueries", () => {
 	});
 
 	it("parses a request for a relationship of the same type", () => {
-		const query = parseRequest(careBearSchema as Schema, {
+		const query = parseRequest(careBearSchema, {
 			type: "bears",
 			include: "bestFriend",
 		});
@@ -417,7 +416,7 @@ describe("requests with subqueries", () => {
 	});
 
 	it("narrows the fields on a nested resource", async () => {
-		const query = parseRequest(careBearSchema as Schema, {
+		const query = parseRequest(careBearSchema, {
 			type: "bears",
 			include: "home",
 			fields: { homes: "name" },

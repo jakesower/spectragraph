@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
-import { Schema, createMemoryStore } from "@data-prism/core"
+import { createMemoryStore } from "@data-prism/memory-store";
 import careBearSchema from "../fixtures/care-bears.schema.json";
 import jsonApiSchema from "../fixtures/json-api-schema.json";
 import { formatResponse } from "../../src/format-response";
@@ -11,7 +11,7 @@ import {
 } from "../fixtures/formatted-care-bear-data.js";
 import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
 
-const store = createMemoryStore(careBearSchema as Schema, careBearData);
+const store = createMemoryStore(careBearSchema, careBearData);
 
 const ajv = new Ajv();
 addFormats(ajv);

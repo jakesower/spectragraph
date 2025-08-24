@@ -2,13 +2,19 @@
 	"name": "@data-prism/jsonapi-server",
 	"version": "0.0.10",
 	"type": "module",
-	"main": "./dist/index.js",
+	"main": "./dist/index.cjs.js",
+	"module": "./dist/index.esm.js",
 	"types": "./dist/index.d.ts",
 	"exports": {
-		".": "./dist/index.js"
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.esm.js",
+			"require": "./dist/index.cjs.js"
+		}
 	},
 	"scripts": {
-		"build": "tsc -p ./tsconfig.json",
+		"build": "npm run clean && rollup -c && cp index.d.ts dist/",
+		"clean": "rm -rf dist",
 		"start": "tsx test/test-server.ts",
 		"lint": "eslint src/ test/",
 		"test": "NODE_ENV=test vitest --no-file-parallelism",
@@ -18,8 +24,12 @@
 	"author": "Jake Sower",
 	"devDependencies": {
 		"@data-prism/memory-store": "0.0.31",
+		"@rollup/plugin-commonjs": "^28.0.1",
+		"@rollup/plugin-json": "^6.1.0",
+		"@rollup/plugin-node-resolve": "^16.0.0",
 		"ajv-formats": "^3.0.1",
 		"axios": "^1.7.7",
+		"rollup": "^4.28.1",
 		"start-server-and-test": "^2.0.4",
 		"tsx": "^4.16.2",
 		"typescript": "^5.5.3",
@@ -30,6 +40,12 @@
 		"access": "public"
 	},
 	"private": true,
+	"files": [
+		"dist/",
+		"README.md",
+		"LICENSE"
+	],
+	"sideEffects": false,
 	"dependencies": {
 		"@data-prism/expressions": "^0.0.9",
 		"@data-prism/utils": "^0.0.5",

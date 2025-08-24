@@ -16,6 +16,7 @@
 		"build": "npm run clean && rollup -c && cp index.d.ts dist/",
 		"clean": "rm -rf dist",
 		"lint": "eslint src/ test/",
+		"lint:fix": "eslint --fix src/ test/",
 		"prepublishOnly": "npm run lint && npm run test",
 		"test": "NODE_ENV=test vitest run --coverage",
 		"test:watch": "vitest"

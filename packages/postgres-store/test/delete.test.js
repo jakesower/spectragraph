@@ -15,7 +15,7 @@ describe("Delete Tests", () => {
 	beforeEach(async () => {
 		db = getClient();
 		await reset(db, careBearSchema, careBearConfig, careBearData);
-		
+
 		const validator = createValidator({ schemas: [geojsonSchema] });
 		store = createPostgresStore(careBearSchema, {
 			...careBearConfig,
@@ -27,5 +27,4 @@ describe("Delete Tests", () => {
 	it("fails to delete an invalid resource", async () => {
 		expect(store.delete({ type: "bears" })).rejects.toThrowError();
 	});
-
 });

@@ -18,20 +18,22 @@ export async function startTestDb() {
 	}
 
 	console.log("Starting PostgreSQL test container...");
-	
+
 	pgContainer = await new GenericContainer("postgis/postgis:15-3.3")
 		.withEnvironment({
 			POSTGRES_DB: "test_db",
-			POSTGRES_USER: "test_user", 
+			POSTGRES_USER: "test_user",
 			POSTGRES_PASSWORD: "test_password",
 		})
 		.withExposedPorts(5432)
-		.withWaitStrategy(Wait.forLogMessage("database system is ready to accept connections", 2))
+		.withWaitStrategy(
+			Wait.forLogMessage("database system is ready to accept connections", 2),
+		)
 		.start();
 
 	const host = pgContainer.getHost();
 	const port = pgContainer.getMappedPort(5432);
-	
+
 	testDb = new Client({
 		host,
 		port,
@@ -41,7 +43,7 @@ export async function startTestDb() {
 	});
 
 	await testDb.connect();
-	
+
 	// Create required extensions
 	await testDb.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
 	await testDb.query('CREATE EXTENSION IF NOT EXISTS "postgis"');
@@ -51,7 +53,7 @@ export async function startTestDb() {
 	globalThis.pgContainer = pgContainer;
 
 	console.log("PostgreSQL test container ready");
-	
+
 	return { db: testDb, container: pgContainer };
 }
 
@@ -61,19 +63,19 @@ export async function startTestDb() {
 export async function stopTestDb() {
 	const db = globalThis.testDb || testDb;
 	const container = globalThis.pgContainer || pgContainer;
-	
+
 	if (db) {
 		await db.end();
 		testDb = null;
 		globalThis.testDb = null;
 	}
-	
+
 	if (container) {
 		await container.stop();
 		pgContainer = null;
 		globalThis.pgContainer = null;
 	}
-	
+
 	console.log("PostgreSQL test container stopped");
 }
 

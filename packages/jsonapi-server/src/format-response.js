@@ -6,6 +6,13 @@ import {
 } from "@data-prism/core"
 import { mapValues, omit } from "lodash-es";
 
+/**
+ * Formats query results into JSON:API response format
+ * @param {import("@data-prism/core").Schema} schema - The schema defining resources
+ * @param {import("@data-prism/core").RootQuery} query - The query that was executed
+ * @param {*} result - The query results to format
+ * @returns {Object} JSON:API formatted response object
+ */
 export function formatResponse(schema, query, result) {
 	if (result === null) return { data: null };
 
