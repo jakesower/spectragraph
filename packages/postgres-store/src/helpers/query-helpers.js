@@ -24,13 +24,7 @@ import { partition, pick } from "lodash-es";
  * @returns {QueryBreakdown} Flattened query breakdown
  */
 export function flattenQuery(schema, rootQuery) {
-	const go = (
-		query,
-		type,
-		path,
-		parent = null,
-		parentRelationship = null,
-	) => {
+	const go = (query, type, path, parent = null, parentRelationship = null) => {
 		const resDef = schema.resources[type];
 		const { idAttribute = "id" } = resDef;
 		const [attributesEntries, relationshipsEntries] = partition(

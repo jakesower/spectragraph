@@ -4,7 +4,10 @@
 	"type": "module",
 	"main": "./src/index.js",
 	"scripts": {
-		"lint": ""
+		"format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
+		"format:fix": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
+		"lint": "eslint src/ test/",
+		"lint:fix": "eslint --fix src/ test/"
 	},
 	"exports": {
 		".": "./src/index.js",

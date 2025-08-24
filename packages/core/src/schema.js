@@ -103,8 +103,9 @@ export function validateSchema(schema, options = {}) {
 	const { validator = defaultValidator } = options;
 
 	if (typeof schema !== "object") {
-		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
-
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
 	}
 	const validatorCache = getValidateSchemaCache(schema, validator);
 	if (validatorCache.hit) return validatorCache.value;

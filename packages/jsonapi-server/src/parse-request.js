@@ -19,8 +19,8 @@ const castFilterValue = (type, val) => {
 	return Array.isArray(parsed)
 		? parsed.map(casters[type])
 		: typeof val === "object"
-		? mapValues(val, (v) => castFilterValue(type, v))
-		: casters[type](val);
+			? mapValues(val, (v) => castFilterValue(type, v))
+			: casters[type](val);
 };
 
 /**
@@ -54,13 +54,15 @@ export function parseRequest(schema, params) {
 		const castFilters = mapValues(parsedFilters, (param, key) => {
 			const attrType = resDef.attributes[key].type;
 
-			if (defaultExpressionEngine.isExpression(param))
-				{return castFilterValue(attrType, param);}
+			if (defaultExpressionEngine.isExpression(param)) {
+				return castFilterValue(attrType, param);
+			}
 
 			try {
 				const parsed = JSON5.parse(param);
-				if (defaultExpressionEngine.isExpression(parsed))
-					{return castFilterValue(attrType, parsed);}
+				if (defaultExpressionEngine.isExpression(parsed)) {
+					return castFilterValue(attrType, parsed);
+				}
 			} catch {
 				// noop
 			}
@@ -83,7 +85,7 @@ export function parseRequest(schema, params) {
 						...fields[type].split(","),
 						resDef.idAttribute ?? "id",
 						...Object.keys(parsedFilters ?? {}),
-				  ])
+					])
 				: Object.keys(resDef.attributes)),
 			...included.map((related) => ({
 				[related]: go(resDef.relationships[related].type, [...path, related]),
@@ -101,7 +103,7 @@ export function parseRequest(schema, params) {
 						}
 
 						return { [parsedField]: field[0] === "-" ? "desc" : "asc" };
-				  })
+					})
 				: null;
 
 		const limit = page?.size ? Number(page.size) : null;

@@ -35,7 +35,7 @@ export function validateRequest(schema, body) {
 			},
 		];
 	}
-	
+
 	if (!(data.type in schema.resources)) {
 		return [
 			{

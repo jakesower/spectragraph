@@ -317,7 +317,7 @@ export function runUpdateTests(createStore) {
 
 		it("fails to update a single resource with a nonexistent ID", async () => {
 			const store = createStore(careBearSchema);
-			
+
 			await expect(async () => {
 				await store.update({
 					type: "bears",

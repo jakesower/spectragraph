@@ -95,10 +95,10 @@ export function linkInverses(schema, graph) {
 }
 
 /**
- * Merges two graphs together by combining resource collections. 
+ * Merges two graphs together by combining resource collections.
  * Right graph takes precedence for resources with conflicting IDs.
  *
- * @param {Graph} left - The left graph  
+ * @param {Graph} left - The left graph
  * @param {Graph} right - The right graph
  * @returns {Graph} Merged graph
  */
@@ -114,7 +114,7 @@ export function mergeGraphs(left, right) {
  * Merges two graphs together, merging individual resources with matching IDs using mergeResources().
  *
  * @param {Graph} left - The left graph
- * @param {Graph} right - The right graph  
+ * @param {Graph} right - The right graph
  * @returns {Graph} Merged graph
  */
 export function mergeGraphsDeep(left, right) {

@@ -7,7 +7,6 @@ import { iterativeDefinitions } from "./definitions/iterative.js";
 import { generativeDefinitions } from "./definitions/generative.js";
 import { temporalDefinitions } from "./definitions/temporal.js";
 
-
 /**
  * @typedef {object} ApplicativeExpression
  */

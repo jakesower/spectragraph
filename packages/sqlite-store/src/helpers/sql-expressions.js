@@ -67,7 +67,8 @@ const sqlExpressions = {
 			`${params[0]} NOT IN (${params[1].map(() => "?").join(",")})`,
 		vars: (params) => params[1],
 	},
-	$or: { // TODO
+	$or: {
+		// TODO
 		name: "or",
 		controlsEvaluation: true,
 		where: (params, evaluate) => {

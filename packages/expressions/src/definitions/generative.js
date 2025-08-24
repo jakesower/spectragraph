@@ -3,11 +3,11 @@ const $random = {
 	apply: (operand = {}) => {
 		const { min = 0, max = 1, precision = null } = operand;
 		const value = Math.random() * (max - min) + min;
-		
+
 		if (precision == null) {
 			return value;
 		}
-		
+
 		if (precision >= 0) {
 			// Positive precision: decimal places
 			return Number(value.toFixed(precision));
@@ -20,11 +20,11 @@ const $random = {
 	evaluate: (operand = {}) => {
 		const { min = 0, max = 1, precision = null } = operand;
 		const value = Math.random() * (max - min) + min;
-		
+
 		if (precision == null) {
 			return value;
 		}
-		
+
 		if (precision >= 0) {
 			// Positive precision: decimal places
 			return Number(value.toFixed(precision));

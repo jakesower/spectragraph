@@ -205,7 +205,7 @@ export function runUpsertTests(createStore) {
 
 		it("fails to upsert a single resource with an invalid attribute", async () => {
 			const store = createStore(careBearSchema);
-			
+
 			await expect(async () =>
 				store.upsert({
 					type: "bears",

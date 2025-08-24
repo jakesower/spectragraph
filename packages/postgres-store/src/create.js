@@ -38,11 +38,7 @@ export async function create(resource, context) {
 	const idColumns = resource.id ? [snakeCase(idAttribute)] : [];
 	const idVars = resource.id ? [resource.id] : [];
 
-	const columns = [
-		...attributeColumns,
-		...relationshipColumns,
-		...idColumns,
-	];
+	const columns = [...attributeColumns, ...relationshipColumns, ...idColumns];
 	const placeholders = replacePlaceholders(columns.map(() => "?").join(", "));
 	const vars = [
 		...Object.values(resource.attributes),
