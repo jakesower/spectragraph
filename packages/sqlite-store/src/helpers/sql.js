@@ -24,7 +24,9 @@ const SQL_CLAUSE_CONFIG = {
 	where: {
 		...defaultClause,
 		toSql: (val) =>
-			val.length > 0 ? `WHERE ${whereExpressionEngine.evaluate({ $and: val })}` : "",
+			val.length > 0
+				? `WHERE ${whereExpressionEngine.evaluate({ $and: val })}`
+				: "",
 	},
 	vars: {
 		...defaultClause,
@@ -84,4 +86,5 @@ export const castPropToDb = (schema, resType, propKey, val) =>
 				: undefined
 		: val;
 
-export const castValToDb = (val) => (val === true ? 1 : val === false ? 0 : val);
+export const castValToDb = (val) =>
+	val === true ? 1 : val === false ? 0 : val;

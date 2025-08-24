@@ -7,7 +7,7 @@ import { get as getQuery } from "./get.js";
 /**
  * Creates a new SQLite store instance that implements the data-prism store interface.
  * Currently only supports read operations (query).
- * 
+ *
  * @param {import('@data-prism/core').Schema} schema - The schema defining resource types and relationships
  * @param {Database} db - The SQLite database instance
  * @param {Object} [config={}] - Configuration options for the store

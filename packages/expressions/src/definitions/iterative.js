@@ -1,5 +1,6 @@
 const $filter = {
-	apply: (operand, inputData, apply) => inputData.filter((item) => apply(operand, item)),
+	apply: (operand, inputData, apply) =>
+		inputData.filter((item) => apply(operand, item)),
 	controlsEvaluation: true,
 	evaluate: () => {
 		throw new Error("$filter is not a valid expression for evaluation");
@@ -7,7 +8,8 @@ const $filter = {
 };
 
 const $flatMap = {
-	apply: (operand, inputData, apply) => inputData.flatMap((item) => apply(operand, item)),
+	apply: (operand, inputData, apply) =>
+		inputData.flatMap((item) => apply(operand, item)),
 	controlsEvaluation: true,
 	evaluate: () => {
 		throw new Error("$flatMap is not a valid expression for evaluation");
@@ -15,7 +17,8 @@ const $flatMap = {
 };
 
 const $map = {
-	apply: (operand, inputData, apply) => inputData.map((item) => apply(operand, item)),
+	apply: (operand, inputData, apply) =>
+		inputData.map((item) => apply(operand, item)),
 	controlsEvaluation: true,
 	evaluate: () => {
 		throw new Error("$map is not a valid expression for evaluation");

@@ -109,10 +109,7 @@ const constraintOperatorDefs = {
  * Constraint operators with preQuery flag added
  * @type {Object<string, ConstraintOperatorDef>}
  */
-export const constraintOperators = mapValues(
-	constraintOperatorDefs,
-	(def) => ({
-		...def,
-		preQuery: true,
-	}),
-);
+export const constraintOperators = mapValues(constraintOperatorDefs, (def) => ({
+	...def,
+	preQuery: true,
+}));

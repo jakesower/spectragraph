@@ -24,7 +24,8 @@ export function flattenQuery(schema, rootQuery) {
 		const [attributesEntries, relationshipsEntries] = partition(
 			Object.entries(query.select ?? {}),
 			([, propVal]) =>
-				typeof propVal === "string" && (propVal in resDef.attributes || propVal === "id"),
+				typeof propVal === "string" &&
+				(propVal in resDef.attributes || propVal === "id"),
 		);
 
 		const attributes = attributesEntries.map((pe) => pe[1]);

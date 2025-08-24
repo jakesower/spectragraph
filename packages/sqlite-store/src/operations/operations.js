@@ -165,7 +165,11 @@ const gatherPreOperations = (query, context) => {
 				? [preQueryRelationships(argContext)]
 				: [];
 
-		return [{ select: [`${table}.${idAttribute}`] }, ...operationParts, ...refPart];
+		return [
+			{ select: [`${table}.${idAttribute}`] },
+			...operationParts,
+			...refPart,
+		];
 	});
 
 	return queryParts;

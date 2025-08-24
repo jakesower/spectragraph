@@ -9,11 +9,13 @@ const $apply = {
 const $isDefined = {
 	name: "$isDefined",
 	apply: (_, inputData) => inputData !== undefined,
-	evaluate: function(operand) {
+	evaluate: function (operand) {
 		if (!Array.isArray(operand)) {
-			throw new Error("$isDefined evaluate form requires array operand: [value]");
+			throw new Error(
+				"$isDefined evaluate form requires array operand: [value]",
+			);
 		}
-		
+
 		const [value] = operand;
 		return value !== undefined;
 	},
@@ -22,11 +24,11 @@ const $isDefined = {
 const $echo = {
 	name: "$echo",
 	apply: (_, inputData) => inputData,
-	evaluate: function(operand) {
+	evaluate: function (operand) {
 		if (!Array.isArray(operand)) {
 			throw new Error("$echo evaluate form requires array operand: [value]");
 		}
-		
+
 		const [value] = operand;
 		return value;
 	},
@@ -51,11 +53,13 @@ const $ensurePath = {
 		go(inputData, operand.split("."));
 		return inputData;
 	},
-	evaluate: function(operand) {
+	evaluate: function (operand) {
 		if (!Array.isArray(operand)) {
-			throw new Error("$ensurePath evaluate form requires array operand: [object, path]");
+			throw new Error(
+				"$ensurePath evaluate form requires array operand: [object, path]",
+			);
 		}
-		
+
 		const [object, path] = operand;
 		return this.apply(path, object);
 	},
@@ -64,11 +68,13 @@ const $ensurePath = {
 const $get = {
 	name: "$get",
 	apply: (operand, inputData) => get(inputData, operand),
-	evaluate: function(operand) {
+	evaluate: function (operand) {
 		if (!Array.isArray(operand)) {
-			throw new Error("$get evaluate form requires array operand: [object, path]");
+			throw new Error(
+				"$get evaluate form requires array operand: [object, path]",
+			);
 		}
-		
+
 		const [object, path] = operand;
 		return this.apply(path, object);
 	},
