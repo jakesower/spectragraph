@@ -9,9 +9,9 @@ import {
 	allBearsResult,
 	allBearsResponse,
 } from "../fixtures/formatted-care-bear-data.js";
-import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
+import { careBearData } from "../fixtures/care-bear-data.js";  
 
-const store = createMemoryStore(careBearSchema, careBearData);
+const store = createMemoryStore(careBearSchema, { initialData: careBearData });
 
 const ajv = new Ajv();
 addFormats(ajv);
@@ -46,14 +46,14 @@ it("formats a response for a single resource", () => {
 	expect(validateResponse(response)).toStrictEqual(true);
 });
 
-it("formats a response for a nested resource", () => {
+it("formats a response for a nested resource", async () => {
 	const query = {
 		type: "bears",
 		id: "1",
 		select: ["id", "name", { home: { select: ["id", "name"] } }],
 	};
 
-	const result = store.query(query);
+	const result = await store.query(query);
 	const response = formatResponse(careBearSchema, query, result);
 
 	expect(response).toStrictEqual({
@@ -78,7 +78,7 @@ it("formats a response for a nested resource", () => {
 	expect(validateResponse(response)).toStrictEqual(true);
 });
 
-it("formats a response for a doubly nested resource", () => {
+it("formats a response for a doubly nested resource", async () => {
 	const query = {
 		type: "homes",
 		id: "1",
@@ -93,7 +93,7 @@ it("formats a response for a doubly nested resource", () => {
 		],
 	};
 
-	const result = store.query(query);
+	const result = await store.query(query);
 	const response = formatResponse(careBearSchema, query, result);
 
 	expect(response).toStrictEqual({
@@ -158,14 +158,14 @@ it("formats a response for a doubly nested resource", () => {
 	expect(validateResponse(response)).toStrictEqual(true);
 });
 
-it("formats a response for a nested resource of the same type as the primary resource", () => {
+it("formats a response for a nested resource of the same type as the primary resource", async () => {
 	const query = {
 		type: "bears",
 		id: "2",
 		select: ["id", "name", { bestFriend: { select: ["id", "name"] } }],
 	};
 
-	const result = store.query(query);
+	const result = await store.query(query);
 	const response = formatResponse(careBearSchema, query, result);
 
 	expect(response).toStrictEqual({
@@ -190,13 +190,13 @@ it("formats a response for a nested resource of the same type as the primary res
 	expect(validateResponse(response)).toStrictEqual(true);
 });
 
-it("formats a response for a nested resource of the same type as the primary resource when both are in data", () => {
+it("formats a response for a nested resource of the same type as the primary resource when both are in data", async () => {
 	const query = {
 		type: "bears",
 		select: ["id", "name", { bestFriend: { select: ["id", "name"] } }],
 	};
 
-	const result = store.query(query);
+	const result = await store.query(query);
 	const response = formatResponse(careBearSchema, query, result);
 
 	expect(response).toStrictEqual({

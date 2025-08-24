@@ -17,7 +17,6 @@ import { createOrUpdate } from "./create-or-update.js";
 import { deleteAction } from "./delete.js";
 import { merge } from "./merge.js";
 
-
 /**
  * @typedef {Object} NormalResourceTree
  * @property {string} type
@@ -40,8 +39,6 @@ import { merge } from "./merge.js";
  * @property {import('@data-prism/core').Graph} storeGraph - The graph data structure containing all resources
  */
 
-
-
 /**
  * @typedef {import('@data-prism/core').Store & {
  *   linkInverses: function(): void,
@@ -52,7 +49,7 @@ import { merge } from "./merge.js";
 /**
  * Creates a new in-memory store instance that implements the data-prism store interface.
  * Provides CRUD operations, querying, and relationship management for graph data.
- * 
+ *
  * @param {import('@data-prism/core').Schema} schema - The schema defining resource types and relationships
  * @param {MemoryStoreConfig} [config={}] - Configuration options for the store
  * @returns {MemoryStore} A new memory store instance
@@ -148,7 +145,9 @@ export function createMemoryStore(schema, config = {}) {
 			return Promise.resolve(runQuery(query));
 		},
 		async merge(resource) {
-			return Promise.resolve(merge(resource, { schema, validator, store: this, storeGraph }));
+			return Promise.resolve(
+				merge(resource, { schema, validator, store: this, storeGraph }),
+			);
 		},
 	};
 }

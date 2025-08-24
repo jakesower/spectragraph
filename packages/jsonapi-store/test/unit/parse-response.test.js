@@ -1,7 +1,6 @@
 import { expect, it } from "vitest";
 import { createMemoryStore } from "@data-prism/memory-store";
-import careBearSchema from "../fixtures/care-bears.schema.json";
-import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
+import { careBearSchema, careBearData } from "@data-prism/interface-tests/fixtures";
 import { parseResponse } from "../../src/parse-response";
 import {
 	allBearsResult,

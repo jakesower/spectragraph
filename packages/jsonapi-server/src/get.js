@@ -19,7 +19,7 @@ export function get(schema, store, type) {
 			const result = await store.query(query);
 			const response = formatResponse(schema, query, result);
 			res.json(response);
-		} catch {
+		} catch (error) {
 			res.statusCode = 500;
 			res.send("something went wrong");
 		}

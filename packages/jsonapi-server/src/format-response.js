@@ -1,9 +1,9 @@
 import { applyOrMap } from "@data-prism/utils";
 import {
-	createGraphFromTrees,
+	createGraphFromResources,
 	normalizeQuery,
 	normalizeResource,
-} from "@data-prism/core"
+} from "@data-prism/core";
 import { mapValues, omit } from "lodash-es";
 
 /**
@@ -19,7 +19,7 @@ export function formatResponse(schema, query, result) {
 	const dataIds = new Set();
 	const data = applyOrMap(result, (res) => {
 		const resSchema = schema.resources[query.type];
-		const normalized = normalizeResource(query.type, res, schema);
+		const normalized = normalizeResource(schema, query.type, res);
 		dataIds.add(res[resSchema.idAttribute ?? "id"]);
 
 		return {
@@ -32,7 +32,7 @@ export function formatResponse(schema, query, result) {
 		};
 	});
 
-	const normalizedQuery = normalizeQuery(query);
+	const normalizedQuery = normalizeQuery(schema, query);
 	const hasIncluded = Object.values(normalizedQuery.select).some(
 		(s) => typeof s === "object",
 	);
@@ -41,10 +41,10 @@ export function formatResponse(schema, query, result) {
 		return { data };
 	}
 
-	const graph = createGraphFromTrees(
+	const graph = createGraphFromResources(
+		schema,
 		query.type,
 		Array.isArray(result) ? result : [result],
-		schema,
 	);
 
 	const included = [];
