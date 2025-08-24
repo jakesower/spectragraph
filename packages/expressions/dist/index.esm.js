@@ -9,11 +9,13 @@ const $apply = {
 const $isDefined = {
 	name: "$isDefined",
 	apply: (_, inputData) => inputData !== undefined,
-	evaluate: function(operand) {
+	evaluate: function (operand) {
 		if (!Array.isArray(operand)) {
-			throw new Error("$isDefined evaluate form requires array operand: [value]");
+			throw new Error(
+				"$isDefined evaluate form requires array operand: [value]",
+			);
 		}
-		
+
 		const [value] = operand;
 		return value !== undefined;
 	},
@@ -22,11 +24,11 @@ const $isDefined = {
 const $echo = {
 	name: "$echo",
 	apply: (_, inputData) => inputData,
-	evaluate: function(operand) {
+	evaluate: function (operand) {
 		if (!Array.isArray(operand)) {
 			throw new Error("$echo evaluate form requires array operand: [value]");
 		}
-		
+
 		const [value] = operand;
 		return value;
 	},
@@ -51,11 +53,13 @@ const $ensurePath = {
 		go(inputData, operand.split("."));
 		return inputData;
 	},
-	evaluate: function(operand) {
+	evaluate: function (operand) {
 		if (!Array.isArray(operand)) {
-			throw new Error("$ensurePath evaluate form requires array operand: [object, path]");
+			throw new Error(
+				"$ensurePath evaluate form requires array operand: [object, path]",
+			);
 		}
-		
+
 		const [object, path] = operand;
 		return this.apply(path, object);
 	},
@@ -64,11 +68,13 @@ const $ensurePath = {
 const $get = {
 	name: "$get",
 	apply: (operand, inputData) => get(inputData, operand),
-	evaluate: function(operand) {
+	evaluate: function (operand) {
 		if (!Array.isArray(operand)) {
-			throw new Error("$get evaluate form requires array operand: [object, path]");
+			throw new Error(
+				"$get evaluate form requires array operand: [object, path]",
+			);
 		}
-		
+
 		const [object, path] = operand;
 		return this.apply(path, object);
 	},
@@ -506,7 +512,8 @@ const aggregativeDefinitions = {
 };
 
 const $filter = {
-	apply: (operand, inputData, apply) => inputData.filter((item) => apply(operand, item)),
+	apply: (operand, inputData, apply) =>
+		inputData.filter((item) => apply(operand, item)),
 	controlsEvaluation: true,
 	evaluate: () => {
 		throw new Error("$filter is not a valid expression for evaluation");
@@ -514,7 +521,8 @@ const $filter = {
 };
 
 const $flatMap = {
-	apply: (operand, inputData, apply) => inputData.flatMap((item) => apply(operand, item)),
+	apply: (operand, inputData, apply) =>
+		inputData.flatMap((item) => apply(operand, item)),
 	controlsEvaluation: true,
 	evaluate: () => {
 		throw new Error("$flatMap is not a valid expression for evaluation");
@@ -522,7 +530,8 @@ const $flatMap = {
 };
 
 const $map = {
-	apply: (operand, inputData, apply) => inputData.map((item) => apply(operand, item)),
+	apply: (operand, inputData, apply) =>
+		inputData.map((item) => apply(operand, item)),
 	controlsEvaluation: true,
 	evaluate: () => {
 		throw new Error("$map is not a valid expression for evaluation");
@@ -546,11 +555,11 @@ const $random = {
 	apply: (operand = {}) => {
 		const { min = 0, max = 1, precision = null } = operand;
 		const value = Math.random() * (max - min) + min;
-		
+
 		if (precision == null) {
 			return value;
 		}
-		
+
 		if (precision >= 0) {
 			// Positive precision: decimal places
 			return Number(value.toFixed(precision));
@@ -563,11 +572,11 @@ const $random = {
 	evaluate: (operand = {}) => {
 		const { min = 0, max = 1, precision = null } = operand;
 		const value = Math.random() * (max - min) + min;
-		
+
 		if (precision == null) {
 			return value;
 		}
-		
+
 		if (precision >= 0) {
 			// Positive precision: decimal places
 			return Number(value.toFixed(precision));
@@ -602,7 +611,9 @@ const $nowLocal = {
 		const now = new Date();
 		const offset = -now.getTimezoneOffset();
 		const sign = offset >= 0 ? "+" : "-";
-		const hours = Math.floor(Math.abs(offset) / 60).toString().padStart(2, "0");
+		const hours = Math.floor(Math.abs(offset) / 60)
+			.toString()
+			.padStart(2, "0");
 		const minutes = (Math.abs(offset) % 60).toString().padStart(2, "0");
 		return now.toISOString().slice(0, -1) + sign + hours + ":" + minutes;
 	},
@@ -610,7 +621,9 @@ const $nowLocal = {
 		const now = new Date();
 		const offset = -now.getTimezoneOffset();
 		const sign = offset >= 0 ? "+" : "-";
-		const hours = Math.floor(Math.abs(offset) / 60).toString().padStart(2, "0");
+		const hours = Math.floor(Math.abs(offset) / 60)
+			.toString()
+			.padStart(2, "0");
 		const minutes = (Math.abs(offset) % 60).toString().padStart(2, "0");
 		return now.toISOString().slice(0, -1) + sign + hours + ":" + minutes;
 	},
@@ -620,7 +633,7 @@ const $nowLocal = {
 };
 
 const $nowUTC = {
-	name: "$nowUTC", 
+	name: "$nowUTC",
 	apply: () => new Date().toISOString(),
 	evaluate: () => new Date().toISOString(),
 	schema: {

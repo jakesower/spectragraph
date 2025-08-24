@@ -4786,8 +4786,9 @@ function validateSchema(schema, options = {}) {
 	const { validator = defaultValidator } = options;
 
 	if (typeof schema !== "object") {
-		return [{ message: "Invalid schema: expected object, got " + typeof schema }];
-
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
 	}
 	const validatorCache = getValidateSchemaCache(schema, validator);
 	if (validatorCache.hit) return validatorCache.value;
@@ -5319,10 +5320,10 @@ function linkInverses(schema, graph) {
 }
 
 /**
- * Merges two graphs together by combining resource collections. 
+ * Merges two graphs together by combining resource collections.
  * Right graph takes precedence for resources with conflicting IDs.
  *
- * @param {Graph} left - The left graph  
+ * @param {Graph} left - The left graph
  * @param {Graph} right - The right graph
  * @returns {Graph} Merged graph
  */
@@ -5338,7 +5339,7 @@ function mergeGraphs(left, right) {
  * Merges two graphs together, merging individual resources with matching IDs using mergeResources().
  *
  * @param {Graph} left - The left graph
- * @param {Graph} right - The right graph  
+ * @param {Graph} right - The right graph
  * @returns {Graph} Merged graph
  */
 function mergeGraphsDeep(left, right) {

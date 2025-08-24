@@ -11994,7 +11994,8 @@ const sqlExpressions = {
 			`${params[0]} NOT IN (${params[1].map(() => "?").join(",")})`,
 		vars: (params) => params[1],
 	},
-	$or: { // TODO
+	$or: {
+		// TODO
 		name: "or",
 		controlsEvaluation: true,
 		where: (params, evaluate) => {
@@ -12037,7 +12038,9 @@ const SQL_CLAUSE_CONFIG = {
 	where: {
 		...defaultClause,
 		toSql: (val) =>
-			val.length > 0 ? `WHERE ${whereExpressionEngine.evaluate({ $and: val })}` : "",
+			val.length > 0
+				? `WHERE ${whereExpressionEngine.evaluate({ $and: val })}`
+				: "",
 	},
 	vars: {
 		...defaultClause,
@@ -12088,7 +12091,8 @@ function composeClauses(queryModifiers) {
 	);
 }
 
-const castValToDb = (val) => (val === true ? 1 : val === false ? 0 : val);
+const castValToDb = (val) =>
+	val === true ? 1 : val === false ? 0 : val;
 
 function makeRelBuilders(schema) {
 	return {
@@ -12261,7 +12265,8 @@ function flattenQuery(schema, rootQuery) {
 		const [attributesEntries, relationshipsEntries] = lodashEs.partition(
 			Object.entries(query.select ?? {}),
 			([, propVal]) =>
-				typeof propVal === "string" && (propVal in resDef.attributes || propVal === "id"),
+				typeof propVal === "string" &&
+				(propVal in resDef.attributes || propVal === "id"),
 		);
 
 		const attributes = attributesEntries.map((pe) => pe[1]);
@@ -12455,7 +12460,11 @@ const gatherPreOperations = (query, context) => {
 				? [preQueryRelationships(argContext)]
 				: [];
 
-		return [{ select: [`${table}.${idAttribute}`] }, ...operationParts, ...refPart];
+		return [
+			{ select: [`${table}.${idAttribute}`] },
+			...operationParts,
+			...refPart,
+		];
 	});
 
 	return queryParts;
@@ -12606,7 +12615,7 @@ function get(query, context) {
 /**
  * Creates a new SQLite store instance that implements the data-prism store interface.
  * Currently only supports read operations (query).
- * 
+ *
  * @param {import('@data-prism/core').Schema} schema - The schema defining resource types and relationships
  * @param {Database} db - The SQLite database instance
  * @param {Object} [config={}] - Configuration options for the store

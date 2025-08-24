@@ -20,7 +20,7 @@
  * applyOrMap(null, x => x * 2)        // Returns: null
  * applyOrMap(undefined, x => x * 2)   // Returns: undefined
  */
-function applyOrMap(itemItemsOrNull, fn) {
+export function applyOrMap(itemItemsOrNull, fn) {
 	if (itemItemsOrNull === null || itemItemsOrNull === undefined) {
 		return itemItemsOrNull;
 	}
@@ -46,7 +46,7 @@ function applyOrMap(itemItemsOrNull, fn) {
  * applyOrMapAsync(null, async x => x * 2)              // Returns: null
  * applyOrMapAsync(undefined, async x => x * 2)         // Returns: undefined
  */
-function applyOrMapAsync(itemItemsOrNull, asyncFn) {
+export function applyOrMapAsync(itemItemsOrNull, asyncFn) {
 	if (itemItemsOrNull === null || itemItemsOrNull === undefined) {
 		return itemItemsOrNull;
 	}
@@ -72,8 +72,6 @@ function applyOrMapAsync(itemItemsOrNull, asyncFn) {
  *
  * pipeThru(10, [add5, multiply2, toString]) // Returns: "30"
  */
-function pipeThru(init, fns) {
+export function pipeThru(init, fns) {
 	return fns.reduce((acc, fn) => fn(acc), init);
 }
-
-export { applyOrMap, applyOrMapAsync, pipeThru };
