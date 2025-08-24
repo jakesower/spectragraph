@@ -105,7 +105,7 @@ export async function getOne(type, id, context) {
 					)
 				: snakeCase(attrName),
 		),
-		...localRelationships.map(([_, r]) => snakeCase(r.localColumn)),
+		...localRelationships.map(([, r]) => snakeCase(r.localColumn)),
 	].join(", ");
 	const localQuery = db.query(
 		{
@@ -178,7 +178,7 @@ export async function getAll(type, context) {
 					)
 				: snakeCase(attrName),
 		),
-		...localRelationships.map(([_, r]) => snakeCase(r.localColumn)),
+		...localRelationships.map(([, r]) => snakeCase(r.localColumn)),
 	].join(", ");
 	const localQuery = db.query({
 		rowMode: "array",

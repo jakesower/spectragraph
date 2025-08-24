@@ -13,7 +13,7 @@ describe("Query Tests", () => {
 	beforeEach(async () => {
 		db = getClient();
 		await reset(db, careBearSchema, careBearConfig, careBearData);
-		
+
 		store = createPostgresStore(careBearSchema, {
 			...careBearConfig,
 			db,
@@ -44,7 +44,10 @@ describe("Query Tests", () => {
 			select: ["powerId", "name"],
 		});
 
-		expect(result).toEqual({ powerId: "careBearStare", name: "Care Bear Stare" });
+		expect(result).toEqual({
+			powerId: "careBearStare",
+			name: "Care Bear Stare",
+		});
 	});
 
 	it("uses explicitly set id fields without fetching the ID", async () => {

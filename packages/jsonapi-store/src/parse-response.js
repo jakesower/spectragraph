@@ -1,0 +1,36 @@
+import { queryGraph } from "@data-prism/core"
+import { mapValues } from "lodash-es";
+
+/**
+ * Parses a JSON:API response into Data Prism query results
+ * @param {import("@data-prism/core").Schema} schema - Data Prism schema
+ * @param {import("@data-prism/core").RootQuery} query - Original query
+ * @param {Object} response - JSON:API response object
+ * @returns {*} Query results in Data Prism format
+ */
+export function parseResponse(schema, query, response) {
+	if (response.data === null) return null;
+
+	const graph = mapValues(schema.resources, () => ({}));
+	const dataArray = Array.isArray(response.data)
+		? response.data
+		: [response.data];
+
+	const extractResource = (datum) => {
+		const resSchema = schema.resources[datum.type];
+
+		graph[datum.type][datum.id] = {
+			...datum,
+			attributes: {
+				[resSchema.idAttribute ?? "id"]: datum.id,
+				...datum.attributes,
+			},
+			relationships: mapValues(datum.relationships ?? {}, (r) => r.data),
+		};
+	};
+
+	dataArray.forEach(extractResource);
+	(response.included ?? []).forEach(extractResource);
+
+	return queryGraph(schema, query, graph);
+}

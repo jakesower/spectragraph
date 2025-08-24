@@ -1,4 +1,3 @@
-import Ajv from "ajv";
 import { validateResourceTree } from "@data-prism/core";
 import { upsertForeignRelationshipRows, upsertResourceRow } from "./upsert.js";
 
@@ -24,8 +23,9 @@ export async function splice(resource, context) {
 	const { db } = config;
 
 	const errors = validateResourceTree(schema, resource, validator);
-	if (errors.length > 0)
-		{throw new Error("invalid resource tree", { cause: errors });}
+	if (errors.length > 0) {
+		throw new Error("invalid resource tree", { cause: errors });
+	}
 
 	/**
 	 * Recursively processes a resource or reference
@@ -59,9 +59,7 @@ export async function splice(resource, context) {
 			type: res.type,
 			id: upserted.id,
 			attributes: res.attributes,
-			...(res.relationships
-				? { relationships: processedRelationships }
-				: {}),
+			...(res.relationships ? { relationships: processedRelationships } : {}),
 		};
 	};
 
