@@ -73,5 +73,13 @@ describe("$not", () => {
 		expect(apply(expression, 2)).toBe(true); // 2 is not between 4-6, so NOT that is true
 	});
 
-	// Note: $not doesn't have an evaluate function, which seems like an oversight
+	it("evaluate with boolean value", () => {
+		expect(evaluate({ $not: true })).toBe(false);
+		expect(evaluate({ $not: false })).toBe(true);
+	});
+
+	it("evaluate with expression", () => {
+		expect(evaluate({ $not: { $eq: [5, 5] } })).toBe(false);
+		expect(evaluate({ $not: { $eq: [5, 10] } })).toBe(true);
+	});
 });

@@ -39,15 +39,12 @@ export async function getOne(type, id, context) {
 
 	const output = { type, id, attributes: {}, relationships: {} };
 
-	/** @type {Array<[string, LocalJoin]>} */
 	const localRelationships = Object.entries(joins).filter(
 		([, j]) => "localColumn" in j,
 	);
-	/** @type {Array<[string, ForeignJoin]>} */
 	const foreignRelationships = Object.entries(joins).filter(
 		([, j]) => "foreignColumn" in j,
 	);
-	/** @type {Array<[string, ManyToManyJoin]>} */
 	const manyToManyRelationships = Object.entries(joins).filter(
 		([, j]) => "localJoinColumn" in j,
 	);
@@ -164,7 +161,6 @@ export async function getAll(type, context) {
 
 	const resources = {};
 
-	/** @type {Array<[string, LocalJoin]>} */
 	const localRelationships = Object.entries(joins).filter(
 		([, j]) => "localColumn" in j,
 	);
@@ -188,7 +184,6 @@ export async function getAll(type, context) {
 	const { rows } = await localQuery;
 
 	rows.forEach((row) => {
-		/** @type {any} */
 		const resource = { type, id: row[0], attributes: {} };
 		if (includeRelationships) {
 			resource.relationships = mapValues(resSchema.relationships, (rel) =>
@@ -221,11 +216,9 @@ export async function getAll(type, context) {
 	});
 
 	if (includeRelationships) {
-		/** @type {Array<[string, ForeignJoin]>} */
 		const foreignRelationships = Object.entries(joins).filter(
 			([, j]) => "foreignColumn" in j,
 		);
-		/** @type {Array<[string, ManyToManyJoin]>} */
 		const manyToManyRelationships = Object.entries(joins).filter(
 			([, j]) => "localJoinColumn" in j,
 		);

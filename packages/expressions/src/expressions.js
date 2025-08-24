@@ -1,10 +1,11 @@
 import { mapValues } from "lodash-es";
 import { coreDefinitions } from "./definitions/core.js";
-import { logicalDefinitions } from "./definitions/logical.js";
-import { comparativeDefinitions } from "./definitions/comparative.js";
 import { aggregativeDefinitions } from "./definitions/aggregative.js";
-import { iterativeDefinitions } from "./definitions/iterative.js";
+import { comparativeDefinitions } from "./definitions/comparative.js";
+import { conditionalDefinitions } from "./definitions/conditional.js";
 import { generativeDefinitions } from "./definitions/generative.js";
+import { iterativeDefinitions } from "./definitions/iterative.js";
+import { logicalDefinitions } from "./definitions/logical.js";
 import { temporalDefinitions } from "./definitions/temporal.js";
 
 /**
@@ -28,7 +29,6 @@ import { temporalDefinitions } from "./definitions/temporal.js";
 /**
  * @typedef {object} ExpressionEngine
  * @property {function(Expression, any): any} apply
- * @property {function(Expression): function(any): any} compile
  * @property {function(Expression): any} evaluate
  * @property {string[]} expressionNames
  * @property {function(Expression): boolean} isExpression
@@ -71,7 +71,7 @@ export function createExpressionEngine(customOperations) {
 			const operation = operations[expressionName];
 
 			if (operation.controlsEvaluation) {
-				return operation.apply(operand, inputData, apply, isExpression);
+				return operation.apply(operand, inputData, { apply, isExpression });
 			}
 
 			const evaluatedOperand = step(operand);
@@ -81,55 +81,49 @@ export function createExpressionEngine(customOperations) {
 		return step(rootExpression);
 	};
 
-	const evaluate = (rootExpression) => {
-		const go = (expression) => {
-			if (!isExpression(expression)) {
-				return Array.isArray(expression)
-					? expression.map(go)
-					: typeof expression === "object"
-						? mapValues(expression, go)
-						: expression;
-			}
+	const evaluate = (expression) => {
+		if (!isExpression(expression)) {
+			return Array.isArray(expression)
+				? expression.map(evaluate)
+				: typeof expression === "object"
+					? mapValues(expression, evaluate)
+					: expression;
+		}
 
-			const [expressionName, operand] = Object.entries(expression)[0];
+		const [expressionName, operand] = Object.entries(expression)[0];
 
-			// special case
-			if (expressionName === "$literal") return expression[expressionName];
+		// special case
+		if (expressionName === "$literal") return expression[expressionName];
 
-			const operation = operations[expressionName];
-			if (operation.controlsEvaluation) {
-				return operation.evaluate(operand, evaluate);
-			}
+		const operation = operations[expressionName];
+		if (operation.controlsEvaluation) {
+			return operation.evaluate(operand, {
+				apply,
+				evaluate,
+				isExpression,
+			});
+		}
 
-			const evaluatedOperand = go(operand);
-			return operation.evaluate(evaluatedOperand);
-		};
-
-		return go(rootExpression);
+		const evaluatedOperand = evaluate(operand);
+		return operation.evaluate(evaluatedOperand);
 	};
 
 	return {
 		apply,
 		evaluate,
 		expressionNames: Object.keys(operations),
-		compile: (expression) => {
-			if (!isExpression(expression)) {
-				throw new Error("only expressions may be compiled");
-			}
-
-			return (inputData) => apply(expression, inputData);
-		},
 		isExpression,
 	};
 }
 
 export const defaultExpressions = {
 	...coreDefinitions,
-	...logicalDefinitions,
-	...comparativeDefinitions,
 	...aggregativeDefinitions,
-	...iterativeDefinitions,
+	...comparativeDefinitions,
+	...conditionalDefinitions,
 	...generativeDefinitions,
+	...iterativeDefinitions,
+	...logicalDefinitions,
 	...temporalDefinitions,
 };
 

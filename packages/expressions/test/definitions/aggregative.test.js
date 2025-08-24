@@ -21,6 +21,18 @@ describe("$count", () => {
 		expect(apply({ $count: singleValue }, null)).toBe(1);
 	});
 
+	describe("evaluate form", () => {
+		const { evaluate } = defaultExpressionEngine;
+
+		it("counts elements in static array", () => {
+			expect(evaluate({ $count: [1, 2, 3, 4, 5] })).toBe(5);
+		});
+
+		it("returns 0 for empty array", () => {
+			expect(evaluate({ $count: [] })).toBe(0);
+		});
+	});
+
 });
 
 describe("$sum", () => {
@@ -56,6 +68,18 @@ describe("$max", () => {
 	it("handles negative values", () => {
 		expect(apply({ $max: [-5, -1, -10] }, null)).toBe(-1);
 	});
+
+	describe("evaluate form", () => {
+		const { evaluate } = defaultExpressionEngine;
+
+		it("finds maximum in static array", () => {
+			expect(evaluate({ $max: [1, 5, 3, 9, 2] })).toBe(9);
+		});
+
+		it("returns undefined for empty array", () => {
+			expect(evaluate({ $max: [] })).toBeUndefined();
+		});
+	});
 });
 
 describe("$min", () => {
@@ -77,6 +101,18 @@ describe("$min", () => {
 
 	it("handles negative values", () => {
 		expect(apply({ $min: [-5, -1, -10] }, null)).toBe(-10);
+	});
+
+	describe("evaluate form", () => {
+		const { evaluate } = defaultExpressionEngine;
+
+		it("finds minimum in static array", () => {
+			expect(evaluate({ $min: [1, 5, 3, 9, 2] })).toBe(1);
+		});
+
+		it("returns undefined for empty array", () => {
+			expect(evaluate({ $min: [] })).toBeUndefined();
+		});
 	});
 });
 
@@ -126,6 +162,18 @@ describe("$mean", () => {
 	it("handles negative values", () => {
 		expect(apply({ $mean: [-6, -3, 0, 3, 6] }, null)).toBe(0);
 	});
+
+	describe("evaluate form", () => {
+		const { evaluate } = defaultExpressionEngine;
+
+		it("calculates mean of static array", () => {
+			expect(evaluate({ $mean: [2, 4, 6, 8] })).toBe(5);
+		});
+
+		it("returns undefined for empty array", () => {
+			expect(evaluate({ $mean: [] })).toBeUndefined();
+		});
+	});
 });
 
 describe("$median", () => {
@@ -152,6 +200,22 @@ describe("$median", () => {
 	it("handles duplicate values", () => {
 		expect(apply({ $median: [1, 2, 2, 3] }, null)).toBe(2);
 	});
+
+	describe("evaluate form", () => {
+		const { evaluate } = defaultExpressionEngine;
+
+		it("calculates median of static odd-length array", () => {
+			expect(evaluate({ $median: [1, 3, 5, 7, 9] })).toBe(5);
+		});
+
+		it("calculates median of static even-length array", () => {
+			expect(evaluate({ $median: [2, 4, 6, 8] })).toBe(5);
+		});
+
+		it("returns undefined for empty array", () => {
+			expect(evaluate({ $median: [] })).toBeUndefined();
+		});
+	});
 });
 
 describe("$mode", () => {
@@ -177,5 +241,27 @@ describe("$mode", () => {
 
 	it("handles all same values", () => {
 		expect(apply({ $mode: [3, 3, 3, 3] }, null)).toBe(3);
+	});
+
+	describe("evaluate form", () => {
+		const { evaluate } = defaultExpressionEngine;
+
+		it("finds single mode in static array", () => {
+			expect(evaluate({ $mode: [1, 2, 2, 3, 4] })).toBe(2);
+		});
+
+		it("finds multiple modes", () => {
+			const result = evaluate({ $mode: [1, 1, 2, 2, 3] });
+			expect(Array.isArray(result)).toBe(true);
+			expect(result.sort()).toEqual([1, 2]);
+		});
+
+		it("returns undefined for array with no mode", () => {
+			expect(evaluate({ $mode: [1, 2, 3, 4] })).toBeUndefined();
+		});
+
+		it("returns undefined for empty array", () => {
+			expect(evaluate({ $mode: [] })).toBeUndefined();
+		});
 	});
 });
