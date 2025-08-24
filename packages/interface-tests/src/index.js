@@ -15,6 +15,13 @@ export function runInterfaceTests(createStore) {
 	});
 }
 
+// Export individual test functions for granular usage
+export { runQueryTests } from "./query.test.js";
+export { runCreateTests } from "./create.test.js";
+export { runUpdateTests } from "./update.test.js";
+export { runDeleteTests } from "./delete.test.js";
+export { runUpsertTests } from "./upsert.test.js";
+
 // Re-export fixtures
 export {
 	careBearSchema,

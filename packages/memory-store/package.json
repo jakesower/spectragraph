@@ -1,6 +1,6 @@
 {
 	"name": "@data-prism/memory-store",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"type": "module",
 	"main": "./dist/index.cjs.js",
 	"module": "./dist/index.esm.js",
@@ -15,7 +15,10 @@
 	"scripts": {
 		"build": "npm run clean && rollup -c && cp index.d.ts dist/",
 		"clean": "rm -rf dist",
+		"format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
+		"format:fix": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
 		"lint": "eslint src/ test/",
+		"lint:fix": "eslint --fix src/ test/",
 		"prepublishOnly": "npm run lint && npm run test",
 		"test": "NODE_ENV=test vitest run --coverage",
 		"test:watch": "vitest"

@@ -36,7 +36,7 @@ function containsNestedResources(relValue) {
  * @returns {import('@data-prism/core').NormalResource} The processed resource with all nested relationships
  */
 function processResourceTree(resource, parent, parentRelSchema, context) {
-	const { schema, store, storeGraph } = context;
+	const { schema, storeGraph } = context;
 	const resSchema = schema.resources[resource.type];
 	const resourceCopy = structuredClone(resource);
 
@@ -47,8 +47,10 @@ function processResourceTree(resource, parent, parentRelSchema, context) {
 		resourceCopy.relationships[inverse] = { type: parent.type, id: parent.id };
 	}
 
-	// Prepare resource for storage and get existing reference  
-	const existing = resource.id ? storeGraph[resource.type]?.[resource.id] : null;
+	// Prepare resource for storage and get existing reference
+	const existing = resource.id
+		? storeGraph[resource.type]?.[resource.id]
+		: null;
 	const resultId = resource.id ?? existing?.id ?? uuidv4();
 
 	// Optimize: Build final resource in-place to avoid intermediate objects
@@ -135,7 +137,7 @@ function processResourceTree(resource, parent, parentRelSchema, context) {
  * @returns {import('@data-prism/core').NormalResource} The processed resource tree with all nested resources created/updated
  */
 export function merge(resourceTree, context) {
-	const { schema, validator, store, storeGraph } = context;
+	const { schema, validator, storeGraph } = context;
 
 	ensureValidMergeResource(schema, resourceTree, { validator });
 

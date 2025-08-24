@@ -3974,6 +3974,15 @@ function buildAttribute(attrSchema, curValue) {
  * }} DeleteResource
  */
 
+/**
+ * @typedef {Object} Store
+ * @property {function(CreateResource): Promise<NormalResource>} create - Creates a new resource
+ * @property {function(UpdateResource): Promise<NormalResource>} update - Updates an existing resource
+ * @property {function(DeleteResource): Promise<DeleteResource>} delete - Deletes a resource
+ * @property {function(CreateResource | UpdateResource): Promise<NormalResource>} upsert - Creates or updates a resource
+ * @property {function(import('./query.js').RootQuery): Promise<*>} query - Queries the store
+ */
+
 const defaultValidator = new Ajv({
 	allErrors: true,
 	allowUnionTypes: true,

@@ -55,12 +55,12 @@ export function parseRequest(schema, params) {
 			const attrType = resDef.attributes[key].type;
 
 			if (defaultExpressionEngine.isExpression(param))
-				return castFilterValue(attrType, param);
+				{return castFilterValue(attrType, param);}
 
 			try {
 				const parsed = JSON5.parse(param);
 				if (defaultExpressionEngine.isExpression(parsed))
-					return castFilterValue(attrType, parsed);
+					{return castFilterValue(attrType, parsed);}
 			} catch {
 				// noop
 			}

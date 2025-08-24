@@ -24,7 +24,7 @@ import { validateRequest } from "./validate-request.js";
  */
 export function create(schema, store) {
 	return async (req, res) => {
-		const body = req.body;
+		const { body } = req;
 		const validationErrors = validateRequest(schema, body);
 		if (validationErrors) {
 			res.statusCode = 400;

@@ -1,4 +1,4 @@
-import { omit, mapValues, orderBy, merge, uniqBy, get as get$1, uniq, last, partition, pick } from 'lodash-es';
+import { omit, mapValues, merge, uniqBy, get as get$1, orderBy, uniq, last, partition, pick } from 'lodash-es';
 import { applyOrMap } from '@data-prism/utils';
 import { defaultExpressionEngine, createExpressionEngine } from '@data-prism/expressions';
 
@@ -11361,6 +11361,15 @@ function normalizeQuery(schema, rootQuery) {
  * }} DeleteResource
  */
 
+/**
+ * @typedef {Object} Store
+ * @property {function(CreateResource): Promise<NormalResource>} create - Creates a new resource
+ * @property {function(UpdateResource): Promise<NormalResource>} update - Updates an existing resource
+ * @property {function(DeleteResource): Promise<DeleteResource>} delete - Deletes a resource
+ * @property {function(CreateResource | UpdateResource): Promise<NormalResource>} upsert - Creates or updates a resource
+ * @property {function(import('./query.js').RootQuery): Promise<*>} query - Queries the store
+ */
+
 const defaultValidator = new Ajv({
 	allErrors: true,
 	allowUnionTypes: true,
@@ -12461,14 +12470,16 @@ function get(query, context) {
 	const { schema, config, rootClauses = [] } = context;
 	const { db, resources } = config;
 
-	const resConfig = resources[query.type];
+	const normalQuery = normalizeQuery(schema, query);
+
+	const resConfig = resources[normalQuery.type];
 	const rootTable = resConfig.table;
 
 	const initModifiers = {
 		from: rootTable,
 	};
 
-	return runQuery(query, context, (queryModifiers) => {
+	return runQuery(normalQuery, context, (queryModifiers) => {
 		const composedModifiers = composeClauses([
 			initModifiers,
 			...rootClauses,
@@ -12489,7 +12500,7 @@ function get(query, context) {
 		const allResults = statement.all(vars) ?? null;
 
 		const dataGraph = mapValues(schema.resources, () => ({}));
-		const flatQuery = flattenQuery(schema, query);
+		const flatQuery = flattenQuery(schema, normalQuery);
 
 		const buildExtractor = () => {
 			const extractors = flatQuery.flatMap((queryPart) => {
@@ -12580,12 +12591,25 @@ function get(query, context) {
 
 		return queryGraph(
 			schema,
-			omit(query, ["limit", "offset", "where"]),
+			omit(normalQuery, ["limit", "offset", "where"]),
 			dataGraph,
 		);
 	});
 }
 
+/**
+ * @typedef {import('@data-prism/core').Store} SQLiteStore
+ */
+
+/**
+ * Creates a new SQLite store instance that implements the data-prism store interface.
+ * Currently only supports read operations (query).
+ * 
+ * @param {import('@data-prism/core').Schema} schema - The schema defining resource types and relationships
+ * @param {Database} db - The SQLite database instance
+ * @param {Object} [config={}] - Configuration options for the store
+ * @returns {SQLiteStore} A new SQLite store instance
+ */
 function createSQLiteStore(schema, db, config = {}) {
 	const fullStoreConfig = {
 		...config,
@@ -12593,12 +12617,25 @@ function createSQLiteStore(schema, db, config = {}) {
 	};
 
 	return {
-		query: async (query) =>
-			get(query, {
+		async create(resource) {
+			throw new Error("SQLite store does not yet support create operations");
+		},
+		async update(resource) {
+			throw new Error("SQLite store does not yet support update operations");
+		},
+		async upsert(resource) {
+			throw new Error("SQLite store does not yet support upsert operations");
+		},
+		async delete(resource) {
+			throw new Error("SQLite store does not yet support delete operations");
+		},
+		async query(query) {
+			return get(query, {
 				config: fullStoreConfig,
 				schema,
 				query,
-			}),
+			});
+		},
 	};
 }
 

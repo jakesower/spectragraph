@@ -1,4 +1,4 @@
-import { queryGraph } from "@data-prism/core"
+import { queryGraph } from "@data-prism/core";
 import { mapValues } from "lodash-es";
 
 /**

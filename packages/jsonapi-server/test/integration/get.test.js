@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import careBearSchema from "../fixtures/care-bears.schema.json";
-import { careBearData } from "../fixtures/care-bear-data.js"; // eslint-disable-line
+import { careBearData } from "../fixtures/care-bear-data.js";  
 import { parseRequest } from "../../src/parse-request.js";
 import { api, makeRequest } from "../helpers.js";
 import { omit, pick } from "lodash-es";

@@ -226,6 +226,38 @@ export interface QueryGraph {
 
 export type QueryResult = { [k: string]: unknown };
 
+// === STORE TYPES ===
+
+/**
+ * Generic store interface for data persistence
+ */
+export interface Store {
+	/**
+	 * Creates a new resource
+	 */
+	create(resource: CreateResource): Promise<NormalResource>;
+	
+	/**
+	 * Updates an existing resource
+	 */
+	update(resource: UpdateResource): Promise<NormalResource>;
+	
+	/**
+	 * Deletes a resource
+	 */
+	delete(resource: DeleteResource): Promise<DeleteResource>;
+	
+	/**
+	 * Creates or updates a resource
+	 */
+	upsert(resource: CreateResource | UpdateResource): Promise<NormalResource>;
+	
+	/**
+	 * Queries the store
+	 */
+	query(query: RootQuery): Promise<QueryResult>;
+}
+
 // === SCHEMA FUNCTIONS ===
 
 /**

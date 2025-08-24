@@ -3935,6 +3935,15 @@ function normalizeQuery(schema, rootQuery) {
  * }} DeleteResource
  */
 
+/**
+ * @typedef {Object} Store
+ * @property {function(CreateResource): Promise<NormalResource>} create - Creates a new resource
+ * @property {function(UpdateResource): Promise<NormalResource>} update - Updates an existing resource
+ * @property {function(DeleteResource): Promise<DeleteResource>} delete - Deletes a resource
+ * @property {function(CreateResource | UpdateResource): Promise<NormalResource>} upsert - Creates or updates a resource
+ * @property {function(import('./query.js').RootQuery): Promise<*>} query - Queries the store
+ */
+
 const defaultValidator = new Ajv({
 	allErrors: true,
 	allowUnionTypes: true,
@@ -5405,7 +5414,7 @@ function containsNestedResources(relValue) {
  * @returns {import('@data-prism/core').NormalResource} The processed resource with all nested relationships
  */
 function processResourceTree(resource, parent, parentRelSchema, context) {
-	const { schema, store, storeGraph } = context;
+	const { schema, storeGraph } = context;
 	const resSchema = schema.resources[resource.type];
 	const resourceCopy = structuredClone(resource);
 
@@ -5417,7 +5426,9 @@ function processResourceTree(resource, parent, parentRelSchema, context) {
 	}
 
 	// Prepare resource for storage and get existing reference
-	const existing = store.getOne(resource.type, resource.id);
+	const existing = resource.id
+		? storeGraph[resource.type]?.[resource.id]
+		: null;
 	const resultId = resource.id ?? existing?.id ?? uuid.v4();
 
 	// Optimize: Build final resource in-place to avoid intermediate objects
@@ -5504,7 +5515,7 @@ function processResourceTree(resource, parent, parentRelSchema, context) {
  * @returns {import('@data-prism/core').NormalResource} The processed resource tree with all nested resources created/updated
  */
 function merge(resourceTree, context) {
-	const { schema, validator, store } = context;
+	const { schema, validator, storeGraph } = context;
 
 	ensureValidMergeResource(schema, resourceTree, { validator });
 
@@ -5535,7 +5546,7 @@ function merge(resourceTree, context) {
 
 	const missing = expectedExistingResources(resourceTree)
 		.filter((ref) => ref && ref.id)
-		.find(({ type, id }) => !store.getOne(type, id));
+		.find(({ type, id }) => !storeGraph[type]?.[id]);
 	if (missing) {
 		throw new Error(
 			`expected { type: "${missing.type}", id: "${missing.id}" } to already exist in the graph`,
@@ -5567,29 +5578,17 @@ function merge(resourceTree, context) {
  * @property {import('@data-prism/core').Graph} storeGraph - The graph data structure containing all resources
  */
 
-
-
 /**
- * @typedef {Object} Store
- * @property {function(string, string): import('@data-prism/core').NormalResource} getOne
- * @property {function(import('@data-prism/core').CreateResource): import('@data-prism/core').NormalResource} create
- * @property {function(import('@data-prism/core').UpdateResource): import('@data-prism/core').NormalResource} update
- * @property {function(import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource): import('@data-prism/core').NormalResource} upsert
- * @property {function(import('@data-prism/core').DeleteResource): import('@data-prism/core').DeleteResource} delete
- * @property {function(import('@data-prism/core').RootQuery): any} query
- * @property {function(NormalResourceTree): NormalResourceTree} merge
- */
-
-/**
- * @typedef {Store & {
- *   linkInverses: function(): void
+ * @typedef {import('@data-prism/core').Store & {
+ *   linkInverses: function(): void,
+ *   merge: function(NormalResourceTree): Promise<NormalResourceTree>
  * }} MemoryStore
  */
 
 /**
  * Creates a new in-memory store instance that implements the data-prism store interface.
  * Provides CRUD operations, querying, and relationship management for graph data.
- * 
+ *
  * @param {import('@data-prism/core').Schema} schema - The schema defining resource types and relationships
  * @param {MemoryStoreConfig} [config={}] - Configuration options for the store
  * @returns {MemoryStore} A new memory store instance
@@ -5669,16 +5668,25 @@ function createMemoryStore(schema, config = {}) {
 
 	return {
 		linkInverses: linkStoreInverses,
-		getOne(type, id) {
-			return storeGraph[type][id] ?? null;
+		async create(resource) {
+			return Promise.resolve(create(resource));
 		},
-		create,
-		update,
-		upsert,
-		delete: delete_,
-		query: runQuery,
-		merge(resource) {
-			return merge(resource, { schema, validator, store: this, storeGraph });
+		async update(resource) {
+			return Promise.resolve(update(resource));
+		},
+		async upsert(resource) {
+			return Promise.resolve(upsert(resource));
+		},
+		async delete(resource) {
+			return Promise.resolve(delete_(resource));
+		},
+		async query(query) {
+			return Promise.resolve(runQuery(query));
+		},
+		async merge(resource) {
+			return Promise.resolve(
+				merge(resource, { schema, validator, storeGraph }),
+			);
 		},
 	};
 }

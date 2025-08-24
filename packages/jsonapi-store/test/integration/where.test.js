@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import careBearSchema from "../fixtures/care-bears.schema.json";
+import { careBearSchema } from "@data-prism/interface-tests/fixtures";
 import { createJSONAPIStore } from "../../src/jsonapi-store.js";
 import { makeRequest } from "../helpers.js";
 
