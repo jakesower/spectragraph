@@ -248,11 +248,11 @@ const aggregativeDefinitions = {
 
 const createComparativeWhereCompiler =
 	(exprName) =>
-	(operand, { attribute }) => {
-		if (!attribute) {
+	(operand, context) => {
+		if (!context.attribute) {
 			throw new Error(`${exprName} must be nested under an attribute`);
 		}
-		return { $pipe: [{ $get: attribute }, { [exprName]: operand }] };
+		return { $pipe: [{ $get: context.attribute }, { [exprName]: operand }] };
 	};
 
 const $eq = {
@@ -359,6 +359,13 @@ const $if = {
 			: outcome;
 	},
 	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({
+		$if: {
+			if: operand.if,
+			then: operand.then,
+			else: operand.else,
+		},
+	}),
 };
 
 const $case = {
@@ -404,6 +411,16 @@ const $case = {
 		return this.apply(trueOperand, value, context);
 	},
 	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({
+		$case: {
+			value: operand.value,
+			cases: operand.cases.map((caseItem) => ({
+				when: caseItem.when,
+				then: caseItem.then,
+			})),
+			default: operand.default,
+		},
+	}),
 };
 
 const conditionalDefinitions = { $if, $case };
@@ -538,8 +555,8 @@ const $and = {
 	evaluate(operand) {
 		return operand.every(Boolean);
 	},
-	normalizeWhere: (operand, { normalizeWhere }) => ({
-		$and: operand.map(normalizeWhere),
+	normalizeWhere: (operand, context) => ({
+		$and: operand.map(context.normalizeWhere),
 	}),
 };
 
@@ -551,8 +568,8 @@ const $or = {
 	evaluate(operand) {
 		return operand.some(Boolean);
 	},
-	normalizeWhere: (operand, { normalizeWhere }) => ({
-		$or: operand.map(normalizeWhere),
+	normalizeWhere: (operand, context) => ({
+		$or: operand.map(context.normalizeWhere),
 	}),
 };
 
@@ -564,8 +581,8 @@ const $not = {
 		const value = typeof operand === "boolean" ? operand : evaluate(operand);
 		return !value;
 	},
-	normalizeWhere: (operand, { normalizeWhere }) => ({
-		$not: normalizeWhere(operand),
+	normalizeWhere: (operand, context) => ({
+		$not: context.normalizeWhere(operand),
 	}),
 };
 
@@ -642,7 +659,7 @@ const temporalDefinitions = {
  * @property {function(Expression): any} evaluate
  * @property {string[]} expressionNames
  * @property {function(Expression): boolean} isExpression
- * @property {function(WhereClause): Expression} compileWhereClause
+ * @property {function(WhereClause): Expression} normalizeWhereClause
  */
 
 /**
@@ -719,7 +736,7 @@ function createExpressionEngine(customExpressions) {
 		return expressionDef.evaluate(evaluatedOperand);
 	};
 
-	const compileWhereClause = (where) => {
+	const normalizeWhereClause = (where) => {
 		const compileNode = (node, attribute) => {
 			if (Array.isArray(node)) {
 				throw new Error("Array found in where clause. Where clauses must be objects or expressions that test conditions.");
@@ -761,7 +778,7 @@ function createExpressionEngine(customExpressions) {
 		evaluate,
 		expressionNames: Object.keys(expressions),
 		isExpression,
-		compileWhereClause,
+		normalizeWhereClause,
 	};
 }
 

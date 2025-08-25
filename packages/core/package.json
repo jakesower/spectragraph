@@ -46,7 +46,6 @@
 	],
 	"sideEffects": false,
 	"dependencies": {
-		"@data-prism/expressions": "^0.0.15",
 		"@data-prism/utils": "^0.0.7",
 		"ajv": "^8.17.1",
 		"ajv-errors": "^3.0.0",
