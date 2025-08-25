@@ -23,7 +23,7 @@ export {
 	createExpressionEngine,
 	defaultExpressionEngine,
 	defaultExpressions,
-} from "./expressions/index.js";
+} from "./expressions/expressions.js";
 
 import { ensure } from "./lib/helpers.js";
 import { validateSchema } from "./schema.js";

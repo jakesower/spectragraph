@@ -165,11 +165,15 @@ describe("mergeGraphsDeep", () => {
 		const left = {
 			bears: pick(careBearData.bears, ["1"]),
 			powers: careBearData.powers,
+			companions: {},
+			villains: {},
 		};
 
 		const right = {
 			bears: omit(careBearData.bears, ["1"]),
 			homes: careBearData.homes,
+			companions: careBearData.companions,
+			villains: careBearData.villains,
 		};
 
 		const merged = mergeGraphsDeep(left, right);
@@ -374,6 +378,8 @@ describe("createGraphFromResources", () => {
 			bears: pick(careBearData.bears, ["1"]),
 			powers: {},
 			homes: {},
+			companions: {},
+			villains: {},
 		});
 	});
 
@@ -386,6 +392,8 @@ describe("createGraphFromResources", () => {
 			bears: careBearData.bears,
 			powers: {},
 			homes: {},
+			companions: {},
+			villains: {},
 		});
 	});
 
@@ -403,6 +411,8 @@ describe("createGraphFromResources", () => {
 			bears: pick(careBearData.bears, ["1"]),
 			powers: {},
 			homes: pick(careBearData.homes, ["1"]),
+			companions: {},
+			villains: {},
 		});
 	});
 
@@ -418,6 +428,8 @@ describe("createGraphFromResources", () => {
 			bears: pick(careBearData.bears, ["3"]),
 			powers: pick(careBearData.powers, ["careBearStare", "makeWish"]),
 			homes: {},
+			companions: {},
+			villains: {},
 		});
 	});
 
@@ -438,6 +450,8 @@ describe("createGraphFromResources", () => {
 			bears: omit(careBearData.bears, ["5"]),
 			powers: pick(careBearData.powers, ["careBearStare", "makeWish"]),
 			homes: {},
+			companions: {},
+			villains: {},
 		});
 	});
 
@@ -706,6 +720,8 @@ describe("createGraphFromResources", () => {
 						},
 					},
 				},
+				companions: {},
+				villains: {},
 			});
 		});
 	});

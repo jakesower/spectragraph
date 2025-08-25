@@ -1,4 +1,5 @@
 import { mapValues, omit } from "lodash-es";
+import { defaultExpressionEngine } from "./expressions/expressions.js";
 import { defaultValidator } from "./resource.js";
 import { createDeepCache, ensure, translateAjvErrors } from "./lib/helpers.js";
 import baseQuerySchema from "./fixtures/query.schema.json";
@@ -349,10 +350,14 @@ export function validateQuery(schema, rootQuery, options = {}) {
  *
  * @param {Object} schema - The schema object
  * @param {RootQuery} rootQuery - The query to normalize
+ * @param {Object} [options]
+ * @param {import('./expressions/expressions.js').ExpressionEngine} [options.expressionEngine] - a @data-prism/graph expression engine
  * @returns {NormalQuery} The normalized query
  */
-export function normalizeQuery(schema, rootQuery) {
-	ensure(validateQuery)(schema, rootQuery);
+export function normalizeQuery(schema, rootQuery, options = {}) {
+	const { expressionEngine = defaultExpressionEngine } = options;
+
+	ensure(validateQuery)(schema, rootQuery, expressionEngine);
 
 	const go = (query, type) => {
 		const { select } = query;
@@ -401,11 +406,16 @@ export function normalizeQuery(schema, rootQuery) {
 			? { order: !Array.isArray(query.order) ? [query.order] : query.order }
 			: {};
 
+		const whereObj = query.where
+			? { where: expressionEngine.normalizeWhereClause(query.where) }
+			: {};
+
 		return {
 			...query,
 			select: selectWithSubqueries,
 			type,
 			...orderObj,
+			...whereObj,
 		};
 	};
 

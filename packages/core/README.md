@@ -805,4 +805,3 @@ For better performance with large datasets:
 - `@data-prism/memory-store` - In-memory data store implementation
 - `@data-prism/postgres-store` - PostgreSQL backend
 - `@data-prism/jsonapi-store` - JSON:API client store
-- `@data-prism/expressions` - Expression engine for advanced queries

@@ -6,8 +6,8 @@ const $and = {
 	evaluate(operand) {
 		return operand.every(Boolean);
 	},
-	normalizeWhere: (operand, context) => ({
-		$and: operand.map(context.normalizeWhere),
+	normalizeWhere: (operand, { attribute, normalizeWhere }) => ({
+		$and: operand.map((pred) => normalizeWhere(pred, attribute)),
 	}),
 };
 
@@ -19,8 +19,8 @@ const $or = {
 	evaluate(operand) {
 		return operand.some(Boolean);
 	},
-	normalizeWhere: (operand, context) => ({
-		$or: operand.map(context.normalizeWhere),
+	normalizeWhere: (operand, { attribute, normalizeWhere }) => ({
+		$or: operand.map((pred) => normalizeWhere(pred, attribute)),
 	}),
 };
 
@@ -32,8 +32,8 @@ const $not = {
 		const value = typeof operand === "boolean" ? operand : evaluate(operand);
 		return !value;
 	},
-	normalizeWhere: (operand, context) => ({
-		$not: context.normalizeWhere(operand),
+	normalizeWhere: (operand, { attribute, normalizeWhere }) => ({
+		$not: normalizeWhere(operand, attribute),
 	}),
 };
 

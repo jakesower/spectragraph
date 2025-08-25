@@ -1,5 +1,5 @@
 // import { mapValues } from "lodash-es";
-// import { defaultExpressionEngine } from "@data-prism/expressions";
+// import { defaultExpressionEngine } from "../expressions/expressions.js";
 
 /**
  * @typedef {Object<string, any>} Projection
@@ -82,7 +82,7 @@ function distributeStrings(expression, expressionEngine) {
 // }
 
 /**
- * @param {import('@data-prism/expressions').Expression} expression
+ * @param {import('../expressions/expressions.js').Expression} expression
  * @param {any} expressionEngine
  * @returns {function(any): any}
  */

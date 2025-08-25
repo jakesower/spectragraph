@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultExpressionEngine } from "../../../src/index.js";
+import { defaultExpressionEngine } from "../../../src/expressions/expressions.js";
 
 const kids = {
 	ximena: { name: "Ximena", age: 4 },

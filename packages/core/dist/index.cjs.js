@@ -4,7 +4,6 @@ var lodashEs = require('lodash-es');
 var Ajv = require('ajv');
 var addFormats = require('ajv-formats');
 var utils = require('@data-prism/utils');
-var expressions = require('@data-prism/expressions');
 
 function getDefaultExportFromCjs (x) {
 	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
@@ -3275,6 +3274,808 @@ function requireDist () {
 var distExports = requireDist();
 var addErrors = /*@__PURE__*/getDefaultExportFromCjs(distExports);
 
+const $apply = {
+	name: "$apply",
+	apply: (operand) => operand,
+	evaluate: (operand) => operand,
+};
+
+const $isDefined = {
+	name: "$isDefined",
+	apply: (_, inputData) => inputData !== undefined,
+	evaluate(operand) {
+		if (!Array.isArray(operand)) {
+			throw new Error(
+				"$isDefined evaluate form requires array operand: [value]",
+			);
+		}
+
+		const [value] = operand;
+		return value !== undefined;
+	},
+};
+
+const $echo = {
+	name: "$echo",
+	apply: (_, inputData) => inputData,
+	evaluate(operand) {
+		if (!Array.isArray(operand)) {
+			throw new Error("$echo evaluate form requires array operand: [value]");
+		}
+
+		const [value] = operand;
+		return value;
+	},
+};
+
+const $ensurePath = {
+	name: "$ensurePath",
+	apply: (operand, inputData) => {
+		const go = (curValue, paths, used = []) => {
+			if (paths.length === 0) return;
+
+			const [head, ...tail] = paths;
+			if (!(head in curValue)) {
+				throw new Error(
+					`"${head}" was not found along the path ${used.join(".")}`,
+				);
+			}
+
+			go(curValue[head], tail, [...used, head]);
+		};
+
+		go(inputData, operand.split("."));
+		return inputData;
+	},
+	evaluate(operand) {
+		if (!Array.isArray(operand)) {
+			throw new Error(
+				"$ensurePath evaluate form requires array operand: [object, path]",
+			);
+		}
+
+		const [object, path] = operand;
+		return this.apply(path, object);
+	},
+};
+
+const $get = {
+	name: "$get",
+	apply: (operand, inputData) => lodashEs.get(inputData, operand),
+	evaluate(operand) {
+		if (!Array.isArray(operand)) {
+			throw new Error(
+				"$get evaluate form requires array operand: [object, path]",
+			);
+		}
+
+		const [object, path] = operand;
+		return this.apply(path, object);
+	},
+};
+
+const $literal = {
+	name: "$literal",
+	apply: (operand) => operand,
+	evaluate: () => {
+		throw new Error("handled in expressions.js");
+	},
+	controlsEvaluation: true,
+};
+
+const $debug = {
+	name: "$debug",
+	apply: (evaluatedOperand) => {
+		console.log(evaluatedOperand);
+		return evaluatedOperand;
+	},
+	evaluate(evaluatedOperand) {
+		console.log(evaluatedOperand);
+		return evaluatedOperand;
+	},
+};
+
+const $compose = {
+	name: "$compose",
+	apply: (operand, inputData, { apply, isExpression }) =>
+		operand.reduceRight((acc, expr) => {
+			if (!isExpression(expr)) {
+				throw new Error(`${JSON.stringify(expr)} is not a valid expression`);
+			}
+
+			return apply(expr, acc);
+		}, inputData),
+	evaluate: ([exprs, init], { apply }) => apply({ $compose: exprs }, init),
+	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({
+		$compose: operand,
+	}),
+};
+
+const $pipe = {
+	name: "$pipe",
+	apply: (operand, inputData, { apply, isExpression }) =>
+		operand.reduce((acc, expr) => {
+			if (!isExpression(expr)) {
+				throw new Error(`${JSON.stringify(expr)} is not a valid expression`);
+			}
+
+			return apply(expr, acc);
+		}, inputData),
+	evaluate: ([exprs, init], { apply }) => apply({ $pipe: exprs }, init),
+	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({
+		$pipe: operand,
+	}),
+};
+
+const coreDefinitions = {
+	$apply,
+	$compose,
+	$debug,
+	$echo,
+	$get,
+	$isDefined,
+	$literal,
+	$pipe,
+	$ensurePath,
+};
+
+const $count = {
+	name: "$count",
+	apply(operand) {
+		return this.evaluate(operand);
+	},
+	evaluate: (operand) => operand.length,
+};
+
+const $max = {
+	name: "$max",
+	apply(operand) {
+		return this.evaluate(operand);
+	},
+	evaluate: (operand) =>
+		operand.length === 0
+			? undefined
+			: operand.reduce((max, v) => Math.max(max, v)),
+};
+
+const $min = {
+	name: "$min",
+	apply(operand) {
+		return this.evaluate(operand);
+	},
+	evaluate: (operand) =>
+		operand.length === 0
+			? undefined
+			: operand.reduce((min, v) => Math.min(min, v)),
+};
+
+const $sum = {
+	name: "$sum",
+	apply(operand) {
+		return this.evaluate(operand);
+	},
+	evaluate: (operand) => operand.reduce((sum, v) => sum + v, 0),
+};
+
+const $mean = {
+	name: "$mean",
+	apply(operand) {
+		return this.evaluate(operand);
+	},
+	evaluate: (operand) =>
+		operand.length === 0
+			? undefined
+			: operand.reduce((sum, v) => sum + v, 0) / operand.length,
+};
+
+const $median = {
+	name: "$median",
+	apply(operand) {
+		return this.evaluate(operand);
+	},
+	evaluate: (operand) => {
+		if (operand.length === 0) return undefined;
+		const sorted = [...operand].sort((a, b) => a - b);
+		const mid = Math.floor(sorted.length / 2);
+		return sorted.length % 2 === 0
+			? (sorted[mid - 1] + sorted[mid]) / 2
+			: sorted[mid];
+	},
+};
+
+const $mode = {
+	name: "$mode",
+	apply(operand) {
+		return this.evaluate(operand);
+	},
+	evaluate: (operand) => {
+		if (operand.length === 0) return undefined;
+		const frequency = {};
+		let maxCount = 0;
+		let modes = [];
+
+		// Count frequencies
+		for (const value of operand) {
+			frequency[value] = (frequency[value] ?? 0) + 1;
+			if (frequency[value] > maxCount) {
+				maxCount = frequency[value];
+				modes = [value];
+			} else if (frequency[value] === maxCount && !modes.includes(value)) {
+				modes.push(value);
+			}
+		}
+
+		// Return single mode if only one, array if multiple, or undefined if all values appear once
+		return maxCount === 1
+			? undefined
+			: modes.length === 1
+				? modes[0]
+				: modes.sort((a, b) => a - b);
+	},
+};
+
+const aggregativeDefinitions = {
+	$count,
+	$max,
+	$mean,
+	$median,
+	$min,
+	$mode,
+	$sum,
+};
+
+const createComparativeWhereCompiler =
+	(exprName) =>
+	(operand, { attribute }) => {
+		if (!attribute) {
+			throw new Error(`${exprName} must be nested under an attribute`);
+		}
+		return { $pipe: [{ $get: attribute }, { [exprName]: operand }] };
+	};
+
+const $eq = {
+	name: "$eq",
+	apply: lodashEs.isEqual,
+	evaluate: ([left, right]) => lodashEs.isEqual(left, right),
+	normalizeWhere: createComparativeWhereCompiler("$eq"),
+};
+
+const $ne = {
+	name: "$ne",
+	apply: (operand, inputData) => !lodashEs.isEqual(operand, inputData),
+	evaluate: ([left, right]) => !lodashEs.isEqual(left, right),
+	normalizeWhere: createComparativeWhereCompiler("$ne"),
+};
+
+const $gt = {
+	name: "$gt",
+	apply: (operand, inputData) => inputData > operand,
+	evaluate: ([left, right]) => left > right,
+	normalizeWhere: createComparativeWhereCompiler("$gt"),
+};
+
+const $gte = {
+	name: "$gte",
+	apply: (operand, inputData) => inputData >= operand,
+	evaluate: ([left, right]) => left >= right,
+	normalizeWhere: createComparativeWhereCompiler("$gte"),
+};
+
+const $lt = {
+	name: "$lt",
+	apply: (operand, inputData) => inputData < operand,
+	evaluate: ([left, right]) => left < right,
+	normalizeWhere: createComparativeWhereCompiler("$lt"),
+};
+
+const $lte = {
+	name: "$lte",
+	apply: (operand, inputData) => inputData <= operand,
+	evaluate: ([left, right]) => left <= right,
+	normalizeWhere: createComparativeWhereCompiler("$lte"),
+};
+
+const $in = {
+	name: "$in",
+	apply: (operand, inputData) => {
+		if (!Array.isArray(operand)) {
+			throw new Error("$in parameter must be an array");
+		}
+		return operand.includes(inputData);
+	},
+	evaluate([array, value]) {
+		return this.apply(array, value);
+	},
+	normalizeWhere: createComparativeWhereCompiler("$in"),
+};
+
+const $nin = {
+	name: "$nin",
+	apply: (operand, inputData) => {
+		if (!Array.isArray(operand)) {
+			throw new Error("$nin parameter must be an array");
+		}
+		return !operand.includes(inputData);
+	},
+	evaluate([array, value]) {
+		return this.apply(array, value);
+	},
+	normalizeWhere: createComparativeWhereCompiler("$nin"),
+};
+
+const comparativeDefinitions = {
+	$eq,
+	$gt,
+	$gte,
+	$lt,
+	$lte,
+	$ne,
+	$in,
+	$nin,
+};
+
+const $if = {
+	name: "$if",
+	apply: (operand, inputData, { apply, isExpression }) => {
+		if (
+			!isExpression(operand.if) &&
+			operand.if !== true &&
+			operand.if !== false
+		) {
+			throw new Error('"if" must be an expression, true, or false');
+		}
+
+		const outcome = apply(operand.if, inputData) ? operand.then : operand.else;
+		return isExpression(outcome) ? apply(outcome, inputData) : outcome;
+	},
+	evaluate: (operand, { evaluate }) => {
+		const conditionResult =
+			typeof operand.if === "boolean" ? operand.if : evaluate(operand.if);
+		const outcome = conditionResult ? operand.then : operand.else;
+		return typeof outcome === "object" && outcome !== null
+			? evaluate(outcome)
+			: outcome;
+	},
+	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({
+		$if: {
+			if: operand.if,
+			then: operand.then,
+			else: operand.else,
+		},
+	}),
+};
+
+const $case = {
+	name: "$case",
+	apply: (operand, inputData, { apply, isExpression }) => {
+		// Evaluate the value once
+		const value = isExpression(operand.value)
+			? apply(operand.value, inputData)
+			: operand.value;
+
+		// Check each case
+		for (const caseItem of operand.cases) {
+			let matches = false;
+
+			// Handle both simple equality and complex expressions
+			if (isExpression(caseItem.when)) {
+				// For expressions that access properties from the original object (like $get),
+				// we need to evaluate with the original argument.
+				// For comparison expressions, we typically want to evaluate with the value.
+				const whenExpressionName = Object.keys(caseItem.when)[0];
+				const evaluationContext =
+					whenExpressionName === "$get" ? inputData : value;
+				matches = apply(caseItem.when, evaluationContext);
+			} else {
+				// Simple equality comparison
+				matches = value === caseItem.when;
+			}
+
+			if (matches) {
+				return isExpression(caseItem.then)
+					? apply(caseItem.then, inputData)
+					: caseItem.then;
+			}
+		}
+
+		// Return default if no case matches
+		return isExpression(operand.default)
+			? apply(operand.default, inputData)
+			: operand.default;
+	},
+	evaluate(operand, context) {
+		const [trueOperand, value] = operand;
+		return this.apply(trueOperand, value, context);
+	},
+	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({
+		$case: {
+			value: operand.value,
+			cases: operand.cases.map((caseItem) => ({
+				when: caseItem.when,
+				then: caseItem.then,
+			})),
+			default: operand.default,
+		},
+	}),
+};
+
+const conditionalDefinitions = { $if, $case };
+
+const $random = {
+	name: "$random",
+	apply: (operand = {}) => {
+		const { min = 0, max = 1, precision = null } = operand;
+		const value = Math.random() * (max - min) + min;
+
+		if (precision == null) {
+			return value;
+		}
+
+		if (precision >= 0) {
+			// Positive precision: decimal places
+			return Number(value.toFixed(precision));
+		} else {
+			// Negative precision: round to 10^(-precision)
+			const factor = Math.pow(10, -precision);
+			return Math.round(value / factor) * factor;
+		}
+	},
+	evaluate(operand = {}) {
+		return this.apply(operand);
+	},
+};
+
+const $uuid = {
+	name: "$uuid",
+	apply: () => crypto.randomUUID(),
+	evaluate: () => crypto.randomUUID(),
+};
+
+const generativeDefinitions = {
+	$random,
+	$uuid,
+};
+
+const $filter = {
+	apply: (operand, inputData, { apply }) =>
+		inputData.filter((item) => apply(operand, item)),
+	controlsEvaluation: true,
+	evaluate([fn, items], { apply }) {
+		return apply({ $filter: fn }, items);
+	},
+};
+
+const $flatMap = {
+	apply: (operand, inputData, { apply }) =>
+		inputData.flatMap((item) => apply(operand, item)),
+	controlsEvaluation: true,
+	evaluate([fn, items], { apply }) {
+		return apply({ $flatMap: fn }, items);
+	},
+};
+
+const $map = {
+	apply: (operand, inputData, { apply }) =>
+		inputData.map((item) => apply(operand, item)),
+	controlsEvaluation: true,
+	evaluate([fn, items], { apply }) {
+		return apply({ $map: fn }, items);
+	},
+};
+
+const $any = {
+	apply: (operand, inputData, { apply }) =>
+		inputData.some((item) => apply(operand, item)),
+	controlsEvaluation: true,
+	evaluate([predicate, array], { apply }) {
+		return apply({ $any: predicate }, array);
+	},
+};
+
+const $all = {
+	apply: (operand, inputData, { apply }) =>
+		inputData.every((item) => apply(operand, item)),
+	controlsEvaluation: true,
+	evaluate([predicate, array], { apply }) {
+		return apply({ $all: predicate }, array);
+	},
+};
+
+const $find = {
+	apply: (operand, inputData, { apply }) =>
+		inputData.find((item) => apply(operand, item)),
+	controlsEvaluation: true,
+	evaluate([predicate, array], { apply }) {
+		return apply({ $find: predicate }, array);
+	},
+};
+
+const $concat = {
+	apply: (operand, inputData) => inputData.concat(operand),
+	evaluate([arrayToConcat, baseArray]) {
+		return this.apply(arrayToConcat, baseArray);
+	},
+};
+
+const $join = {
+	apply: (operand, inputData) => inputData.join(operand),
+	evaluate([separator, array]) {
+		return this.apply(separator, array);
+	},
+};
+
+const $reverse = {
+	apply: (_, inputData) => inputData.slice().reverse(),
+	evaluate(array) {
+		return this.apply(null, array);
+	},
+};
+
+const iterativeDefinitions = {
+	$all,
+	$any,
+	$concat,
+	$filter,
+	$find,
+	$flatMap,
+	$join,
+	$map,
+	$reverse,
+};
+
+const $and = {
+	name: "$and",
+	apply: (operand, inputData, { apply }) =>
+		operand.every((subexpr) => apply(subexpr, inputData)),
+	controlsEvaluation: true,
+	evaluate(operand) {
+		return operand.every(Boolean);
+	},
+	normalizeWhere: (operand, { attribute, normalizeWhere }) => ({
+		$and: operand.map((pred) => normalizeWhere(pred, attribute)),
+	}),
+};
+
+const $or = {
+	name: "$or",
+	apply: (operand, inputData, { apply }) =>
+		operand.some((subexpr) => apply(subexpr, inputData)),
+	controlsEvaluation: true,
+	evaluate(operand) {
+		return operand.some(Boolean);
+	},
+	normalizeWhere: (operand, { attribute, normalizeWhere }) => ({
+		$or: operand.map((pred) => normalizeWhere(pred, attribute)),
+	}),
+};
+
+const $not = {
+	name: "$not",
+	apply: (operand, inputData, { apply }) => !apply(operand, inputData),
+	controlsEvaluation: true,
+	evaluate(operand, { evaluate }) {
+		const value = typeof operand === "boolean" ? operand : evaluate(operand);
+		return !value;
+	},
+	normalizeWhere: (operand, { attribute, normalizeWhere }) => ({
+		$not: normalizeWhere(operand, attribute),
+	}),
+};
+
+const logicalDefinitions = {
+	$and,
+	$not,
+	$or,
+};
+
+const $nowLocal = {
+	name: "$nowLocal",
+	apply: () => {
+		const now = new Date();
+		const offset = -now.getTimezoneOffset();
+		const sign = offset >= 0 ? "+" : "-";
+		const hours = Math.floor(Math.abs(offset) / 60)
+			.toString()
+			.padStart(2, "0");
+		const minutes = (Math.abs(offset) % 60).toString().padStart(2, "0");
+		return now.toISOString().slice(0, -1) + sign + hours + ":" + minutes;
+	},
+	evaluate() {
+		return this.apply();
+	},
+};
+
+const $nowUTC = {
+	name: "$nowUTC",
+	apply: () => new Date().toISOString(),
+	evaluate() {
+		return this.apply();
+	},
+};
+
+const $timestamp = {
+	name: "$timestamp",
+	apply: () => Date.now(),
+	evaluate() {
+		return this.apply();
+	},
+};
+
+const temporalDefinitions = {
+	$nowLocal,
+	$nowUTC,
+	$timestamp,
+};
+
+/**
+ * @typedef {object} ApplicativeExpression
+ */
+
+/**
+ * @typedef {object} Expression
+ */
+
+/**
+ * @typedef {object} WhereClause
+ */
+
+/**
+ * @template Args, Input, Output
+ * @typedef {object} Expression
+ * @property {function(any, Input): Output} apply
+ * @property {function(Args, Input, any): Output} [applyImplicit]
+ * @property {function(Input): Output} evaluate
+ * @property {string} [name]
+ * @property {object} schema
+ */
+
+/**
+ * @typedef {object} ExpressionEngine
+ * @property {function(Expression, any): any} apply
+ * @property {function(Expression): any} evaluate
+ * @property {string[]} expressionNames
+ * @property {function(Expression): boolean} isExpression
+ * @property {function(WhereClause): Expression} normalizeWhereClause
+ */
+
+/**
+ * @template Args, Input, Output
+ * @typedef {function(...any): Expression} FunctionExpression
+ */
+
+/**
+ * @param {object} definitions
+ * @returns {ExpressionEngine}
+ */
+function createExpressionEngine(customExpressions) {
+	const expressions = { ...coreDefinitions, ...customExpressions }; // mutated later
+	const isExpression = (val) => {
+		const expressionKeys = new Set(Object.keys(expressions));
+
+		return (
+			val !== null &&
+			typeof val === "object" &&
+			!Array.isArray(val) &&
+			Object.keys(val).length === 1 &&
+			expressionKeys.has(Object.keys(val)[0])
+		);
+	};
+
+	const apply = (rootExpression, inputData) => {
+		const step = (expression) => {
+			if (!isExpression(expression)) {
+				return Array.isArray(expression)
+					? expression.map(step)
+					: typeof expression === "object"
+						? lodashEs.mapValues(expression, step)
+						: expression;
+			}
+
+			const [expressionName, operand] = Object.entries(expression)[0];
+			const expressionDef = expressions[expressionName];
+
+			if (expressionDef.controlsEvaluation) {
+				return expressionDef.apply(operand, inputData, { apply, isExpression });
+			}
+
+			const evaluatedOperand = step(operand);
+			return expressionDef.apply(evaluatedOperand, inputData);
+		};
+
+		return step(rootExpression);
+	};
+
+	const evaluate = (expression) => {
+		if (!isExpression(expression)) {
+			return Array.isArray(expression)
+				? expression.map(evaluate)
+				: typeof expression === "object"
+					? lodashEs.mapValues(expression, evaluate)
+					: expression;
+		}
+
+		const [expressionName, operand] = Object.entries(expression)[0];
+
+		// special case
+		if (expressionName === "$literal") return expression[expressionName];
+
+		const expressionDef = expressions[expressionName];
+		if (expressionDef.controlsEvaluation) {
+			return expressionDef.evaluate(operand, {
+				apply,
+				evaluate,
+				isExpression,
+			});
+		}
+
+		const evaluatedOperand = evaluate(operand);
+		return expressionDef.evaluate(evaluatedOperand);
+	};
+
+	const normalizeWhereClause = (where) => {
+		const compileNode = (node, attribute) => {
+			if (Array.isArray(node)) {
+				throw new Error("Array found in where clause. Where clauses must be objects or expressions that test conditions.");
+			}
+
+			if (typeof node === "object") {
+				if (isExpression(node)) {
+					const [expressionName, operand] = Object.entries(node)[0];
+					const expression = expressions[expressionName];
+
+					if (!("normalizeWhere" in expression)) {
+						throw new Error(`Expression ${expressionName} cannot be used in where clauses. Where clauses require expressions that test conditions (comparisons like $eq, $gt or logical operators like $and, $or).`);
+					}
+
+					return expression.normalizeWhere(operand, {
+						attribute,
+						normalizeWhere: compileNode,
+					});
+				}
+
+				// not an expression
+				return Object.entries(node).length === 1
+					? compileNode(Object.entries(node)[0][1], Object.entries(node)[0][0])
+					: {
+							$and: Object.entries(node).map(([attr, value]) =>
+								compileNode(value, attr),
+							),
+						};
+			}
+
+			return { $pipe: [{ $get: attribute }, { $eq: node }] };
+		};
+
+		return compileNode(where, null);
+	};
+
+	return {
+		apply,
+		evaluate,
+		expressionNames: Object.keys(expressions),
+		isExpression,
+		normalizeWhereClause,
+	};
+}
+
+const defaultExpressions = {
+	...coreDefinitions,
+	...aggregativeDefinitions,
+	...comparativeDefinitions,
+	...conditionalDefinitions,
+	...generativeDefinitions,
+	...iterativeDefinitions,
+	...logicalDefinitions,
+	...temporalDefinitions,
+};
+
+const defaultExpressionEngine =
+	createExpressionEngine(defaultExpressions);
+
 /**
  * @typedef {Object} StandardError
  * @property {string} message
@@ -3820,10 +4621,14 @@ function validateQuery(schema, rootQuery, options = {}) {
  *
  * @param {Object} schema - The schema object
  * @param {RootQuery} rootQuery - The query to normalize
+ * @param {Object} [options]
+ * @param {import('./expressions/expressions.js').ExpressionEngine} [options.expressionEngine] - a @data-prism/graph expression engine
  * @returns {NormalQuery} The normalized query
  */
-function normalizeQuery(schema, rootQuery) {
-	ensure(validateQuery)(schema, rootQuery);
+function normalizeQuery(schema, rootQuery, options = {}) {
+	const { expressionEngine = defaultExpressionEngine } = options;
+
+	ensure(validateQuery)(schema, rootQuery, expressionEngine);
 
 	const go = (query, type) => {
 		const { select } = query;
@@ -3872,11 +4677,16 @@ function normalizeQuery(schema, rootQuery) {
 			? { order: !Array.isArray(query.order) ? [query.order] : query.order }
 			: {};
 
+		const whereObj = query.where
+			? { where: expressionEngine.normalizeWhereClause(query.where) }
+			: {};
+
 		return {
 			...query,
 			select: selectWithSubqueries,
 			type,
 			...orderObj,
+			...whereObj,
 		};
 	};
 
@@ -4540,7 +5350,7 @@ function validateQueryResult(schema, rootQuery, result, options = {}) {
 			properties: lodashEs.mapValues(query.select, (def, prop) => {
 				const resDef = schema.resources[query.type];
 
-				if (expressions.defaultExpressionEngine.isExpression(def)) return {};
+				if (defaultExpressionEngine.isExpression(def)) return {};
 
 				if (typeof def === "string") {
 					return { ...resDef.attributes[def] };
@@ -4873,37 +5683,8 @@ function validateSchema(schema, options = {}) {
 	return introspectiveResult;
 }
 
-/**
- * @param {Object} whereClause
- * @param {any} expressionEngine
- * @returns {any}
- */
-function buildWhereExpression(whereClause, expressionEngine) {
-	if (expressionEngine.isExpression(whereClause)) {
-		const [name, params] = Object.entries(whereClause)[0];
-		const built = Array.isArray(params)
-			? params.map((p) => buildWhereExpression(p, expressionEngine))
-			: buildWhereExpression(params, expressionEngine);
-
-		return { [name]: built };
-	}
-
-	const whereExpressions = Object.entries(whereClause).map(
-		([propPath, propVal]) => ({
-			$pipe: [
-				{ $get: propPath },
-				expressionEngine.isExpression(propVal) ? propVal : { $eq: propVal },
-			],
-		}),
-	);
-
-	return whereExpressions.length > 1
-		? { $and: whereExpressions }
-		: whereExpressions[0];
-}
-
 // import { mapValues } from "lodash-es";
-// import { defaultExpressionEngine } from "@data-prism/expressions";
+// import { defaultExpressionEngine } from "../expressions/expressions.js";
 
 /**
  * @typedef {Object<string, any>} Projection
@@ -4986,7 +5767,7 @@ function distributeStrings(expression, expressionEngine) {
 // }
 
 /**
- * @param {import('@data-prism/expressions').Expression} expression
+ * @param {import('../expressions/expressions.js').Expression} expression
  * @param {any} expressionEngine
  * @returns {function(any): any}
  */
@@ -5080,13 +5861,8 @@ function runQuery(rootQuery, data) {
 			where(results) {
 				if (Object.keys(query.where).length === 0) return results;
 
-				const whereExpression = buildWhereExpression(
-					query.where,
-					expressions.defaultExpressionEngine,
-				);
-
 				return results.filter((result) => {
-					return expressions.defaultExpressionEngine.apply(whereExpression, result);
+					return defaultExpressionEngine.apply(query.where, result);
 				});
 			},
 			order(results) {
@@ -5141,10 +5917,10 @@ function runQuery(rootQuery, data) {
 					}
 
 					// expression
-					if (expressions.defaultExpressionEngine.isExpression(propQuery)) {
+					if (defaultExpressionEngine.isExpression(propQuery)) {
 						return createExpressionProjector(
 							propQuery,
-							expressions.defaultExpressionEngine,
+							defaultExpressionEngine,
 						);
 					}
 
@@ -5430,802 +6206,6 @@ function createGraphFromResources(
 
 	return output;
 }
-
-const $apply = {
-	name: "$apply",
-	apply: (operand) => operand,
-	evaluate: (operand) => operand,
-};
-
-const $isDefined = {
-	name: "$isDefined",
-	apply: (_, inputData) => inputData !== undefined,
-	evaluate(operand) {
-		if (!Array.isArray(operand)) {
-			throw new Error(
-				"$isDefined evaluate form requires array operand: [value]",
-			);
-		}
-
-		const [value] = operand;
-		return value !== undefined;
-	},
-};
-
-const $echo = {
-	name: "$echo",
-	apply: (_, inputData) => inputData,
-	evaluate(operand) {
-		if (!Array.isArray(operand)) {
-			throw new Error("$echo evaluate form requires array operand: [value]");
-		}
-
-		const [value] = operand;
-		return value;
-	},
-};
-
-const $ensurePath = {
-	name: "$ensurePath",
-	apply: (operand, inputData) => {
-		const go = (curValue, paths, used = []) => {
-			if (paths.length === 0) return;
-
-			const [head, ...tail] = paths;
-			if (!(head in curValue)) {
-				throw new Error(
-					`"${head}" was not found along the path ${used.join(".")}`,
-				);
-			}
-
-			go(curValue[head], tail, [...used, head]);
-		};
-
-		go(inputData, operand.split("."));
-		return inputData;
-	},
-	evaluate(operand) {
-		if (!Array.isArray(operand)) {
-			throw new Error(
-				"$ensurePath evaluate form requires array operand: [object, path]",
-			);
-		}
-
-		const [object, path] = operand;
-		return this.apply(path, object);
-	},
-};
-
-const $get = {
-	name: "$get",
-	apply: (operand, inputData) => lodashEs.get(inputData, operand),
-	evaluate(operand) {
-		if (!Array.isArray(operand)) {
-			throw new Error(
-				"$get evaluate form requires array operand: [object, path]",
-			);
-		}
-
-		const [object, path] = operand;
-		return this.apply(path, object);
-	},
-};
-
-const $literal = {
-	name: "$literal",
-	apply: (operand) => operand,
-	evaluate: () => {
-		throw new Error("handled in expressions.js");
-	},
-	controlsEvaluation: true,
-};
-
-const $debug = {
-	name: "$debug",
-	apply: (evaluatedOperand) => {
-		console.log(evaluatedOperand);
-		return evaluatedOperand;
-	},
-	evaluate(evaluatedOperand) {
-		console.log(evaluatedOperand);
-		return evaluatedOperand;
-	},
-};
-
-const $compose = {
-	name: "$compose",
-	apply: (operand, inputData, { apply, isExpression }) =>
-		operand.reduceRight((acc, expr) => {
-			if (!isExpression(expr)) {
-				throw new Error(`${JSON.stringify(expr)} is not a valid expression`);
-			}
-
-			return apply(expr, acc);
-		}, inputData),
-	evaluate: ([exprs, init], { apply }) => apply({ $compose: exprs }, init),
-	controlsEvaluation: true,
-};
-
-const $pipe = {
-	name: "$pipe",
-	apply: (operand, inputData, { apply, isExpression }) =>
-		operand.reduce((acc, expr) => {
-			if (!isExpression(expr)) {
-				throw new Error(`${JSON.stringify(expr)} is not a valid expression`);
-			}
-
-			return apply(expr, acc);
-		}, inputData),
-	evaluate: ([exprs, init], { apply }) => apply({ $pipe: exprs }, init),
-	controlsEvaluation: true,
-};
-
-const coreDefinitions = {
-	$apply,
-	$compose,
-	$debug,
-	$echo,
-	$get,
-	$isDefined,
-	$literal,
-	$pipe,
-	$ensurePath,
-};
-
-const $count = {
-	name: "$count",
-	apply(operand) {
-		return this.evaluate(operand);
-	},
-	evaluate: (operand) => operand.length,
-};
-
-const $max = {
-	name: "$max",
-	apply(operand) {
-		return this.evaluate(operand);
-	},
-	evaluate: (operand) =>
-		operand.length === 0
-			? undefined
-			: operand.reduce((max, v) => Math.max(max, v)),
-};
-
-const $min = {
-	name: "$min",
-	apply(operand) {
-		return this.evaluate(operand);
-	},
-	evaluate: (operand) =>
-		operand.length === 0
-			? undefined
-			: operand.reduce((min, v) => Math.min(min, v)),
-};
-
-const $sum = {
-	name: "$sum",
-	apply(operand) {
-		return this.evaluate(operand);
-	},
-	evaluate: (operand) => operand.reduce((sum, v) => sum + v, 0),
-};
-
-const $mean = {
-	name: "$mean",
-	apply(operand) {
-		return this.evaluate(operand);
-	},
-	evaluate: (operand) =>
-		operand.length === 0
-			? undefined
-			: operand.reduce((sum, v) => sum + v, 0) / operand.length,
-};
-
-const $median = {
-	name: "$median",
-	apply(operand) {
-		return this.evaluate(operand);
-	},
-	evaluate: (operand) => {
-		if (operand.length === 0) return undefined;
-		const sorted = [...operand].sort((a, b) => a - b);
-		const mid = Math.floor(sorted.length / 2);
-		return sorted.length % 2 === 0
-			? (sorted[mid - 1] + sorted[mid]) / 2
-			: sorted[mid];
-	},
-};
-
-const $mode = {
-	name: "$mode",
-	apply(operand) {
-		return this.evaluate(operand);
-	},
-	evaluate: (operand) => {
-		if (operand.length === 0) return undefined;
-		const frequency = {};
-		let maxCount = 0;
-		let modes = [];
-
-		// Count frequencies
-		for (const value of operand) {
-			frequency[value] = (frequency[value] ?? 0) + 1;
-			if (frequency[value] > maxCount) {
-				maxCount = frequency[value];
-				modes = [value];
-			} else if (frequency[value] === maxCount && !modes.includes(value)) {
-				modes.push(value);
-			}
-		}
-
-		// Return single mode if only one, array if multiple, or undefined if all values appear once
-		return maxCount === 1
-			? undefined
-			: modes.length === 1
-				? modes[0]
-				: modes.sort((a, b) => a - b);
-	},
-};
-
-const aggregativeDefinitions = {
-	$count,
-	$max,
-	$mean,
-	$median,
-	$min,
-	$mode,
-	$sum,
-};
-
-const createComparativeWhereCompiler =
-	(exprName) =>
-	(operand, context) => {
-		if (!context.attribute) {
-			throw new Error(`${exprName} must be nested under an attribute`);
-		}
-		return { $pipe: [{ $get: context.attribute }, { [exprName]: operand }] };
-	};
-
-const $eq = {
-	name: "$eq",
-	apply: lodashEs.isEqual,
-	evaluate: ([left, right]) => lodashEs.isEqual(left, right),
-	normalizeWhere: createComparativeWhereCompiler("$eq"),
-};
-
-const $ne = {
-	name: "$ne",
-	apply: (operand, inputData) => !lodashEs.isEqual(operand, inputData),
-	evaluate: ([left, right]) => !lodashEs.isEqual(left, right),
-	normalizeWhere: createComparativeWhereCompiler("$ne"),
-};
-
-const $gt = {
-	name: "$gt",
-	apply: (operand, inputData) => inputData > operand,
-	evaluate: ([left, right]) => left > right,
-	normalizeWhere: createComparativeWhereCompiler("$gt"),
-};
-
-const $gte = {
-	name: "$gte",
-	apply: (operand, inputData) => inputData >= operand,
-	evaluate: ([left, right]) => left >= right,
-	normalizeWhere: createComparativeWhereCompiler("$gte"),
-};
-
-const $lt = {
-	name: "$lt",
-	apply: (operand, inputData) => inputData < operand,
-	evaluate: ([left, right]) => left < right,
-	normalizeWhere: createComparativeWhereCompiler("$lt"),
-};
-
-const $lte = {
-	name: "$lte",
-	apply: (operand, inputData) => inputData <= operand,
-	evaluate: ([left, right]) => left <= right,
-	normalizeWhere: createComparativeWhereCompiler("$lte"),
-};
-
-const $in = {
-	name: "$in",
-	apply: (operand, inputData) => {
-		if (!Array.isArray(operand)) {
-			throw new Error("$in parameter must be an array");
-		}
-		return operand.includes(inputData);
-	},
-	evaluate([array, value]) {
-		return this.apply(array, value);
-	},
-	normalizeWhere: createComparativeWhereCompiler("$in"),
-};
-
-const $nin = {
-	name: "$nin",
-	apply: (operand, inputData) => {
-		if (!Array.isArray(operand)) {
-			throw new Error("$nin parameter must be an array");
-		}
-		return !operand.includes(inputData);
-	},
-	evaluate([array, value]) {
-		return this.apply(array, value);
-	},
-	normalizeWhere: createComparativeWhereCompiler("$nin"),
-};
-
-const comparativeDefinitions = {
-	$eq,
-	$gt,
-	$gte,
-	$lt,
-	$lte,
-	$ne,
-	$in,
-	$nin,
-};
-
-const $if = {
-	name: "$if",
-	apply: (operand, inputData, { apply, isExpression }) => {
-		if (
-			!isExpression(operand.if) &&
-			operand.if !== true &&
-			operand.if !== false
-		) {
-			throw new Error('"if" must be an expression, true, or false');
-		}
-
-		const outcome = apply(operand.if, inputData) ? operand.then : operand.else;
-		return isExpression(outcome) ? apply(outcome, inputData) : outcome;
-	},
-	evaluate: (operand, { evaluate }) => {
-		const conditionResult =
-			typeof operand.if === "boolean" ? operand.if : evaluate(operand.if);
-		const outcome = conditionResult ? operand.then : operand.else;
-		return typeof outcome === "object" && outcome !== null
-			? evaluate(outcome)
-			: outcome;
-	},
-	controlsEvaluation: true,
-	normalizeWhere: (operand) => ({
-		$if: {
-			if: operand.if,
-			then: operand.then,
-			else: operand.else,
-		},
-	}),
-};
-
-const $case = {
-	name: "$case",
-	apply: (operand, inputData, { apply, isExpression }) => {
-		// Evaluate the value once
-		const value = isExpression(operand.value)
-			? apply(operand.value, inputData)
-			: operand.value;
-
-		// Check each case
-		for (const caseItem of operand.cases) {
-			let matches = false;
-
-			// Handle both simple equality and complex expressions
-			if (isExpression(caseItem.when)) {
-				// For expressions that access properties from the original object (like $get),
-				// we need to evaluate with the original argument.
-				// For comparison expressions, we typically want to evaluate with the value.
-				const whenExpressionName = Object.keys(caseItem.when)[0];
-				const evaluationContext =
-					whenExpressionName === "$get" ? inputData : value;
-				matches = apply(caseItem.when, evaluationContext);
-			} else {
-				// Simple equality comparison
-				matches = value === caseItem.when;
-			}
-
-			if (matches) {
-				return isExpression(caseItem.then)
-					? apply(caseItem.then, inputData)
-					: caseItem.then;
-			}
-		}
-
-		// Return default if no case matches
-		return isExpression(operand.default)
-			? apply(operand.default, inputData)
-			: operand.default;
-	},
-	evaluate(operand, context) {
-		const [trueOperand, value] = operand;
-		return this.apply(trueOperand, value, context);
-	},
-	controlsEvaluation: true,
-	normalizeWhere: (operand) => ({
-		$case: {
-			value: operand.value,
-			cases: operand.cases.map((caseItem) => ({
-				when: caseItem.when,
-				then: caseItem.then,
-			})),
-			default: operand.default,
-		},
-	}),
-};
-
-const conditionalDefinitions = { $if, $case };
-
-const $random = {
-	name: "$random",
-	apply: (operand = {}) => {
-		const { min = 0, max = 1, precision = null } = operand;
-		const value = Math.random() * (max - min) + min;
-
-		if (precision == null) {
-			return value;
-		}
-
-		if (precision >= 0) {
-			// Positive precision: decimal places
-			return Number(value.toFixed(precision));
-		} else {
-			// Negative precision: round to 10^(-precision)
-			const factor = Math.pow(10, -precision);
-			return Math.round(value / factor) * factor;
-		}
-	},
-	evaluate(operand = {}) {
-		return this.apply(operand);
-	},
-};
-
-const $uuid = {
-	name: "$uuid",
-	apply: () => crypto.randomUUID(),
-	evaluate: () => crypto.randomUUID(),
-};
-
-const generativeDefinitions = {
-	$random,
-	$uuid,
-};
-
-const $filter = {
-	apply: (operand, inputData, { apply }) =>
-		inputData.filter((item) => apply(operand, item)),
-	controlsEvaluation: true,
-	evaluate([fn, items], { apply }) {
-		return apply({ $filter: fn }, items);
-	},
-};
-
-const $flatMap = {
-	apply: (operand, inputData, { apply }) =>
-		inputData.flatMap((item) => apply(operand, item)),
-	controlsEvaluation: true,
-	evaluate([fn, items], { apply }) {
-		return apply({ $flatMap: fn }, items);
-	},
-};
-
-const $map = {
-	apply: (operand, inputData, { apply }) =>
-		inputData.map((item) => apply(operand, item)),
-	controlsEvaluation: true,
-	evaluate([fn, items], { apply }) {
-		return apply({ $map: fn }, items);
-	},
-};
-
-const $any = {
-	apply: (operand, inputData, { apply }) =>
-		inputData.some((item) => apply(operand, item)),
-	controlsEvaluation: true,
-	evaluate([predicate, array], { apply }) {
-		return apply({ $any: predicate }, array);
-	},
-};
-
-const $all = {
-	apply: (operand, inputData, { apply }) =>
-		inputData.every((item) => apply(operand, item)),
-	controlsEvaluation: true,
-	evaluate([predicate, array], { apply }) {
-		return apply({ $all: predicate }, array);
-	},
-};
-
-const $find = {
-	apply: (operand, inputData, { apply }) =>
-		inputData.find((item) => apply(operand, item)),
-	controlsEvaluation: true,
-	evaluate([predicate, array], { apply }) {
-		return apply({ $find: predicate }, array);
-	},
-};
-
-const $concat = {
-	apply: (operand, inputData) => inputData.concat(operand),
-	evaluate([arrayToConcat, baseArray]) {
-		return this.apply(arrayToConcat, baseArray);
-	},
-};
-
-const $join = {
-	apply: (operand, inputData) => inputData.join(operand),
-	evaluate([separator, array]) {
-		return this.apply(separator, array);
-	},
-};
-
-const $reverse = {
-	apply: (_, inputData) => inputData.slice().reverse(),
-	evaluate(array) {
-		return this.apply(null, array);
-	},
-};
-
-const iterativeDefinitions = {
-	$all,
-	$any,
-	$concat,
-	$filter,
-	$find,
-	$flatMap,
-	$join,
-	$map,
-	$reverse,
-};
-
-const $and = {
-	name: "$and",
-	apply: (operand, inputData, { apply }) =>
-		operand.every((subexpr) => apply(subexpr, inputData)),
-	controlsEvaluation: true,
-	evaluate(operand) {
-		return operand.every(Boolean);
-	},
-	normalizeWhere: (operand, context) => ({
-		$and: operand.map(context.normalizeWhere),
-	}),
-};
-
-const $or = {
-	name: "$or",
-	apply: (operand, inputData, { apply }) =>
-		operand.some((subexpr) => apply(subexpr, inputData)),
-	controlsEvaluation: true,
-	evaluate(operand) {
-		return operand.some(Boolean);
-	},
-	normalizeWhere: (operand, context) => ({
-		$or: operand.map(context.normalizeWhere),
-	}),
-};
-
-const $not = {
-	name: "$not",
-	apply: (operand, inputData, { apply }) => !apply(operand, inputData),
-	controlsEvaluation: true,
-	evaluate(operand, { evaluate }) {
-		const value = typeof operand === "boolean" ? operand : evaluate(operand);
-		return !value;
-	},
-	normalizeWhere: (operand, context) => ({
-		$not: context.normalizeWhere(operand),
-	}),
-};
-
-const logicalDefinitions = {
-	$and,
-	$not,
-	$or,
-};
-
-const $nowLocal = {
-	name: "$nowLocal",
-	apply: () => {
-		const now = new Date();
-		const offset = -now.getTimezoneOffset();
-		const sign = offset >= 0 ? "+" : "-";
-		const hours = Math.floor(Math.abs(offset) / 60)
-			.toString()
-			.padStart(2, "0");
-		const minutes = (Math.abs(offset) % 60).toString().padStart(2, "0");
-		return now.toISOString().slice(0, -1) + sign + hours + ":" + minutes;
-	},
-	evaluate() {
-		return this.apply();
-	},
-};
-
-const $nowUTC = {
-	name: "$nowUTC",
-	apply: () => new Date().toISOString(),
-	evaluate() {
-		return this.apply();
-	},
-};
-
-const $timestamp = {
-	name: "$timestamp",
-	apply: () => Date.now(),
-	evaluate() {
-		return this.apply();
-	},
-};
-
-const temporalDefinitions = {
-	$nowLocal,
-	$nowUTC,
-	$timestamp,
-};
-
-/**
- * @typedef {object} ApplicativeExpression
- */
-
-/**
- * @typedef {object} Expression
- */
-
-/**
- * @typedef {object} WhereClause
- */
-
-/**
- * @template Args, Input, Output
- * @typedef {object} Expression
- * @property {function(any, Input): Output} apply
- * @property {function(Args, Input, any): Output} [applyImplicit]
- * @property {function(Input): Output} evaluate
- * @property {string} [name]
- * @property {object} schema
- */
-
-/**
- * @typedef {object} ExpressionEngine
- * @property {function(Expression, any): any} apply
- * @property {function(Expression): any} evaluate
- * @property {string[]} expressionNames
- * @property {function(Expression): boolean} isExpression
- * @property {function(WhereClause): Expression} normalizeWhereClause
- */
-
-/**
- * @template Args, Input, Output
- * @typedef {function(...any): Expression} FunctionExpression
- */
-
-/**
- * @param {object} definitions
- * @returns {ExpressionEngine}
- */
-function createExpressionEngine(customExpressions) {
-	const expressions = { ...coreDefinitions, ...customExpressions }; // mutated later
-	const isExpression = (val) => {
-		const expressionKeys = new Set(Object.keys(expressions));
-
-		return (
-			val !== null &&
-			typeof val === "object" &&
-			!Array.isArray(val) &&
-			Object.keys(val).length === 1 &&
-			expressionKeys.has(Object.keys(val)[0])
-		);
-	};
-
-	const apply = (rootExpression, inputData) => {
-		const step = (expression) => {
-			if (!isExpression(expression)) {
-				return Array.isArray(expression)
-					? expression.map(step)
-					: typeof expression === "object"
-						? lodashEs.mapValues(expression, step)
-						: expression;
-			}
-
-			const [expressionName, operand] = Object.entries(expression)[0];
-			const expressionDef = expressions[expressionName];
-
-			if (expressionDef.controlsEvaluation) {
-				return expressionDef.apply(operand, inputData, { apply, isExpression });
-			}
-
-			const evaluatedOperand = step(operand);
-			return expressionDef.apply(evaluatedOperand, inputData);
-		};
-
-		return step(rootExpression);
-	};
-
-	const evaluate = (expression) => {
-		if (!isExpression(expression)) {
-			return Array.isArray(expression)
-				? expression.map(evaluate)
-				: typeof expression === "object"
-					? lodashEs.mapValues(expression, evaluate)
-					: expression;
-		}
-
-		const [expressionName, operand] = Object.entries(expression)[0];
-
-		// special case
-		if (expressionName === "$literal") return expression[expressionName];
-
-		const expressionDef = expressions[expressionName];
-		if (expressionDef.controlsEvaluation) {
-			return expressionDef.evaluate(operand, {
-				apply,
-				evaluate,
-				isExpression,
-			});
-		}
-
-		const evaluatedOperand = evaluate(operand);
-		return expressionDef.evaluate(evaluatedOperand);
-	};
-
-	const normalizeWhereClause = (where) => {
-		const compileNode = (node, attribute) => {
-			if (Array.isArray(node)) {
-				throw new Error("Array found in where clause. Where clauses must be objects or expressions that test conditions.");
-			}
-
-			if (typeof node === "object") {
-				if (isExpression(node)) {
-					const [expressionName, operand] = Object.entries(node)[0];
-					const expression = expressions[expressionName];
-
-					if (!("normalizeWhere" in expression)) {
-						throw new Error(`Expression ${expressionName} cannot be used in where clauses. Where clauses require expressions that test conditions (comparisons like $eq, $gt or logical operators like $and, $or).`);
-					}
-
-					return expression.normalizeWhere(operand, {
-						attribute,
-						normalizeWhere: compileNode,
-					});
-				}
-
-				// not an expression
-				return Object.entries(node).length === 1
-					? compileNode(Object.entries(node)[0][1], Object.entries(node)[0][0])
-					: {
-							$and: Object.entries(node).map(([attr, value]) =>
-								compileNode(value, attr),
-							),
-						};
-			}
-
-			return { $pipe: [{ $get: attribute }, { $eq: node }] };
-		};
-
-		return compileNode(where, null);
-	};
-
-	return {
-		apply,
-		evaluate,
-		expressionNames: Object.keys(expressions),
-		isExpression,
-		normalizeWhereClause,
-	};
-}
-
-const defaultExpressions = {
-	...coreDefinitions,
-	...aggregativeDefinitions,
-	...comparativeDefinitions,
-	...conditionalDefinitions,
-	...generativeDefinitions,
-	...iterativeDefinitions,
-	...logicalDefinitions,
-	...temporalDefinitions,
-};
-
-const defaultExpressionEngine =
-	createExpressionEngine(defaultExpressions);
 
 const ensureValidSchema = ensure(validateSchema);
 const ensureValidQuery = ensure(validateQuery);
