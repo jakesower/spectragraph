@@ -124,7 +124,7 @@ export function createMemoryStore(schema, config = {}) {
 
 	// WARNING: MUTATES storeGraph
 	const linkStoreInverses = () => {
-		storeGraph = linkInverses(storeGraph, schema);
+		storeGraph = linkInverses(schema, storeGraph);
 	};
 
 	return {
