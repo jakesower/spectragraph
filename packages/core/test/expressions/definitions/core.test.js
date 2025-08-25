@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { defaultExpressionEngine } from "../../../src/index.js";
+import { defaultExpressionEngine } from "../../../src/expressions/expressions.js";
 
-const { apply, evaluate } = defaultExpressionEngine;
+const { apply, evaluate, normalizeWhereClause } = defaultExpressionEngine;
 
 describe("$apply", () => {
 	it("applies identity function", () => {
@@ -328,5 +328,99 @@ describe("$literal", () => {
 	it("doesn't evaluate expression operands", () => {
 		const expr = { $random: "" };
 		expect(evaluate({ $literal: expr })).toEqual(expr);
+	});
+});
+
+describe("normalizeWhereClause for core expressions", () => {
+	describe("$pipe", () => {
+		it("normalizes simple $pipe expressions", () => {
+			const where = { $pipe: [{ $get: "age" }, { $gt: 5 }] };
+			const normalized = normalizeWhereClause(where);
+			expect(normalized).toEqual({
+				$pipe: [{ $get: "age" }, { $gt: 5 }],
+			});
+		});
+
+		it("normalizes complex $pipe expressions with nested attributes", () => {
+			const where = { $pipe: [{ $get: "user.name" }, { $eq: "John" }] };
+			const normalized = normalizeWhereClause(where);
+			expect(normalized).toEqual({
+				$pipe: [{ $get: "user.name" }, { $eq: "John" }],
+			});
+		});
+
+		it("normalizes $pipe with multiple operations", () => {
+			const where = {
+				$pipe: [{ $get: "scores" }, { $sum: [] }, { $gt: 100 }],
+			};
+			const normalized = normalizeWhereClause(where);
+			expect(normalized).toEqual({
+				$pipe: [{ $get: "scores" }, { $sum: [] }, { $gt: 100 }],
+			});
+		});
+
+		it("normalizes $pipe used in attribute context (ignores attribute)", () => {
+			const where = { 
+				status: { $pipe: [{ $get: "user.active" }, { $eq: true }] }
+			};
+			const normalized = normalizeWhereClause(where);
+			expect(normalized).toEqual({
+				$pipe: [{ $get: "user.active" }, { $eq: true }],
+			});
+		});
+	});
+
+	describe("$compose", () => {
+		it("normalizes simple $compose expressions", () => {
+			const where = { $compose: [{ $gt: 5 }, { $get: "age" }] };
+			const normalized = normalizeWhereClause(where);
+			expect(normalized).toEqual({
+				$compose: [{ $gt: 5 }, { $get: "age" }],
+			});
+		});
+
+		it("normalizes complex $compose expressions", () => {
+			const where = { $compose: [{ $eq: "John" }, { $get: "user.name" }] };
+			const normalized = normalizeWhereClause(where);
+			expect(normalized).toEqual({
+				$compose: [{ $eq: "John" }, { $get: "user.name" }],
+			});
+		});
+
+		it("normalizes $compose with multiple operations", () => {
+			const where = {
+				$compose: [{ $gt: 100 }, { $sum: [] }, { $get: "scores" }],
+			};
+			const normalized = normalizeWhereClause(where);
+			expect(normalized).toEqual({
+				$compose: [{ $gt: 100 }, { $sum: [] }, { $get: "scores" }],
+			});
+		});
+
+		it("normalizes $compose used in attribute context (ignores attribute)", () => {
+			const where = { 
+				status: { $compose: [{ $eq: true }, { $get: "user.active" }] }
+			};
+			const normalized = normalizeWhereClause(where);
+			expect(normalized).toEqual({
+				$compose: [{ $eq: true }, { $get: "user.active" }],
+			});
+		});
+	});
+
+	it("normalizes expressions within logical operators", () => {
+		const where = {
+			$or: [
+				{ $pipe: [{ $get: "age" }, { $gt: 18 }] },
+				{ $compose: [{ $eq: true }, { $get: "admin" }] },
+			],
+		};
+		const normalized = normalizeWhereClause(where);
+		expect(normalized).toEqual({
+			$or: [
+				{ $pipe: [{ $get: "age" }, { $gt: 18 }] },
+				{ $compose: [{ $eq: true }, { $get: "admin" }] },
+			],
+		});
 	});
 });

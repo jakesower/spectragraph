@@ -835,10 +835,7 @@ const query = {
 ### Custom Operations
 
 ```javascript
-import {
-	createExpressionEngine,
-	defaultExpressions,
-} from "@data-prism/core";
+import { createExpressionEngine, defaultExpressions } from "@data-prism/core";
 
 const customEngine = createExpressionEngine({
 	...defaultExpressions,

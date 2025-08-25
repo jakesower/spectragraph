@@ -2,11 +2,11 @@ import { isEqual } from "lodash-es";
 
 const createComparativeWhereCompiler =
 	(exprName) =>
-	(operand, context) => {
-		if (!context.attribute) {
+	(operand, { attribute }) => {
+		if (!attribute) {
 			throw new Error(`${exprName} must be nested under an attribute`);
 		}
-		return { $pipe: [{ $get: context.attribute }, { [exprName]: operand }] };
+		return { $pipe: [{ $get: attribute }, { [exprName]: operand }] };
 	};
 
 const $eq = {

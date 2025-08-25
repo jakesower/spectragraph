@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultExpressionEngine } from "../../../src/index.js";
+import { defaultExpressionEngine } from "../../../src/expressions/expressions.js";
 
 const { apply, evaluate, normalizeWhereClause } = defaultExpressionEngine;
 
@@ -28,6 +28,49 @@ describe("$and", () => {
 		expect(evaluate({ $and: [true, false, true] })).toBe(false);
 		expect(evaluate({ $and: [false, false, false] })).toBe(false);
 		expect(evaluate({ $and: [] })).toBe(true); // empty array
+	});
+
+	it("distributes attributes on normalizeWhereClause when phrased differently", () => {
+		const where = { age: { $and: [{ $gte: 18 }, { $lt: 65 }] } };
+		const normalized = normalizeWhereClause(where);
+		expect(normalized).toEqual({
+			$and: [
+				{ $pipe: [{ $get: "age" }, { $gte: 18 }] },
+				{ $pipe: [{ $get: "age" }, { $lt: 65 }] },
+			],
+		});
+	});
+
+	it("normalizes $and expressions", () => {
+		const where = { $and: [{ age: { $gt: 3 } }, { activity: "playing" }] };
+		const normalized = normalizeWhereClause(where);
+		expect(normalized).toEqual({
+			$and: [
+				{ $pipe: [{ $get: "age" }, { $gt: 3 }] },
+				{ $pipe: [{ $get: "activity" }, { $eq: "playing" }] },
+			],
+		});
+	});
+
+	it("normalizes nested $and expressions", () => {
+		const where = {
+			$and: [
+				{ $or: [{ favoriteToy: "blocks" }, { favoriteToy: "dolls" }] },
+				{ age: { $gte: 4 } },
+			],
+		};
+		const normalized = normalizeWhereClause(where);
+		expect(normalized).toEqual({
+			$and: [
+				{
+					$or: [
+						{ $pipe: [{ $get: "favoriteToy" }, { $eq: "blocks" }] },
+						{ $pipe: [{ $get: "favoriteToy" }, { $eq: "dolls" }] },
+					],
+				},
+				{ $pipe: [{ $get: "age" }, { $gte: 4 }] },
+			],
+		});
 	});
 });
 
@@ -67,6 +110,49 @@ describe("$or", () => {
 			],
 		});
 	});
+
+	it("distributes attributes on normalizeWhereClause when phrased differently", () => {
+		const where = { age: { $or: [{ $gte: 10 }, { $lt: 18 }] } };
+		const normalized = normalizeWhereClause(where);
+		expect(normalized).toEqual({
+			$or: [
+				{ $pipe: [{ $get: "age" }, { $gte: 10 }] },
+				{ $pipe: [{ $get: "age" }, { $lt: 18 }] },
+			],
+		});
+	});
+
+	it("normalizes $or used directly in where clause", () => {
+		const where = { $or: [{ age: { $gt: 18 } }, { admin: true }] };
+		const normalized = normalizeWhereClause(where);
+		expect(normalized).toEqual({
+			$or: [
+				{ $pipe: [{ $get: "age" }, { $gt: 18 }] },
+				{ $pipe: [{ $get: "admin" }, { $eq: true }] },
+			],
+		});
+	});
+
+	it("normalizes $or with complex expressions", () => {
+		const where = {
+			$or: [
+				{ age: { $gte: 21 } },
+				{ $and: [{ role: "admin" }, { active: true }] },
+			],
+		};
+		const normalized = normalizeWhereClause(where);
+		expect(normalized).toEqual({
+			$or: [
+				{ $pipe: [{ $get: "age" }, { $gte: 21 }] },
+				{
+					$and: [
+						{ $pipe: [{ $get: "role" }, { $eq: "admin" }] },
+						{ $pipe: [{ $get: "active" }, { $eq: true }] },
+					],
+				},
+			],
+		});
+	});
 });
 
 describe("$not", () => {
@@ -93,38 +179,12 @@ describe("$not", () => {
 		expect(evaluate({ $not: { $eq: [5, 5] } })).toBe(false);
 		expect(evaluate({ $not: { $eq: [5, 10] } })).toBe(true);
 	});
-});
 
-describe("normalizeWhereClause for logical operators", () => {
-	it("normalizes $and expressions", () => {
-		const where = { $and: [{ age: { $gt: 3 } }, { activity: "playing" }] };
+	it("distributes attributes on normalizeWhereClause when phrased differently", () => {
+		const where = { active: { $not: { $eq: true } } };
 		const normalized = normalizeWhereClause(where);
 		expect(normalized).toEqual({
-			$and: [
-				{ $pipe: [{ $get: "age" }, { $gt: 3 }] },
-				{ $pipe: [{ $get: "activity" }, { $eq: "playing" }] },
-			],
-		});
-	});
-
-	it("normalizes nested $and expressions", () => {
-		const where = {
-			$and: [
-				{ $or: [{ favoriteToy: "blocks" }, { favoriteToy: "dolls" }] },
-				{ age: { $gte: 4 } },
-			],
-		};
-		const normalized = normalizeWhereClause(where);
-		expect(normalized).toEqual({
-			$and: [
-				{
-					$or: [
-						{ $pipe: [{ $get: "favoriteToy" }, { $eq: "blocks" }] },
-						{ $pipe: [{ $get: "favoriteToy" }, { $eq: "dolls" }] },
-					],
-				},
-				{ $pipe: [{ $get: "age" }, { $gte: 4 }] },
-			],
+			$not: { $pipe: [{ $get: "active" }, { $eq: true }] },
 		});
 	});
 
@@ -151,3 +211,36 @@ describe("normalizeWhereClause for logical operators", () => {
 		});
 	});
 });
+
+describe("expressions using multiple logical operators", () => {
+	it("normalizes properly through multiple logical operators with mixed patterns", () => {
+		const where = {
+			$and: [
+				{ age: { $not: { $or: [{ $lt: 1 }, { $gt: 5 }] } } },
+				{ $or: [{ favoriteToy: "blocks" }, { $not: { age: { $eq: 3 } } }] },
+			],
+		};
+		const normalized = normalizeWhereClause(where);
+		expect(normalized).toEqual({
+			$and: [
+				{
+					$not: {
+						$or: [
+							{ $pipe: [{ $get: "age" }, { $lt: 1 }] },
+							{ $pipe: [{ $get: "age" }, { $gt: 5 }] },
+						],
+					},
+				},
+				{
+					$or: [
+						{ $pipe: [{ $get: "favoriteToy" }, { $eq: "blocks" }] },
+						{
+							$not: { $pipe: [{ $get: "age" }, { $eq: 3 }] },
+						},
+					],
+				},
+			],
+		});
+	});
+});
+

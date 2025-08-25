@@ -1,7 +1,6 @@
-import { defaultExpressionEngine } from "@data-prism/expressions";
+import { defaultExpressionEngine } from "../expressions/expressions.js";
 import { mapValues, orderBy } from "lodash-es";
 import { applyOrMap } from "@data-prism/utils";
-import { buildWhereExpression } from "./where-helpers.js";
 import { createExpressionProjector } from "./select-helpers.js";
 import { normalizeQuery } from "../query.js";
 
@@ -88,13 +87,8 @@ function runQuery(rootQuery, data) {
 			where(results) {
 				if (Object.keys(query.where).length === 0) return results;
 
-				const whereExpression = buildWhereExpression(
-					query.where,
-					defaultExpressionEngine,
-				);
-
 				return results.filter((result) => {
-					return defaultExpressionEngine.apply(whereExpression, result);
+					return defaultExpressionEngine.apply(query.where, result);
 				});
 			},
 			order(results) {

@@ -113,6 +113,9 @@ const $compose = {
 		}, inputData),
 	evaluate: ([exprs, init], { apply }) => apply({ $compose: exprs }, init),
 	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({
+		$compose: operand,
+	}),
 };
 
 const $pipe = {
@@ -127,6 +130,9 @@ const $pipe = {
 		}, inputData),
 	evaluate: ([exprs, init], { apply }) => apply({ $pipe: exprs }, init),
 	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({
+		$pipe: operand,
+	}),
 };
 
 export const coreDefinitions = {
