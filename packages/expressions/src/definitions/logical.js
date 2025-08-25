@@ -6,6 +6,9 @@ const $and = {
 	evaluate(operand) {
 		return operand.every(Boolean);
 	},
+	normalizeWhere: (operand, context) => ({
+		$and: operand.map(context.normalizeWhere),
+	}),
 };
 
 const $or = {
@@ -16,6 +19,9 @@ const $or = {
 	evaluate(operand) {
 		return operand.some(Boolean);
 	},
+	normalizeWhere: (operand, context) => ({
+		$or: operand.map(context.normalizeWhere),
+	}),
 };
 
 const $not = {
@@ -26,6 +32,9 @@ const $not = {
 		const value = typeof operand === "boolean" ? operand : evaluate(operand);
 		return !value;
 	},
+	normalizeWhere: (operand, context) => ({
+		$not: context.normalizeWhere(operand),
+	}),
 };
 
 export const logicalDefinitions = {

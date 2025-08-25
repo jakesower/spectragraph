@@ -17,8 +17,12 @@ import { temporalDefinitions } from "./definitions/temporal.js";
  */
 
 /**
+ * @typedef {object} WhereClause
+ */
+
+/**
  * @template Args, Input, Output
- * @typedef {object} Operation
+ * @typedef {object} Expression
  * @property {function(any, Input): Output} apply
  * @property {function(Args, Input, any): Output} [applyImplicit]
  * @property {function(Input): Output} evaluate
@@ -32,6 +36,7 @@ import { temporalDefinitions } from "./definitions/temporal.js";
  * @property {function(Expression): any} evaluate
  * @property {string[]} expressionNames
  * @property {function(Expression): boolean} isExpression
+ * @property {function(WhereClause): Expression} normalizeWhereClause
  */
 
 /**
@@ -43,10 +48,10 @@ import { temporalDefinitions } from "./definitions/temporal.js";
  * @param {object} definitions
  * @returns {ExpressionEngine}
  */
-export function createExpressionEngine(customOperations) {
-	const operations = { ...coreDefinitions, ...customOperations }; // mutated later
+export function createExpressionEngine(customExpressions) {
+	const expressions = { ...coreDefinitions, ...customExpressions }; // mutated later
 	const isExpression = (val) => {
-		const expressionKeys = new Set(Object.keys(operations));
+		const expressionKeys = new Set(Object.keys(expressions));
 
 		return (
 			val !== null &&
@@ -68,14 +73,14 @@ export function createExpressionEngine(customOperations) {
 			}
 
 			const [expressionName, operand] = Object.entries(expression)[0];
-			const operation = operations[expressionName];
+			const expressionDef = expressions[expressionName];
 
-			if (operation.controlsEvaluation) {
-				return operation.apply(operand, inputData, { apply, isExpression });
+			if (expressionDef.controlsEvaluation) {
+				return expressionDef.apply(operand, inputData, { apply, isExpression });
 			}
 
 			const evaluatedOperand = step(operand);
-			return operation.apply(evaluatedOperand, inputData);
+			return expressionDef.apply(evaluatedOperand, inputData);
 		};
 
 		return step(rootExpression);
@@ -95,9 +100,9 @@ export function createExpressionEngine(customOperations) {
 		// special case
 		if (expressionName === "$literal") return expression[expressionName];
 
-		const operation = operations[expressionName];
-		if (operation.controlsEvaluation) {
-			return operation.evaluate(operand, {
+		const expressionDef = expressions[expressionName];
+		if (expressionDef.controlsEvaluation) {
+			return expressionDef.evaluate(operand, {
 				apply,
 				evaluate,
 				isExpression,
@@ -105,14 +110,52 @@ export function createExpressionEngine(customOperations) {
 		}
 
 		const evaluatedOperand = evaluate(operand);
-		return operation.evaluate(evaluatedOperand);
+		return expressionDef.evaluate(evaluatedOperand);
+	};
+
+	const normalizeWhereClause = (where) => {
+		const compileNode = (node, attribute) => {
+			if (Array.isArray(node)) {
+				throw new Error("Array found in where clause. Where clauses must be objects or expressions that test conditions.");
+			}
+
+			if (typeof node === "object") {
+				if (isExpression(node)) {
+					const [expressionName, operand] = Object.entries(node)[0];
+					const expression = expressions[expressionName];
+
+					if (!("normalizeWhere" in expression)) {
+						throw new Error(`Expression ${expressionName} cannot be used in where clauses. Where clauses require expressions that test conditions (comparisons like $eq, $gt or logical operators like $and, $or).`);
+					}
+
+					return expression.normalizeWhere(operand, {
+						attribute,
+						normalizeWhere: compileNode,
+					});
+				}
+
+				// not an expression
+				return Object.entries(node).length === 1
+					? compileNode(Object.entries(node)[0][1], Object.entries(node)[0][0])
+					: {
+							$and: Object.entries(node).map(([attr, value]) =>
+								compileNode(value, attr),
+							),
+						};
+			}
+
+			return { $pipe: [{ $get: attribute }, { $eq: node }] };
+		};
+
+		return compileNode(where, null);
 	};
 
 	return {
 		apply,
 		evaluate,
-		expressionNames: Object.keys(operations),
+		expressionNames: Object.keys(expressions),
 		isExpression,
+		normalizeWhereClause,
 	};
 }
 

@@ -21,6 +21,13 @@ const $if = {
 			: outcome;
 	},
 	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({
+		$if: {
+			if: operand.if,
+			then: operand.then,
+			else: operand.else,
+		},
+	}),
 };
 
 const $case = {
@@ -66,6 +73,16 @@ const $case = {
 		return this.apply(trueOperand, value, context);
 	},
 	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({
+		$case: {
+			value: operand.value,
+			cases: operand.cases.map((caseItem) => ({
+				when: caseItem.when,
+				then: caseItem.then,
+			})),
+			default: operand.default,
+		},
+	}),
 };
 
 export const conditionalDefinitions = { $if, $case };
