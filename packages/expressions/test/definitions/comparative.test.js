@@ -7,74 +7,76 @@ const kids = {
 	zoë: { name: "Zoë", age: 6 },
 };
 
-const { apply } = defaultExpressionEngine;
+const { apply, normalizeWhereClause } = defaultExpressionEngine;
 
-describe("the $eq expression", () => {
-	it("is determined deeply", async () => {
-		const expression = {
-			$eq: [3, { chicken: "butt" }],
-		};
-		expect(apply(expression, [3, { chicken: "butt" }])).toBe(true);
+describe("apply", () => {
+	describe("the $eq expression", () => {
+		it("is determined deeply", async () => {
+			const expression = {
+				$eq: [3, { chicken: "butt" }],
+			};
+			expect(apply(expression, [3, { chicken: "butt" }])).toBe(true);
+		});
+	});
+
+	it("implements the $gt expression", () => {
+		const exp = { $pipe: [{ $get: "age" }, { $gt: 5 }] };
+
+		expect(apply(exp, kids.ximena)).toBe(false);
+		expect(apply(exp, kids.yousef)).toBe(false);
+		expect(apply(exp, kids.zoë)).toBe(true);
+	});
+
+	it("implements the $gte expression", () => {
+		const exp = { $pipe: [{ $get: "age" }, { $gte: 5 }] };
+
+		expect(apply(exp, kids.ximena)).toBe(false);
+		expect(apply(exp, kids.yousef)).toBe(true);
+		expect(apply(exp, kids.zoë)).toBe(true);
+	});
+
+	it("implements the $lt expression", () => {
+		const exp = { $pipe: [{ $get: "age" }, { $lt: 5 }] };
+
+		expect(apply(exp, kids.ximena)).toBe(true);
+		expect(apply(exp, kids.yousef)).toBe(false);
+		expect(apply(exp, kids.zoë)).toBe(false);
+	});
+
+	it("implements the $lte expression", () => {
+		const exp = { $pipe: [{ $get: "age" }, { $lte: 5 }] };
+
+		expect(apply(exp, kids.ximena)).toBe(true);
+		expect(apply(exp, kids.yousef)).toBe(true);
+		expect(apply(exp, kids.zoë)).toBe(false);
+	});
+
+	it("implements the $ne expression", () => {
+		const exp = { $pipe: [{ $get: "age" }, { $ne: 5 }] };
+
+		expect(apply(exp, kids.ximena)).toBe(true);
+		expect(apply(exp, kids.yousef)).toBe(false);
+		expect(apply(exp, kids.zoë)).toBe(true);
+	});
+
+	it("implements the $in expression", () => {
+		const exp = { $pipe: [{ $get: "age" }, { $in: [4, 6] }] };
+
+		expect(apply(exp, kids.ximena)).toBe(true);
+		expect(apply(exp, kids.yousef)).toBe(false);
+		expect(apply(exp, kids.zoë)).toBe(true);
+	});
+
+	it("implements the $nin expression", () => {
+		const exp = { $pipe: [{ $get: "age" }, { $nin: [4, 6] }] };
+
+		expect(apply(exp, kids.ximena)).toBe(false);
+		expect(apply(exp, kids.yousef)).toBe(true);
+		expect(apply(exp, kids.zoë)).toBe(false);
 	});
 });
 
-it("implements the $gt expression", () => {
-	const exp = { $pipe: [{ $get: "age" }, { $gt: 5 }] };
-
-	expect(apply(exp, kids.ximena)).toBe(false);
-	expect(apply(exp, kids.yousef)).toBe(false);
-	expect(apply(exp, kids.zoë)).toBe(true);
-});
-
-it("implements the $gte expression", () => {
-	const exp = { $pipe: [{ $get: "age" }, { $gte: 5 }] };
-
-	expect(apply(exp, kids.ximena)).toBe(false);
-	expect(apply(exp, kids.yousef)).toBe(true);
-	expect(apply(exp, kids.zoë)).toBe(true);
-});
-
-it("implements the $lt expression", () => {
-	const exp = { $pipe: [{ $get: "age" }, { $lt: 5 }] };
-
-	expect(apply(exp, kids.ximena)).toBe(true);
-	expect(apply(exp, kids.yousef)).toBe(false);
-	expect(apply(exp, kids.zoë)).toBe(false);
-});
-
-it("implements the $lte expression", () => {
-	const exp = { $pipe: [{ $get: "age" }, { $lte: 5 }] };
-
-	expect(apply(exp, kids.ximena)).toBe(true);
-	expect(apply(exp, kids.yousef)).toBe(true);
-	expect(apply(exp, kids.zoë)).toBe(false);
-});
-
-it("implements the $ne expression", () => {
-	const exp = { $pipe: [{ $get: "age" }, { $ne: 5 }] };
-
-	expect(apply(exp, kids.ximena)).toBe(true);
-	expect(apply(exp, kids.yousef)).toBe(false);
-	expect(apply(exp, kids.zoë)).toBe(true);
-});
-
-it("implements the $in expression", () => {
-	const exp = { $pipe: [{ $get: "age" }, { $in: [4, 6] }] };
-
-	expect(apply(exp, kids.ximena)).toBe(true);
-	expect(apply(exp, kids.yousef)).toBe(false);
-	expect(apply(exp, kids.zoë)).toBe(true);
-});
-
-it("implements the $nin expression", () => {
-	const exp = { $pipe: [{ $get: "age" }, { $nin: [4, 6] }] };
-
-	expect(apply(exp, kids.ximena)).toBe(false);
-	expect(apply(exp, kids.yousef)).toBe(true);
-	expect(apply(exp, kids.zoë)).toBe(false);
-});
-
-describe("evaluate functions", () => {
+describe("evaluate", () => {
 	const { evaluate } = defaultExpressionEngine;
 
 	// $eq is pure mathematical - no currying needed, same operand for apply and evaluate
@@ -137,5 +139,51 @@ describe("evaluate functions", () => {
 		expect(() => evaluate({ $nin: ["not-array", 2] })).toThrow(
 			"$nin parameter must be an array",
 		);
+	});
+});
+
+describe("normalizeWhereClause", () => {
+	it("normalizes $eq", () => {
+		const where = { age: { $eq: 4 } };
+		const normalized = normalizeWhereClause(where);
+		expect(normalized).toEqual({ $pipe: [{ $get: "age" }, { $eq: 4 }] });
+	});
+
+	it("normalizes all comparison operators", () => {
+		const testCases = [
+			{
+				input: { age: { $gt: 3 } },
+				expected: { $pipe: [{ $get: "age" }, { $gt: 3 }] },
+			},
+			{
+				input: { age: { $gte: 4 } },
+				expected: { $pipe: [{ $get: "age" }, { $gte: 4 }] },
+			},
+			{
+				input: { age: { $lt: 6 } },
+				expected: { $pipe: [{ $get: "age" }, { $lt: 6 }] },
+			},
+			{
+				input: { age: { $lte: 5 } },
+				expected: { $pipe: [{ $get: "age" }, { $lte: 5 }] },
+			},
+			{
+				input: { name: { $ne: "Ximena" } },
+				expected: { $pipe: [{ $get: "name" }, { $ne: "Ximena" }] },
+			},
+			{
+				input: { favoriteToy: { $in: ["blocks", "dolls"] } },
+				expected: { $pipe: [{ $get: "favoriteToy" }, { $in: ["blocks", "dolls"] }] },
+			},
+			{
+				input: { activity: { $nin: ["napping", "crying"] } },
+				expected: { $pipe: [{ $get: "activity" }, { $nin: ["napping", "crying"] }] },
+			},
+		];
+
+		for (const { input, expected } of testCases) {
+			const normalized = normalizeWhereClause(input);
+			expect(normalized).toEqual(expected);
+		}
 	});
 });

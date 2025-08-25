@@ -45,7 +45,11 @@ Expressions are JSON objects that describe computations to be performed on data.
 
 ### Expression Engine
 
-The expression engine evaluates expressions against data:
+The expression engine holds the expressions definitions and allows for them to be used in a few ways:
+
+#### `apply`
+
+Applies the expression like a function to a value.
 
 ```javascript
 import { defaultExpressionEngine } from "@data-prism/expressions";
@@ -53,13 +57,23 @@ import { defaultExpressionEngine } from "@data-prism/expressions";
 const expression = { $gt: 21 };
 const data = 25;
 
-const result = defaultExpressionEngine.apply(expression, data);
+const result = defaultExpressionEngine.apply(expression, value);
 // Returns: true
+```
 
+#### `evaluate`
+
+Takes an expression in its evaluable form and evaluates it, returning a value wholly determined by the expression itself. It is not applied to anything, but is fully self-contained.
+
+```javascript
 // Evaluate expressions without input data (for static expressions)
 const staticResult = defaultExpressionEngine.evaluate({ $sum: [1, 2, 3] });
 // Returns: 6
 ```
+
+#### `normalizeWhereClause`
+
+Transforms an expression from Data Prism's user-focused form to an equivalent expression that's more suitable for consumption by stores as they execute the `where` clause of a query. It lives in this repository for extensibility purposes, as expressions can define their own `normalizeWhere` functions to handle complex behavior.
 
 ## API Reference
 
@@ -150,6 +164,25 @@ const isExpr1 = engine.isExpression({ $get: "name" }); // true
 const isExpr2 = engine.isExpression({ name: "John" }); // false
 ```
 
+#### `normalizeWhereClause(where)`
+
+Normalizes a user-friendly where clause into executable expressions for query processing.
+
+**Parameters:**
+
+- `where` (object) - The where clause to normalize
+
+**Returns:** Normalized expression suitable for query execution
+
+```javascript
+const where = { name: "John", age: { $gt: 18 } };
+const normalized = engine.normalizeWhereClause(where);
+// Returns: { $and: [
+//   { $pipe: [{ $get: "name" }, { $eq: "John" }] },
+//   { $pipe: [{ $get: "age" }, { $gt: 18 }] }
+// ] }
+```
+
 ## Built-in Operations
 
 ### Core Operations
@@ -161,7 +194,6 @@ Applies the parameters directly (identity for parameters).
 ```json
 { "$apply": [1, 2, 3] } // Returns [1, 2, 3]
 ```
-
 
 #### `$compose`
 
@@ -210,7 +242,6 @@ Retrieves a value from the data object using lodash-style path notation.
 { "$get": "name" }          // Gets data.name
 { "$get": "user.age" }      // Gets data.user.age (nested path)
 ```
-
 
 #### `$isDefined`
 
@@ -322,7 +353,7 @@ All comparison operations use mathematical abbreviations for consistency and bre
 Equality comparison using deep equality.
 
 ```json
-{ "$eq": "published" }  // data === "published"
+{ "$eq": "published" } // data === "published"
 ```
 
 #### `$gt`
@@ -330,7 +361,7 @@ Equality comparison using deep equality.
 Greater than comparison.
 
 ```json
-{ "$gt": 90 }   // data > 90
+{ "$gt": 90 } // data > 90
 ```
 
 #### `$gte`
@@ -338,7 +369,7 @@ Greater than comparison.
 Greater than or equal comparison.
 
 ```json
-{ "$gte": 18 }  // data >= 18
+{ "$gte": 18 } // data >= 18
 ```
 
 #### `$in`
@@ -346,7 +377,7 @@ Greater than or equal comparison.
 Array membership test (in).
 
 ```json
-{ "$in": ["tech", "science", "math"] }  // data is in array
+{ "$in": ["tech", "science", "math"] } // data is in array
 ```
 
 #### `$lt`
@@ -354,7 +385,7 @@ Array membership test (in).
 Less than comparison.
 
 ```json
-{ "$lt": 100 }  // data < 100
+{ "$lt": 100 } // data < 100
 ```
 
 #### `$lte`
@@ -362,7 +393,7 @@ Less than comparison.
 Less than or equal comparison.
 
 ```json
-{ "$lte": 3 }   // data <= 3
+{ "$lte": 3 } // data <= 3
 ```
 
 #### `$ne`
@@ -370,7 +401,7 @@ Less than or equal comparison.
 Inequality comparison using deep equality.
 
 ```json
-{ "$ne": "draft" }      // data !== "draft"
+{ "$ne": "draft" } // data !== "draft"
 ```
 
 #### `$nin`
@@ -378,7 +409,7 @@ Inequality comparison using deep equality.
 Array membership test (not in).
 
 ```json
-{ "$nin": ["deleted", "archived"] }     // data is not in array
+{ "$nin": ["deleted", "archived"] } // data is not in array
 ```
 
 ### Aggregative Operations
@@ -396,7 +427,7 @@ Count of items in an array.
 Maximum of array values.
 
 ```json
-{ "$max": [1, 5, 3, 9] }  // Returns 9
+{ "$max": [1, 5, 3, 9] } // Returns 9
 ```
 
 #### `$mean`
@@ -425,7 +456,7 @@ Returns `undefined` for empty arrays.
 Minimum of array values.
 
 ```json
-{ "$min": [1, 5, 3, 9] }  // Returns 1
+{ "$min": [1, 5, 3, 9] } // Returns 1
 ```
 
 #### `$mode`

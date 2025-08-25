@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { defaultExpressionEngine } from "../../src/index.js";
 
-const { apply, evaluate } = defaultExpressionEngine;
+const { apply, evaluate, normalizeWhereClause } = defaultExpressionEngine;
 
 describe("$and", () => {
 	it("returns true when all conditions are true", () => {
@@ -56,6 +56,17 @@ describe("$or", () => {
 		expect(evaluate({ $or: [false, false, false] })).toBe(false);
 		expect(evaluate({ $or: [] })).toBe(false); // empty array
 	});
+
+	it("distributes attributes on normalizeWhereClause", () => {
+		const where = { $or: [{ age: { $gte: 10 } }, { age: { $lt: 18 } }] };
+		const normalized = normalizeWhereClause(where);
+		expect(normalized).toEqual({
+			$or: [
+				{ $pipe: [{ $get: "age" }, { $gte: 10 }] },
+				{ $pipe: [{ $get: "age" }, { $lt: 18 }] },
+			],
+		});
+	});
 });
 
 describe("$not", () => {
@@ -81,5 +92,62 @@ describe("$not", () => {
 	it("evaluate with expression", () => {
 		expect(evaluate({ $not: { $eq: [5, 5] } })).toBe(false);
 		expect(evaluate({ $not: { $eq: [5, 10] } })).toBe(true);
+	});
+});
+
+describe("normalizeWhereClause for logical operators", () => {
+	it("normalizes $and expressions", () => {
+		const where = { $and: [{ age: { $gt: 3 } }, { activity: "playing" }] };
+		const normalized = normalizeWhereClause(where);
+		expect(normalized).toEqual({
+			$and: [
+				{ $pipe: [{ $get: "age" }, { $gt: 3 }] },
+				{ $pipe: [{ $get: "activity" }, { $eq: "playing" }] },
+			],
+		});
+	});
+
+	it("normalizes nested $and expressions", () => {
+		const where = {
+			$and: [
+				{ $or: [{ favoriteToy: "blocks" }, { favoriteToy: "dolls" }] },
+				{ age: { $gte: 4 } },
+			],
+		};
+		const normalized = normalizeWhereClause(where);
+		expect(normalized).toEqual({
+			$and: [
+				{
+					$or: [
+						{ $pipe: [{ $get: "favoriteToy" }, { $eq: "blocks" }] },
+						{ $pipe: [{ $get: "favoriteToy" }, { $eq: "dolls" }] },
+					],
+				},
+				{ $pipe: [{ $get: "age" }, { $gte: 4 }] },
+			],
+		});
+	});
+
+	it("normalizes $not expressions", () => {
+		const where = { $not: { age: { $lt: 3 } } };
+		const normalized = normalizeWhereClause(where);
+		expect(normalized).toEqual({
+			$not: { $pipe: [{ $get: "age" }, { $lt: 3 }] },
+		});
+	});
+
+	it("normalizes complex nested $not expressions", () => {
+		const where = {
+			$not: { $and: [{ age: { $lt: 4 } }, { activity: "napping" }] },
+		};
+		const normalized = normalizeWhereClause(where);
+		expect(normalized).toEqual({
+			$not: {
+				$and: [
+					{ $pipe: [{ $get: "age" }, { $lt: 4 }] },
+					{ $pipe: [{ $get: "activity" }, { $eq: "napping" }] },
+				],
+			},
+		});
 	});
 });

@@ -80,76 +80,6 @@ const $get = {
 	},
 };
 
-const $if = {
-	name: "$if",
-	apply: (operand, inputData, { apply, isExpression }) => {
-		if (
-			!isExpression(operand.if) &&
-			operand.if !== true &&
-			operand.if !== false
-		) {
-			throw new Error('"if" must be an expression, true, or false');
-		}
-
-		const outcome = apply(operand.if, inputData) ? operand.then : operand.else;
-		return isExpression(outcome) ? apply(outcome, inputData) : outcome;
-	},
-	evaluate: (operand, { evaluate }) => {
-		const conditionResult =
-			typeof operand.if === "boolean" ? operand.if : evaluate(operand.if);
-		const outcome = conditionResult ? operand.then : operand.else;
-		return typeof outcome === "object" && outcome !== null
-			? evaluate(outcome)
-			: outcome;
-	},
-	controlsEvaluation: true,
-};
-
-const $case = {
-	name: "$case",
-	apply: (operand, inputData, { apply, isExpression }) => {
-		// Evaluate the value once
-		const value = isExpression(operand.value)
-			? apply(operand.value, inputData)
-			: operand.value;
-
-		// Check each case
-		for (const caseItem of operand.cases) {
-			let matches = false;
-
-			// Handle both simple equality and complex expressions
-			if (isExpression(caseItem.when)) {
-				// For expressions that access properties from the original object (like $get),
-				// we need to evaluate with the original argument.
-				// For comparison expressions, we typically want to evaluate with the value.
-				const whenExpressionName = Object.keys(caseItem.when)[0];
-				const evaluationContext =
-					whenExpressionName === "$get" ? inputData : value;
-				matches = apply(caseItem.when, evaluationContext);
-			} else {
-				// Simple equality comparison
-				matches = value === caseItem.when;
-			}
-
-			if (matches) {
-				return isExpression(caseItem.then)
-					? apply(caseItem.then, inputData)
-					: caseItem.then;
-			}
-		}
-
-		// Return default if no case matches
-		return isExpression(operand.default)
-			? apply(operand.default, inputData)
-			: operand.default;
-	},
-	evaluate(operand, context) {
-		const [trueOperand, value] = operand;
-		return this.apply(trueOperand, value, context);
-	},
-	controlsEvaluation: true,
-};
-
 const $literal = {
 	name: "$literal",
 	apply: (operand) => operand,
@@ -161,17 +91,14 @@ const $literal = {
 
 const $debug = {
 	name: "$debug",
-	apply: (operand, inputData, { apply }) => {
-		const result = apply(operand, inputData);
-		console.log(result);
-		return result;
+	apply: (evaluatedOperand) => {
+		console.log(evaluatedOperand);
+		return evaluatedOperand;
 	},
-	evaluate(operand, { evaluate }) {
-		const result = evaluate(operand);
-		console.log(result);
-		return result;
+	evaluate(evaluatedOperand) {
+		console.log(evaluatedOperand);
+		return evaluatedOperand;
 	},
-	controlsEvaluation: true,
 };
 
 const $compose = {
@@ -204,125 +131,14 @@ const $pipe = {
 
 const coreDefinitions = {
 	$apply,
-	$case,
 	$compose,
 	$debug,
 	$echo,
 	$get,
-	$if,
 	$isDefined,
 	$literal,
 	$pipe,
 	$ensurePath,
-};
-
-const $and = {
-	name: "$and",
-	apply: (operand, inputData, { apply }) =>
-		operand.every((subexpr) => apply(subexpr, inputData)),
-	controlsEvaluation: true,
-	evaluate(operand) {
-		return operand.every(Boolean);
-	},
-};
-
-const $or = {
-	name: "$or",
-	apply: (operand, inputData, { apply }) =>
-		operand.some((subexpr) => apply(subexpr, inputData)),
-	controlsEvaluation: true,
-	evaluate(operand) {
-		return operand.some(Boolean);
-	},
-};
-
-const $not = {
-	name: "$not",
-	apply: (operand, inputData, { apply }) => !apply(operand, inputData),
-	controlsEvaluation: true,
-	evaluate(operand, { evaluate }) {
-		const value = typeof operand === "boolean" ? operand : evaluate(operand);
-		return !value;
-	},
-};
-
-const logicalDefinitions = {
-	$and,
-	$not,
-	$or,
-};
-
-const $eq = {
-	name: "$eq",
-	apply: isEqual,
-	evaluate: ([left, right]) => isEqual(left, right),
-};
-
-const $ne = {
-	name: "$ne",
-	apply: (operand, inputData) => !isEqual(operand, inputData),
-	evaluate: ([left, right]) => !isEqual(left, right),
-};
-
-const $gt = {
-	name: "$gt",
-	apply: (operand, inputData) => inputData > operand,
-	evaluate: ([left, right]) => left > right,
-};
-
-const $gte = {
-	name: "$gte",
-	apply: (operand, inputData) => inputData >= operand,
-	evaluate: ([left, right]) => left >= right,
-};
-
-const $lt = {
-	name: "$lt",
-	apply: (operand, inputData) => inputData < operand,
-	evaluate: ([left, right]) => left < right,
-};
-
-const $lte = {
-	name: "$lte",
-	apply: (operand, inputData) => inputData <= operand,
-	evaluate: ([left, right]) => left <= right,
-};
-
-const $in = {
-	name: "$in",
-	apply: (operand, inputData) => {
-		if (!Array.isArray(operand)) {
-			throw new Error("$in parameter must be an array");
-		}
-		return operand.includes(inputData);
-	},
-	evaluate([array, value]) {
-		return this.apply(array, value);
-	},
-};
-
-const $nin = {
-	name: "$nin",
-	apply: (operand, inputData) => {
-		if (!Array.isArray(operand)) {
-			throw new Error("$nin parameter must be an array");
-		}
-		return !operand.includes(inputData);
-	},
-	evaluate([array, value]) {
-		return this.apply(array, value);
-	},
-};
-
-const comparativeDefinitions = {
-	$eq,
-	$gt,
-	$gte,
-	$lt,
-	$lte,
-	$ne,
-	$in,
-	$nin,
 };
 
 const $count = {
@@ -430,6 +246,203 @@ const aggregativeDefinitions = {
 	$sum,
 };
 
+const createComparativeWhereCompiler =
+	(exprName) =>
+	(operand, { attribute }) => {
+		if (!attribute) {
+			throw new Error(`${exprName} must be nested under an attribute`);
+		}
+		return { $pipe: [{ $get: attribute }, { [exprName]: operand }] };
+	};
+
+const $eq = {
+	name: "$eq",
+	apply: isEqual,
+	evaluate: ([left, right]) => isEqual(left, right),
+	normalizeWhere: createComparativeWhereCompiler("$eq"),
+};
+
+const $ne = {
+	name: "$ne",
+	apply: (operand, inputData) => !isEqual(operand, inputData),
+	evaluate: ([left, right]) => !isEqual(left, right),
+	normalizeWhere: createComparativeWhereCompiler("$ne"),
+};
+
+const $gt = {
+	name: "$gt",
+	apply: (operand, inputData) => inputData > operand,
+	evaluate: ([left, right]) => left > right,
+	normalizeWhere: createComparativeWhereCompiler("$gt"),
+};
+
+const $gte = {
+	name: "$gte",
+	apply: (operand, inputData) => inputData >= operand,
+	evaluate: ([left, right]) => left >= right,
+	normalizeWhere: createComparativeWhereCompiler("$gte"),
+};
+
+const $lt = {
+	name: "$lt",
+	apply: (operand, inputData) => inputData < operand,
+	evaluate: ([left, right]) => left < right,
+	normalizeWhere: createComparativeWhereCompiler("$lt"),
+};
+
+const $lte = {
+	name: "$lte",
+	apply: (operand, inputData) => inputData <= operand,
+	evaluate: ([left, right]) => left <= right,
+	normalizeWhere: createComparativeWhereCompiler("$lte"),
+};
+
+const $in = {
+	name: "$in",
+	apply: (operand, inputData) => {
+		if (!Array.isArray(operand)) {
+			throw new Error("$in parameter must be an array");
+		}
+		return operand.includes(inputData);
+	},
+	evaluate([array, value]) {
+		return this.apply(array, value);
+	},
+	normalizeWhere: createComparativeWhereCompiler("$in"),
+};
+
+const $nin = {
+	name: "$nin",
+	apply: (operand, inputData) => {
+		if (!Array.isArray(operand)) {
+			throw new Error("$nin parameter must be an array");
+		}
+		return !operand.includes(inputData);
+	},
+	evaluate([array, value]) {
+		return this.apply(array, value);
+	},
+	normalizeWhere: createComparativeWhereCompiler("$nin"),
+};
+
+const comparativeDefinitions = {
+	$eq,
+	$gt,
+	$gte,
+	$lt,
+	$lte,
+	$ne,
+	$in,
+	$nin,
+};
+
+const $if = {
+	name: "$if",
+	apply: (operand, inputData, { apply, isExpression }) => {
+		if (
+			!isExpression(operand.if) &&
+			operand.if !== true &&
+			operand.if !== false
+		) {
+			throw new Error('"if" must be an expression, true, or false');
+		}
+
+		const outcome = apply(operand.if, inputData) ? operand.then : operand.else;
+		return isExpression(outcome) ? apply(outcome, inputData) : outcome;
+	},
+	evaluate: (operand, { evaluate }) => {
+		const conditionResult =
+			typeof operand.if === "boolean" ? operand.if : evaluate(operand.if);
+		const outcome = conditionResult ? operand.then : operand.else;
+		return typeof outcome === "object" && outcome !== null
+			? evaluate(outcome)
+			: outcome;
+	},
+	controlsEvaluation: true,
+};
+
+const $case = {
+	name: "$case",
+	apply: (operand, inputData, { apply, isExpression }) => {
+		// Evaluate the value once
+		const value = isExpression(operand.value)
+			? apply(operand.value, inputData)
+			: operand.value;
+
+		// Check each case
+		for (const caseItem of operand.cases) {
+			let matches = false;
+
+			// Handle both simple equality and complex expressions
+			if (isExpression(caseItem.when)) {
+				// For expressions that access properties from the original object (like $get),
+				// we need to evaluate with the original argument.
+				// For comparison expressions, we typically want to evaluate with the value.
+				const whenExpressionName = Object.keys(caseItem.when)[0];
+				const evaluationContext =
+					whenExpressionName === "$get" ? inputData : value;
+				matches = apply(caseItem.when, evaluationContext);
+			} else {
+				// Simple equality comparison
+				matches = value === caseItem.when;
+			}
+
+			if (matches) {
+				return isExpression(caseItem.then)
+					? apply(caseItem.then, inputData)
+					: caseItem.then;
+			}
+		}
+
+		// Return default if no case matches
+		return isExpression(operand.default)
+			? apply(operand.default, inputData)
+			: operand.default;
+	},
+	evaluate(operand, context) {
+		const [trueOperand, value] = operand;
+		return this.apply(trueOperand, value, context);
+	},
+	controlsEvaluation: true,
+};
+
+const conditionalDefinitions = { $if, $case };
+
+const $random = {
+	name: "$random",
+	apply: (operand = {}) => {
+		const { min = 0, max = 1, precision = null } = operand;
+		const value = Math.random() * (max - min) + min;
+
+		if (precision == null) {
+			return value;
+		}
+
+		if (precision >= 0) {
+			// Positive precision: decimal places
+			return Number(value.toFixed(precision));
+		} else {
+			// Negative precision: round to 10^(-precision)
+			const factor = Math.pow(10, -precision);
+			return Math.round(value / factor) * factor;
+		}
+	},
+	evaluate(operand = {}) {
+		return this.apply(operand);
+	},
+};
+
+const $uuid = {
+	name: "$uuid",
+	apply: () => crypto.randomUUID(),
+	evaluate: () => crypto.randomUUID(),
+};
+
+const generativeDefinitions = {
+	$random,
+	$uuid,
+};
+
 const $filter = {
 	apply: (operand, inputData, { apply }) =>
 		inputData.filter((item) => apply(operand, item)),
@@ -517,39 +530,49 @@ const iterativeDefinitions = {
 	$reverse,
 };
 
-const $random = {
-	name: "$random",
-	apply: (operand = {}) => {
-		const { min = 0, max = 1, precision = null } = operand;
-		const value = Math.random() * (max - min) + min;
-
-		if (precision == null) {
-			return value;
-		}
-
-		if (precision >= 0) {
-			// Positive precision: decimal places
-			return Number(value.toFixed(precision));
-		} else {
-			// Negative precision: round to 10^(-precision)
-			const factor = Math.pow(10, -precision);
-			return Math.round(value / factor) * factor;
-		}
+const $and = {
+	name: "$and",
+	apply: (operand, inputData, { apply }) =>
+		operand.every((subexpr) => apply(subexpr, inputData)),
+	controlsEvaluation: true,
+	evaluate(operand) {
+		return operand.every(Boolean);
 	},
-	evaluate(operand = {}) {
-		return this.apply(operand);
-	},
+	normalizeWhere: (operand, { normalizeWhere }) => ({
+		$and: operand.map(normalizeWhere),
+	}),
 };
 
-const $uuid = {
-	name: "$uuid",
-	apply: () => crypto.randomUUID(),
-	evaluate: () => crypto.randomUUID(),
+const $or = {
+	name: "$or",
+	apply: (operand, inputData, { apply }) =>
+		operand.some((subexpr) => apply(subexpr, inputData)),
+	controlsEvaluation: true,
+	evaluate(operand) {
+		return operand.some(Boolean);
+	},
+	normalizeWhere: (operand, { normalizeWhere }) => ({
+		$or: operand.map(normalizeWhere),
+	}),
 };
 
-const generativeDefinitions = {
-	$random,
-	$uuid,
+const $not = {
+	name: "$not",
+	apply: (operand, inputData, { apply }) => !apply(operand, inputData),
+	controlsEvaluation: true,
+	evaluate(operand, { evaluate }) {
+		const value = typeof operand === "boolean" ? operand : evaluate(operand);
+		return !value;
+	},
+	normalizeWhere: (operand, { normalizeWhere }) => ({
+		$not: normalizeWhere(operand),
+	}),
+};
+
+const logicalDefinitions = {
+	$and,
+	$not,
+	$or,
 };
 
 const $nowLocal = {
@@ -600,8 +623,12 @@ const temporalDefinitions = {
  */
 
 /**
+ * @typedef {object} WhereClause
+ */
+
+/**
  * @template Args, Input, Output
- * @typedef {object} Operation
+ * @typedef {object} Expression
  * @property {function(any, Input): Output} apply
  * @property {function(Args, Input, any): Output} [applyImplicit]
  * @property {function(Input): Output} evaluate
@@ -615,6 +642,7 @@ const temporalDefinitions = {
  * @property {function(Expression): any} evaluate
  * @property {string[]} expressionNames
  * @property {function(Expression): boolean} isExpression
+ * @property {function(WhereClause): Expression} compileWhereClause
  */
 
 /**
@@ -626,10 +654,10 @@ const temporalDefinitions = {
  * @param {object} definitions
  * @returns {ExpressionEngine}
  */
-function createExpressionEngine(customOperations) {
-	const operations = { ...coreDefinitions, ...customOperations }; // mutated later
+function createExpressionEngine(customExpressions) {
+	const expressions = { ...coreDefinitions, ...customExpressions }; // mutated later
 	const isExpression = (val) => {
-		const expressionKeys = new Set(Object.keys(operations));
+		const expressionKeys = new Set(Object.keys(expressions));
 
 		return (
 			val !== null &&
@@ -651,14 +679,14 @@ function createExpressionEngine(customOperations) {
 			}
 
 			const [expressionName, operand] = Object.entries(expression)[0];
-			const operation = operations[expressionName];
+			const expressionDef = expressions[expressionName];
 
-			if (operation.controlsEvaluation) {
-				return operation.apply(operand, inputData, { apply, isExpression });
+			if (expressionDef.controlsEvaluation) {
+				return expressionDef.apply(operand, inputData, { apply, isExpression });
 			}
 
 			const evaluatedOperand = step(operand);
-			return operation.apply(evaluatedOperand, inputData);
+			return expressionDef.apply(evaluatedOperand, inputData);
 		};
 
 		return step(rootExpression);
@@ -678,9 +706,9 @@ function createExpressionEngine(customOperations) {
 		// special case
 		if (expressionName === "$literal") return expression[expressionName];
 
-		const operation = operations[expressionName];
-		if (operation.controlsEvaluation) {
-			return operation.evaluate(operand, {
+		const expressionDef = expressions[expressionName];
+		if (expressionDef.controlsEvaluation) {
+			return expressionDef.evaluate(operand, {
 				apply,
 				evaluate,
 				isExpression,
@@ -688,24 +716,63 @@ function createExpressionEngine(customOperations) {
 		}
 
 		const evaluatedOperand = evaluate(operand);
-		return operation.evaluate(evaluatedOperand);
+		return expressionDef.evaluate(evaluatedOperand);
+	};
+
+	const compileWhereClause = (where) => {
+		const compileNode = (node, attribute) => {
+			if (Array.isArray(node)) {
+				throw new Error("Array found in where clause. Where clauses must be objects or expressions that test conditions.");
+			}
+
+			if (typeof node === "object") {
+				if (isExpression(node)) {
+					const [expressionName, operand] = Object.entries(node)[0];
+					const expression = expressions[expressionName];
+
+					if (!("normalizeWhere" in expression)) {
+						throw new Error(`Expression ${expressionName} cannot be used in where clauses. Where clauses require expressions that test conditions (comparisons like $eq, $gt or logical operators like $and, $or).`);
+					}
+
+					return expression.normalizeWhere(operand, {
+						attribute,
+						normalizeWhere: compileNode,
+					});
+				}
+
+				// not an expression
+				return Object.entries(node).length === 1
+					? compileNode(Object.entries(node)[0][1], Object.entries(node)[0][0])
+					: {
+							$and: Object.entries(node).map(([attr, value]) =>
+								compileNode(value, attr),
+							),
+						};
+			}
+
+			return { $pipe: [{ $get: attribute }, { $eq: node }] };
+		};
+
+		return compileNode(where, null);
 	};
 
 	return {
 		apply,
 		evaluate,
-		expressionNames: Object.keys(operations),
+		expressionNames: Object.keys(expressions),
 		isExpression,
+		compileWhereClause,
 	};
 }
 
 const defaultExpressions = {
 	...coreDefinitions,
-	...logicalDefinitions,
-	...comparativeDefinitions,
 	...aggregativeDefinitions,
-	...iterativeDefinitions,
+	...comparativeDefinitions,
+	...conditionalDefinitions,
 	...generativeDefinitions,
+	...iterativeDefinitions,
+	...logicalDefinitions,
 	...temporalDefinitions,
 };
 
