@@ -1,24 +1,8 @@
 # Data Prism Expressions
 
-> **⚠️ DEPRECATED**: This package has been merged into `@data-prism/core` for better integration and simpler dependency management. Please migrate to `@data-prism/core` which includes all expression functionality. This package will receive no further updates.
-
 A JavaScript expression engine for enhancing Data Prism queries with computed values and conditional logic. Data Prism Expressions provides a JSON-based syntax for creating dynamic where clauses and calculated select fields, extending the core querying capabilities with lightweight programmatic logic.
 
 It is suitable for more general applications that call for simple logic that needs to be written as JSON. It is inspired by the Lisp concept of code being data.
-
-## Migration
-
-**Old:**
-```javascript
-import { defaultExpressionEngine } from "@data-prism/expressions";
-```
-
-**New:**
-```javascript
-import { defaultExpressionEngine } from "@data-prism/core";
-```
-
-All expression functionality remains identical - only the import path has changed.
 
 ## Overview
 
@@ -28,16 +12,6 @@ Data Prism Expressions is built around several key principles:
 - **Extensible**: Built for users to extend with custom expressions and operations
 - **Lightweight**: Focuses on the most common expressions needed in data queries
 - **JSON-native**: Uses JSON objects that can be serialized and stored
-
-## Installation
-
-```bash
-# Deprecated - use @data-prism/core instead
-npm install @data-prism/expressions
-
-# Recommended
-npm install @data-prism/core
-```
 
 ## Core Concepts
 
@@ -72,7 +46,7 @@ The expression engine holds the expressions definitions and allows for them to b
 Applies the expression like a function to a value.
 
 ```javascript
-import { defaultExpressionEngine } from "@data-prism/expressions";
+import { defaultExpressionEngine } from "@data-prism/core";
 
 const expression = { $gt: 21 };
 const data = 25;
@@ -110,7 +84,7 @@ Creates a custom expression engine with additional operation definitions.
 **Returns:** ExpressionEngine with core + custom operations
 
 ```javascript
-import { createExpressionEngine } from "@data-prism/expressions";
+import { createExpressionEngine } from "@data-prism/core";
 
 const customEngine = createExpressionEngine({
 	$customOp: {
@@ -127,7 +101,7 @@ const customEngine = createExpressionEngine({
 Pre-configured expression engine with all built-in operations.
 
 ```javascript
-import { defaultExpressionEngine } from "@data-prism/expressions";
+import { defaultExpressionEngine } from "@data-prism/core";
 
 const result = defaultExpressionEngine.apply(expression, data);
 ```
@@ -668,7 +642,7 @@ The operand is ignored - this expression always returns the current timestamp wh
 ### Basic Usage
 
 ```javascript
-import { defaultExpressionEngine } from "@data-prism/expressions";
+import { defaultExpressionEngine } from "@data-prism/core";
 
 const data = {
 	user: { name: "Fatoumata", age: 30 },
@@ -864,7 +838,7 @@ const query = {
 import {
 	createExpressionEngine,
 	defaultExpressions,
-} from "@data-prism/expressions";
+} from "@data-prism/core";
 
 const customEngine = createExpressionEngine({
 	...defaultExpressions,
@@ -897,7 +871,7 @@ const result = customEngine.apply({ $titleCase: "paul bunyan" }, null);
 ### Expressions for Reusable Logic
 
 ```javascript
-import { defaultExpressionEngine } from "@data-prism/expressions";
+import { defaultExpressionEngine } from "@data-prism/core";
 
 // Define reusable expression
 const discountPriceExpression = {
@@ -926,8 +900,7 @@ const discountedPrices = products.map((product) =>
 Expressions work seamlessly with Data Prism queries:
 
 ```javascript
-import { defaultExpressionEngine } from "@data-prism/expressions";
-import { queryGraph } from "@data-prism/core";
+import { defaultExpressionEngine, queryGraph } from "@data-prism/core";
 
 const query = {
 	type: "users",
