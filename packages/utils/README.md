@@ -275,4 +275,3 @@ const step3 = transform3(step2);
 - `@data-prism/core` - Uses utils for resource and query processing
 - `@data-prism/memory-store` - Uses utils for data transformations
 - `@data-prism/postgres-store` - Uses utils for SQL query building
-- `@data-prism/expressions` - Uses utils for expression evaluation

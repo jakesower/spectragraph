@@ -34,5 +34,13 @@ export const careBearConfig = {
 				},
 			},
 		},
+		companions: {
+			table: "companions",
+			joins: {},
+		},
+		villains: {
+			table: "villains",
+			joins: {},
+		},
 	},
 };

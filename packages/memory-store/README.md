@@ -435,4 +435,3 @@ const newTeam: CreateResource = {
 - `@data-prism/core` - Core Data Prism functionality and validation
 - `@data-prism/postgres-store` - PostgreSQL backend store
 - `@data-prism/jsonapi-store` - JSON:API client store
-- `@data-prism/expressions` - Expression engine for advanced queries

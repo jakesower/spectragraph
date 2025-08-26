@@ -9,7 +9,6 @@ export default [
 		plugins: [nodeResolve(), commonjs()],
 		external: [
 			"lodash-es",
-			"@data-prism/expressions",
 			"@data-prism/utils",
 			"ajv",
 			"ajv-formats",
@@ -23,7 +22,6 @@ export default [
 		plugins: [nodeResolve(), commonjs()],
 		external: [
 			"lodash-es",
-			"@data-prism/expressions",
 			"@data-prism/utils",
 			"ajv",
 			"ajv-formats",

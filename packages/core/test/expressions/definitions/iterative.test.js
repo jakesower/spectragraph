@@ -12,7 +12,7 @@ const { apply, evaluate } = defaultExpressionEngine;
 describe("apply", () => {
 	describe("$map", () => {
 		it("should perform without subexpressions", () => {
-			expect(apply({ $map: { $echo: {} } }, [3])).toEqual([3]);
+			expect(apply({ $map: { $literal: 3 } }, [1])).toEqual([3]);
 		});
 
 		it("should perform with a subexpression", () => {

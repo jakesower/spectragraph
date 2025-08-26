@@ -60,13 +60,11 @@ const QUERY_CLAUSE_EXTRACTORS = {
 		};
 	},
 	where: (where, { table }) => {
-		const propExprs = Object.entries(where).map(([propKey, propValOrExpr]) => {
-			if (whereExpressionEngine.isExpression(where)) {
-				// TODO
-				// const [operation, args] = Object.entries(where)[0];
-				// return whereExpressionEngine.evaluate(where);
-			}
+		if (whereExpressionEngine.isExpression(where)) {
+			return { where: [where], vars: [where] };
+		}
 
+		const propExprs = Object.entries(where).map(([propKey, propValOrExpr]) => {
 			if (whereExpressionEngine.isExpression(propValOrExpr)) {
 				const [operation, args] = Object.entries(propValOrExpr)[0];
 				return { [operation]: [`${table}.${snakeCase(propKey)}`, args] };

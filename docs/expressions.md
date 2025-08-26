@@ -112,14 +112,6 @@ Returns `true` if the arg is not equal to every item in the param.
 
 These are mostly plumbing expressions that will seldom be needed by end users.
 
-### `$apply`
-
-Param: expression, expression[], or object of expressions
-Arg: any
-Output: any
-
-Allows the expression engine to evaluate lists of expressions and objects of expressions.
-
 ### `$isDefined`
 
 Param: -
@@ -128,13 +120,6 @@ Output: boolean
 
 Returns `false` if the argument is undefined, otherwise returns `true`.
 
-### `$echo`
-
-Param: -
-Arg: any
-Output: any
-
-Returns whatever arg it was given.
 
 ### `$get`
 
@@ -213,3 +198,80 @@ Arg: any
 Output: boolean
 
 Returns `true` if any expression in param returns `true` when applied to the arg.
+
+## Math Expressions
+
+### `$add`
+
+**Apply form:**
+Param: number
+Arg: number
+Output: number
+
+Adds param to arg.
+
+**Evaluate form:**
+Param: [number, number]
+Output: number
+
+Adds the two numbers in the param array.
+
+### `$subtract`
+
+**Apply form:**
+Param: number
+Arg: number
+Output: number
+
+Subtracts param from arg.
+
+**Evaluate form:**
+Param: [number, number]
+Output: number
+
+Subtracts the second number from the first in the param array.
+
+### `$multiply`
+
+**Apply form:**
+Param: number
+Arg: number
+Output: number
+
+Multiplies arg by param.
+
+**Evaluate form:**
+Param: [number, number]
+Output: number
+
+Multiplies the two numbers in the param array.
+
+### `$divide`
+
+**Apply form:**
+Param: number
+Arg: number
+Output: number
+
+Divides arg by param. Throws error on division by zero.
+
+**Evaluate form:**
+Param: [number, number]
+Output: number
+
+Divides the first number by the second in the param array. Throws error on division by zero.
+
+### `$modulo`
+
+**Apply form:**
+Param: number
+Arg: number
+Output: number
+
+Computes arg modulo param. Throws error on modulo by zero.
+
+**Evaluate form:**
+Param: [number, number]
+Output: number
+
+Computes the first number modulo the second in the param array. Throws error on modulo by zero.

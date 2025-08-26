@@ -242,5 +242,29 @@ describe("expressions using multiple logical operators", () => {
 			],
 		});
 	});
-});
 
+	it("preserves a mixed pattern", () => {
+		const where = {
+			$and: [
+				{
+					$not: {
+						$or: [
+							{ $pipe: [{ $get: "age" }, { $lt: 1 }] },
+							{ $pipe: [{ $get: "age" }, { $gt: 5 }] },
+						],
+					},
+				},
+				{
+					$or: [
+						{ $pipe: [{ $get: "favoriteToy" }, { $eq: "blocks" }] },
+						{
+							$not: { $pipe: [{ $get: "age" }, { $eq: 3 }] },
+						},
+					],
+				},
+			],
+		};
+		const normalized = normalizeWhereClause(where);
+		expect(normalized).toEqual(where);
+	});
+});

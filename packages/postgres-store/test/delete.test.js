@@ -25,6 +25,6 @@ describe("Delete Tests", () => {
 	});
 
 	it("fails to delete an invalid resource", async () => {
-		expect(store.delete({ type: "bears" })).rejects.toThrowError();
+		await expect(store.delete({ type: "bears" })).rejects.toThrowError();
 	});
 });

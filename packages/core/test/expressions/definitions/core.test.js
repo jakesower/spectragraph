@@ -3,22 +3,6 @@ import { defaultExpressionEngine } from "../../../src/expressions/expressions.js
 
 const { apply, evaluate, normalizeWhereClause } = defaultExpressionEngine;
 
-describe("$apply", () => {
-	it("applies identity function", () => {
-		expect(apply({ $apply: "hello" }, "world")).toEqual("hello");
-	});
-
-	describe("evaluate form", () => {
-		it("evaluates identity function", () => {
-			expect(evaluate({ $apply: "hello" })).toEqual("hello");
-		});
-
-		it("evaluates with objects", () => {
-			const obj = { name: "test" };
-			expect(evaluate({ $apply: obj })).toEqual(obj);
-		});
-	});
-});
 
 describe("$debug", () => {
 	it("applies debug expression and logs result", () => {
@@ -32,7 +16,7 @@ describe("$debug", () => {
 
 	it("debugs identity expression", () => {
 		const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-		expect(apply({ $debug: { $echo: null } }, "input")).toEqual("input");
+		expect(apply({ $debug: { $literal: "input" } }, "input")).toEqual("input");
 		expect(consoleSpy).toHaveBeenCalledWith("input");
 		consoleSpy.mockRestore();
 	});
@@ -154,31 +138,6 @@ describe("$isDefined", () => {
 	});
 });
 
-describe("$echo", () => {
-	describe("evaluate form", () => {
-		const { evaluate } = defaultExpressionEngine;
-
-		it("echoes the provided value", () => {
-			expect(evaluate({ $echo: ["hello world"] })).toEqual("hello world");
-		});
-
-		it("echoes objects", () => {
-			const obj = { name: "Arnar", age: 30 };
-			expect(evaluate({ $echo: [obj] })).toEqual(obj);
-		});
-
-		it("echoes arrays", () => {
-			const arr = [1, 2, 3];
-			expect(evaluate({ $echo: [arr] })).toEqual(arr);
-		});
-
-		it("throws with non-array operand", () => {
-			expect(() => {
-				evaluate({ $echo: null });
-			}).toThrowError("$echo evaluate form requires array operand: [value]");
-		});
-	});
-});
 
 describe("$get", () => {
 	describe("evaluate form", () => {
@@ -226,14 +185,14 @@ describe("$compose", () => {
 		const result = apply(
 			{
 				$compose: [
-					{ $get: "name" }, // f: get name
-					{ $echo: null }, // g: identity
-					{ $get: "child" }, // h: get child
+					{ $add: 0 }, // f: identity (add 0)
+					{ $multiply: 2 }, // g: multiply by 2  
+					{ $get: "value" }, // h: get value
 				],
 			},
-			{ child: { name: "Fatoumata" } },
+			{ value: 5 },
 		);
-		expect(result).toEqual("Fatoumata");
+		expect(result).toEqual(10); // 5 * 2 + 0 = 10
 	});
 
 	it("throws with a non-expression", () => {
@@ -267,14 +226,14 @@ describe("$pipe", () => {
 		const result = apply(
 			{
 				$pipe: [
-					{ $get: "child" }, // h: get child
-					{ $echo: null }, // g: identity
-					{ $get: "name" }, // f: get name
+					{ $get: "value" }, // h: get value
+					{ $multiply: 2 }, // g: multiply by 2
+					{ $add: 0 }, // f: identity (add 0)
 				],
 			},
-			{ child: { name: "Fatoumata" } },
+			{ value: 5 },
 		);
-		expect(result).toEqual("Fatoumata");
+		expect(result).toEqual(10); // 5 * 2 + 0 = 10
 	});
 
 	it("demonstrates the difference between $compose and $pipe", () => {

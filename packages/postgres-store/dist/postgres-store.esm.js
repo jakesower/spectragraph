@@ -1,7 +1,6 @@
-import { mapValues, omit, uniqBy, get, orderBy, merge, partition, pick, last, snakeCase, uniq, pickBy, camelCase } from 'lodash-es';
+import { get, mapValues, omit, isEqual, uniqBy, orderBy, merge, partition, pick, last, snakeCase, uniq, pickBy, camelCase } from 'lodash-es';
 import Ajv from 'ajv';
 import { applyOrMap } from '@data-prism/utils';
-import { defaultExpressionEngine, createExpressionEngine } from '@data-prism/expressions';
 
 function getDefaultExportFromCjs$1 (x) {
 	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
@@ -4655,6 +4654,808 @@ function requireDist () {
 var distExports = requireDist();
 var addErrors = /*@__PURE__*/getDefaultExportFromCjs(distExports);
 
+const $apply = {
+	name: "$apply",
+	apply: (operand) => operand,
+	evaluate: (operand) => operand,
+};
+
+const $isDefined = {
+	name: "$isDefined",
+	apply: (_, inputData) => inputData !== undefined,
+	evaluate(operand) {
+		if (!Array.isArray(operand)) {
+			throw new Error(
+				"$isDefined evaluate form requires array operand: [value]",
+			);
+		}
+
+		const [value] = operand;
+		return value !== undefined;
+	},
+};
+
+const $echo = {
+	name: "$echo",
+	apply: (_, inputData) => inputData,
+	evaluate(operand) {
+		if (!Array.isArray(operand)) {
+			throw new Error("$echo evaluate form requires array operand: [value]");
+		}
+
+		const [value] = operand;
+		return value;
+	},
+};
+
+const $ensurePath = {
+	name: "$ensurePath",
+	apply: (operand, inputData) => {
+		const go = (curValue, paths, used = []) => {
+			if (paths.length === 0) return;
+
+			const [head, ...tail] = paths;
+			if (!(head in curValue)) {
+				throw new Error(
+					`"${head}" was not found along the path ${used.join(".")}`,
+				);
+			}
+
+			go(curValue[head], tail, [...used, head]);
+		};
+
+		go(inputData, operand.split("."));
+		return inputData;
+	},
+	evaluate(operand) {
+		if (!Array.isArray(operand)) {
+			throw new Error(
+				"$ensurePath evaluate form requires array operand: [object, path]",
+			);
+		}
+
+		const [object, path] = operand;
+		return this.apply(path, object);
+	},
+};
+
+const $get = {
+	name: "$get",
+	apply: (operand, inputData) => get(inputData, operand),
+	evaluate(operand) {
+		if (!Array.isArray(operand)) {
+			throw new Error(
+				"$get evaluate form requires array operand: [object, path]",
+			);
+		}
+
+		const [object, path] = operand;
+		return this.apply(path, object);
+	},
+};
+
+const $literal = {
+	name: "$literal",
+	apply: (operand) => operand,
+	evaluate: () => {
+		throw new Error("handled in expressions.js");
+	},
+	controlsEvaluation: true,
+};
+
+const $debug = {
+	name: "$debug",
+	apply: (evaluatedOperand) => {
+		console.log(evaluatedOperand);
+		return evaluatedOperand;
+	},
+	evaluate(evaluatedOperand) {
+		console.log(evaluatedOperand);
+		return evaluatedOperand;
+	},
+};
+
+const $compose = {
+	name: "$compose",
+	apply: (operand, inputData, { apply, isExpression }) =>
+		operand.reduceRight((acc, expr) => {
+			if (!isExpression(expr)) {
+				throw new Error(`${JSON.stringify(expr)} is not a valid expression`);
+			}
+
+			return apply(expr, acc);
+		}, inputData),
+	evaluate: ([exprs, init], { apply }) => apply({ $compose: exprs }, init),
+	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({
+		$compose: operand,
+	}),
+};
+
+const $pipe = {
+	name: "$pipe",
+	apply: (operand, inputData, { apply, isExpression }) =>
+		operand.reduce((acc, expr) => {
+			if (!isExpression(expr)) {
+				throw new Error(`${JSON.stringify(expr)} is not a valid expression`);
+			}
+
+			return apply(expr, acc);
+		}, inputData),
+	evaluate: ([exprs, init], { apply }) => apply({ $pipe: exprs }, init),
+	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({
+		$pipe: operand,
+	}),
+};
+
+const coreDefinitions = {
+	$apply,
+	$compose,
+	$debug,
+	$echo,
+	$get,
+	$isDefined,
+	$literal,
+	$pipe,
+	$ensurePath,
+};
+
+const $count = {
+	name: "$count",
+	apply(operand) {
+		return this.evaluate(operand);
+	},
+	evaluate: (operand) => operand.length,
+};
+
+const $max = {
+	name: "$max",
+	apply(operand) {
+		return this.evaluate(operand);
+	},
+	evaluate: (operand) =>
+		operand.length === 0
+			? undefined
+			: operand.reduce((max, v) => Math.max(max, v)),
+};
+
+const $min = {
+	name: "$min",
+	apply(operand) {
+		return this.evaluate(operand);
+	},
+	evaluate: (operand) =>
+		operand.length === 0
+			? undefined
+			: operand.reduce((min, v) => Math.min(min, v)),
+};
+
+const $sum = {
+	name: "$sum",
+	apply(operand) {
+		return this.evaluate(operand);
+	},
+	evaluate: (operand) => operand.reduce((sum, v) => sum + v, 0),
+};
+
+const $mean = {
+	name: "$mean",
+	apply(operand) {
+		return this.evaluate(operand);
+	},
+	evaluate: (operand) =>
+		operand.length === 0
+			? undefined
+			: operand.reduce((sum, v) => sum + v, 0) / operand.length,
+};
+
+const $median = {
+	name: "$median",
+	apply(operand) {
+		return this.evaluate(operand);
+	},
+	evaluate: (operand) => {
+		if (operand.length === 0) return undefined;
+		const sorted = [...operand].sort((a, b) => a - b);
+		const mid = Math.floor(sorted.length / 2);
+		return sorted.length % 2 === 0
+			? (sorted[mid - 1] + sorted[mid]) / 2
+			: sorted[mid];
+	},
+};
+
+const $mode = {
+	name: "$mode",
+	apply(operand) {
+		return this.evaluate(operand);
+	},
+	evaluate: (operand) => {
+		if (operand.length === 0) return undefined;
+		const frequency = {};
+		let maxCount = 0;
+		let modes = [];
+
+		// Count frequencies
+		for (const value of operand) {
+			frequency[value] = (frequency[value] ?? 0) + 1;
+			if (frequency[value] > maxCount) {
+				maxCount = frequency[value];
+				modes = [value];
+			} else if (frequency[value] === maxCount && !modes.includes(value)) {
+				modes.push(value);
+			}
+		}
+
+		// Return single mode if only one, array if multiple, or undefined if all values appear once
+		return maxCount === 1
+			? undefined
+			: modes.length === 1
+				? modes[0]
+				: modes.sort((a, b) => a - b);
+	},
+};
+
+const aggregativeDefinitions = {
+	$count,
+	$max,
+	$mean,
+	$median,
+	$min,
+	$mode,
+	$sum,
+};
+
+const createComparativeWhereCompiler =
+	(exprName) =>
+	(operand, { attribute }) => {
+		if (!attribute) {
+			throw new Error(`${exprName} must be nested under an attribute`);
+		}
+		return { $pipe: [{ $get: attribute }, { [exprName]: operand }] };
+	};
+
+const $eq = {
+	name: "$eq",
+	apply: isEqual,
+	evaluate: ([left, right]) => isEqual(left, right),
+	normalizeWhere: createComparativeWhereCompiler("$eq"),
+};
+
+const $ne = {
+	name: "$ne",
+	apply: (operand, inputData) => !isEqual(operand, inputData),
+	evaluate: ([left, right]) => !isEqual(left, right),
+	normalizeWhere: createComparativeWhereCompiler("$ne"),
+};
+
+const $gt = {
+	name: "$gt",
+	apply: (operand, inputData) => inputData > operand,
+	evaluate: ([left, right]) => left > right,
+	normalizeWhere: createComparativeWhereCompiler("$gt"),
+};
+
+const $gte = {
+	name: "$gte",
+	apply: (operand, inputData) => inputData >= operand,
+	evaluate: ([left, right]) => left >= right,
+	normalizeWhere: createComparativeWhereCompiler("$gte"),
+};
+
+const $lt = {
+	name: "$lt",
+	apply: (operand, inputData) => inputData < operand,
+	evaluate: ([left, right]) => left < right,
+	normalizeWhere: createComparativeWhereCompiler("$lt"),
+};
+
+const $lte = {
+	name: "$lte",
+	apply: (operand, inputData) => inputData <= operand,
+	evaluate: ([left, right]) => left <= right,
+	normalizeWhere: createComparativeWhereCompiler("$lte"),
+};
+
+const $in = {
+	name: "$in",
+	apply: (operand, inputData) => {
+		if (!Array.isArray(operand)) {
+			throw new Error("$in parameter must be an array");
+		}
+		return operand.includes(inputData);
+	},
+	evaluate([array, value]) {
+		return this.apply(array, value);
+	},
+	normalizeWhere: createComparativeWhereCompiler("$in"),
+};
+
+const $nin = {
+	name: "$nin",
+	apply: (operand, inputData) => {
+		if (!Array.isArray(operand)) {
+			throw new Error("$nin parameter must be an array");
+		}
+		return !operand.includes(inputData);
+	},
+	evaluate([array, value]) {
+		return this.apply(array, value);
+	},
+	normalizeWhere: createComparativeWhereCompiler("$nin"),
+};
+
+const comparativeDefinitions = {
+	$eq,
+	$gt,
+	$gte,
+	$lt,
+	$lte,
+	$ne,
+	$in,
+	$nin,
+};
+
+const $if = {
+	name: "$if",
+	apply: (operand, inputData, { apply, isExpression }) => {
+		if (
+			!isExpression(operand.if) &&
+			operand.if !== true &&
+			operand.if !== false
+		) {
+			throw new Error('"if" must be an expression, true, or false');
+		}
+
+		const outcome = apply(operand.if, inputData) ? operand.then : operand.else;
+		return isExpression(outcome) ? apply(outcome, inputData) : outcome;
+	},
+	evaluate: (operand, { evaluate }) => {
+		const conditionResult =
+			typeof operand.if === "boolean" ? operand.if : evaluate(operand.if);
+		const outcome = conditionResult ? operand.then : operand.else;
+		return typeof outcome === "object" && outcome !== null
+			? evaluate(outcome)
+			: outcome;
+	},
+	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({
+		$if: {
+			if: operand.if,
+			then: operand.then,
+			else: operand.else,
+		},
+	}),
+};
+
+const $case = {
+	name: "$case",
+	apply: (operand, inputData, { apply, isExpression }) => {
+		// Evaluate the value once
+		const value = isExpression(operand.value)
+			? apply(operand.value, inputData)
+			: operand.value;
+
+		// Check each case
+		for (const caseItem of operand.cases) {
+			let matches = false;
+
+			// Handle both simple equality and complex expressions
+			if (isExpression(caseItem.when)) {
+				// For expressions that access properties from the original object (like $get),
+				// we need to evaluate with the original argument.
+				// For comparison expressions, we typically want to evaluate with the value.
+				const whenExpressionName = Object.keys(caseItem.when)[0];
+				const evaluationContext =
+					whenExpressionName === "$get" ? inputData : value;
+				matches = apply(caseItem.when, evaluationContext);
+			} else {
+				// Simple equality comparison
+				matches = value === caseItem.when;
+			}
+
+			if (matches) {
+				return isExpression(caseItem.then)
+					? apply(caseItem.then, inputData)
+					: caseItem.then;
+			}
+		}
+
+		// Return default if no case matches
+		return isExpression(operand.default)
+			? apply(operand.default, inputData)
+			: operand.default;
+	},
+	evaluate(operand, context) {
+		const [trueOperand, value] = operand;
+		return this.apply(trueOperand, value, context);
+	},
+	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({
+		$case: {
+			value: operand.value,
+			cases: operand.cases.map((caseItem) => ({
+				when: caseItem.when,
+				then: caseItem.then,
+			})),
+			default: operand.default,
+		},
+	}),
+};
+
+const conditionalDefinitions = { $if, $case };
+
+const $random = {
+	name: "$random",
+	apply: (operand = {}) => {
+		const { min = 0, max = 1, precision = null } = operand;
+		const value = Math.random() * (max - min) + min;
+
+		if (precision == null) {
+			return value;
+		}
+
+		if (precision >= 0) {
+			// Positive precision: decimal places
+			return Number(value.toFixed(precision));
+		} else {
+			// Negative precision: round to 10^(-precision)
+			const factor = Math.pow(10, -precision);
+			return Math.round(value / factor) * factor;
+		}
+	},
+	evaluate(operand = {}) {
+		return this.apply(operand);
+	},
+};
+
+const $uuid = {
+	name: "$uuid",
+	apply: () => crypto.randomUUID(),
+	evaluate: () => crypto.randomUUID(),
+};
+
+const generativeDefinitions = {
+	$random,
+	$uuid,
+};
+
+const $filter = {
+	apply: (operand, inputData, { apply }) =>
+		inputData.filter((item) => apply(operand, item)),
+	controlsEvaluation: true,
+	evaluate([fn, items], { apply }) {
+		return apply({ $filter: fn }, items);
+	},
+};
+
+const $flatMap = {
+	apply: (operand, inputData, { apply }) =>
+		inputData.flatMap((item) => apply(operand, item)),
+	controlsEvaluation: true,
+	evaluate([fn, items], { apply }) {
+		return apply({ $flatMap: fn }, items);
+	},
+};
+
+const $map = {
+	apply: (operand, inputData, { apply }) =>
+		inputData.map((item) => apply(operand, item)),
+	controlsEvaluation: true,
+	evaluate([fn, items], { apply }) {
+		return apply({ $map: fn }, items);
+	},
+};
+
+const $any = {
+	apply: (operand, inputData, { apply }) =>
+		inputData.some((item) => apply(operand, item)),
+	controlsEvaluation: true,
+	evaluate([predicate, array], { apply }) {
+		return apply({ $any: predicate }, array);
+	},
+};
+
+const $all = {
+	apply: (operand, inputData, { apply }) =>
+		inputData.every((item) => apply(operand, item)),
+	controlsEvaluation: true,
+	evaluate([predicate, array], { apply }) {
+		return apply({ $all: predicate }, array);
+	},
+};
+
+const $find = {
+	apply: (operand, inputData, { apply }) =>
+		inputData.find((item) => apply(operand, item)),
+	controlsEvaluation: true,
+	evaluate([predicate, array], { apply }) {
+		return apply({ $find: predicate }, array);
+	},
+};
+
+const $concat = {
+	apply: (operand, inputData) => inputData.concat(operand),
+	evaluate([arrayToConcat, baseArray]) {
+		return this.apply(arrayToConcat, baseArray);
+	},
+};
+
+const $join = {
+	apply: (operand, inputData) => inputData.join(operand),
+	evaluate([separator, array]) {
+		return this.apply(separator, array);
+	},
+};
+
+const $reverse = {
+	apply: (_, inputData) => inputData.slice().reverse(),
+	evaluate(array) {
+		return this.apply(null, array);
+	},
+};
+
+const iterativeDefinitions = {
+	$all,
+	$any,
+	$concat,
+	$filter,
+	$find,
+	$flatMap,
+	$join,
+	$map,
+	$reverse,
+};
+
+const $and = {
+	name: "$and",
+	apply: (operand, inputData, { apply }) =>
+		operand.every((subexpr) => apply(subexpr, inputData)),
+	controlsEvaluation: true,
+	evaluate(operand) {
+		return operand.every(Boolean);
+	},
+	normalizeWhere: (operand, { attribute, normalizeWhere }) => ({
+		$and: operand.map((pred) => normalizeWhere(pred, attribute)),
+	}),
+};
+
+const $or = {
+	name: "$or",
+	apply: (operand, inputData, { apply }) =>
+		operand.some((subexpr) => apply(subexpr, inputData)),
+	controlsEvaluation: true,
+	evaluate(operand) {
+		return operand.some(Boolean);
+	},
+	normalizeWhere: (operand, { attribute, normalizeWhere }) => ({
+		$or: operand.map((pred) => normalizeWhere(pred, attribute)),
+	}),
+};
+
+const $not = {
+	name: "$not",
+	apply: (operand, inputData, { apply }) => !apply(operand, inputData),
+	controlsEvaluation: true,
+	evaluate(operand, { evaluate }) {
+		const value = typeof operand === "boolean" ? operand : evaluate(operand);
+		return !value;
+	},
+	normalizeWhere: (operand, { attribute, normalizeWhere }) => ({
+		$not: normalizeWhere(operand, attribute),
+	}),
+};
+
+const logicalDefinitions = {
+	$and,
+	$not,
+	$or,
+};
+
+const $nowLocal = {
+	name: "$nowLocal",
+	apply: () => {
+		const now = new Date();
+		const offset = -now.getTimezoneOffset();
+		const sign = offset >= 0 ? "+" : "-";
+		const hours = Math.floor(Math.abs(offset) / 60)
+			.toString()
+			.padStart(2, "0");
+		const minutes = (Math.abs(offset) % 60).toString().padStart(2, "0");
+		return now.toISOString().slice(0, -1) + sign + hours + ":" + minutes;
+	},
+	evaluate() {
+		return this.apply();
+	},
+};
+
+const $nowUTC = {
+	name: "$nowUTC",
+	apply: () => new Date().toISOString(),
+	evaluate() {
+		return this.apply();
+	},
+};
+
+const $timestamp = {
+	name: "$timestamp",
+	apply: () => Date.now(),
+	evaluate() {
+		return this.apply();
+	},
+};
+
+const temporalDefinitions = {
+	$nowLocal,
+	$nowUTC,
+	$timestamp,
+};
+
+/**
+ * @typedef {object} ApplicativeExpression
+ */
+
+/**
+ * @typedef {object} Expression
+ */
+
+/**
+ * @typedef {object} WhereClause
+ */
+
+/**
+ * @template Args, Input, Output
+ * @typedef {object} Expression
+ * @property {function(any, Input): Output} apply
+ * @property {function(Args, Input, any): Output} [applyImplicit]
+ * @property {function(Input): Output} evaluate
+ * @property {string} [name]
+ * @property {object} schema
+ */
+
+/**
+ * @typedef {object} ExpressionEngine
+ * @property {function(Expression, any): any} apply
+ * @property {function(Expression): any} evaluate
+ * @property {string[]} expressionNames
+ * @property {function(Expression): boolean} isExpression
+ * @property {function(WhereClause): Expression} normalizeWhereClause
+ */
+
+/**
+ * @template Args, Input, Output
+ * @typedef {function(...any): Expression} FunctionExpression
+ */
+
+/**
+ * @param {object} definitions
+ * @returns {ExpressionEngine}
+ */
+function createExpressionEngine(customExpressions) {
+	const expressions = { ...coreDefinitions, ...customExpressions }; // mutated later
+	const isExpression = (val) => {
+		const expressionKeys = new Set(Object.keys(expressions));
+
+		return (
+			val !== null &&
+			typeof val === "object" &&
+			!Array.isArray(val) &&
+			Object.keys(val).length === 1 &&
+			expressionKeys.has(Object.keys(val)[0])
+		);
+	};
+
+	const apply = (rootExpression, inputData) => {
+		const step = (expression) => {
+			if (!isExpression(expression)) {
+				return Array.isArray(expression)
+					? expression.map(step)
+					: typeof expression === "object"
+						? mapValues(expression, step)
+						: expression;
+			}
+
+			const [expressionName, operand] = Object.entries(expression)[0];
+			const expressionDef = expressions[expressionName];
+
+			if (expressionDef.controlsEvaluation) {
+				return expressionDef.apply(operand, inputData, { apply, isExpression });
+			}
+
+			const evaluatedOperand = step(operand);
+			return expressionDef.apply(evaluatedOperand, inputData);
+		};
+
+		return step(rootExpression);
+	};
+
+	const evaluate = (expression) => {
+		if (!isExpression(expression)) {
+			return Array.isArray(expression)
+				? expression.map(evaluate)
+				: typeof expression === "object"
+					? mapValues(expression, evaluate)
+					: expression;
+		}
+
+		const [expressionName, operand] = Object.entries(expression)[0];
+
+		// special case
+		if (expressionName === "$literal") return expression[expressionName];
+
+		const expressionDef = expressions[expressionName];
+		if (expressionDef.controlsEvaluation) {
+			return expressionDef.evaluate(operand, {
+				apply,
+				evaluate,
+				isExpression,
+			});
+		}
+
+		const evaluatedOperand = evaluate(operand);
+		return expressionDef.evaluate(evaluatedOperand);
+	};
+
+	const normalizeWhereClause = (where) => {
+		const compileNode = (node, attribute) => {
+			if (Array.isArray(node)) {
+				throw new Error("Array found in where clause. Where clauses must be objects or expressions that test conditions.");
+			}
+
+			if (typeof node === "object") {
+				if (isExpression(node)) {
+					const [expressionName, operand] = Object.entries(node)[0];
+					const expression = expressions[expressionName];
+
+					if (!("normalizeWhere" in expression)) {
+						throw new Error(`Expression ${expressionName} cannot be used in where clauses. Where clauses require expressions that test conditions (comparisons like $eq, $gt or logical operators like $and, $or).`);
+					}
+
+					return expression.normalizeWhere(operand, {
+						attribute,
+						normalizeWhere: compileNode,
+					});
+				}
+
+				// not an expression
+				return Object.entries(node).length === 1
+					? compileNode(Object.entries(node)[0][1], Object.entries(node)[0][0])
+					: {
+							$and: Object.entries(node).map(([attr, value]) =>
+								compileNode(value, attr),
+							),
+						};
+			}
+
+			return { $pipe: [{ $get: attribute }, { $eq: node }] };
+		};
+
+		return compileNode(where, null);
+	};
+
+	return {
+		apply,
+		evaluate,
+		expressionNames: Object.keys(expressions),
+		isExpression,
+		normalizeWhereClause,
+	};
+}
+
+const defaultExpressions = {
+	...coreDefinitions,
+	...aggregativeDefinitions,
+	...comparativeDefinitions,
+	...conditionalDefinitions,
+	...generativeDefinitions,
+	...iterativeDefinitions,
+	...logicalDefinitions,
+	...temporalDefinitions,
+};
+
+const defaultExpressionEngine =
+	createExpressionEngine(defaultExpressions);
+
 /**
  * @typedef {Object} StandardError
  * @property {string} message
@@ -5001,137 +5802,23 @@ function getResourceStructureValidator(schema, resourceType, expressionEngine) {
 	return compiled;
 }
 
-/**
- * Validates semantic aspects (relationships, attributes, expressions)
- *
- * @param {Object} schema - The schema object
- * @param {Object} query - The query to validate
- * @param {string} type - Resource type
- * @param {Array} path - Current validation path
- * @param {Object} expressionEngine - Validation functions
- * @return {{errors: Array, isValid: boolean}}
- */
-function validateSemantics(schema, query, type, path, expressionEngine) {
+function validateStructure(schema, query, type, expressionEngine) {
 	const errors = [];
-	const addError = (message, path, value) => {
-		errors.push(createErrorReporter()(message, path, value));
-	};
+	const validator = getResourceStructureValidator(
+		schema,
+		type,
+		expressionEngine,
+	);
 
-	const isValidExpression = expressionEngine
-		? expressionEngine.isExpression
-		: isExpressionLike;
-
-	const resSchema = schema.resources[type];
-
-	// Validate where clause semantics
-	if (query.where) {
-		if (
-			!isValidExpression(query.where) &&
-			Object.keys(query.where).some((k) => !(k in resSchema.attributes))
-		) {
-			addError(
-				"Invalid where clause: unknown attribute names. Use valid attributes or an expression.",
-				[...path, "where"],
-				query.where,
-			);
-		}
-	}
-
-	// Validate select semantics
-	const validateSelectObject = (selectObj, prevPath) => {
-		Object.entries(selectObj).forEach(([key, val]) => {
-			const currentPath = [...prevPath, key];
-
-			if (key === "*") return;
-
-			if (key in resSchema.relationships) {
-				// Validate that relationship points to a valid subquery, not an attribute
-				if (typeof val === "string") {
-					addError(
-						`Invalid value for relationship "${key}": expected object, got string "${val}".`,
-						currentPath,
-						val,
-					);
-				}
-				return;
-			}
-
-			if (Array.isArray(val)) {
-				addError(
-					`Invalid selection "${key}": arrays not allowed in object selects.`,
-					currentPath,
-				);
-				return;
-			}
-
-			if (typeof val === "object") {
-				if (!isValidExpression(val)) {
-					addError(
-						`Invalid selection "${key}": not a valid relationship name. Object values must be expressions or subqueries.`,
-						currentPath,
-					);
-				}
-				return;
-			}
-
-			if (typeof val === "string") {
-				if (!isValidAttribute(val, resSchema)) {
-					addError(
-						`Invalid attribute "${val}": not a valid attribute name.`,
-						currentPath,
-						val,
-					);
-				}
-			}
-		});
-	};
-
-	const validateSelectArray = (selectArray) => {
-		selectArray.forEach((val, idx) => {
-			const currentPath = [...path, "select", idx];
-
-			if (val === "*") return;
-
-			if (Array.isArray(val)) {
-				addError(
-					"Invalid selection: nested arrays not allowed.",
-					currentPath,
-					val,
-				);
-				return;
-			}
-
-			if (typeof val === "object") {
-				validateSelectObject(val, currentPath);
-				return;
-			}
-
-			if (typeof val === "string") {
-				if (!isValidAttribute(val, resSchema)) {
-					addError(
-						`Invalid attribute "${val}" in select array: use "*" or a valid attribute name.`,
-						currentPath,
-						val,
-					);
-				}
-			}
-		});
-	};
-
-	if (query.select === "*") return { errors, isValid: true };
-
-	if (Array.isArray(query.select)) validateSelectArray(query.select);
-	else if (typeof query.select === "object")
-		{validateSelectObject(query.select, [...path, "select"]);}
-	else {
-		addError(
-			'Invalid select value: must be "*", an object, or an array.',
-			[...path, "select"],
-			query.select,
+	// Structure validation first
+	const structureIsValid = validator(query);
+	if (!structureIsValid) {
+		translateAjvErrors(validator.errors, query, "query").forEach((err) =>
+			errors.push(err),
 		);
 	}
 
-	return { errors, isValid: errors.length === 0 };
+	return errors;
 }
 
 /**
@@ -5151,61 +5838,156 @@ function validateQuery(schema, rootQuery, options = {}) {
 			{ message: "Invalid schema: expected object, got " + typeof schema },
 		];
 	}
-
 	if (typeof rootQuery !== "object") {
 		return [
 			{ message: "Invalid query: expected object, got " + typeof rootQuery },
 		];
 	}
-
 	if (expressionEngine && typeof expressionEngine !== "object") {
 		return [{ message: "[data-prism] expressionEngine must be an object" }];
-
 	}
 	if (!rootQuery.type) {
 		return [{ message: "Missing query type: required for validation" }];
-
 	}
+
 	// Shape validation
-	if (!validateQueryShape)
-		{validateQueryShape = defaultValidator.compile(baseQuerySchema);}
+	if (!validateQueryShape) {
+		validateQueryShape = defaultValidator.compile(baseQuerySchema);
+	}
 	const shapeResult = validateQueryShape(rootQuery);
 	if (!shapeResult) return validateQueryShape.errors;
 
 	const errors = [];
+	const addError = (message, path, value) => {
+		errors.push(createErrorReporter()(message, path, value));
+	};
+
 	const go = (query, type, path) => {
-		const validator = getResourceStructureValidator(
-			schema,
-			type,
-			expressionEngine,
-		);
-
-		// Structure validation first
-		const structureIsValid = validator(query);
-		if (!structureIsValid) {
-			translateAjvErrors(validator.errors, query, "query").forEach((err) =>
-				errors.push(err),
-			);
-			if (typeof query.select !== "object") return;
-		}
-
-		// Semantic validation second
-		const semanticResult = validateSemantics(
+		// validate the structure of the resource first
+		const structureErrors = validateStructure(
 			schema,
 			query,
 			type,
-			path,
 			expressionEngine,
 		);
-		errors.push(...semanticResult.errors);
+		if (structureErrors) {
+			errors.push(...structureErrors);
+			if (typeof query !== "object") return errors;
+		}
 
-		// Recurse into relationships
-		if (typeof query.select === "object" && !Array.isArray(query.select)) {
-			const resSchema = schema.resources[type];
-			Object.entries(query.select).forEach(([key, val]) => {
-				if (key in resSchema.relationships && typeof val === "object")
-					{go(val, resSchema.relationships[key].type, [...path, key]);}
+		// Semantic validation second
+		const isValidExpression = expressionEngine
+			? expressionEngine.isExpression
+			: isExpressionLike;
+
+		const resSchema = schema.resources[type];
+
+		// Validate where clause semantics
+		if (query.where) {
+			if (
+				!isValidExpression(query.where) &&
+				Object.keys(query.where).some((k) => !(k in resSchema.attributes))
+			) {
+				addError(
+					"Invalid where clause: unknown attribute names. Use valid attributes or an expression.",
+					[...path, "where"],
+					query.where,
+				);
+			}
+		}
+
+		// Validate select semantics
+		const validateSelectObject = (selectObj, prevPath) => {
+			Object.entries(selectObj).forEach(([key, val]) => {
+				const currentPath = [...prevPath, key];
+
+				if (key === "*") return;
+
+				if (key in resSchema.relationships) {
+					if (typeof val !== "object") {
+						addError(
+							`Invalid value for relationship "${key}": expected object, got ${typeof val} "${val}".`,
+							currentPath,
+							val,
+						);
+					} else {
+						go(val, resSchema.relationships[key].type, [...path, key]);
+					}
+
+					return;
+				}
+
+				if (Array.isArray(val)) {
+					addError(
+						`Invalid selection "${key}": arrays not allowed in object selects.`,
+						currentPath,
+					);
+					return;
+				}
+
+				if (typeof val === "object") {
+					if (!isValidExpression(val)) {
+						addError(
+							`Invalid selection "${key}": not a valid relationship name. Object values must be expressions or subqueries.`,
+							currentPath,
+						);
+					}
+					return;
+				}
+
+				if (typeof val === "string") {
+					if (!isValidAttribute(val, resSchema)) {
+						addError(
+							`Invalid attribute "${val}": not a valid attribute name.`,
+							currentPath,
+							val,
+						);
+					}
+				}
 			});
+		};
+
+		const validateSelectArray = (selectArray) => {
+			selectArray.forEach((val, idx) => {
+				const currentPath = [...path, "select", idx];
+
+				if (val === "*") return;
+
+				if (Array.isArray(val)) {
+					addError(
+						"Invalid selection: nested arrays not allowed.",
+						currentPath,
+						val,
+					);
+					return;
+				}
+
+				if (typeof val === "object") {
+					validateSelectObject(val, currentPath);
+					return;
+				}
+
+				if (typeof val === "string") {
+					if (!isValidAttribute(val, resSchema)) {
+						addError(
+							`Invalid attribute "${val}" in select array: use "*" or a valid attribute name.`,
+							currentPath,
+							val,
+						);
+					}
+				}
+			});
+		};
+
+		if (Array.isArray(query.select)) validateSelectArray(query.select);
+		else if (typeof query.select === "object") {
+			validateSelectObject(query.select, [...path, "select"]);
+		} else if (query.select !== "*") {
+			addError(
+				'Invalid select value: must be "*", an object, or an array.',
+				[...path, "select"],
+				query.select,
+			);
 		}
 
 		return errors;
@@ -5219,42 +6001,45 @@ function validateQuery(schema, rootQuery, options = {}) {
  *
  * @param {Object} schema - The schema object
  * @param {RootQuery} rootQuery - The query to normalize
+ * @param {Object} [options]
+ * @param {import('./expressions/expressions.js').ExpressionEngine} [options.expressionEngine] - a @data-prism/graph expression engine
  * @returns {NormalQuery} The normalized query
  */
-function normalizeQuery(schema, rootQuery) {
-	ensure(validateQuery)(schema, rootQuery);
+function normalizeQuery(schema, rootQuery, options = {}) {
+	const { expressionEngine = defaultExpressionEngine } = options;
+
+	ensure(validateQuery)(schema, rootQuery, expressionEngine);
 
 	const go = (query, type) => {
 		const { select } = query;
 		const resSchema = schema.resources[type];
 
-		const selectWithExpandedStar = select === "*" 
-			? Object.keys(resSchema.attributes) 
-			: select;
+		const selectWithExpandedStar =
+			select === "*" ? Object.keys(resSchema.attributes) : select;
 
 		const selectObj = Array.isArray(selectWithExpandedStar)
 			? (() => {
-				const result = {};
-				for (const item of selectWithExpandedStar) {
-					if (typeof item === "string") {
-						result[item] = item;
-					} else {
-						Object.assign(result, item);
+					const result = {};
+					for (const item of selectWithExpandedStar) {
+						if (typeof item === "string") {
+							result[item] = item;
+						} else {
+							Object.assign(result, item);
+						}
 					}
-				}
-				return result;
-			})()
+					return result;
+				})()
 			: select;
 
 		const selectWithStar = selectObj["*"]
 			? (() => {
-				const result = {};
-				for (const attr of Object.keys(resSchema.attributes)) {
-					result[attr] = attr;
-				}
-				Object.assign(result, omit(selectObj, ["*"]));
-				return result;
-			})()
+					const result = {};
+					for (const attr of Object.keys(resSchema.attributes)) {
+						result[attr] = attr;
+					}
+					Object.assign(result, omit(selectObj, ["*"]));
+					return result;
+				})()
 			: selectObj;
 
 		const selectWithSubqueries = mapValues(selectWithStar, (sel, key) => {
@@ -5272,11 +6057,16 @@ function normalizeQuery(schema, rootQuery) {
 			? { order: !Array.isArray(query.order) ? [query.order] : query.order }
 			: {};
 
+		const whereObj = query.where
+			? { where: expressionEngine.normalizeWhereClause(query.where) }
+			: {};
+
 		return {
 			...query,
 			select: selectWithSubqueries,
 			type,
 			...orderObj,
+			...whereObj,
 		};
 	};
 
@@ -5332,6 +6122,15 @@ function normalizeQuery(schema, rootQuery) {
  *   attributes?: Object<string, *>,
  *   relationships?: Object<string, Ref|Ref[]|null>,
  * }} DeleteResource
+ */
+
+/**
+ * @typedef {Object} Store
+ * @property {function(CreateResource): Promise<NormalResource>} create - Creates a new resource
+ * @property {function(UpdateResource): Promise<NormalResource>} update - Updates an existing resource
+ * @property {function(DeleteResource): Promise<DeleteResource>} delete - Deletes a resource
+ * @property {function(CreateResource | UpdateResource): Promise<NormalResource>} upsert - Creates or updates a resource
+ * @property {function(import('./query.js').RootQuery): Promise<*>} query - Queries the store
  */
 
 const defaultValidator = new Ajv({
@@ -5940,37 +6739,8 @@ var metaschema = {
 	return out;
 })();
 
-/**
- * @param {Object} whereClause
- * @param {any} expressionEngine
- * @returns {any}
- */
-function buildWhereExpression(whereClause, expressionEngine) {
-	if (expressionEngine.isExpression(whereClause)) {
-		const [name, params] = Object.entries(whereClause)[0];
-		const built = Array.isArray(params)
-			? params.map((p) => buildWhereExpression(p, expressionEngine))
-			: buildWhereExpression(params, expressionEngine);
-
-		return { [name]: built };
-	}
-
-	const whereExpressions = Object.entries(whereClause).map(
-		([propPath, propVal]) => ({
-			$pipe: [
-				{ $get: propPath },
-				expressionEngine.isExpression(propVal) ? propVal : { $eq: propVal },
-			],
-		}),
-	);
-
-	return whereExpressions.length > 1
-		? { $and: whereExpressions }
-		: whereExpressions[0];
-}
-
 // import { mapValues } from "lodash-es";
-// import { defaultExpressionEngine } from "@data-prism/expressions";
+// import { defaultExpressionEngine } from "../expressions/expressions.js";
 
 /**
  * @typedef {Object<string, any>} Projection
@@ -6053,7 +6823,7 @@ function distributeStrings(expression, expressionEngine) {
 // }
 
 /**
- * @param {import('@data-prism/expressions').Expression} expression
+ * @param {import('../expressions/expressions.js').Expression} expression
  * @param {any} expressionEngine
  * @returns {function(any): any}
  */
@@ -6147,13 +6917,8 @@ function runQuery(rootQuery, data) {
 			where(results) {
 				if (Object.keys(query.where).length === 0) return results;
 
-				const whereExpression = buildWhereExpression(
-					query.where,
-					defaultExpressionEngine,
-				);
-
 				return results.filter((result) => {
-					return defaultExpressionEngine.apply(whereExpression, result);
+					return defaultExpressionEngine.apply(query.where, result);
 				});
 			},
 			order(results) {
@@ -6411,13 +7176,7 @@ const varsExpressionEngine = createExpressionEngine(
  * @returns {QueryBreakdown} Flattened query breakdown
  */
 function flattenQuery(schema, rootQuery) {
-	const go = (
-		query,
-		type,
-		path,
-		parent = null,
-		parentRelationship = null,
-	) => {
+	const go = (query, type, path, parent = null, parentRelationship = null) => {
 		const resDef = schema.resources[type];
 		const { idAttribute = "id" } = resDef;
 		const [attributesEntries, relationshipsEntries] = partition(
@@ -6762,11 +7521,7 @@ const QUERY_CLAUSE_EXTRACTORS = {
 	},
 	where: (where, { table }) => {
 		const propExprs = Object.entries(where).map(([propKey, propValOrExpr]) => {
-			if (whereExpressionEngine.isExpression(where)) {
-				// TODO
-				const [operation, args] = Object.entries(where)[0];
-				return whereExpressionEngine.evaluate(where);
-			}
+			if (whereExpressionEngine.isExpression(where)) ;
 
 			if (whereExpressionEngine.isExpression(propValOrExpr)) {
 				const [operation, args] = Object.entries(propValOrExpr)[0];
@@ -7122,7 +7877,7 @@ async function query(query, context) {
 	const allResults =
 		(await db.query({ rowMode: "array", text: sql }, vars))?.rows ?? null;
 
-	const hasToManyJoin = Object.keys(normalizeQuery(query).select).some(
+	const hasToManyJoin = Object.keys(normalizeQuery(schema, query).select).some(
 		(k) =>
 			schema.resources[query.type].relationships[k]?.cardinality === "many",
 	);
@@ -7174,11 +7929,7 @@ async function create(resource, context) {
 	const idColumns = resource.id ? [snakeCase(idAttribute)] : [];
 	const idVars = resource.id ? [resource.id] : [];
 
-	const columns = [
-		...attributeColumns,
-		...relationshipColumns,
-		...idColumns,
-	];
+	const columns = [...attributeColumns, ...relationshipColumns, ...idColumns];
 	const placeholders = replacePlaceholders(columns.map(() => "?").join(", "));
 	const vars = [
 		...Object.values(resource.attributes),
@@ -7306,7 +8057,7 @@ async function deleteResource(resource, context) {
 	);
 
 	await Promise.all(
-		Object.entries(foreignRelationships).map(async ([relName, val]) => {
+		Object.entries(foreignRelationships).map(async ([relName]) => {
 			const { foreignColumn } = joins[relName];
 			const foreignTable =
 				config.resources[resSchema.relationships[relName].type].table;
@@ -7333,7 +8084,7 @@ async function deleteResource(resource, context) {
 			const { joinTable, localJoinColumn } = joins[relName];
 
 			await Promise.all(
-				val.map((v) =>
+				val.map(() =>
 					db.query(
 						`
 							DELETE FROM ${joinTable}
@@ -7528,17 +8279,14 @@ async function getOne(type, id, context) {
 
 	const output = { type, id, attributes: {}, relationships: {} };
 
-	/** @type {Array<[string, LocalJoin]>} */
 	const localRelationships = Object.entries(joins).filter(
-		([_, j]) => "localColumn" in j,
+		([, j]) => "localColumn" in j,
 	);
-	/** @type {Array<[string, ForeignJoin]>} */
 	const foreignRelationships = Object.entries(joins).filter(
-		([_, j]) => "foreignColumn" in j,
+		([, j]) => "foreignColumn" in j,
 	);
-	/** @type {Array<[string, ManyToManyJoin]>} */
 	const manyToManyRelationships = Object.entries(joins).filter(
-		([_, j]) => "localJoinColumn" in j,
+		([, j]) => "localJoinColumn" in j,
 	);
 
 	const foreignQueries = includeRelationships
@@ -7594,7 +8342,7 @@ async function getOne(type, id, context) {
 					)
 				: snakeCase(attrName),
 		),
-		...localRelationships.map(([_, r]) => snakeCase(r.localColumn)),
+		...localRelationships.map(([, r]) => snakeCase(r.localColumn)),
 	].join(", ");
 	const localQuery = db.query(
 		{
@@ -7653,9 +8401,8 @@ async function getAll(type, context) {
 
 	const resources = {};
 
-	/** @type {Array<[string, LocalJoin]>} */
 	const localRelationships = Object.entries(joins).filter(
-		([_, j]) => "localColumn" in j,
+		([, j]) => "localColumn" in j,
 	);
 
 	const cols = [
@@ -7667,7 +8414,7 @@ async function getAll(type, context) {
 					)
 				: snakeCase(attrName),
 		),
-		...localRelationships.map(([_, r]) => snakeCase(r.localColumn)),
+		...localRelationships.map(([, r]) => snakeCase(r.localColumn)),
 	].join(", ");
 	const localQuery = db.query({
 		rowMode: "array",
@@ -7677,7 +8424,6 @@ async function getAll(type, context) {
 	const { rows } = await localQuery;
 
 	rows.forEach((row) => {
-		/** @type {any} */
 		const resource = { type, id: row[0], attributes: {} };
 		if (includeRelationships) {
 			resource.relationships = mapValues(resSchema.relationships, (rel) =>
@@ -7710,13 +8456,11 @@ async function getAll(type, context) {
 	});
 
 	if (includeRelationships) {
-		/** @type {Array<[string, ForeignJoin]>} */
 		const foreignRelationships = Object.entries(joins).filter(
-			([_, j]) => "foreignColumn" in j,
+			([, j]) => "foreignColumn" in j,
 		);
-		/** @type {Array<[string, ManyToManyJoin]>} */
 		const manyToManyRelationships = Object.entries(joins).filter(
-			([_, j]) => "localJoinColumn" in j,
+			([, j]) => "localJoinColumn" in j,
 		);
 
 		const foreignQueries = [
@@ -8068,29 +8812,33 @@ function createPostgresStore(schema, config) {
 		},
 		async create(resource) {
 			const errors = validateCreateResource(schema, resource, { validator });
-			if (errors.length > 0)
+			if (errors.length > 0) {
 				throw new Error("invalid resource", { cause: errors });
+			}
 
 			return create(resource, { config, schema });
 		},
 		async update(resource) {
 			const errors = validateUpdateResource(schema, resource, { validator });
-			if (errors.length > 0)
+			if (errors.length > 0) {
 				throw new Error("invalid resource", { cause: errors });
+			}
 
 			return update(resource, { config, schema });
 		},
 		async upsert(resource) {
 			const errors = validateMergeResource(schema, resource, { validator });
-			if (errors.length > 0)
+			if (errors.length > 0) {
 				throw new Error("invalid resource", { cause: errors });
+			}
 
 			return upsert(resource, { config, schema });
 		},
 		async delete(resource) {
 			const errors = validateDeleteResource(schema, resource);
-			if (errors.length > 0)
+			if (errors.length > 0) {
 				throw new Error("invalid resource", { cause: errors });
+			}
 
 			return deleteResource(resource, { config, schema });
 		},
