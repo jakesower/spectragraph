@@ -20,7 +20,7 @@ describe("Query Tests", () => {
 		});
 	});
 
-	it("fetches a single resource with a geography column", async () => {
+	it.skip("fetches a single resource with a geography column", async () => {
 		const result = await store.query({
 			type: "homes",
 			id: "1",

@@ -6,6 +6,12 @@ import { flattenQuery } from "./helpers/query-helpers.js";
 import { castValToDb } from "./helpers/sql.js";
 import { varsExpressionEngine } from "./helpers/sql-expressions.js";
 
+/**
+ *
+ * @param {import('@data-prism/core').Query} query
+ * @param {import('./sqlite-store.js').Context} context
+ * @returns
+ */
 export function get(query, context) {
 	const { schema, config, rootClauses = [] } = context;
 	const { db, resources } = config;

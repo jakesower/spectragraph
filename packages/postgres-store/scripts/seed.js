@@ -92,7 +92,12 @@ export async function seed(db, schema, config, seedData) {
 					column: snakeCase(attrName),
 					placeholder:
 						attrSchema.type === "geography" ? "ST_GeomFromGeoJSON(?)" : "?",
-					value: (res) => res.attributes[attrName],
+					value: (res) => {
+						const val = res.attributes[attrName];
+						return (attrSchema.type === "object" || attrSchema.type === "array") 
+							? JSON.stringify(val) 
+							: val;
+					},
 				}));
 
 			const joins = Object.entries(resConfig.joins ?? {})

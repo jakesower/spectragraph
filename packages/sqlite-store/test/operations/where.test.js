@@ -147,7 +147,7 @@ describe("where clauses", () => {
 			select: {
 				powerId: "powerId",
 				wielders: {
-					select: ["id"],
+					select: ["id", "bellyBadge"],
 					where: {
 						bellyBadge: { $eq: "shooting star" },
 					},
@@ -157,56 +157,7 @@ describe("where clauses", () => {
 
 		expect(result).toEqual({
 			powerId: "careBearStare",
-			wielders: [{ id: "3" }],
-		});
-	});
-
-	describe.skip("where expressions", () => {
-		it("filters using an $or operation", async () => {
-			const result = await store.query({
-				type: "bears",
-				select: {
-					id: "id",
-				},
-				where: {
-					$or: [{ yearIntroduced: { $gt: 2000 } }, { bellyBadge: "rainbow" }],
-				},
-			});
-
-			expect(result).toEqual([{ id: "2" }, { id: "5" }]);
-		});
-
-		it("filters using an $or and $and operation", async () => {
-			const result = await store.query({
-				type: "bears",
-				select: {
-					id: "id",
-				},
-				where: {
-					$or: [
-						{ yearIntroduced: { $gt: 2000 } },
-						{ $and: [{ name: "Tenderheart Bear" }, { bellyBadge: "rainbow" }] },
-					],
-				},
-			});
-
-			expect(result).toEqual([{ id: "5" }]);
-		});
-
-		it("filters using an $or and $not operation", async () => {
-			const result = await store.query({
-				type: "bears",
-				select: {
-					id: "id",
-				},
-				where: {
-					$not: {
-						$or: [{ yearIntroduced: { $gt: 2000 } }, { bellyBadge: "rainbow" }],
-					},
-				},
-			});
-
-			expect(result).toEqual([{ id: "1" }, { id: "3" }]);
+			wielders: [{ id: "3", bellyBadge: "shooting star" }],
 		});
 	});
 });

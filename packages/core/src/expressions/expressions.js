@@ -7,6 +7,7 @@ import { generativeDefinitions } from "./definitions/generative.js";
 import { iterativeDefinitions } from "./definitions/iterative.js";
 import { logicalDefinitions } from "./definitions/logical.js";
 import { temporalDefinitions } from "./definitions/temporal.js";
+import { mathDefinitions } from "./definitions/math.js";
 
 /**
  * @typedef {object} ApplicativeExpression
@@ -167,6 +168,7 @@ export const defaultExpressions = {
 	...generativeDefinitions,
 	...iterativeDefinitions,
 	...logicalDefinitions,
+	...mathDefinitions,
 	...temporalDefinitions,
 };
 

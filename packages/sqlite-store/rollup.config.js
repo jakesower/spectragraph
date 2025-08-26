@@ -10,7 +10,6 @@ export default [
 		plugins: [nodeResolve(), commonjs(), json()],
 		external: [
 			"lodash-es",
-			"@data-prism/expressions",
 			"@data-prism/utils",
 			"better-sqlite3",
 			"data-prism",
@@ -23,7 +22,6 @@ export default [
 		plugins: [nodeResolve(), commonjs(), json()],
 		external: [
 			"lodash-es",
-			"@data-prism/expressions",
 			"@data-prism/utils",
 			"better-sqlite3",
 			"data-prism",

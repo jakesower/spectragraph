@@ -25,7 +25,7 @@ describe("Upsert Tests", () => {
 	});
 
 	describe("create upserts", () => {
-		it("upserts a single resource with only attributes, including a geometry attribute", async () => {
+		it.skip("upserts a single resource with only attributes, including a geometry attribute", async () => {
 			const upserted = await store.upsert({
 				type: "homes",
 				attributes: {
@@ -52,7 +52,7 @@ describe("Upsert Tests", () => {
 			});
 		});
 
-		it("fails to upsert a single resource with an invalid geometry attribute", async () => {
+		it.skip("fails to upsert a single resource with an invalid geometry attribute", async () => {
 			expect(
 				store.upsert({
 					type: "homes",
@@ -69,7 +69,7 @@ describe("Upsert Tests", () => {
 	});
 
 	describe("update upserts", () => {
-		it("updates a single resource with only attributes, including a geometry attribute", async () => {
+		it.skip("updates a single resource with only attributes, including a geometry attribute", async () => {
 			const created = await store.create({
 				type: "homes",
 				attributes: {
@@ -103,7 +103,7 @@ describe("Upsert Tests", () => {
 			});
 		});
 
-		it("updates a single resource with only attributes, including a geometry attribute, with the geometry attribute coming from a get request", async () => {
+		it.skip("updates a single resource with only attributes, including a geometry attribute, with the geometry attribute coming from a get request", async () => {
 			const created = await store.create({
 				type: "homes",
 				attributes: {

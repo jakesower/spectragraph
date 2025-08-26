@@ -1,4 +1,4 @@
-import { createExpressionEngine } from "@data-prism/expressions";
+import { createExpressionEngine } from "@data-prism/core";
 import { mapValues } from "lodash-es";
 
 export let whereExpressionEngine;
@@ -21,58 +21,59 @@ const extractWhere = (where, table) =>
 
 const sqlExpressions = {
 	$and: {
-		name: "and",
-		where: (params) => params.join(" AND "),
-		vars: (params) => params.flat(),
+		name: "$and",
+		where: (operand) => operand.join(" AND "),
+		vars: (operand) => operand.flat(),
 	},
 	$eq: {
-		name: "equal",
-		where: (params) => `${params[0]} = ?`,
-		vars: (params) => params[1],
+		name: "$equal",
+		where: (operand) => `${operand[0]} = ?`,
+		vars: (operand) => operand[1],
 	},
 	$gt: {
-		name: "greater than",
-		where: (params) => `${params[0]} > ?`,
-		vars: (params) => params[1],
+		name: "$gt",
+		where: (operand) => `${operand[0]} > ?`,
+		vars: (operand) => operand[1],
 	},
 	$gte: {
-		name: "greater than or equal to",
-		where: (params) => `${params[0]} >= ?`,
-		vars: (params) => params[1],
+		name: "$gte",
+		where: (operand) => `${operand[0]} >= ?`,
+		vars: (operand) => operand[1],
 	},
 	$lt: {
-		name: "less than",
-		where: (params) => `${params[0]} < ?`,
-		vars: (params) => params[1],
+		name: "$lt",
+		where: (operand) => `${operand[0]} < ?`,
+		vars: (operand) => operand[1],
 	},
 	$lte: {
-		name: "less than or equal to",
-		where: (params) => `${params[0]} <= ?`,
-		vars: (params) => params[1],
+		name: "$lte",
+		where: (operand) => `${operand[0]} <= ?`,
+		vars: (operand) => operand[1],
 	},
 	$ne: {
-		name: "not equal",
-		where: (params) => `${params[0]} != ?`,
-		vars: (params) => params[1],
+		name: "$ne",
+		where: (operand) => `${operand[0]} != ?`,
+		vars: (operand) => operand[1],
 	},
 	$in: {
-		name: "contained in",
-		where: (params) =>
-			`${params[0]} IN (${params[1].map(() => "?").join(",")})`,
-		vars: (params) => params[1],
+		name: "$in",
+		where: (operand) =>
+			`${operand[0]} IN (${operand[1].map(() => "?").join(",")})`,
+		vars: (operand) => operand[1],
 	},
 	$nin: {
-		name: "not contained in",
-		where: (params) =>
-			`${params[0]} NOT IN (${params[1].map(() => "?").join(",")})`,
-		vars: (params) => params[1],
+		name: "$nin",
+		where: (operand) =>
+			`${operand[0]} NOT IN (${operand[1].map(() => "?").join(",")})`,
+		vars: (operand) => operand[1],
 	},
 	$or: {
 		// TODO
-		name: "or",
+		name: "$or",
 		controlsEvaluation: true,
-		where: (params, evaluate) => {
-			console.log("args", params.map(evaluate));
+		where: (operand, { evaluate }) => {
+			console.log("operand", operand);
+			console.log("evaled", operand.map(evaluate));
 		},
 		vars: (...args) => {
 			console.log("Var args", args);

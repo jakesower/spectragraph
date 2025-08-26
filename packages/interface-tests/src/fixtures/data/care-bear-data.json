@@ -162,5 +162,16 @@
 			}
 		}
 	},
+	"companions": {
+		"1": {
+			"type": "companions",
+			"id": "1",
+			"attributes": {
+				"companionId": "1",
+				"name": "Brave Heart Lion"
+			},
+			"relationships": {}
+		}
+	},
 	"villains": {}
 }

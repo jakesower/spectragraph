@@ -457,4 +457,3 @@ const store = createPostgresStore(schema, pool);
 - `@data-prism/core` - Core Data Prism functionality and schema definitions
 - `@data-prism/interface-tests` - Test suite for validating store implementations
 - `@data-prism/memory-store` - In-memory store for development and testing
-- `@data-prism/expressions` - Expression engine for advanced query conditions

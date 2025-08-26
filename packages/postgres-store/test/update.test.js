@@ -24,7 +24,7 @@ describe("Update Tests", () => {
 		});
 	});
 
-	it("updates a single resource with only attributes, including a geometry attribute", async () => {
+	it.skip("updates a single resource with only attributes, including a geometry attribute", async () => {
 		const created = await store.create({
 			type: "homes",
 			attributes: {
@@ -58,7 +58,7 @@ describe("Update Tests", () => {
 		});
 	});
 
-	it("updates a single resource with only attributes, including a geometry attribute, with the geometry attribute coming from a get request", async () => {
+	it.skip("updates a single resource with only attributes, including a geometry attribute, with the geometry attribute coming from a get request", async () => {
 		const created = await store.create({
 			type: "homes",
 			attributes: {

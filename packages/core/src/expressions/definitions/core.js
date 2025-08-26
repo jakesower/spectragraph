@@ -1,11 +1,5 @@
 import { get } from "lodash-es";
 
-const $apply = {
-	name: "$apply",
-	apply: (operand) => operand,
-	evaluate: (operand) => operand,
-};
-
 const $isDefined = {
 	name: "$isDefined",
 	apply: (_, inputData) => inputData !== undefined,
@@ -18,19 +12,6 @@ const $isDefined = {
 
 		const [value] = operand;
 		return value !== undefined;
-	},
-};
-
-const $echo = {
-	name: "$echo",
-	apply: (_, inputData) => inputData,
-	evaluate(operand) {
-		if (!Array.isArray(operand)) {
-			throw new Error("$echo evaluate form requires array operand: [value]");
-		}
-
-		const [value] = operand;
-		return value;
 	},
 };
 
@@ -136,10 +117,8 @@ const $pipe = {
 };
 
 export const coreDefinitions = {
-	$apply,
 	$compose,
 	$debug,
-	$echo,
 	$get,
 	$isDefined,
 	$literal,

@@ -407,4 +407,3 @@ db.pragma("cache_size = 10000");
 - `@data-prism/interface-tests` - Test suite for validating store implementations
 - `@data-prism/postgres-store` - Full-featured PostgreSQL store implementation
 - `@data-prism/memory-store` - In-memory store for development and testing
-- `@data-prism/expressions` - Expression engine for advanced query conditions
