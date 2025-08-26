@@ -42,7 +42,6 @@ const operations = {
 					([propKey, propValOrExpr]) => {
 						if (whereExpressionEngine.isExpression(where)) {
 							// TODO
-							const [operation, args] = Object.entries(where)[0];
 							return whereExpressionEngine.evaluate(where);
 						}
 

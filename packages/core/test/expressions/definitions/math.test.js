@@ -19,13 +19,13 @@ describe("$add", () => {
 
 		it("throws with non-number operand", () => {
 			expect(() => apply({ $add: "invalid" }, 5)).toThrowError(
-				"$add apply form requires number operand"
+				"$add apply form requires number operand",
 			);
 		});
 
 		it("throws with non-number input data", () => {
 			expect(() => apply({ $add: 3 }, "invalid")).toThrowError(
-				"$add apply form requires number input data"
+				"$add apply form requires number input data",
 			);
 		});
 	});
@@ -41,19 +41,19 @@ describe("$add", () => {
 
 		it("throws with wrong array length", () => {
 			expect(() => evaluate({ $add: [1, 2, 3] })).toThrowError(
-				"$add evaluate form requires array of exactly 2 numbers"
+				"$add evaluate form requires array of exactly 2 numbers",
 			);
 		});
 
 		it("throws with non-array operand", () => {
 			expect(() => evaluate({ $add: "invalid" })).toThrowError(
-				"$add evaluate form requires array of exactly 2 numbers"
+				"$add evaluate form requires array of exactly 2 numbers",
 			);
 		});
 
 		it("throws with non-number elements", () => {
 			expect(() => evaluate({ $add: [1, "invalid"] })).toThrowError(
-				"$add evaluate form requires array of exactly 2 numbers"
+				"$add evaluate form requires array of exactly 2 numbers",
 			);
 		});
 	});
@@ -75,13 +75,13 @@ describe("$subtract", () => {
 
 		it("throws with non-number operand", () => {
 			expect(() => apply({ $subtract: "invalid" }, 5)).toThrowError(
-				"$subtract apply form requires number operand"
+				"$subtract apply form requires number operand",
 			);
 		});
 
 		it("throws with non-number input data", () => {
 			expect(() => apply({ $subtract: 3 }, "invalid")).toThrowError(
-				"$subtract apply form requires number input data"
+				"$subtract apply form requires number input data",
 			);
 		});
 	});
@@ -97,19 +97,19 @@ describe("$subtract", () => {
 
 		it("throws with wrong array length", () => {
 			expect(() => evaluate({ $subtract: [1, 2, 3] })).toThrowError(
-				"$subtract evaluate form requires array of exactly 2 numbers"
+				"$subtract evaluate form requires array of exactly 2 numbers",
 			);
 		});
 
 		it("throws with non-array operand", () => {
 			expect(() => evaluate({ $subtract: "invalid" })).toThrowError(
-				"$subtract evaluate form requires array of exactly 2 numbers"
+				"$subtract evaluate form requires array of exactly 2 numbers",
 			);
 		});
 
 		it("throws with non-number elements", () => {
 			expect(() => evaluate({ $subtract: [1, "invalid"] })).toThrowError(
-				"$subtract evaluate form requires array of exactly 2 numbers"
+				"$subtract evaluate form requires array of exactly 2 numbers",
 			);
 		});
 	});
@@ -135,13 +135,13 @@ describe("$multiply", () => {
 
 		it("throws with non-number operand", () => {
 			expect(() => apply({ $multiply: "invalid" }, 5)).toThrowError(
-				"$multiply apply form requires number operand"
+				"$multiply apply form requires number operand",
 			);
 		});
 
 		it("throws with non-number input data", () => {
 			expect(() => apply({ $multiply: 3 }, "invalid")).toThrowError(
-				"$multiply apply form requires number input data"
+				"$multiply apply form requires number input data",
 			);
 		});
 	});
@@ -161,19 +161,19 @@ describe("$multiply", () => {
 
 		it("throws with wrong array length", () => {
 			expect(() => evaluate({ $multiply: [1, 2, 3] })).toThrowError(
-				"$multiply evaluate form requires array of exactly 2 numbers"
+				"$multiply evaluate form requires array of exactly 2 numbers",
 			);
 		});
 
 		it("throws with non-array operand", () => {
 			expect(() => evaluate({ $multiply: "invalid" })).toThrowError(
-				"$multiply evaluate form requires array of exactly 2 numbers"
+				"$multiply evaluate form requires array of exactly 2 numbers",
 			);
 		});
 
 		it("throws with non-number elements", () => {
 			expect(() => evaluate({ $multiply: [1, "invalid"] })).toThrowError(
-				"$multiply evaluate form requires array of exactly 2 numbers"
+				"$multiply evaluate form requires array of exactly 2 numbers",
 			);
 		});
 	});
@@ -195,19 +195,19 @@ describe("$divide", () => {
 
 		it("throws on division by zero", () => {
 			expect(() => apply({ $divide: 0 }, 10)).toThrowError(
-				"Division by zero"
+				"Division by zero",
 			);
 		});
 
 		it("throws with non-number operand", () => {
 			expect(() => apply({ $divide: "invalid" }, 5)).toThrowError(
-				"$divide apply form requires number operand"
+				"$divide apply form requires number operand",
 			);
 		});
 
 		it("throws with non-number input data", () => {
 			expect(() => apply({ $divide: 3 }, "invalid")).toThrowError(
-				"$divide apply form requires number input data"
+				"$divide apply form requires number input data",
 			);
 		});
 	});
@@ -227,25 +227,25 @@ describe("$divide", () => {
 
 		it("throws on division by zero", () => {
 			expect(() => evaluate({ $divide: [10, 0] })).toThrowError(
-				"Division by zero"
+				"Division by zero",
 			);
 		});
 
 		it("throws with wrong array length", () => {
 			expect(() => evaluate({ $divide: [1, 2, 3] })).toThrowError(
-				"$divide evaluate form requires array of exactly 2 numbers"
+				"$divide evaluate form requires array of exactly 2 numbers",
 			);
 		});
 
 		it("throws with non-array operand", () => {
 			expect(() => evaluate({ $divide: "invalid" })).toThrowError(
-				"$divide evaluate form requires array of exactly 2 numbers"
+				"$divide evaluate form requires array of exactly 2 numbers",
 			);
 		});
 
 		it("throws with non-number elements", () => {
 			expect(() => evaluate({ $divide: [1, "invalid"] })).toThrowError(
-				"$divide evaluate form requires array of exactly 2 numbers"
+				"$divide evaluate form requires array of exactly 2 numbers",
 			);
 		});
 	});
@@ -268,19 +268,19 @@ describe("$modulo", () => {
 
 		it("throws on modulo by zero", () => {
 			expect(() => apply({ $modulo: 0 }, 10)).toThrowError(
-				"Modulo by zero"
+				"Modulo by zero",
 			);
 		});
 
 		it("throws with non-number operand", () => {
 			expect(() => apply({ $modulo: "invalid" }, 5)).toThrowError(
-				"$modulo apply form requires number operand"
+				"$modulo apply form requires number operand",
 			);
 		});
 
 		it("throws with non-number input data", () => {
 			expect(() => apply({ $modulo: 3 }, "invalid")).toThrowError(
-				"$modulo apply form requires number input data"
+				"$modulo apply form requires number input data",
 			);
 		});
 	});
@@ -301,25 +301,25 @@ describe("$modulo", () => {
 
 		it("throws on modulo by zero", () => {
 			expect(() => evaluate({ $modulo: [10, 0] })).toThrowError(
-				"Modulo by zero"
+				"Modulo by zero",
 			);
 		});
 
 		it("throws with wrong array length", () => {
 			expect(() => evaluate({ $modulo: [1, 2, 3] })).toThrowError(
-				"$modulo evaluate form requires array of exactly 2 numbers"
+				"$modulo evaluate form requires array of exactly 2 numbers",
 			);
 		});
 
 		it("throws with non-array operand", () => {
 			expect(() => evaluate({ $modulo: "invalid" })).toThrowError(
-				"$modulo evaluate form requires array of exactly 2 numbers"
+				"$modulo evaluate form requires array of exactly 2 numbers",
 			);
 		});
 
 		it("throws with non-number elements", () => {
 			expect(() => evaluate({ $modulo: [1, "invalid"] })).toThrowError(
-				"$modulo evaluate form requires array of exactly 2 numbers"
+				"$modulo evaluate form requires array of exactly 2 numbers",
 			);
 		});
 	});
@@ -328,21 +328,21 @@ describe("$modulo", () => {
 describe("Math expressions integration", () => {
 	it("can be combined with other expressions using evaluate form", () => {
 		const result = evaluate({
-			$add: [{ $multiply: [2, 3] }, { $subtract: [10, 4] }]
+			$add: [{ $multiply: [2, 3] }, { $subtract: [10, 4] }],
 		});
 		expect(result).toEqual(12); // (2*3) + (10-4) = 6 + 6 = 12
 	});
 
 	it("works with nested operations", () => {
 		const result = evaluate({
-			$divide: [{ $add: [10, 5] }, { $subtract: [8, 5] }]
+			$divide: [{ $add: [10, 5] }, { $subtract: [8, 5] }],
 		});
 		expect(result).toEqual(5); // (10+5) / (8-5) = 15 / 3 = 5
 	});
 
 	it("uses modulo in calculations", () => {
 		const result = evaluate({
-			$modulo: [{ $add: [7, 8] }, 4]
+			$modulo: [{ $add: [7, 8] }, 4],
 		});
 		expect(result).toEqual(3); // (7+8) % 4 = 15 % 4 = 3
 	});

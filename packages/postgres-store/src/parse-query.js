@@ -1,5 +1,5 @@
 import { snakeCase, uniq } from "lodash-es";
-import { whereExpressionEngine } from "./helpers/sql-expressions.js";
+import { whereExpressionEngine } from "./helpers/where-expressions.js";
 import { forEachQuery, someQuery } from "./helpers/query-helpers.js";
 import { preQueryRelationships } from "./relationships.js";
 import { columnTypeModifiers } from "./column-type-modifiers.js";

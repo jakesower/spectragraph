@@ -69,7 +69,7 @@ export function seed(db, schema, config, seedData) {
 					: (res) => res.attributes[attrName],
 			);
 		const joins = Object.entries(resConfig.joins)
-			.filter(([_, j]) => j.localColumn)
+			.filter(([, j]) => j.localColumn)
 			.map(
 				([joinAttr]) =>
 					(res) =>
@@ -96,7 +96,7 @@ export function seed(db, schema, config, seedData) {
 	const allJoinTableConfigs = Object.entries(config.resources).flatMap(
 		([resType, resConfig]) =>
 			Object.entries(resConfig.joins)
-				.filter(([_, resJoinConfig]) => resJoinConfig.joinTable)
+				.filter(([, resJoinConfig]) => resJoinConfig.joinTable)
 				.map(([relName, join]) => ({
 					table: join.joinTable,
 					resourceType: resType,

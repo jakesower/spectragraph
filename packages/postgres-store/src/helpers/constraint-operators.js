@@ -14,7 +14,8 @@
 
 // /**
 //  * @typedef {Object} ConstraintOperatorDef
-//  * @property {(exprVal: any, compile: Function, context?: CompileContext) => () => CompiledExpression} compile - Compilation function
+//  * @property {(exprVal: any, compile: Function, context?: CompileContext) => () =>
+//  * CompiledExpression} compile - Compilation function
 //  * @property {boolean} [preQuery] - Whether this is a pre-query operator
 //  */
 

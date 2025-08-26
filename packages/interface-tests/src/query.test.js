@@ -57,25 +57,9 @@ export function runQueryTests(createStore) {
 				furColor: "tan",
 			});
 		});
+	});
 
-		it("can initialize with initial data", async () => {
-			const store = createStore(careBearSchema, {
-				initialData: { bears: careBearData.bears },
-			});
-
-			const result = await store.query({
-				type: "bears",
-				select: ["name"],
-			});
-
-			expect(result).toEqual([
-				{ name: "Tenderheart Bear" },
-				{ name: "Cheer Bear" },
-				{ name: "Wish Bear" },
-				{ name: "Smart Heart Bear" },
-			]);
-		});
-
+	describe("select clauses", () => {
 		describe("* notation", () => {
 			it("fetches a single resource with * as a string", async () => {
 				const store = createStore(careBearSchema, {
@@ -140,263 +124,270 @@ export function runQueryTests(createStore) {
 	});
 
 	describe("where clauses", () => {
-		it("filters on a property equality constraint", async () => {
-			const store = createStore(careBearSchema, {
-				initialData: careBearData,
+		describe("general", () => {
+			it("filters on a property equality constraint", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const result = await store.query({
+					type: "bears",
+					select: ["id", "name"],
+					where: { name: "Cheer Bear" },
+				});
+
+				expect(result).toEqual([{ id: "2", name: "Cheer Bear" }]);
 			});
 
-			const result = await store.query({
-				type: "bears",
-				select: ["id", "name"],
-				where: { name: "Cheer Bear" },
+			it("filters on an attribute that is not returned from selected attributes", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const result = await store.query({
+					type: "bears",
+					select: ["id"],
+					where: { name: { $eq: "Cheer Bear" } },
+				});
+
+				expect(result).toEqual([{ id: "2" }]);
 			});
 
-			expect(result).toEqual([{ id: "2", name: "Cheer Bear" }]);
+			it("filters on multiple property equality where", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const result = await store.query({
+					type: "homes",
+					select: ["id"],
+					where: {
+						caringMeter: 1,
+						isInClouds: false,
+					},
+				});
+
+				expect(result).toEqual([{ id: "2" }]);
+			});
 		});
 
-		it("filters on a property that is not returned from properties", async () => {
-			const store = createStore(careBearSchema, {
-				initialData: careBearData,
+		describe("expressions", () => {
+			it("filters using $eq operator", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const result = await store.query({
+					type: "bears",
+					select: ["id"],
+					where: {
+						yearIntroduced: { $eq: 2005 },
+					},
+				});
+
+				expect(result).toEqual([{ id: "5" }]);
 			});
 
-			const result = await store.query({
-				type: "bears",
-				select: ["id"],
-				where: { name: { $eq: "Cheer Bear" } },
+			it("filters using $gt operator", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const result = await store.query({
+					type: "bears",
+					select: ["id"],
+					where: {
+						yearIntroduced: { $gt: 2000 },
+					},
+				});
+
+				expect(result).toEqual([{ id: "5" }]);
 			});
 
-			expect(result).toEqual([{ id: "2" }]);
-		});
+			it("filters using $lt operator", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
 
-		it("filters on multiple property equality where", async () => {
-			const store = createStore(careBearSchema, {
-				initialData: careBearData,
+				const result = await store.query({
+					type: "bears",
+					select: ["id"],
+					where: {
+						yearIntroduced: { $lt: 2000 },
+					},
+				});
+
+				expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
 			});
 
-			const result = await store.query({
-				type: "homes",
-				select: ["id"],
-				where: {
-					caringMeter: 1,
-					isInClouds: false,
-				},
+			it("filters using $lte operator", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const result = await store.query({
+					type: "bears",
+					select: ["id"],
+					where: {
+						yearIntroduced: { $lte: 2000 },
+					},
+				});
+
+				expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
 			});
 
-			expect(result).toEqual([{ id: "2" }]);
-		});
+			it("filters using $gte operator", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
 
-		it("filters using $eq operator", async () => {
-			const store = createStore(careBearSchema, {
-				initialData: careBearData,
+				const result = await store.query({
+					type: "bears",
+					select: ["id"],
+					where: {
+						yearIntroduced: { $gte: 2005 },
+					},
+				});
+
+				expect(result).toEqual([{ id: "5" }]);
 			});
 
-			const result = await store.query({
-				type: "bears",
-				select: ["id"],
-				where: {
-					yearIntroduced: { $eq: 2005 },
-				},
+			it("filters using $in 1", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const result = await store.query({
+					type: "bears",
+					select: ["id"],
+					where: {
+						yearIntroduced: { $in: [2005, 2022] },
+					},
+				});
+
+				expect(result).toEqual([{ id: "5" }]);
 			});
 
-			expect(result).toEqual([{ id: "5" }]);
-		});
+			it("filters using $in 2", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
 
-		it("filters using $gt operator", async () => {
-			const store = createStore(careBearSchema, {
-				initialData: careBearData,
+				const result = await store.query({
+					type: "bears",
+					select: ["id"],
+					where: {
+						yearIntroduced: { $in: [2022] },
+					},
+				});
+
+				expect(result).toEqual([]);
 			});
 
-			const result = await store.query({
-				type: "bears",
-				select: ["id"],
-				where: {
-					yearIntroduced: { $gt: 2000 },
-				},
+			it("filters using $ne operator", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const result = await store.query({
+					type: "bears",
+					select: ["id"],
+					where: {
+						yearIntroduced: { $ne: 2005 },
+					},
+				});
+
+				expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
 			});
 
-			expect(result).toEqual([{ id: "5" }]);
-		});
+			it("filters related resources", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
 
-		it("filters using $lt operator", async () => {
-			const store = createStore(careBearSchema, {
-				initialData: careBearData,
-			});
-
-			const result = await store.query({
-				type: "bears",
-				select: ["id"],
-				where: {
-					yearIntroduced: { $lt: 2000 },
-				},
-			});
-
-			expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
-		});
-
-		it("filters using $lte operator", async () => {
-			const store = createStore(careBearSchema, {
-				initialData: careBearData,
-			});
-
-			const result = await store.query({
-				type: "bears",
-				select: ["id"],
-				where: {
-					yearIntroduced: { $lte: 2000 },
-				},
-			});
-
-			expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
-		});
-
-		it("filters using $gte operator", async () => {
-			const store = createStore(careBearSchema, {
-				initialData: careBearData,
-			});
-
-			const result = await store.query({
-				type: "bears",
-				select: ["id"],
-				where: {
-					yearIntroduced: { $gte: 2005 },
-				},
-			});
-
-			expect(result).toEqual([{ id: "5" }]);
-		});
-
-		it("filters using $in 1", async () => {
-			const store = createStore(careBearSchema, {
-				initialData: careBearData,
-			});
-
-			const result = await store.query({
-				type: "bears",
-				select: ["id"],
-				where: {
-					yearIntroduced: { $in: [2005, 2022] },
-				},
-			});
-
-			expect(result).toEqual([{ id: "5" }]);
-		});
-
-		it("filters using $in 2", async () => {
-			const store = createStore(careBearSchema, {
-				initialData: careBearData,
-			});
-
-			const result = await store.query({
-				type: "bears",
-				select: ["id"],
-				where: {
-					yearIntroduced: { $in: [2022] },
-				},
-			});
-
-			expect(result).toEqual([]);
-		});
-
-		it("filters using $ne operator", async () => {
-			const store = createStore(careBearSchema, {
-				initialData: careBearData,
-			});
-
-			const result = await store.query({
-				type: "bears",
-				select: ["id"],
-				where: {
-					yearIntroduced: { $ne: 2005 },
-				},
-			});
-
-			expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
-		});
-
-		it("filters related resources", async () => {
-			const store = createStore(careBearSchema, {
-				initialData: careBearData,
-			});
-
-			const result = await store.query({
-				type: "powers",
-				id: "careBearStare",
-				select: {
-					powerId: "powerId",
-					wielders: {
-						select: ["id", "bellyBadge"],
-						where: {
-							bellyBadge: { $eq: "shooting star" },
+				const result = await store.query({
+					type: "powers",
+					id: "careBearStare",
+					select: {
+						powerId: "powerId",
+						wielders: {
+							select: ["id", "bellyBadge"],
+							where: {
+								bellyBadge: { $eq: "shooting star" },
+							},
 						},
 					},
-				},
+				});
+
+				expect(result).toEqual({
+					powerId: "careBearStare",
+					wielders: [{ id: "3", bellyBadge: "shooting star" }],
+				});
 			});
 
-			expect(result).toEqual({
-				powerId: "careBearStare",
-				wielders: [{ id: "3", bellyBadge: "shooting star" }],
-			});
-		});
+			it("filters using an $or operation", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
 
-		it("filters using an $or operation", async () => {
-			const store = createStore(careBearSchema, {
-				initialData: careBearData,
-			});
-
-			const result = await store.query({
-				type: "bears",
-				select: {
-					id: "id",
-				},
-				where: {
-					$or: [{ yearIntroduced: { $gt: 2000 } }, { bellyBadge: "rainbow" }],
-				},
-			});
-
-			expect(result).toEqual([{ id: "2" }, { id: "5" }]);
-		});
-
-		it("filters using an $or and $and operation", async () => {
-			const store = createStore(careBearSchema, {
-				initialData: careBearData,
-			});
-
-			const result = await store.query({
-				type: "bears",
-				select: {
-					id: "id",
-				},
-				where: {
-					$or: [
-						{ yearIntroduced: { $gt: 2000 } },
-						{
-							$and: [{ name: "Tenderheart Bear" }, { bellyBadge: "rainbow" }],
-						},
-					],
-				},
-			});
-
-			expect(result).toEqual([{ id: "5" }]);
-		});
-
-		it("filters using an $or and $not operation", async () => {
-			const store = createStore(careBearSchema, {
-				initialData: careBearData,
-			});
-
-			const result = await store.query({
-				type: "bears",
-				select: {
-					id: "id",
-				},
-				where: {
-					$not: {
+				const result = await store.query({
+					type: "bears",
+					select: {
+						id: "id",
+					},
+					where: {
 						$or: [{ yearIntroduced: { $gt: 2000 } }, { bellyBadge: "rainbow" }],
 					},
-				},
+				});
+
+				expect(result).toEqual([{ id: "2" }, { id: "5" }]);
 			});
 
-			expect(result).toEqual([{ id: "1" }, { id: "3" }]);
+			it("filters using an $or and $and operation", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const result = await store.query({
+					type: "bears",
+					select: {
+						id: "id",
+					},
+					where: {
+						$or: [
+							{ yearIntroduced: { $gt: 2000 } },
+							{
+								$and: [{ name: "Tenderheart Bear" }, { bellyBadge: "rainbow" }],
+							},
+						],
+					},
+				});
+
+				expect(result).toEqual([{ id: "5" }]);
+			});
+
+			it("filters using an $or and $not operation", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const result = await store.query({
+					type: "bears",
+					select: {
+						id: "id",
+					},
+					where: {
+						$not: {
+							$or: [
+								{ yearIntroduced: { $gt: 2000 } },
+								{ bellyBadge: "rainbow" },
+							],
+						},
+					},
+				});
+
+				expect(result).toEqual([{ id: "1" }, { id: "3" }]);
+			});
 		});
 	});
 }

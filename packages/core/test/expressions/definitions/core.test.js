@@ -320,7 +320,7 @@ describe("normalizeWhereClause for core expressions", () => {
 
 		it("normalizes $pipe used in attribute context (ignores attribute)", () => {
 			const where = { 
-				status: { $pipe: [{ $get: "user.active" }, { $eq: true }] }
+				status: { $pipe: [{ $get: "user.active" }, { $eq: true }] },
 			};
 			const normalized = normalizeWhereClause(where);
 			expect(normalized).toEqual({
@@ -358,7 +358,7 @@ describe("normalizeWhereClause for core expressions", () => {
 
 		it("normalizes $compose used in attribute context (ignores attribute)", () => {
 			const where = { 
-				status: { $compose: [{ $eq: true }, { $get: "user.active" }] }
+				status: { $compose: [{ $eq: true }, { $get: "user.active" }] },
 			};
 			const normalized = normalizeWhereClause(where);
 			expect(normalized).toEqual({

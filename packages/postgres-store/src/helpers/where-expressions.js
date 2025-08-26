@@ -16,7 +16,8 @@ import { mapValues, snakeCase } from "lodash-es";
 const sqlExpressions = {
 	$and: {
 		controlsEvaluation: true,
-		where: (operand, { evaluate }) => `(${operand.map(evaluate).join(" AND ")})`,
+		where: (operand, { evaluate }) =>
+			`(${operand.map(evaluate).join(" AND ")})`,
 		vars: (operand, { evaluate }) => operand.flatMap(evaluate),
 	},
 	$or: {
@@ -73,6 +74,81 @@ const sqlExpressions = {
 		controlsEvaluation: true,
 		where: (operand, { evaluate }) => evaluate({ $pipe: operand.toReversed() }),
 		vars: (operand, { evaluate }) => evaluate({ $pipe: operand.toReversed() }),
+	},
+	$literal: {
+		where: () => "?",
+		vars: (operand) => operand,
+	},
+	$if: {
+		controlsEvaluation: true,
+		where: (operand, { evaluate, isExpression }) => {
+			const condition = evaluate(operand.if);
+			const thenClause = isExpression(operand.then) ? evaluate(operand.then) : "?";
+			const elseClause = isExpression(operand.else) ? evaluate(operand.else) : "?";
+			return `CASE WHEN ${condition} THEN ${thenClause} ELSE ${elseClause} END`;
+		},
+		vars: (operand, { evaluate, isExpression }) => {
+			const vars = [...evaluate(operand.if)];
+			if (isExpression(operand.then)) {
+				vars.push(...evaluate(operand.then));
+			} else {
+				vars.push(operand.then);
+			}
+			if (isExpression(operand.else)) {
+				vars.push(...evaluate(operand.else));
+			} else {
+				vars.push(operand.else);
+			}
+			return vars.flat();
+		},
+	},
+	$case: {
+		controlsEvaluation: true,
+		where: (operand, { evaluate, isExpression }) => {
+			const value = isExpression(operand.value) ? evaluate(operand.value) : "?";
+			let sql = `CASE ${value}`;
+			
+			for (const caseItem of operand.cases) {
+				const whenClause = isExpression(caseItem.when) ? evaluate(caseItem.when) : "?";
+				const thenClause = isExpression(caseItem.then) ? evaluate(caseItem.then) : "?";
+				sql += ` WHEN ${whenClause} THEN ${thenClause}`;
+			}
+			
+			const defaultClause = isExpression(operand.default) ? evaluate(operand.default) : "?";
+			sql += ` ELSE ${defaultClause} END`;
+			
+			return sql;
+		},
+		vars: (operand, { evaluate, isExpression }) => {
+			const vars = [];
+			
+			if (isExpression(operand.value)) {
+				vars.push(...evaluate(operand.value));
+			} else {
+				vars.push(operand.value);
+			}
+			
+			for (const caseItem of operand.cases) {
+				if (isExpression(caseItem.when)) {
+					vars.push(...evaluate(caseItem.when));
+				} else {
+					vars.push(caseItem.when);
+				}
+				if (isExpression(caseItem.then)) {
+					vars.push(...evaluate(caseItem.then));
+				} else {
+					vars.push(caseItem.then);
+				}
+			}
+			
+			if (isExpression(operand.default)) {
+				vars.push(...evaluate(operand.default));
+			} else {
+				vars.push(operand.default);
+			}
+			
+			return vars.flat();
+		},
 	},
 };
 

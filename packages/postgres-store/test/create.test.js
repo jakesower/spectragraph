@@ -7,7 +7,10 @@ import { careBearConfig } from "./fixtures/care-bear-config.js";
 import { careBearData } from "./fixtures/care-bear-data.js";
 import { reset } from "../scripts/seed.js";
 
-describe("Create Tests", () => {
+// Most create tests are covered by interface-tests via interface.test.js
+// This file contains PostgreSQL-specific create functionality tests
+
+describe("PostgreSQL-Specific Create Tests", () => {
 	let store;
 	let db;
 

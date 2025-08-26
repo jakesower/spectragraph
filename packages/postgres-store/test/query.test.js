@@ -6,7 +6,10 @@ import { careBearData } from "../../interface-tests/src/index.js";
 import { careBearConfig } from "./fixtures/care-bear-config.js";
 import { reset } from "../scripts/seed.js";
 
-describe("Query Tests", () => {
+// Most query tests are covered by interface-tests via interface.test.js
+// This file contains PostgreSQL-specific query functionality tests
+
+describe("PostgreSQL-Specific Query Tests", () => {
 	let store;
 	let db;
 
@@ -17,23 +20,6 @@ describe("Query Tests", () => {
 		store = createPostgresStore(careBearSchema, {
 			...careBearConfig,
 			db,
-		});
-	});
-
-	it.skip("fetches a single resource with a geography column", async () => {
-		const result = await store.query({
-			type: "homes",
-			id: "1",
-			select: {
-				location: "location",
-			},
-		});
-
-		expect(result).toEqual({
-			location: {
-				type: "Point",
-				coordinates: [-119.557320248, 46.820255868],
-			},
 		});
 	});
 
