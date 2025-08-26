@@ -153,7 +153,7 @@ describe("linkStoreInverses", () => {
 	it("links multiple relationship types simultaneously", async () => {
 		// Create data with multiple missing inverse relationships
 		// Keep homes -> bears relationships, remove bears -> home relationships
-		// Keep powers -> bears relationships, remove bears -> powers relationships  
+		// Keep powers -> bears relationships, remove bears -> powers relationships
 		const unlinkedBears = mapValues(careBearData.bears, (bear) => ({
 			...bear,
 			relationships: {

@@ -49,13 +49,13 @@ export function createSQLiteStore(schema, db, config = {}) {
 		async create(resource) {
 			return this.create(resource, { db, schema });
 		},
-		async update(resource) {
+		async update() {
 			throw new Error("SQLite store does not yet support update operations");
 		},
-		async upsert(resource) {
+		async upsert() {
 			throw new Error("SQLite store does not yet support upsert operations");
 		},
-		async delete(resource) {
+		async delete() {
 			throw new Error("SQLite store does not yet support delete operations");
 		},
 		async query(query) {

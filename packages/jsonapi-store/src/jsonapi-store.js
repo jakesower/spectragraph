@@ -36,19 +36,19 @@ export function createJSONAPIStore(schema, config) {
 			}
 		},
 
-		async create(_resource) {
+		async create() {
 			throw new Error("create method not implemented for JSON:API store");
 		},
 
-		async update(_resource) {
+		async update() {
 			throw new Error("update method not implemented for JSON:API store");
 		},
 
-		async delete(_resource) {
+		async delete() {
 			throw new Error("delete method not implemented for JSON:API store");
 		},
 
-		async upsert(_resource) {
+		async upsert() {
 			throw new Error("upsert method not implemented for JSON:API store");
 		},
 	};

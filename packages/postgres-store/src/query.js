@@ -1,9 +1,9 @@
 import { mapValues, omit, snakeCase, uniq } from "lodash-es";
 import { normalizeQuery, queryGraph } from "@data-prism/core";
-import { varsExpressionEngine } from "./helpers/sql-expressions.js";
+import { varsExpressionEngine } from "./helpers/where-expressions.js";
 import { parseQuery } from "./parse-query.js";
 import { extractGraph } from "./extract-graph.js";
-import { whereExpressionEngine } from "./helpers/sql-expressions.js";
+import { whereExpressionEngine } from "./helpers/where-expressions.js";
 
 /**
  * @typedef {Object} StoreContext
