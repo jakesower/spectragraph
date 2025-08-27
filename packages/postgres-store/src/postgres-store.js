@@ -7,7 +7,7 @@ import {
 	validateMergeResource,
 	validateUpdateResource,
 } from "@data-prism/core";
-import { query as getQuery } from "./query.js";
+import { query as getQuery } from "./query/index.js";
 import { create } from "./create.js";
 import { deleteResource } from "./delete.js";
 import { update } from "./update.js";
@@ -168,7 +168,6 @@ export function createPostgresStore(schema, config) {
 
 		async query(query) {
 			const normalized = normalizeQuery(schema, query);
-
 			return getQuery(normalized, {
 				config,
 				schema,
