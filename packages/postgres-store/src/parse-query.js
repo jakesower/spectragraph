@@ -1,5 +1,4 @@
 import { snakeCase, uniq } from "lodash-es";
-import { whereExpressionEngine } from "./helpers/where-expressions.js";
 import { forEachQuery, someQuery } from "./helpers/query-helpers.js";
 import { preQueryRelationships } from "./relationships.js";
 import { columnTypeModifiers } from "./column-type-modifiers.js";
@@ -59,24 +58,7 @@ const QUERY_CLAUSE_EXTRACTORS = {
 			vars: [id],
 		};
 	},
-	where: (where, { table }) => {
-		if (whereExpressionEngine.isExpression(where)) {
-			return { where: [where], vars: [where] };
-		}
-
-		const propExprs = Object.entries(where).map(([propKey, propValOrExpr]) => {
-			if (whereExpressionEngine.isExpression(propValOrExpr)) {
-				const [operation, args] = Object.entries(propValOrExpr)[0];
-				return { [operation]: [`${table}.${snakeCase(propKey)}`, args] };
-			}
-
-			return { $eq: [`${table}.${snakeCase(propKey)}`, propValOrExpr] };
-		});
-
-		const expr = { $and: propExprs };
-
-		return { where: [expr], vars: [expr] };
-	},
+	where: (where) => ({ where: [where], vars: [where] }),
 	order: (order, { table }) => {
 		return {
 			orderBy: (Array.isArray(order) ? order : [order]).map((orderEntry) => {
@@ -144,7 +126,7 @@ const QUERY_CLAUSE_EXTRACTORS = {
  * @param {StoreContext} context - Store context
  * @returns {ParsedClause[]} Array of parsed query clauses
  */
-export function parseQuery(query, context) {
+export function extractQueryClauses(query, context) {
 	const { schema } = context;
 	const clauses = [];
 

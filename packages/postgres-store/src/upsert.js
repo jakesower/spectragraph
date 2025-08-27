@@ -1,5 +1,5 @@
 import { camelCase, pick, pickBy, snakeCase } from "lodash-es";
-import { replacePlaceholders } from "./query.js";
+import { replacePlaceholders } from "./helpers/query-helpers.js";
 
 /**
  * @typedef {import('./postgres-store.js').CreateResource} CreateResource

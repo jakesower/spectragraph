@@ -109,3 +109,13 @@ export function reduceQuery(schema, query, fn, initVal) {
 export function someQuery(schema, query, fn) {
 	return flattenQuery(schema, query).some((q) => fn(q.query, q));
 }
+
+/**
+ * Replaces ? placeholders with PostgreSQL $n placeholders
+ * @param {string} inputString - Input SQL string with ? placeholders
+ * @returns {string} SQL string with $n placeholders
+ */
+export function replacePlaceholders(inputString) {
+	let counter = 1;
+	return inputString.replace(/\?/g, () => `$${counter++}`);
+}
