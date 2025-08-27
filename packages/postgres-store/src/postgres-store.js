@@ -1,6 +1,6 @@
 import {
 	createValidator,
-	ensureValidQuery,
+	ensureValidSchema,
 	normalizeQuery,
 	validateCreateResource,
 	validateDeleteResource,
@@ -119,13 +119,17 @@ import { upsert } from "./upsert.js";
 export function createPostgresStore(schema, config) {
 	const { validator = createValidator() } = config;
 
+	ensureValidSchema(schema, { validator });
+
 	return {
 		async getAll(type, options = {}) {
 			return getAll(type, { config, options, schema });
 		},
+
 		async getOne(type, id, options = {}) {
 			return getOne(type, id, { config, options, schema });
 		},
+
 		async create(resource) {
 			const errors = validateCreateResource(schema, resource, { validator });
 			if (errors.length > 0) {
@@ -134,6 +138,7 @@ export function createPostgresStore(schema, config) {
 
 			return create(resource, { config, schema });
 		},
+
 		async update(resource) {
 			const errors = validateUpdateResource(schema, resource, { validator });
 			if (errors.length > 0) {
@@ -142,6 +147,7 @@ export function createPostgresStore(schema, config) {
 
 			return update(resource, { config, schema });
 		},
+
 		async upsert(resource) {
 			const errors = validateMergeResource(schema, resource, { validator });
 			if (errors.length > 0) {
@@ -150,6 +156,7 @@ export function createPostgresStore(schema, config) {
 
 			return upsert(resource, { config, schema });
 		},
+
 		async delete(resource) {
 			const errors = validateDeleteResource(schema, resource);
 			if (errors.length > 0) {
@@ -158,8 +165,8 @@ export function createPostgresStore(schema, config) {
 
 			return deleteResource(resource, { config, schema });
 		},
+
 		async query(query) {
-			ensureValidQuery(schema, query);
 			const normalized = normalizeQuery(schema, query);
 
 			return getQuery(normalized, {

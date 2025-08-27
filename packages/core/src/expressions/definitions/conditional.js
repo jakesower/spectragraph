@@ -21,11 +21,17 @@ const $if = {
 			: outcome;
 	},
 	controlsEvaluation: true,
-	normalizeWhere: (operand) => ({
+	normalizeWhere: (operand, context) => ({
 		$if: {
-			if: operand.if,
-			then: operand.then,
-			else: operand.else,
+			if: context.normalizeWhere(operand.if, null),
+			then:
+				typeof operand.then === "object" && operand.then !== null
+					? context.normalizeWhere(operand.then, context)
+					: operand.then,
+			else:
+				typeof operand.else === "object" && operand.else !== null
+					? context.normalizeWhere(operand.else, context)
+					: operand.else,
 		},
 	}),
 };

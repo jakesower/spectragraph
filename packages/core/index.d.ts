@@ -150,6 +150,57 @@ export interface Expression {
 	[key: string]: unknown;
 }
 
+// === COMPARATIVE EXPRESSIONS ===
+
+export interface EqualExpression {
+	$eq: unknown;
+}
+
+export interface GreaterThanExpression {
+	$gt: number;
+}
+
+export interface GreaterThanOrEqualExpression {
+	$gte: number;
+}
+
+export interface LessThanExpression {
+	$lt: number;
+}
+
+export interface LessThanOrEqualExpression {
+	$lte: number;
+}
+
+export interface NotEqualExpression {
+	$ne: unknown;
+}
+
+export interface InExpression {
+	$in: unknown[];
+}
+
+export interface NotInExpression {
+	$nin: unknown[];
+}
+
+/**
+ * Regular expression matching expression.
+ * Tests if a string matches a regex pattern.
+ * 
+ * Supports inline flags using the syntax (?flags)pattern where flags can be:
+ * - i: case insensitive matching
+ * - m: multiline mode (^ and $ match line boundaries)  
+ * - s: dotall mode (. matches newlines)
+ * 
+ * @example
+ * { name: { $matchesRegex: "^[A-Z].*" } } // Names starting with capital letter
+ * { email: { $matchesRegex: "(?i).*@example\\.com$" } } // Case-insensitive email check
+ */
+export interface MatchesRegexExpression {
+	$matchesRegex: string;
+}
+
 export interface Query {
 	id?: string;
 	limit?: number;

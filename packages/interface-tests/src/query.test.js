@@ -1,5 +1,6 @@
 import { expect, it, describe } from "vitest";
 import { careBearData, careBearSchema } from "./fixtures/index.js";
+import { normalizeQuery } from "@data-prism/core";
 
 export function runQueryTests(createStore) {
 	describe("core query operations", () => {
@@ -387,6 +388,292 @@ export function runQueryTests(createStore) {
 				});
 
 				expect(result).toEqual([{ id: "1" }, { id: "3" }]);
+			});
+
+			it("filters with an $if expression", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = normalizeQuery(careBearSchema, {
+					type: "bears",
+					select: ["name"],
+					where: {
+						$if: {
+							if: { yearIntroduced: { $lt: 2000 } },
+							then: { bellyBadge: "rainbow" },
+							else: { furColor: "watermelon pink" },
+						},
+					},
+				});
+				const result = await store.query(query);
+
+				expect(result).toEqual([
+					{ name: "Cheer Bear" },
+					{ name: "Smart Heart Bear" },
+				]);
+			});
+
+			it("filters with an $if expression with a literal", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = normalizeQuery(careBearSchema, {
+					type: "bears",
+					select: ["name"],
+					where: {
+						$if: {
+							if: { $literal: true },
+							then: { bellyBadge: "rainbow" },
+							else: { furColor: "watermelon pink" },
+						},
+					},
+				});
+				const result = await store.query(query);
+
+				expect(result).toEqual([{ name: "Cheer Bear" }]);
+			});
+
+			it("filters using $matchesRegex operator", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = normalizeQuery(careBearSchema, {
+					type: "bears",
+					select: ["name"],
+					where: {
+						name: { $matchesRegex: ".*Heart.*$" },
+					},
+				});
+				const result = await store.query(query);
+
+				expect(result).toEqual([{ name: "Smart Heart Bear" }]);
+			});
+
+			it("filters using $matchesRegex operator with the case insensitive", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = normalizeQuery(careBearSchema, {
+					type: "bears",
+					select: ["name"],
+					where: {
+						name: { $matchesRegex: "(?i).*Heart.*$" },
+					},
+				});
+				const result = await store.query(query);
+
+				expect(result).toEqual([
+					{ name: "Tenderheart Bear" },
+					{ name: "Smart Heart Bear" },
+				]);
+			});
+
+			it("filters using $matchesRegex operator with start anchor", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = normalizeQuery(careBearSchema, {
+					type: "bears",
+					select: ["name"],
+					where: {
+						name: { $matchesRegex: "^Cheer.*" },
+					},
+				});
+				const result = await store.query(query);
+
+				expect(result).toEqual([{ name: "Cheer Bear" }]);
+			});
+
+			it("filters using $matchesRegex operator with end anchor", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = normalizeQuery(careBearSchema, {
+					type: "bears",
+					select: ["name"],
+					where: {
+						name: { $matchesRegex: ".*Bear$" },
+					},
+				});
+				const result = await store.query(query);
+
+				expect(result).toEqual([
+					{ name: "Tenderheart Bear" },
+					{ name: "Cheer Bear" },
+					{ name: "Wish Bear" },
+					{ name: "Smart Heart Bear" },
+				]);
+			});
+
+			it("filters using $matchesRegex operator with character class", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = normalizeQuery(careBearSchema, {
+					type: "bears",
+					select: ["name"],
+					where: {
+						name: { $matchesRegex: "[CW][a-z]+ Bear" },
+					},
+				});
+				const result = await store.query(query);
+
+				expect(result).toEqual([
+					{ name: "Cheer Bear" },
+					{ name: "Wish Bear" },
+				]);
+			});
+
+			it("filters using $matchesRegex operator with quantifiers", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = normalizeQuery(careBearSchema, {
+					type: "bears",
+					select: ["name"],
+					where: {
+						name: { $matchesRegex: "^.{4,10} Bear$" },
+					},
+				});
+				const result = await store.query(query);
+
+				expect(result).toEqual([
+					{ name: "Cheer Bear" },
+					{ name: "Wish Bear" },
+				]);
+			});
+
+			it("filters using $matchesRegex operator with alternation", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = normalizeQuery(careBearSchema, {
+					type: "bears",
+					select: ["name"],
+					where: {
+						name: { $matchesRegex: "(Tender|Smart).*Bear" },
+					},
+				});
+				const result = await store.query(query);
+
+				expect(result).toEqual([
+					{ name: "Tenderheart Bear" },
+					{ name: "Smart Heart Bear" },
+				]);
+			});
+
+			it("filters using $matchesRegex operator with combined flags", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = normalizeQuery(careBearSchema, {
+					type: "bears",
+					select: ["name"],
+					where: {
+						name: { $matchesRegex: "(?ims)^tender.*bear$" },
+					},
+				});
+				const result = await store.query(query);
+
+				expect(result).toEqual([{ name: "Tenderheart Bear" }]);
+			});
+
+			it("filters using $matchesRegex operator with multiline flag", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = normalizeQuery(careBearSchema, {
+					type: "companions",
+					select: ["name"],
+					where: {
+						description: { $matchesRegex: "(?m)^Always" },
+					},
+				});
+				const result = await store.query(query);
+
+				expect(result).toEqual([
+					{ name: "Brave Heart Lion" },
+					{ name: "Loyal Heart Dog" },
+				]);
+			});
+
+			it("filters using $matchesRegex operator without multiline flag", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = normalizeQuery(careBearSchema, {
+					type: "companions",
+					select: ["name"],
+					where: {
+						description: { $matchesRegex: "^Always" },
+					},
+				});
+				const result = await store.query(query);
+
+				expect(result).toEqual([]);
+			});
+
+			it("filters using $matchesRegex operator with dotall flag", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = normalizeQuery(careBearSchema, {
+					type: "companions",
+					select: ["name"],
+					where: {
+						description: { $matchesRegex: "(?s)friend.*everyone" },
+					},
+				});
+				const result = await store.query(query);
+
+				expect(result).toEqual([{ name: "Cozy Heart Penguin" }]);
+			});
+
+			it("filters using $matchesRegex operator without dotall flag", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = normalizeQuery(careBearSchema, {
+					type: "companions",
+					select: ["name"],
+					where: {
+						description: { $matchesRegex: "friend.*everyone" },
+					},
+				});
+				const result = await store.query(query);
+
+				expect(result).toEqual([]);
+			});
+
+			it("filters using $matchesRegex operator with multiline anchors", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = normalizeQuery(careBearSchema, {
+					type: "companions",
+					select: ["name"],
+					where: {
+						description: { $matchesRegex: "(?m)^start:.*loyal$" },
+					},
+				});
+				const result = await store.query(query);
+
+				expect(result).toEqual([{ name: "Loyal Heart Dog" }]);
 			});
 		});
 	});

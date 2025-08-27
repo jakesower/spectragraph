@@ -64,7 +64,9 @@ export const careBearSchema = {
 		companions: {
 			idAttribute: "companionId",
 			attributes: {
+				companionId: { type: "string" },
 				name: { type: "string" },
+				description: { type: "string" },
 			},
 			relationships: {},
 		},

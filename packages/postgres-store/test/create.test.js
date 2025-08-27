@@ -4,7 +4,7 @@ import { getClient } from "./get-client.js";
 import { createPostgresStore } from "../src/postgres-store.js";
 import { careBearSchema } from "../../interface-tests/src/index.js";
 import { careBearConfig } from "./fixtures/care-bear-config.js";
-import { careBearData } from "./fixtures/care-bear-data.js";
+import { careBearData } from "../../interface-tests/src/index.js";
 import { reset } from "../scripts/seed.js";
 
 // Most create tests are covered by interface-tests via interface.test.js
