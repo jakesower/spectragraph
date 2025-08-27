@@ -17,6 +17,52 @@ import { columnTypeModifiers } from "./column-type-modifiers.js";
  * @typedef {Object.<string, Object.<string, import('./postgres-store.js').Resource>>} Graph
  */
 
+// Path string utilities
+const buildPathString = (path) => (path.length > 0 ? `$${path.join("$")}` : "");
+const buildParentPath = (path) =>
+	path.length > 1 ? `$${path.slice(0, -1).join("$")}` : "";
+
+// Resource creation utilities
+const findOrCreateResource = (context) => {
+	const { graph, type, id, schema } = context;
+	const resourceSchema = schema.resources[type];
+	const { idAttribute = "id" } = resourceSchema;
+
+	if (!graph[type][id]) {
+		graph[type][id] = {
+			[idAttribute]: id,
+			id,
+			type,
+			attributes: {},
+			relationships: {},
+		};
+	}
+	return graph[type][id];
+};
+
+const processRelationship = (context) => {
+	const { parent, relationshipName, relationshipDef, childType, childId } =
+		context;
+
+	if (relationshipDef.cardinality === "one") {
+		parent.relationships[relationshipName] = childId
+			? { id: childId, type: childType }
+			: null;
+	} else {
+		parent.relationships[relationshipName] =
+			parent.relationships[relationshipName] ?? [];
+
+		if (!parent.relationships[relationshipName].some((r) => r.id === childId)) {
+			if (childId !== null) {
+				parent.relationships[relationshipName].push({
+					type: childType,
+					id: childId,
+				});
+			}
+		}
+	}
+};
+
 /**
  * Extracts a resource graph from raw SQL query results
  * @param {any[][]} rawResults - Raw SQL query results
@@ -43,7 +89,7 @@ export function extractGraph(rawResults, selectClause, context) {
 			parentQuery &&
 			schema.resources[parentType].relationships[parentRelationship];
 
-		const pathStr = info.path.length > 0 ? `$${info.path.join("$")}` : "";
+		const pathStr = buildPathString(info.path);
 		const idPath = `${rootQuery.type}${pathStr}.${snakeCase(idAttribute)}`;
 		const idIdx = selectAttributeMap[idPath];
 
@@ -52,56 +98,48 @@ export function extractGraph(rawResults, selectClause, context) {
 
 			if (parentQuery) {
 				const parentResSchema = schema.resources[parentType];
-				const parentPathStr =
-					info.path.length > 1 ? `$${info.path.slice(0, -1).join("$")}` : "";
-				const parentIdAttribute = parentResSchema.idAttribute ?? "id";
-				const parentIdPath = `${rootQuery.type}${parentPathStr}.${snakeCase(
-					parentIdAttribute,
-				)}`;
-				const parentIdIdx = selectAttributeMap[parentIdPath];
-				const parentId = result[parentIdIdx];
+				const parentId =
+					result[
+						selectAttributeMap[
+							`${rootQuery.type}${buildParentPath(info.path)}.${snakeCase(
+								parentResSchema.idAttribute ?? "id",
+							)}`
+						]
+					];
 
-				if (!graph[parentType][parentId]) {
-					graph[parentType][parentId] = {
-						[idAttribute]: parentId,
-						id: parentId,
-						type: parentType,
-						attributes: {},
-						relationships: {},
-					};
-				}
-				const parent = graph[parentType][parentId];
+				const parent = findOrCreateResource({
+					graph,
+					type: parentType,
+					id: parentId,
+					schema,
+				});
 
-				if (parentRelDef.cardinality === "one") {
-					parent.relationships[parentRelationship] = id ? { id, type } : null;
-				} else {
-					parent.relationships[parentRelationship] =
-						parent.relationships[parentRelationship] ?? [];
-
-					if (
-						!parent.relationships[parentRelationship].some((r) => r.id === id)
-					) {
-						if (id !== null) {
-							parent.relationships[parentRelationship].push({ type, id });
-						}
-					}
-				}
+				processRelationship({
+					parent,
+					relationshipName: parentRelationship,
+					relationshipDef: parentRelDef,
+					childType: type,
+					childId: id,
+				});
 			}
 
 			if (!id) return;
 
-			graph[type][id] = graph[type][id] ?? {
-				id,
+			findOrCreateResource({
+				graph,
 				type,
-				attributes: {},
-				relationships: {},
-			};
+				id,
+				schema,
+			});
 
 			if (attributes.length > 0) {
 				attributes.forEach((attr) => {
-					const fullAttrPath = `${rootQuery.type}${pathStr}.${snakeCase(attr)}`;
-					const resultIdx = selectAttributeMap[fullAttrPath];
-					const attrType = resSchema.attributes[attr]?.type;
+					const resultIdx =
+						selectAttributeMap[
+							`${rootQuery.type}${pathStr}.${snakeCase(attr)}`
+						];
+					const resourceSchema = schema.resources[type];
+					const attrType = resourceSchema.attributes[attr]?.type;
 
 					graph[type][id].attributes[attr] = columnTypeModifiers[attrType]
 						? columnTypeModifiers[attrType].extract(result[resultIdx])
