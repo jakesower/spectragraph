@@ -28,7 +28,6 @@ export {
 	soccerSchema,
 	geojsonSchema,
 	jsonApiSchema,
-	jsonSchemaTestingSchema,
 	careBearData,
 	careBearDataFlat,
 } from "./fixtures/index.js";

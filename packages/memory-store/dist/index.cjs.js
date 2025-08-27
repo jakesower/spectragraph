@@ -3275,12 +3275,6 @@ function requireDist () {
 var distExports = requireDist();
 var addErrors = /*@__PURE__*/getDefaultExportFromCjs(distExports);
 
-const $apply = {
-	name: "$apply",
-	apply: (operand) => operand,
-	evaluate: (operand) => operand,
-};
-
 const $isDefined = {
 	name: "$isDefined",
 	apply: (_, inputData) => inputData !== undefined,
@@ -3293,19 +3287,6 @@ const $isDefined = {
 
 		const [value] = operand;
 		return value !== undefined;
-	},
-};
-
-const $echo = {
-	name: "$echo",
-	apply: (_, inputData) => inputData,
-	evaluate(operand) {
-		if (!Array.isArray(operand)) {
-			throw new Error("$echo evaluate form requires array operand: [value]");
-		}
-
-		const [value] = operand;
-		return value;
 	},
 };
 
@@ -3362,6 +3343,7 @@ const $literal = {
 		throw new Error("handled in expressions.js");
 	},
 	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({ $literal: operand }),
 };
 
 const $debug = {
@@ -3388,6 +3370,9 @@ const $compose = {
 		}, inputData),
 	evaluate: ([exprs, init], { apply }) => apply({ $compose: exprs }, init),
 	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({
+		$compose: operand,
+	}),
 };
 
 const $pipe = {
@@ -3402,13 +3387,14 @@ const $pipe = {
 		}, inputData),
 	evaluate: ([exprs, init], { apply }) => apply({ $pipe: exprs }, init),
 	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({
+		$pipe: operand,
+	}),
 };
 
 const coreDefinitions = {
-	$apply,
 	$compose,
 	$debug,
-	$echo,
 	$get,
 	$isDefined,
 	$literal,
@@ -3523,11 +3509,12 @@ const aggregativeDefinitions = {
 
 const createComparativeWhereCompiler =
 	(exprName) =>
-	(operand, context) => {
-		if (!context.attribute) {
-			throw new Error(`${exprName} must be nested under an attribute`);
+	(operand, { attribute }) => {
+		if (!attribute) {
+			// When used in conditional expressions, return the expression as-is
+			return { [exprName]: operand };
 		}
-		return { $pipe: [{ $get: context.attribute }, { [exprName]: operand }] };
+		return { $pipe: [{ $get: attribute }, { [exprName]: operand }] };
 	};
 
 const $eq = {
@@ -3600,6 +3587,85 @@ const $nin = {
 	normalizeWhere: createComparativeWhereCompiler("$nin"),
 };
 
+/**
+ * Tests if a string matches a regular expression pattern.
+ * 
+ * Uses PCRE (Perl Compatible Regular Expression) semantics as the canonical standard.
+ * Supports inline flags using the syntax (?flags)pattern where flags can be:
+ * - i: case insensitive matching
+ * - m: multiline mode (^ and $ match line boundaries)
+ * - s: dotall mode (. matches newlines)
+ * 
+ * PCRE defaults (when no flags specified):
+ * - Case-sensitive matching
+ * - ^ and $ match string boundaries (not line boundaries)  
+ * - . does not match newlines
+ * 
+ * @example
+ * // Basic pattern matching
+ * apply("hello", "hello world") // true
+ * apply("\\d+", "abc123") // true
+ * 
+ * @example
+ * // With inline flags
+ * apply("(?i)hello", "HELLO WORLD") // true (case insensitive)
+ * apply("(?m)^line2", "line1\nline2") // true (multiline)
+ * apply("(?s)hello.world", "hello\nworld") // true (dotall)
+ * apply("(?ims)^hello.world$", "HELLO\nWORLD") // true (combined flags)
+ * 
+ * @example
+ * // In WHERE clauses
+ * { name: { $matchesRegex: "^[A-Z].*" } } // Names starting with capital letter
+ * { email: { $matchesRegex: "(?i).*@example\\.com$" } } // Case-insensitive email domain check
+ */
+const $matchesRegex = {
+	name: "$matchesRegex",
+	apply: (operand, inputData) => {
+		if (typeof inputData !== "string") {
+			throw new Error("$matchesRegex requires string input");
+		}
+		
+		// Extract inline flags and clean pattern
+		const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
+		if (flagMatch) {
+			const [, flags, pattern] = flagMatch;
+			let jsFlags = "";
+			
+			// PCRE flag mapping - JavaScript RegExp aligns well with PCRE semantics
+			if (flags.includes("i")) {
+				jsFlags += "i";
+			}
+			if (flags.includes("m")) {
+				jsFlags += "m";
+			}
+			if (flags.includes("s")) {
+				jsFlags += "s";
+			}
+			
+			const regex = new RegExp(pattern, jsFlags);
+			return regex.test(inputData);
+		}
+		
+		// Check for unsupported inline flags and strip them
+		const unsupportedFlagMatch = operand.match(/^\(\?[^)]*\)(.*)/);
+		if (unsupportedFlagMatch) {
+			// Unsupported flags detected, use pattern without flags (PCRE defaults)
+			const [, pattern] = unsupportedFlagMatch;
+			const regex = new RegExp(pattern);
+			return regex.test(inputData);
+		}
+		
+		// No inline flags - use PCRE defaults
+		// ^ and $ match string boundaries, . doesn't match newlines, case-sensitive
+		const regex = new RegExp(operand);
+		return regex.test(inputData);
+	},
+	evaluate([pattern, string]) {
+		return this.apply(pattern, string);
+	},
+	normalizeWhere: createComparativeWhereCompiler("$matchesRegex"),
+};
+
 const comparativeDefinitions = {
 	$eq,
 	$gt,
@@ -3609,6 +3675,7 @@ const comparativeDefinitions = {
 	$ne,
 	$in,
 	$nin,
+	$matchesRegex,
 };
 
 const $if = {
@@ -3634,11 +3701,17 @@ const $if = {
 			: outcome;
 	},
 	controlsEvaluation: true,
-	normalizeWhere: (operand) => ({
+	normalizeWhere: (operand, context) => ({
 		$if: {
-			if: operand.if,
-			then: operand.then,
-			else: operand.else,
+			if: context.normalizeWhere(operand.if, null),
+			then:
+				typeof operand.then === "object" && operand.then !== null
+					? context.normalizeWhere(operand.then, context)
+					: operand.then,
+			else:
+				typeof operand.else === "object" && operand.else !== null
+					? context.normalizeWhere(operand.else, context)
+					: operand.else,
 		},
 	}),
 };
@@ -3830,8 +3903,8 @@ const $and = {
 	evaluate(operand) {
 		return operand.every(Boolean);
 	},
-	normalizeWhere: (operand, context) => ({
-		$and: operand.map(context.normalizeWhere),
+	normalizeWhere: (operand, { attribute, normalizeWhere }) => ({
+		$and: operand.map((pred) => normalizeWhere(pred, attribute)),
 	}),
 };
 
@@ -3843,8 +3916,8 @@ const $or = {
 	evaluate(operand) {
 		return operand.some(Boolean);
 	},
-	normalizeWhere: (operand, context) => ({
-		$or: operand.map(context.normalizeWhere),
+	normalizeWhere: (operand, { attribute, normalizeWhere }) => ({
+		$or: operand.map((pred) => normalizeWhere(pred, attribute)),
 	}),
 };
 
@@ -3856,8 +3929,8 @@ const $not = {
 		const value = typeof operand === "boolean" ? operand : evaluate(operand);
 		return !value;
 	},
-	normalizeWhere: (operand, context) => ({
-		$not: context.normalizeWhere(operand),
+	normalizeWhere: (operand, { attribute, normalizeWhere }) => ({
+		$not: normalizeWhere(operand, attribute),
 	}),
 };
 
@@ -3904,6 +3977,136 @@ const temporalDefinitions = {
 	$nowLocal,
 	$nowUTC,
 	$timestamp,
+};
+
+const $add = {
+	name: "$add",
+	apply: (operand, inputData) => {
+		if (typeof operand !== "number") {
+			throw new Error("$add apply form requires number operand");
+		}
+		if (typeof inputData !== "number") {
+			throw new Error("$add apply form requires number input data");
+		}
+		return inputData + operand;
+	},
+	evaluate: (operand) => {
+		if (!Array.isArray(operand) || operand.length !== 2) {
+			throw new Error("$add evaluate form requires array of exactly 2 numbers");
+		}
+		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
+			throw new Error("$add evaluate form requires array of exactly 2 numbers");
+		}
+		return operand[0] + operand[1];
+	},
+};
+
+const $subtract = {
+	name: "$subtract",
+	apply: (operand, inputData) => {
+		if (typeof operand !== "number") {
+			throw new Error("$subtract apply form requires number operand");
+		}
+		if (typeof inputData !== "number") {
+			throw new Error("$subtract apply form requires number input data");
+		}
+		return inputData - operand;
+	},
+	evaluate: (operand) => {
+		if (!Array.isArray(operand) || operand.length !== 2) {
+			throw new Error("$subtract evaluate form requires array of exactly 2 numbers");
+		}
+		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
+			throw new Error("$subtract evaluate form requires array of exactly 2 numbers");
+		}
+		return operand[0] - operand[1];
+	},
+};
+
+const $multiply = {
+	name: "$multiply",
+	apply: (operand, inputData) => {
+		if (typeof operand !== "number") {
+			throw new Error("$multiply apply form requires number operand");
+		}
+		if (typeof inputData !== "number") {
+			throw new Error("$multiply apply form requires number input data");
+		}
+		return inputData * operand;
+	},
+	evaluate: (operand) => {
+		if (!Array.isArray(operand) || operand.length !== 2) {
+			throw new Error("$multiply evaluate form requires array of exactly 2 numbers");
+		}
+		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
+			throw new Error("$multiply evaluate form requires array of exactly 2 numbers");
+		}
+		return operand[0] * operand[1];
+	},
+};
+
+const $divide = {
+	name: "$divide",
+	apply: (operand, inputData) => {
+		if (typeof operand !== "number") {
+			throw new Error("$divide apply form requires number operand");
+		}
+		if (typeof inputData !== "number") {
+			throw new Error("$divide apply form requires number input data");
+		}
+		if (operand === 0) {
+			throw new Error("Division by zero");
+		}
+		return inputData / operand;
+	},
+	evaluate: (operand) => {
+		if (!Array.isArray(operand) || operand.length !== 2) {
+			throw new Error("$divide evaluate form requires array of exactly 2 numbers");
+		}
+		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
+			throw new Error("$divide evaluate form requires array of exactly 2 numbers");
+		}
+		if (operand[1] === 0) {
+			throw new Error("Division by zero");
+		}
+		return operand[0] / operand[1];
+	},
+};
+
+const $modulo = {
+	name: "$modulo",
+	apply: (operand, inputData) => {
+		if (typeof operand !== "number") {
+			throw new Error("$modulo apply form requires number operand");
+		}
+		if (typeof inputData !== "number") {
+			throw new Error("$modulo apply form requires number input data");
+		}
+		if (operand === 0) {
+			throw new Error("Modulo by zero");
+		}
+		return inputData % operand;
+	},
+	evaluate: (operand) => {
+		if (!Array.isArray(operand) || operand.length !== 2) {
+			throw new Error("$modulo evaluate form requires array of exactly 2 numbers");
+		}
+		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
+			throw new Error("$modulo evaluate form requires array of exactly 2 numbers");
+		}
+		if (operand[1] === 0) {
+			throw new Error("Modulo by zero");
+		}
+		return operand[0] % operand[1];
+	},
+};
+
+const mathDefinitions = {
+	$add,
+	$subtract,
+	$multiply,
+	$divide,
+	$modulo,
 };
 
 /**
@@ -4065,6 +4268,7 @@ const defaultExpressions = {
 	...generativeDefinitions,
 	...iterativeDefinitions,
 	...logicalDefinitions,
+	...mathDefinitions,
 	...temporalDefinitions,
 };
 
@@ -4616,10 +4820,14 @@ function validateQuery(schema, rootQuery, options = {}) {
  *
  * @param {Object} schema - The schema object
  * @param {RootQuery} rootQuery - The query to normalize
+ * @param {Object} [options]
+ * @param {import('./expressions/expressions.js').ExpressionEngine} [options.expressionEngine] - a @data-prism/graph expression engine
  * @returns {NormalQuery} The normalized query
  */
-function normalizeQuery(schema, rootQuery) {
-	ensure(validateQuery)(schema, rootQuery);
+function normalizeQuery(schema, rootQuery, options = {}) {
+	const { expressionEngine = defaultExpressionEngine } = options;
+
+	ensure(validateQuery)(schema, rootQuery, expressionEngine);
 
 	const go = (query, type) => {
 		const { select } = query;
@@ -4668,11 +4876,16 @@ function normalizeQuery(schema, rootQuery) {
 			? { order: !Array.isArray(query.order) ? [query.order] : query.order }
 			: {};
 
+		const whereObj = query.where
+			? { where: expressionEngine.normalizeWhereClause(query.where) }
+			: {};
+
 		return {
 			...query,
 			select: selectWithSubqueries,
 			type,
 			...orderObj,
+			...whereObj,
 		};
 	};
 
@@ -5443,37 +5656,8 @@ function validateSchema(schema, options = {}) {
 	return introspectiveResult;
 }
 
-/**
- * @param {Object} whereClause
- * @param {any} expressionEngine
- * @returns {any}
- */
-function buildWhereExpression(whereClause, expressionEngine) {
-	if (expressionEngine.isExpression(whereClause)) {
-		const [name, params] = Object.entries(whereClause)[0];
-		const built = Array.isArray(params)
-			? params.map((p) => buildWhereExpression(p, expressionEngine))
-			: buildWhereExpression(params, expressionEngine);
-
-		return { [name]: built };
-	}
-
-	const whereExpressions = Object.entries(whereClause).map(
-		([propPath, propVal]) => ({
-			$pipe: [
-				{ $get: propPath },
-				expressionEngine.isExpression(propVal) ? propVal : { $eq: propVal },
-			],
-		}),
-	);
-
-	return whereExpressions.length > 1
-		? { $and: whereExpressions }
-		: whereExpressions[0];
-}
-
 // import { mapValues } from "lodash-es";
-// import { defaultExpressionEngine } from "../expressions/index.js";
+// import { defaultExpressionEngine } from "../expressions/expressions.js";
 
 /**
  * @typedef {Object<string, any>} Projection
@@ -5556,7 +5740,7 @@ function distributeStrings(expression, expressionEngine) {
 // }
 
 /**
- * @param {import('../expressions/index.js').Expression} expression
+ * @param {import('../expressions/expressions.js').Expression} expression
  * @param {any} expressionEngine
  * @returns {function(any): any}
  */
@@ -5650,13 +5834,8 @@ function runQuery(rootQuery, data) {
 			where(results) {
 				if (Object.keys(query.where).length === 0) return results;
 
-				const whereExpression = buildWhereExpression(
-					query.where,
-					defaultExpressionEngine,
-				);
-
 				return results.filter((result) => {
-					return defaultExpressionEngine.apply(whereExpression, result);
+					return defaultExpressionEngine.apply(query.where, result);
 				});
 			},
 			order(results) {

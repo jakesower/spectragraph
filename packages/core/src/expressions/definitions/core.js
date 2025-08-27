@@ -68,6 +68,7 @@ const $literal = {
 		throw new Error("handled in expressions.js");
 	},
 	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({ $literal: operand }),
 };
 
 const $debug = {

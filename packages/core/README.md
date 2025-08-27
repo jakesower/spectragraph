@@ -124,6 +124,51 @@ const query = {
 };
 ```
 
+### Expressions
+
+Expressions are JSON objects that add computed fields and conditional logic to Data Prism queries. They provide a powerful way to transform, filter, and manipulate data using a declarative syntax:
+
+```javascript
+// Basic comparisons and logic
+const query = {
+	type: "teams",
+	where: {
+		$and: [
+			{ founded: { $gte: 2000 } },  // Teams founded after 2000
+			{ city: { $matchesRegex: "(?i)phoenix|tempe" } }, // Case-insensitive city matching
+		]
+	},
+	select: {
+		name: "name",
+		isNewTeam: { $if: {
+			if: { $gte: 2020 },
+			then: true,
+			else: false
+		}},
+		ageCategory: { $case: {
+			value: { $get: "founded" },
+			cases: [
+				{ when: { $gte: 2020 }, then: "New" },
+				{ when: { $gte: 2010 }, then: "Recent" },
+				{ when: { $gte: 2000 }, then: "Established" }
+			],
+			default: "Legacy"
+		}}
+	}
+};
+```
+
+Expressions support a wide range of operations including:
+- **Comparisons**: `$eq`, `$gt`, `$lt`, `$in`, `$matchesRegex`, etc.
+- **Logic**: `$and`, `$or`, `$not`
+- **Conditionals**: `$if`, `$case`
+- **Math**: `$add`, `$subtract`, `$multiply`, `$divide`
+- **Aggregation**: `$sum`, `$count`, `$max`, `$min`, `$mean`, `$median`
+- **Array operations**: `$filter`, `$map`, `$find`, `$any`, `$all`
+- **Data access**: `$get`, `$pipe`, `$compose`
+
+For comprehensive documentation on all available expressions, examples, and advanced usage patterns, see the **[Expressions README](src/expressions/README.md)**.
+
 ## API Reference
 
 ### Schema Functions

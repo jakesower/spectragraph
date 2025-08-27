@@ -1,4 +1,4 @@
-import { get, mapValues, omit, isEqual, uniqBy, orderBy, merge, partition, pick, last, snakeCase, uniq, pickBy, camelCase } from 'lodash-es';
+import { get, mapValues, omit, isEqual, uniqBy, orderBy, merge, snakeCase, partition, pick, last, uniq, pickBy, camelCase } from 'lodash-es';
 import Ajv from 'ajv';
 import { applyOrMap } from '@data-prism/utils';
 
@@ -4654,12 +4654,6 @@ function requireDist () {
 var distExports = requireDist();
 var addErrors = /*@__PURE__*/getDefaultExportFromCjs(distExports);
 
-const $apply = {
-	name: "$apply",
-	apply: (operand) => operand,
-	evaluate: (operand) => operand,
-};
-
 const $isDefined = {
 	name: "$isDefined",
 	apply: (_, inputData) => inputData !== undefined,
@@ -4672,19 +4666,6 @@ const $isDefined = {
 
 		const [value] = operand;
 		return value !== undefined;
-	},
-};
-
-const $echo = {
-	name: "$echo",
-	apply: (_, inputData) => inputData,
-	evaluate(operand) {
-		if (!Array.isArray(operand)) {
-			throw new Error("$echo evaluate form requires array operand: [value]");
-		}
-
-		const [value] = operand;
-		return value;
 	},
 };
 
@@ -4741,6 +4722,7 @@ const $literal = {
 		throw new Error("handled in expressions.js");
 	},
 	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({ $literal: operand }),
 };
 
 const $debug = {
@@ -4790,10 +4772,8 @@ const $pipe = {
 };
 
 const coreDefinitions = {
-	$apply,
 	$compose,
 	$debug,
-	$echo,
 	$get,
 	$isDefined,
 	$literal,
@@ -4910,7 +4890,8 @@ const createComparativeWhereCompiler =
 	(exprName) =>
 	(operand, { attribute }) => {
 		if (!attribute) {
-			throw new Error(`${exprName} must be nested under an attribute`);
+			// When used in conditional expressions, return the expression as-is
+			return { [exprName]: operand };
 		}
 		return { $pipe: [{ $get: attribute }, { [exprName]: operand }] };
 	};
@@ -4985,6 +4966,65 @@ const $nin = {
 	normalizeWhere: createComparativeWhereCompiler("$nin"),
 };
 
+/**
+ * Tests if a string matches a regular expression pattern.
+ * 
+ * Supports inline flags using the syntax (?flags)pattern where flags can be:
+ * - i: case insensitive matching
+ * - m: multiline mode (^ and $ match line boundaries)
+ * - s: dotall mode (. matches newlines)
+ * 
+ * @example
+ * // Basic pattern matching
+ * apply("hello", "hello world") // true
+ * apply("\\d+", "abc123") // true
+ * 
+ * @example
+ * // With inline flags
+ * apply("(?i)hello", "HELLO WORLD") // true (case insensitive)
+ * apply("(?m)^line2", "line1\nline2") // true (multiline)
+ * apply("(?s)hello.world", "hello\nworld") // true (dotall)
+ * apply("(?ims)^hello.world$", "HELLO\nWORLD") // true (combined flags)
+ * 
+ * @example
+ * // In WHERE clauses
+ * { name: { $matchesRegex: "^[A-Z].*" } } // Names starting with capital letter
+ * { email: { $matchesRegex: "(?i).*@example\\.com$" } } // Case-insensitive email domain check
+ */
+const $matchesRegex = {
+	name: "$matchesRegex",
+	apply: (operand, inputData) => {
+		if (typeof inputData !== "string") {
+			throw new Error("$matchesRegex requires string input");
+		}
+		
+		// Extract inline flags and clean pattern
+		const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
+		if (flagMatch) {
+			const [, flags, pattern] = flagMatch;
+			const regex = new RegExp(pattern, flags);
+			return regex.test(inputData);
+		}
+		
+		// Check for unsupported inline flags and strip them
+		const unsupportedFlagMatch = operand.match(/^\(\?[^)]*\)(.*)/);
+		if (unsupportedFlagMatch) {
+			// Unsupported flags detected, use pattern without the flag syntax
+			const [, pattern] = unsupportedFlagMatch;
+			const regex = new RegExp(pattern);
+			return regex.test(inputData);
+		}
+		
+		// No inline flags, use pattern as-is
+		const regex = new RegExp(operand);
+		return regex.test(inputData);
+	},
+	evaluate([pattern, string]) {
+		return this.apply(pattern, string);
+	},
+	normalizeWhere: createComparativeWhereCompiler("$matchesRegex"),
+};
+
 const comparativeDefinitions = {
 	$eq,
 	$gt,
@@ -4994,6 +5034,7 @@ const comparativeDefinitions = {
 	$ne,
 	$in,
 	$nin,
+	$matchesRegex,
 };
 
 const $if = {
@@ -5019,11 +5060,17 @@ const $if = {
 			: outcome;
 	},
 	controlsEvaluation: true,
-	normalizeWhere: (operand) => ({
+	normalizeWhere: (operand, context) => ({
 		$if: {
-			if: operand.if,
-			then: operand.then,
-			else: operand.else,
+			if: context.normalizeWhere(operand.if, null),
+			then:
+				typeof operand.then === "object" && operand.then !== null
+					? context.normalizeWhere(operand.then, context)
+					: operand.then,
+			else:
+				typeof operand.else === "object" && operand.else !== null
+					? context.normalizeWhere(operand.else, context)
+					: operand.else,
 		},
 	}),
 };
@@ -5291,6 +5338,136 @@ const temporalDefinitions = {
 	$timestamp,
 };
 
+const $add = {
+	name: "$add",
+	apply: (operand, inputData) => {
+		if (typeof operand !== "number") {
+			throw new Error("$add apply form requires number operand");
+		}
+		if (typeof inputData !== "number") {
+			throw new Error("$add apply form requires number input data");
+		}
+		return inputData + operand;
+	},
+	evaluate: (operand) => {
+		if (!Array.isArray(operand) || operand.length !== 2) {
+			throw new Error("$add evaluate form requires array of exactly 2 numbers");
+		}
+		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
+			throw new Error("$add evaluate form requires array of exactly 2 numbers");
+		}
+		return operand[0] + operand[1];
+	},
+};
+
+const $subtract = {
+	name: "$subtract",
+	apply: (operand, inputData) => {
+		if (typeof operand !== "number") {
+			throw new Error("$subtract apply form requires number operand");
+		}
+		if (typeof inputData !== "number") {
+			throw new Error("$subtract apply form requires number input data");
+		}
+		return inputData - operand;
+	},
+	evaluate: (operand) => {
+		if (!Array.isArray(operand) || operand.length !== 2) {
+			throw new Error("$subtract evaluate form requires array of exactly 2 numbers");
+		}
+		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
+			throw new Error("$subtract evaluate form requires array of exactly 2 numbers");
+		}
+		return operand[0] - operand[1];
+	},
+};
+
+const $multiply = {
+	name: "$multiply",
+	apply: (operand, inputData) => {
+		if (typeof operand !== "number") {
+			throw new Error("$multiply apply form requires number operand");
+		}
+		if (typeof inputData !== "number") {
+			throw new Error("$multiply apply form requires number input data");
+		}
+		return inputData * operand;
+	},
+	evaluate: (operand) => {
+		if (!Array.isArray(operand) || operand.length !== 2) {
+			throw new Error("$multiply evaluate form requires array of exactly 2 numbers");
+		}
+		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
+			throw new Error("$multiply evaluate form requires array of exactly 2 numbers");
+		}
+		return operand[0] * operand[1];
+	},
+};
+
+const $divide = {
+	name: "$divide",
+	apply: (operand, inputData) => {
+		if (typeof operand !== "number") {
+			throw new Error("$divide apply form requires number operand");
+		}
+		if (typeof inputData !== "number") {
+			throw new Error("$divide apply form requires number input data");
+		}
+		if (operand === 0) {
+			throw new Error("Division by zero");
+		}
+		return inputData / operand;
+	},
+	evaluate: (operand) => {
+		if (!Array.isArray(operand) || operand.length !== 2) {
+			throw new Error("$divide evaluate form requires array of exactly 2 numbers");
+		}
+		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
+			throw new Error("$divide evaluate form requires array of exactly 2 numbers");
+		}
+		if (operand[1] === 0) {
+			throw new Error("Division by zero");
+		}
+		return operand[0] / operand[1];
+	},
+};
+
+const $modulo = {
+	name: "$modulo",
+	apply: (operand, inputData) => {
+		if (typeof operand !== "number") {
+			throw new Error("$modulo apply form requires number operand");
+		}
+		if (typeof inputData !== "number") {
+			throw new Error("$modulo apply form requires number input data");
+		}
+		if (operand === 0) {
+			throw new Error("Modulo by zero");
+		}
+		return inputData % operand;
+	},
+	evaluate: (operand) => {
+		if (!Array.isArray(operand) || operand.length !== 2) {
+			throw new Error("$modulo evaluate form requires array of exactly 2 numbers");
+		}
+		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
+			throw new Error("$modulo evaluate form requires array of exactly 2 numbers");
+		}
+		if (operand[1] === 0) {
+			throw new Error("Modulo by zero");
+		}
+		return operand[0] % operand[1];
+	},
+};
+
+const mathDefinitions = {
+	$add,
+	$subtract,
+	$multiply,
+	$divide,
+	$modulo,
+};
+
 /**
  * @typedef {object} ApplicativeExpression
  */
@@ -5450,6 +5627,7 @@ const defaultExpressions = {
 	...generativeDefinitions,
 	...iterativeDefinitions,
 	...logicalDefinitions,
+	...mathDefinitions,
 	...temporalDefinitions,
 };
 
@@ -6720,7 +6898,7 @@ var metaschema = {
  * @property {Object<string, SchemaResource>} resources
  */
 
-(() => {
+const metaschemaWithErrors = (() => {
 	const out = merge(structuredClone(metaschema), {
 		definitions: {
 			attribute: {
@@ -6738,6 +6916,104 @@ var metaschema = {
 	delete out.$id;
 	return out;
 })();
+
+const getValidateSchemaCache = createDeepCache();
+
+/**
+ * Validates that a schema is valid
+ * @param {Schema} schema - The schema to validate
+ * @param {Object} options
+ * @param {import('ajv').Ajv} options.validator
+ * @throws {Error} If the schema is invalid
+ */
+function validateSchema(schema, options = {}) {
+	const { validator = defaultValidator } = options;
+
+	if (typeof schema !== "object") {
+		return [
+			{ message: "Invalid schema: expected object, got " + typeof schema },
+		];
+	}
+	const validatorCache = getValidateSchemaCache(schema, validator);
+	if (validatorCache.hit) return validatorCache.value;
+
+	const baseValidate = validator.compile(metaschemaWithErrors);
+	if (!baseValidate(schema)) {
+		const result = translateAjvErrors(baseValidate.errors, schema, "schema");
+		validatorCache.set(result);
+		return result;
+	}
+
+	const attributeSchemaErrors = [];
+	Object.entries(schema.resources).forEach(([resName, resSchema]) =>
+		Object.entries(resSchema.attributes).forEach(([attrName, attrSchema]) => {
+			try {
+				validator.compile(attrSchema);
+			} catch (err) {
+				attributeSchemaErrors.push({
+					message: `Invalid attribute schema "${resName}.${attrName}": ${err.message}`,
+				});
+			}
+		}),
+	);
+
+	if (attributeSchemaErrors.length > 0) {
+		validatorCache.set(attributeSchemaErrors);
+		return attributeSchemaErrors;
+	}
+
+	const introspectiveSchema = merge(structuredClone(metaschema), {
+		properties: {
+			resources: {
+				properties: mapValues(schema.resources, (_, resName) => ({
+					$ref: `#/definitions/resources/${resName}`,
+				})),
+			},
+		},
+		definitions: {
+			resources: mapValues(schema.resources, (resSchema, resName) => ({
+				allOf: [
+					{ $ref: "#/definitions/resource" },
+					{
+						type: "object",
+						properties: {
+							type: { const: resName },
+							attributes: {
+								type: "object",
+								required: [
+									resSchema.idAttribute ?? "id",
+									...(resSchema.requiredAttributes ?? []),
+								],
+							},
+							relationships: {
+								type: "object",
+								required: resSchema.requiredRelationships ?? [],
+							},
+						},
+					},
+				],
+			})),
+			relationship: {
+				properties: {
+					type: {
+						enum: Object.keys(schema.resources),
+						errorMessage: `Invalid resource type "\${0}": use one of (${Object.keys(schema.resources).join(", ")})`,
+					},
+				},
+			},
+		},
+	});
+	delete introspectiveSchema.$id;
+	delete introspectiveSchema.properties.resources.patternProperties;
+
+	const introspectiveValidate = validator.compile(introspectiveSchema);
+	const introspectiveResult = introspectiveValidate(schema)
+		? []
+		: translateAjvErrors(introspectiveValidate.errors, schema, "schema");
+
+	validatorCache.set(introspectiveResult);
+	return introspectiveResult;
+}
 
 // import { mapValues } from "lodash-es";
 // import { defaultExpressionEngine } from "../expressions/expressions.js";
@@ -7063,13 +7339,14 @@ function queryGraph(schema, query, graph) {
 
 	return runQuery(normalQuery, preppedGraph);
 }
-const ensureValidQuery = ensure(validateQuery);
+
+const ensureValidSchema = ensure(validateSchema);
 
 /**
  * @typedef {Object} SqlExpression
  * @property {string} name - Human readable name for the expression
- * @property {(params: any[]) => string} where - Function to generate WHERE clause SQL
- * @property {(params: any[]) => any} vars - Function to extract variables for SQL params
+ * @property {(operand: any[]) => string} where - Function to generate WHERE clause SQL
+ * @property {(operand: any[]) => any} vars - Function to extract variables for SQL operand
  * @property {boolean} [controlsEvaluation] - Whether this expression controls evaluation
  */
 
@@ -7079,62 +7356,195 @@ const ensureValidQuery = ensure(validateQuery);
  */
 const sqlExpressions = {
 	$and: {
-		name: "and",
-		where: (params) => params.join(" AND "),
-		vars: (params) => params.flat(),
-	},
-	$eq: {
-		name: "equal",
-		where: (params) => `${params[0]} = ?`,
-		vars: (params) => params[1],
-	},
-	$gt: {
-		name: "greater than",
-		where: (params) => `${params[0]} > ?`,
-		vars: (params) => params[1],
-	},
-	$gte: {
-		name: "greater than or equal to",
-		where: (params) => `${params[0]} >= ?`,
-		vars: (params) => params[1],
-	},
-	$lt: {
-		name: "less than",
-		where: (params) => `${params[0]} < ?`,
-		vars: (params) => params[1],
-	},
-	$lte: {
-		name: "less than or equal to",
-		where: (params) => `${params[0]} <= ?`,
-		vars: (params) => params[1],
-	},
-	$ne: {
-		name: "not equal",
-		where: (params) => `${params[0]} != ?`,
-		vars: (params) => params[1],
-	},
-	$in: {
-		name: "contained in",
-		where: (params) =>
-			`${params[0]} IN (${params[1].map(() => "?").join(",")})`,
-		vars: (params) => params[1],
-	},
-	$nin: {
-		name: "not contained in",
-		where: (params) =>
-			`${params[0]} NOT IN (${params[1].map(() => "?").join(",")})`,
-		vars: (params) => params[1],
+		controlsEvaluation: true,
+		where: (operand, { evaluate }) =>
+			`(${operand.map(evaluate).join(" AND ")})`,
+		vars: (operand, { evaluate }) => operand.flatMap(evaluate),
 	},
 	$or: {
-		// TODO
-		name: "or",
 		controlsEvaluation: true,
-		where: (params, evaluate) => {
-			console.log("args", params.map(evaluate));
+		where: (operand, { evaluate }) => `(${operand.map(evaluate).join(" OR ")})`,
+		vars: (operand, { evaluate }) => operand.flatMap(evaluate),
+	},
+	$not: {
+		controlsEvaluation: true,
+		where: (operand, { evaluate }) => `NOT (${evaluate(operand)})`,
+		vars: (operand, { evaluate }) => evaluate(operand),
+	},
+	$eq: {
+		where: () => " = ?",
+		vars: (operand) => operand,
+	},
+	$gt: {
+		where: () => " > ?",
+		vars: (operand) => operand,
+	},
+	$gte: {
+		where: () => " >= ?",
+		vars: (operand) => operand,
+	},
+	$lt: {
+		where: () => " < ?",
+		vars: (operand) => operand,
+	},
+	$lte: {
+		where: () => " <= ?",
+		vars: (operand) => operand,
+	},
+	$ne: {
+		where: () => " != ?",
+		vars: (operand) => operand,
+	},
+	$in: {
+		where: (operand) => ` IN (${operand.map(() => "?").join(",")})`,
+		vars: (operand) => operand,
+	},
+	$nin: {
+		where: (operand) => ` NOT IN (${operand.map(() => "?").join(",")})`,
+		vars: (operand) => operand,
+	},
+	$matchesRegex: {
+		where: (operand) => {
+			// Extract inline flags and clean pattern
+			const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
+			if (flagMatch) {
+				const [, flags] = flagMatch;
+				// Case-insensitive flag in PostgreSQL
+				if (flags.includes("i")) {
+					return " ~* ?";
+				}
+			}
+			// Default case-sensitive POSIX regex
+			return " ~ ?";
 		},
-		vars: (...args) => {
-			console.log("Var args", args);
+		vars: (operand) => {
+			// Extract inline flags and clean pattern
+			const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
+			if (flagMatch) {
+				const [, flags, pattern] = flagMatch;
+				let processedPattern = pattern;
+
+				// Handle dotall flag - PostgreSQL . doesn't match newlines by default (POSIX behavior)
+				// So when 's' flag IS present, we need to make . match newlines
+				if (flags.includes("s")) {
+					// Use PostgreSQL's (?n) flag to make . match newlines
+					processedPattern = "(?n)" + processedPattern;
+				}
+
+				return [processedPattern];
+			}
+			// No inline flags - use POSIX ERE defaults
+			// ^ and $ match line boundaries, . doesn't match newlines (PostgreSQL default)
+			return [operand];
 		},
+	},
+	$get: {
+		where: (operand) => snakeCase(operand),
+		vars: () => [],
+	},
+	$pipe: {
+		where: (operand) => operand.join(" "),
+		vars: (operand) => operand.flat(),
+	},
+	$compose: {
+		controlsEvaluation: true,
+		where: (operand, { evaluate }) => evaluate({ $pipe: operand.toReversed() }),
+		vars: (operand, { evaluate }) => evaluate({ $pipe: operand.toReversed() }),
+	},
+	$literal: {
+		where: (operand) => String(operand),
+		vars: () => [],
+		controlsEvaluation: true,
+	},
+	$if: {
+		controlsEvaluation: true,
+		where: (operand, { evaluate, isExpression }) => {
+			const condition = evaluate(operand.if);
+			const thenClause = isExpression(operand.then)
+				? evaluate(operand.then)
+				: "?";
+			const elseClause = isExpression(operand.else)
+				? evaluate(operand.else)
+				: "?";
+			return `CASE WHEN ${condition} THEN ${thenClause} ELSE ${elseClause} END`;
+		},
+		vars: (operand, { evaluate, isExpression }) => {
+			const ifResult = evaluate(operand.if);
+			const vars =
+				Array.isArray(ifResult) && ifResult.length > 0 ? ifResult : [];
+			if (isExpression(operand.then)) {
+				const thenResult = evaluate(operand.then);
+				vars.push(...(Array.isArray(thenResult) ? thenResult : [thenResult]));
+			} else {
+				vars.push(operand.then);
+			}
+			if (isExpression(operand.else)) {
+				const elseResult = evaluate(operand.else);
+				vars.push(...(Array.isArray(elseResult) ? elseResult : [elseResult]));
+			} else {
+				vars.push(operand.else);
+			}
+			return vars.flat();
+		},
+	},
+	$case: {
+		controlsEvaluation: true,
+		where: (operand, { evaluate, isExpression }) => {
+			const value = isExpression(operand.value) ? evaluate(operand.value) : "?";
+			let sql = `CASE ${value}`;
+
+			for (const caseItem of operand.cases) {
+				const whenClause = isExpression(caseItem.when)
+					? evaluate(caseItem.when)
+					: "?";
+				const thenClause = isExpression(caseItem.then)
+					? evaluate(caseItem.then)
+					: "?";
+				sql += ` WHEN ${whenClause} THEN ${thenClause}`;
+			}
+
+			const defaultClause = isExpression(operand.default)
+				? evaluate(operand.default)
+				: "?";
+			sql += ` ELSE ${defaultClause} END`;
+
+			return sql;
+		},
+		vars: (operand, { evaluate, isExpression }) => {
+			const vars = [];
+
+			if (isExpression(operand.value)) {
+				vars.push(...evaluate(operand.value));
+			} else {
+				vars.push(operand.value);
+			}
+
+			for (const caseItem of operand.cases) {
+				if (isExpression(caseItem.when)) {
+					vars.push(...evaluate(caseItem.when));
+				} else {
+					vars.push(caseItem.when);
+				}
+				if (isExpression(caseItem.then)) {
+					vars.push(...evaluate(caseItem.then));
+				} else {
+					vars.push(caseItem.then);
+				}
+			}
+
+			if (isExpression(operand.default)) {
+				vars.push(...evaluate(operand.default));
+			} else {
+				vars.push(operand.default);
+			}
+
+			return vars.flat();
+		},
+	},
+	$debug: {
+		controlsEvaluation: true,
+		where: (operand, { evaluate }) => evaluate(operand),
+		vars: (operand, { evaluate }) => evaluate(operand),
 	},
 };
 
@@ -7520,9 +7930,11 @@ const QUERY_CLAUSE_EXTRACTORS = {
 		};
 	},
 	where: (where, { table }) => {
-		const propExprs = Object.entries(where).map(([propKey, propValOrExpr]) => {
-			if (whereExpressionEngine.isExpression(where)) ;
+		if (whereExpressionEngine.isExpression(where)) {
+			return { where: [where], vars: [where] };
+		}
 
+		const propExprs = Object.entries(where).map(([propKey, propValOrExpr]) => {
 			if (whereExpressionEngine.isExpression(propValOrExpr)) {
 				const [operation, args] = Object.entries(propValOrExpr)[0];
 				return { [operation]: [`${table}.${snakeCase(propKey)}`, args] };
@@ -8037,7 +8449,7 @@ async function deleteResource(resource, context) {
 	const { db } = config;
 
 	const resConfig = config.resources[resource.type];
-	const { joins, table } = resConfig;
+	const { joins = {}, table } = resConfig;
 
 	const resSchema = schema.resources[resource.type];
 	const { idAttribute = "id" } = resSchema;
@@ -8051,14 +8463,10 @@ async function deleteResource(resource, context) {
 	await db.query(sql, [resource.id]);
 
 	// handle to-one foreign columns
-	const foreignRelationships = pickBy(
-		resource.relationships ?? {},
-		(_, k) => joins[k].foreignColumn,
-	);
-
+	const foreignRelationships = pickBy(joins, (jr) => jr.foreignColumn);
 	await Promise.all(
-		Object.entries(foreignRelationships).map(async ([relName]) => {
-			const { foreignColumn } = joins[relName];
+		Object.entries(foreignRelationships).map(async ([relName, join]) => {
+			const { foreignColumn } = join;
 			const foreignTable =
 				config.resources[resSchema.relationships[relName].type].table;
 
@@ -8074,25 +8482,17 @@ async function deleteResource(resource, context) {
 	);
 
 	// handle many-to-many columns
-	const m2mForeignRelationships = pickBy(
-		resource.relationships ?? {},
-		(_, k) => joins[k].joinTable,
-	);
-
+	const m2mForeignRelationships = pickBy(joins, (jr) => jr.joinTable);
 	await Promise.all(
-		Object.entries(m2mForeignRelationships).map(async ([relName, val]) => {
-			const { joinTable, localJoinColumn } = joins[relName];
+		Object.values(m2mForeignRelationships).map(async (join) => {
+			const { joinTable, localJoinColumn } = join;
 
-			await Promise.all(
-				val.map(() =>
-					db.query(
-						`
-							DELETE FROM ${joinTable}
-              WHERE ${localJoinColumn} = $1
-			`,
-						[resource.id],
-					),
-				),
+			await db.query(
+				`
+				DELETE FROM ${joinTable}
+				WHERE ${localJoinColumn} = $1
+				`,
+				[resource.id],
 			);
 		}),
 	);
@@ -8803,13 +9203,17 @@ async function upsert(resource, context) {
 function createPostgresStore(schema, config) {
 	const { validator = createValidator() } = config;
 
+	ensureValidSchema(schema, { validator });
+
 	return {
 		async getAll(type, options = {}) {
 			return getAll(type, { config, options, schema });
 		},
+
 		async getOne(type, id, options = {}) {
 			return getOne(type, id, { config, options, schema });
 		},
+
 		async create(resource) {
 			const errors = validateCreateResource(schema, resource, { validator });
 			if (errors.length > 0) {
@@ -8818,6 +9222,7 @@ function createPostgresStore(schema, config) {
 
 			return create(resource, { config, schema });
 		},
+
 		async update(resource) {
 			const errors = validateUpdateResource(schema, resource, { validator });
 			if (errors.length > 0) {
@@ -8826,6 +9231,7 @@ function createPostgresStore(schema, config) {
 
 			return update(resource, { config, schema });
 		},
+
 		async upsert(resource) {
 			const errors = validateMergeResource(schema, resource, { validator });
 			if (errors.length > 0) {
@@ -8834,6 +9240,7 @@ function createPostgresStore(schema, config) {
 
 			return upsert(resource, { config, schema });
 		},
+
 		async delete(resource) {
 			const errors = validateDeleteResource(schema, resource);
 			if (errors.length > 0) {
@@ -8842,8 +9249,8 @@ function createPostgresStore(schema, config) {
 
 			return deleteResource(resource, { config, schema });
 		},
+
 		async query(query$1) {
-			ensureValidQuery(schema, query$1);
 			const normalized = normalizeQuery(schema, query$1);
 
 			return query(normalized, {

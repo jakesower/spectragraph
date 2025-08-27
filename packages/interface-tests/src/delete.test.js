@@ -68,7 +68,7 @@ export function runDeleteTests(createStore) {
 			expect(result2).toEqual({ residents: [] });
 		});
 
-		it("deletes a single resource with a foreign to-one relationship", async () => {
+		it("deletes a single resource with a to-one relationship created on the foreign resource", async () => {
 			const store = createStore(careBearSchema);
 			const createdBear = await store.create({
 				type: "bears",
@@ -113,6 +113,50 @@ export function runDeleteTests(createStore) {
 				select: ["name", { home: { select: ["name"] } }],
 			});
 			expect(bearResult).toEqual(null);
+		});
+
+		it("deletes a single resource with a foreign to-one relationship", async () => {
+			const store = createStore(careBearSchema);
+			const createdBear = await store.create({
+				type: "bears",
+				attributes: {
+					name: "Birthday Bear",
+					yearIntroduced: 1984,
+					bellyBadge: "pink cupcake with candle",
+					furColor: "pink",
+				},
+			});
+
+			const createdHome = await store.create({
+				type: "homes",
+				attributes: {
+					name: "Hall of Hearts",
+					caringMeter: 0.95,
+					isInClouds: true,
+				},
+				relationships: {
+					residents: [{ type: "bears", id: createdBear.id }],
+				},
+			});
+
+			await store.delete({
+				type: "homes",
+				id: createdHome.id,
+			});
+
+			const homeResult = await store.query({
+				type: "homes",
+				id: createdHome.id,
+				select: ["name", { residents: { select: ["name"] } }],
+			});
+			expect(homeResult).toEqual(null);
+
+			const bearResult = await store.query({
+				type: "bears",
+				id: createdBear.id,
+				select: ["name", { home: { select: ["name"] } }],
+			});
+			expect(bearResult).toEqual({ name: "Birthday Bear", home: null });
 		});
 
 		it("deletes all many-to-many foreign relationships that belong to a deleted resource", async () => {

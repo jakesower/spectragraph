@@ -27,6 +27,7 @@ export const careBearConfig = {
 			idType: "varchar NOT NULL DEFAULT uuid_generate_v4()",
 			joins: {
 				residents: {
+					foreignTable: "bears",
 					foreignColumn: "home_id",
 					foreignColumnType: "varchar",
 				},

@@ -3340,6 +3340,7 @@ const $literal = {
 		throw new Error("handled in expressions.js");
 	},
 	controlsEvaluation: true,
+	normalizeWhere: (operand) => ({ $literal: operand }),
 };
 
 const $debug = {
@@ -3507,7 +3508,8 @@ const createComparativeWhereCompiler =
 	(exprName) =>
 	(operand, { attribute }) => {
 		if (!attribute) {
-			throw new Error(`${exprName} must be nested under an attribute`);
+			// When used in conditional expressions, return the expression as-is
+			return { [exprName]: operand };
 		}
 		return { $pipe: [{ $get: attribute }, { [exprName]: operand }] };
 	};
@@ -3582,6 +3584,85 @@ const $nin = {
 	normalizeWhere: createComparativeWhereCompiler("$nin"),
 };
 
+/**
+ * Tests if a string matches a regular expression pattern.
+ * 
+ * Uses PCRE (Perl Compatible Regular Expression) semantics as the canonical standard.
+ * Supports inline flags using the syntax (?flags)pattern where flags can be:
+ * - i: case insensitive matching
+ * - m: multiline mode (^ and $ match line boundaries)
+ * - s: dotall mode (. matches newlines)
+ * 
+ * PCRE defaults (when no flags specified):
+ * - Case-sensitive matching
+ * - ^ and $ match string boundaries (not line boundaries)  
+ * - . does not match newlines
+ * 
+ * @example
+ * // Basic pattern matching
+ * apply("hello", "hello world") // true
+ * apply("\\d+", "abc123") // true
+ * 
+ * @example
+ * // With inline flags
+ * apply("(?i)hello", "HELLO WORLD") // true (case insensitive)
+ * apply("(?m)^line2", "line1\nline2") // true (multiline)
+ * apply("(?s)hello.world", "hello\nworld") // true (dotall)
+ * apply("(?ims)^hello.world$", "HELLO\nWORLD") // true (combined flags)
+ * 
+ * @example
+ * // In WHERE clauses
+ * { name: { $matchesRegex: "^[A-Z].*" } } // Names starting with capital letter
+ * { email: { $matchesRegex: "(?i).*@example\\.com$" } } // Case-insensitive email domain check
+ */
+const $matchesRegex = {
+	name: "$matchesRegex",
+	apply: (operand, inputData) => {
+		if (typeof inputData !== "string") {
+			throw new Error("$matchesRegex requires string input");
+		}
+		
+		// Extract inline flags and clean pattern
+		const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
+		if (flagMatch) {
+			const [, flags, pattern] = flagMatch;
+			let jsFlags = "";
+			
+			// PCRE flag mapping - JavaScript RegExp aligns well with PCRE semantics
+			if (flags.includes("i")) {
+				jsFlags += "i";
+			}
+			if (flags.includes("m")) {
+				jsFlags += "m";
+			}
+			if (flags.includes("s")) {
+				jsFlags += "s";
+			}
+			
+			const regex = new RegExp(pattern, jsFlags);
+			return regex.test(inputData);
+		}
+		
+		// Check for unsupported inline flags and strip them
+		const unsupportedFlagMatch = operand.match(/^\(\?[^)]*\)(.*)/);
+		if (unsupportedFlagMatch) {
+			// Unsupported flags detected, use pattern without flags (PCRE defaults)
+			const [, pattern] = unsupportedFlagMatch;
+			const regex = new RegExp(pattern);
+			return regex.test(inputData);
+		}
+		
+		// No inline flags - use PCRE defaults
+		// ^ and $ match string boundaries, . doesn't match newlines, case-sensitive
+		const regex = new RegExp(operand);
+		return regex.test(inputData);
+	},
+	evaluate([pattern, string]) {
+		return this.apply(pattern, string);
+	},
+	normalizeWhere: createComparativeWhereCompiler("$matchesRegex"),
+};
+
 const comparativeDefinitions = {
 	$eq,
 	$gt,
@@ -3591,6 +3672,7 @@ const comparativeDefinitions = {
 	$ne,
 	$in,
 	$nin,
+	$matchesRegex,
 };
 
 const $if = {
@@ -3616,11 +3698,17 @@ const $if = {
 			: outcome;
 	},
 	controlsEvaluation: true,
-	normalizeWhere: (operand) => ({
+	normalizeWhere: (operand, context) => ({
 		$if: {
-			if: operand.if,
-			then: operand.then,
-			else: operand.else,
+			if: context.normalizeWhere(operand.if, null),
+			then:
+				typeof operand.then === "object" && operand.then !== null
+					? context.normalizeWhere(operand.then, context)
+					: operand.then,
+			else:
+				typeof operand.else === "object" && operand.else !== null
+					? context.normalizeWhere(operand.else, context)
+					: operand.else,
 		},
 	}),
 };

@@ -62,6 +62,55 @@ const sqlExpressions = {
 		where: (operand) => ` NOT IN (${operand.map(() => "?").join(",")})`,
 		vars: (operand) => operand,
 	},
+	$matchesRegex: {
+		where: (operand) => {
+			// Extract inline flags and clean pattern
+			const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
+			if (flagMatch) {
+				const [, flags] = flagMatch;
+				// Case-insensitive flag in PostgreSQL
+				if (flags.includes("i")) {
+					return " ~* ?";
+				}
+			}
+			// Default case-sensitive regex (PCRE defaults)
+			return " ~ ?";
+		},
+		vars: (operand) => {
+			// Extract inline flags and clean pattern
+			const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
+			if (flagMatch) {
+				const [, flags, pattern] = flagMatch;
+				let processedPattern = pattern;
+
+				// Handle PCRE flag mappings to PostgreSQL
+				let pgFlags = "";
+				
+				// Handle dotall flag - PCRE default is . doesn't match newlines
+				// When 's' flag is present, make . match newlines
+				if (flags.includes("s")) {
+					pgFlags += "n"; // PostgreSQL (?n) makes . match newlines
+				}
+				
+				// Handle multiline flag - PCRE default is ^ and $ match string boundaries
+				// When 'm' flag is present, make ^ and $ match line boundaries  
+				if (flags.includes("m")) {
+					// PostgreSQL default is line boundaries, so we need string boundaries for non-m
+					// This is tricky - PostgreSQL doesn't have a direct equivalent
+					// We'll rely on the default PostgreSQL behavior which is line boundaries
+				}
+				
+				if (pgFlags) {
+					processedPattern = `(?${pgFlags})${processedPattern}`;
+				}
+
+				return [processedPattern];
+			}
+			// No inline flags - use PCRE defaults
+			// PostgreSQL ~ operator defaults match PCRE behavior reasonably well
+			return [operand];
+		},
+	},
 	$get: {
 		where: (operand) => snakeCase(operand),
 		vars: () => [],
@@ -76,26 +125,35 @@ const sqlExpressions = {
 		vars: (operand, { evaluate }) => evaluate({ $pipe: operand.toReversed() }),
 	},
 	$literal: {
-		where: () => "?",
-		vars: (operand) => operand,
+		where: (operand) => String(operand),
+		vars: () => [],
+		controlsEvaluation: true,
 	},
 	$if: {
 		controlsEvaluation: true,
 		where: (operand, { evaluate, isExpression }) => {
 			const condition = evaluate(operand.if);
-			const thenClause = isExpression(operand.then) ? evaluate(operand.then) : "?";
-			const elseClause = isExpression(operand.else) ? evaluate(operand.else) : "?";
+			const thenClause = isExpression(operand.then)
+				? evaluate(operand.then)
+				: "?";
+			const elseClause = isExpression(operand.else)
+				? evaluate(operand.else)
+				: "?";
 			return `CASE WHEN ${condition} THEN ${thenClause} ELSE ${elseClause} END`;
 		},
 		vars: (operand, { evaluate, isExpression }) => {
-			const vars = [...evaluate(operand.if)];
+			const ifResult = evaluate(operand.if);
+			const vars =
+				Array.isArray(ifResult) && ifResult.length > 0 ? ifResult : [];
 			if (isExpression(operand.then)) {
-				vars.push(...evaluate(operand.then));
+				const thenResult = evaluate(operand.then);
+				vars.push(...(Array.isArray(thenResult) ? thenResult : [thenResult]));
 			} else {
 				vars.push(operand.then);
 			}
 			if (isExpression(operand.else)) {
-				vars.push(...evaluate(operand.else));
+				const elseResult = evaluate(operand.else);
+				vars.push(...(Array.isArray(elseResult) ? elseResult : [elseResult]));
 			} else {
 				vars.push(operand.else);
 			}
@@ -107,27 +165,33 @@ const sqlExpressions = {
 		where: (operand, { evaluate, isExpression }) => {
 			const value = isExpression(operand.value) ? evaluate(operand.value) : "?";
 			let sql = `CASE ${value}`;
-			
+
 			for (const caseItem of operand.cases) {
-				const whenClause = isExpression(caseItem.when) ? evaluate(caseItem.when) : "?";
-				const thenClause = isExpression(caseItem.then) ? evaluate(caseItem.then) : "?";
+				const whenClause = isExpression(caseItem.when)
+					? evaluate(caseItem.when)
+					: "?";
+				const thenClause = isExpression(caseItem.then)
+					? evaluate(caseItem.then)
+					: "?";
 				sql += ` WHEN ${whenClause} THEN ${thenClause}`;
 			}
-			
-			const defaultClause = isExpression(operand.default) ? evaluate(operand.default) : "?";
+
+			const defaultClause = isExpression(operand.default)
+				? evaluate(operand.default)
+				: "?";
 			sql += ` ELSE ${defaultClause} END`;
-			
+
 			return sql;
 		},
 		vars: (operand, { evaluate, isExpression }) => {
 			const vars = [];
-			
+
 			if (isExpression(operand.value)) {
 				vars.push(...evaluate(operand.value));
 			} else {
 				vars.push(operand.value);
 			}
-			
+
 			for (const caseItem of operand.cases) {
 				if (isExpression(caseItem.when)) {
 					vars.push(...evaluate(caseItem.when));
@@ -140,15 +204,20 @@ const sqlExpressions = {
 					vars.push(caseItem.then);
 				}
 			}
-			
+
 			if (isExpression(operand.default)) {
 				vars.push(...evaluate(operand.default));
 			} else {
 				vars.push(operand.default);
 			}
-			
+
 			return vars.flat();
 		},
+	},
+	$debug: {
+		controlsEvaluation: true,
+		where: (operand, { evaluate }) => evaluate(operand),
+		vars: (operand, { evaluate }) => evaluate(operand),
 	},
 };
 

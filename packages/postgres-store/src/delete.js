@@ -17,7 +17,7 @@ export async function deleteResource(resource, context) {
 	const { db } = config;
 
 	const resConfig = config.resources[resource.type];
-	const { joins, table } = resConfig;
+	const { joins = {}, table } = resConfig;
 
 	const resSchema = schema.resources[resource.type];
 	const { idAttribute = "id" } = resSchema;
@@ -31,14 +31,10 @@ export async function deleteResource(resource, context) {
 	await db.query(sql, [resource.id]);
 
 	// handle to-one foreign columns
-	const foreignRelationships = pickBy(
-		resource.relationships ?? {},
-		(_, k) => joins[k].foreignColumn,
-	);
-
+	const foreignRelationships = pickBy(joins, (jr) => jr.foreignColumn);
 	await Promise.all(
-		Object.entries(foreignRelationships).map(async ([relName]) => {
-			const { foreignColumn } = joins[relName];
+		Object.entries(foreignRelationships).map(async ([relName, join]) => {
+			const { foreignColumn } = join;
 			const foreignTable =
 				config.resources[resSchema.relationships[relName].type].table;
 
@@ -54,25 +50,17 @@ export async function deleteResource(resource, context) {
 	);
 
 	// handle many-to-many columns
-	const m2mForeignRelationships = pickBy(
-		resource.relationships ?? {},
-		(_, k) => joins[k].joinTable,
-	);
-
+	const m2mForeignRelationships = pickBy(joins, (jr) => jr.joinTable);
 	await Promise.all(
-		Object.entries(m2mForeignRelationships).map(async ([relName, val]) => {
-			const { joinTable, localJoinColumn } = joins[relName];
+		Object.values(m2mForeignRelationships).map(async (join) => {
+			const { joinTable, localJoinColumn } = join;
 
-			await Promise.all(
-				val.map(() =>
-					db.query(
-						`
-							DELETE FROM ${joinTable}
-              WHERE ${localJoinColumn} = $1
-			`,
-						[resource.id],
-					),
-				),
+			await db.query(
+				`
+				DELETE FROM ${joinTable}
+				WHERE ${localJoinColumn} = $1
+				`,
+				[resource.id],
 			);
 		}),
 	);
