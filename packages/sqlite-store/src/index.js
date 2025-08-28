@@ -1,1 +1,1 @@
-export { createSQLiteStore } from "./sqlite-store.js";
+export { sqliteStore } from "./sqlite-store.js";

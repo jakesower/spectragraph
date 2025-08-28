@@ -1,67 +1,177 @@
-import { get as getQuery } from "./get.js";
+import {
+	createValidator,
+	ensureValidSchema,
+	normalizeQuery,
+	validateCreateResource,
+	validateDeleteResource,
+	validateMergeResource,
+	validateUpdateResource,
+} from "@data-prism/core";
+import { query as getQuery } from "./query/index.js";
+import { create } from "./create.js";
+import { deleteResource } from "./delete.js";
+import { update } from "./update.js";
+import { getAll, getOne } from "./get.js";
+import { upsert } from "./upsert.js";
 
 /**
- * @typedef {import('@data-prism/core').Store} SQLiteStore
+ * @typedef {Object} Ref
+ * @property {string} type
+ * @property {string} id
  */
 
 /**
- * @typedef {Object} SQLiteStoreConfig
- * @property {Object.<string, SQLiteResourceConfig>} resources
+ * @typedef {Object} Resource
+ * @property {string} type
+ * @property {any} id
+ * @property {Object<string, unknown>} attributes
+ * @property {Object<string, Ref|Ref[]>} relationships
  */
 
 /**
- * @typedef {Object} SQLiteResourceConfig
- * @property {string} table - Name of the database table for this resource type.
- * @property {string} [idAttribute] - Optional column name to use as the unique identifier.
- * @property {Object.<string, SQLiteJoinConfig>} [joins] - Optional relationship definitions keyed by relationship name.
+ * @typedef {Object} CreateResource
+ * @property {string} type
+ * @property {string} [id]
+ * @property {Object<string, unknown>} [attributes]
+ * @property {Object<string, Ref|Ref[]>} [relationships]
  */
 
 /**
- * @typedef {Object} SQLiteJoinConfig
- * @property {string} [localColumn] - Column in the local table used in the join.
- * @property {string} [foreignTable] - Name of the foreign table.
- * @property {string} [foreignColumn] - Column in the foreign table used in the join.
- * @property {string} [joinTable] - Name of the join table (for many-to-many relationships).
- * @property {string} [localJoinColumn] - Column in the join table that references the local table.
- * @property {string} [foreignJoinColumn] - Column in the join table that references the foreign table.
+ * @typedef {Object} UpdateResource
+ * @property {string} type
+ * @property {any} id
+ * @property {Object<string, unknown>} [attributes]
+ * @property {Object<string, Ref|Ref[]>} [relationships]
  */
 
 /**
- * @typedef Context
- * @property {SQLiteStoreConfig} config
- * @property {Database} db
- * @property {import('@data-prism/core').Schema} schema
+ * @typedef {Object} DeleteResource
+ * @property {string} type
+ * @property {any} id
  */
 
 /**
- * Creates a new SQLite store instance that implements the data-prism store interface.
- * Currently only supports read operations (query).
- *
- * @param {import('@data-prism/core').Schema} schema - The schema defining resource types and relationships
- * @param {Database} db - The SQLite database instance
- * @param {Object} [config={}] - Configuration options for the store
- * @returns {SQLiteStore} A new SQLite store instance
+ * @typedef {Object} LocalJoin
+ * @property {string} localColumn
+ * @property {string} [localColumnType]
  */
-export function createSQLiteStore(schema, db, config = {}) {
-	const context = { config: { ...config, db }, db, schema };
+
+/**
+ * @typedef {Object} ForeignJoin
+ * @property {string} foreignColumn
+ * @property {string} [foreignColumnType]
+ */
+
+/**
+ * @typedef {Object} ManyToManyJoin
+ * @property {string} joinTable
+ * @property {string} localJoinColumn
+ * @property {string} [localJoinColumnType]
+ * @property {string} foreignJoinColumn
+ * @property {string} [foreignJoinColumnType]
+ */
+
+/**
+ * @typedef {Object} Config
+ * @property {import('better-sqlite3').Database} db
+ * @property {Object<string, {
+ *   table: string,
+ *   idType?: string,
+ *   columns?: Object<string, {
+ *     select?: (table: string, col: string) => string
+ *   }>,
+ *   joins?: Object<string, LocalJoin|ForeignJoin|ManyToManyJoin>
+ * }>} resources
+ * @property {import('ajv').Ajv} [validator]
+ */
+
+/**
+ * @typedef {Object} Context
+ * @property {Config} config
+ * @property {import('data-prism').Schema} schema
+ */
+
+/**
+ * @typedef {Object} GetOptions
+ * @property {Object<string, "asc"|"desc">} [order]
+ * @property {number} [limit]
+ * @property {number} [offset]
+ * @property {Object<string, unknown>} [where]
+ */
+
+/**
+ * @typedef {Object} SqliteStore
+ * @property {(type: string, options?: GetOptions) => Promise<Resource[]>} getAll
+ * @property {(type: string, id: string, options?: GetOptions) => Promise<Resource>} getOne
+ * @property {(resource: CreateResource) => Promise<Resource>} create
+ * @property {(resource: UpdateResource) => Promise<Resource>} update
+ * @property {(resource: CreateResource|UpdateResource) => Promise<Resource>} upsert
+ * @property {(resource: DeleteResource) => Promise<DeleteResource>} delete
+ * @property {(query: import('data-prism').RootQuery) => Promise<any>} query
+ */
+
+/**
+ * Creates a SQLite store instance
+ * @param {import('data-prism').Schema} schema - The schema object
+ * @param {Config} config - Store configuration
+ * @returns {SqliteStore} The SQLite store instance
+ */
+export function sqliteStore(schema, config) {
+	const { validator = createValidator() } = config;
+
+	ensureValidSchema(schema, { validator });
 
 	return {
+		async getAll(type, options = {}) {
+			return getAll(type, { config, options, schema });
+		},
+
+		async getOne(type, id, options = {}) {
+			return getOne(type, id, { config, options, schema });
+		},
+
 		async create(resource) {
-			return this.create(resource, { db, schema });
+			const errors = validateCreateResource(schema, resource, { validator });
+			if (errors.length > 0) {
+				throw new Error("invalid resource", { cause: errors });
+			}
+
+			return create(resource, { config, schema });
 		},
-		async update() {
-			throw new Error("SQLite store does not yet support update operations");
+
+		async update(resource) {
+			const errors = validateUpdateResource(schema, resource, { validator });
+			if (errors.length > 0) {
+				throw new Error("invalid resource", { cause: errors });
+			}
+
+			return update(resource, { config, schema });
 		},
-		async upsert() {
-			throw new Error("SQLite store does not yet support upsert operations");
+
+		async upsert(resource) {
+			const errors = validateMergeResource(schema, resource, { validator });
+			if (errors.length > 0) {
+				throw new Error("invalid resource", { cause: errors });
+			}
+
+			return upsert(resource, { config, schema });
 		},
-		async delete() {
-			throw new Error("SQLite store does not yet support delete operations");
+
+		async delete(resource) {
+			const errors = validateDeleteResource(schema, resource);
+			if (errors.length > 0) {
+				throw new Error("invalid resource", { cause: errors });
+			}
+
+			return deleteResource(resource, { config, schema });
 		},
+
 		async query(query) {
-			return getQuery(query, {
-				...context,
-				// query,
+			const normalized = normalizeQuery(schema, query);
+			return getQuery(normalized, {
+				config,
+				schema,
+				query: normalized,
 			});
 		},
 	};

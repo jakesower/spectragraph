@@ -1,4 +1,4 @@
-import { createExpressionEngine } from "@data-prism/core";
+import { createExpressionEngine, ExpressionNotSupportedError } from "@data-prism/core";
 import { mapValues, snakeCase } from "lodash-es";
 
 /**
@@ -64,54 +64,18 @@ const sqlExpressions = {
 	},
 	$matchesRegex: {
 		where: (operand) => {
-			// Extract inline flags and clean pattern
-			const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
-			if (flagMatch) {
-				const [, flags] = flagMatch;
-				// Case-insensitive flag in PostgreSQL
-				if (flags.includes("i")) {
-					return " ~* ?";
-				}
-			}
-			// Default case-sensitive regex (PCRE defaults)
-			return " ~ ?";
+			throw new ExpressionNotSupportedError(
+				"$matchesRegex", 
+				"sqlite-store", 
+				"SQLite regex support requires custom REGEXP function configuration"
+			);
 		},
 		vars: (operand) => {
-			// Extract inline flags and clean pattern
-			const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
-			if (flagMatch) {
-				const [, flags, pattern] = flagMatch;
-				let processedPattern = pattern;
-
-				// Handle multiline flag FIRST - PCRE 'm' flag makes ^ and $ match line boundaries
-				// PostgreSQL doesn't have direct equivalent, so we need to transform the pattern
-				if (flags.includes("m")) {
-					// Transform ^ to match start of line (after newline or start of string)
-					processedPattern = processedPattern.replace(/\^/g, "(^|(?<=\\n))");
-					// Transform $ to match end of line (before newline or end of string)
-					processedPattern = processedPattern.replace(/\$/g, "(?=\\n|$)");
-				}
-
-				// Handle dotall flag AFTER multiline - PCRE 's' flag makes . match newlines
-				// We need to be explicit about . behavior when flags are present
-				if (flags.includes("s")) {
-					// Make . explicitly match newlines by replacing . with [\s\S]
-					processedPattern = processedPattern.replace(/\./g, "[\\s\\S]");
-				} else if (processedPattern.includes(".")) {
-					// If 's' flag is NOT present but pattern contains ., ensure . does NOT match newlines
-					// Replace . with [^\n] to exclude newlines explicitly
-					processedPattern = processedPattern.replace(/\./g, "[^\\n]");
-				}
-
-				return [processedPattern];
-			}
-			// No inline flags - need to handle default PostgreSQL behavior
-			// PostgreSQL . might match newlines by default, so make it explicit to match PCRE behavior
-			let processedPattern = operand;
-			if (processedPattern.includes(".")) {
-				processedPattern = processedPattern.replace(/\./g, "[^\\n]");
-			}
-			return [processedPattern];
+			throw new ExpressionNotSupportedError(
+				"$matchesRegex", 
+				"sqlite-store", 
+				"SQLite regex support requires custom REGEXP function configuration"
+			);
 		},
 	},
 	$get: {
@@ -229,14 +193,8 @@ const sqlExpressions = {
 	},
 	$matchesGlob: {
 		name: "$matchesGlob",
-		where: () => " SIMILAR TO ?", // PostgreSQL equivalent to GLOB
-		vars: (operand) => {
-			// Convert GLOB pattern to PostgreSQL SIMILAR TO pattern
-			let pattern = operand
-				.replace(/\*/g, "%") // * becomes %
-				.replace(/\?/g, "_"); // ? becomes _
-			return [pattern];
-		},
+		where: () => " GLOB ?",
+		vars: (operand) => operand,
 	},
 };
 

@@ -2,13 +2,10 @@ import { isEqual } from "lodash-es";
 
 const createComparativeWhereCompiler =
 	(exprName) =>
-	(operand, { attribute }) => {
-		if (!attribute) {
-			// When used in conditional expressions, return the expression as-is
-			return { [exprName]: operand };
-		}
-		return { $pipe: [{ $get: attribute }, { [exprName]: operand }] };
-	};
+	(operand, { attribute }) =>
+		attribute
+			? { $pipe: [{ $get: attribute }, { [exprName]: operand }] }
+			: { [exprName]: operand };
 
 const $eq = {
 	name: "$eq",
@@ -161,6 +158,146 @@ const $matchesRegex = {
 	normalizeWhere: createComparativeWhereCompiler("$matchesRegex"),
 };
 
+/**
+ * Tests if a string matches a SQL LIKE pattern.
+ *
+ * Provides database-agnostic LIKE pattern matching with SQL standard semantics:
+ * - % matches any sequence of characters (including none)
+ * - _ matches exactly one character
+ * - Case-sensitive matching (consistent across databases)
+ *
+ * @example
+ * // Basic LIKE patterns
+ * apply("hello%", "hello world") // true
+ * apply("%world", "hello world") // true
+ * apply("h_llo", "hello") // true
+ * apply("h_llo", "hallo") // true
+ *
+ * @example
+ * // In WHERE clauses
+ * { name: { $matchesLike: "John%" } } // Names starting with "John"
+ * { email: { $matchesLike: "%@gmail.com" } } // Gmail addresses
+ * { code: { $matchesLike: "A_B_" } } // Codes like "A1B2", "AXBY"
+ */
+const $matchesLike = {
+	name: "$matchesLike",
+	apply: (operand, inputData) => {
+		if (typeof inputData !== "string") {
+			throw new Error("$matchesLike requires string input");
+		}
+
+		// Convert SQL LIKE pattern to JavaScript regex
+		// Escape regex special characters except % and _
+		let regexPattern = operand
+			.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") // Escape regex special chars
+			.replace(/%/g, ".*") // % becomes .*
+			.replace(/_/g, "."); // _ becomes .
+
+		// Anchor the pattern to match the entire string
+		regexPattern = "^" + regexPattern + "$";
+
+		const regex = new RegExp(regexPattern);
+		return regex.test(inputData);
+	},
+	evaluate([pattern, string]) {
+		return this.apply(pattern, string);
+	},
+	normalizeWhere: createComparativeWhereCompiler("$matchesLike"),
+};
+
+/**
+ * Tests if a string matches a Unix shell GLOB pattern.
+ *
+ * Provides database-agnostic GLOB pattern matching with Unix shell semantics:
+ * - * matches any sequence of characters (including none)
+ * - ? matches exactly one character
+ * - [chars] matches any single character in the set
+ * - [!chars] or [^chars] matches any character not in the set
+ * - Case-sensitive matching
+ *
+ * @example
+ * // Basic GLOB patterns
+ * apply("hello*", "hello world") // true
+ * apply("*world", "hello world") // true
+ * apply("h?llo", "hello") // true
+ * apply("h?llo", "hallo") // true
+ * apply("[hw]ello", "hello") // true
+ * apply("[hw]ello", "wello") // true
+ * apply("[!hw]ello", "bello") // true
+ *
+ * @example
+ * // In WHERE clauses
+ * { filename: { $matchesGlob: "*.txt" } } // Text files
+ * { name: { $matchesGlob: "[A-Z]*" } } // Names starting with capital
+ * { code: { $matchesGlob: "IMG_[0-9][0-9][0-9][0-9]" } } // Image codes
+ */
+const $matchesGlob = {
+	name: "$matchesGlob",
+	apply: (operand, inputData) => {
+		if (typeof inputData !== "string") {
+			throw new Error("$matchesGlob requires string input");
+		}
+
+		// Convert GLOB pattern to JavaScript regex
+		let regexPattern = "";
+		let i = 0;
+
+		while (i < operand.length) {
+			const char = operand[i];
+
+			if (char === "*") {
+				regexPattern += ".*";
+			} else if (char === "?") {
+				regexPattern += ".";
+			} else if (char === "[") {
+				// Handle character classes
+				let j = i + 1;
+				let isNegated = false;
+
+				// Check for negation
+				if (j < operand.length && (operand[j] === "!" || operand[j] === "^")) {
+					isNegated = true;
+					j++;
+				}
+
+				// Find the closing bracket
+				let classContent = "";
+				while (j < operand.length && operand[j] !== "]") {
+					classContent += operand[j];
+					j++;
+				}
+
+				if (j < operand.length) {
+					// Valid character class
+					regexPattern +=
+						"[" +
+						(isNegated ? "^" : "") +
+						classContent.replace(/\\/g, "\\\\") +
+						"]";
+					i = j;
+				} else {
+					// No closing bracket, treat as literal
+					regexPattern += "\\[";
+				}
+			} else {
+				// Escape regex special characters
+				regexPattern += char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			}
+			i++;
+		}
+
+		// Anchor the pattern to match the entire string
+		regexPattern = "^" + regexPattern + "$";
+
+		const regex = new RegExp(regexPattern);
+		return regex.test(inputData);
+	},
+	evaluate([pattern, string]) {
+		return this.apply(pattern, string);
+	},
+	normalizeWhere: createComparativeWhereCompiler("$matchesGlob"),
+};
+
 export const comparativeDefinitions = {
 	$eq,
 	$gt,
@@ -171,4 +308,6 @@ export const comparativeDefinitions = {
 	$in,
 	$nin,
 	$matchesRegex,
+	$matchesLike,
+	$matchesGlob,
 };

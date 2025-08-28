@@ -3508,13 +3508,10 @@ const aggregativeDefinitions = {
 
 const createComparativeWhereCompiler =
 	(exprName) =>
-	(operand, { attribute }) => {
-		if (!attribute) {
-			// When used in conditional expressions, return the expression as-is
-			return { [exprName]: operand };
-		}
-		return { $pipe: [{ $get: attribute }, { [exprName]: operand }] };
-	};
+	(operand, { attribute }) =>
+		attribute
+			? { $pipe: [{ $get: attribute }, { [exprName]: operand }] }
+			: { [exprName]: operand };
 
 const $eq = {
 	name: "$eq",
@@ -3588,30 +3585,32 @@ const $nin = {
 
 /**
  * Tests if a string matches a regular expression pattern.
- * 
- * Uses PCRE (Perl Compatible Regular Expression) semantics as the canonical standard.
+ *
+ * **Uses PCRE (Perl Compatible Regular Expression) semantics** as the canonical standard
+ * for consistent behavior across all Data Prism store implementations.
+ *
  * Supports inline flags using the syntax (?flags)pattern where flags can be:
  * - i: case insensitive matching
  * - m: multiline mode (^ and $ match line boundaries)
  * - s: dotall mode (. matches newlines)
- * 
+ *
  * PCRE defaults (when no flags specified):
  * - Case-sensitive matching
- * - ^ and $ match string boundaries (not line boundaries)  
+ * - ^ and $ match string boundaries (not line boundaries)
  * - . does not match newlines
- * 
+ *
  * @example
  * // Basic pattern matching
  * apply("hello", "hello world") // true
  * apply("\\d+", "abc123") // true
- * 
+ *
  * @example
  * // With inline flags
  * apply("(?i)hello", "HELLO WORLD") // true (case insensitive)
  * apply("(?m)^line2", "line1\nline2") // true (multiline)
  * apply("(?s)hello.world", "hello\nworld") // true (dotall)
  * apply("(?ims)^hello.world$", "HELLO\nWORLD") // true (combined flags)
- * 
+ *
  * @example
  * // In WHERE clauses
  * { name: { $matchesRegex: "^[A-Z].*" } } // Names starting with capital letter
@@ -3623,13 +3622,13 @@ const $matchesRegex = {
 		if (typeof inputData !== "string") {
 			throw new Error("$matchesRegex requires string input");
 		}
-		
+
 		// Extract inline flags and clean pattern
 		const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
 		if (flagMatch) {
 			const [, flags, pattern] = flagMatch;
 			let jsFlags = "";
-			
+
 			// PCRE flag mapping - JavaScript RegExp aligns well with PCRE semantics
 			if (flags.includes("i")) {
 				jsFlags += "i";
@@ -3640,11 +3639,11 @@ const $matchesRegex = {
 			if (flags.includes("s")) {
 				jsFlags += "s";
 			}
-			
+
 			const regex = new RegExp(pattern, jsFlags);
 			return regex.test(inputData);
 		}
-		
+
 		// Check for unsupported inline flags and strip them
 		const unsupportedFlagMatch = operand.match(/^\(\?[^)]*\)(.*)/);
 		if (unsupportedFlagMatch) {
@@ -3653,7 +3652,7 @@ const $matchesRegex = {
 			const regex = new RegExp(pattern);
 			return regex.test(inputData);
 		}
-		
+
 		// No inline flags - use PCRE defaults
 		// ^ and $ match string boundaries, . doesn't match newlines, case-sensitive
 		const regex = new RegExp(operand);
@@ -3663,6 +3662,146 @@ const $matchesRegex = {
 		return this.apply(pattern, string);
 	},
 	normalizeWhere: createComparativeWhereCompiler("$matchesRegex"),
+};
+
+/**
+ * Tests if a string matches a SQL LIKE pattern.
+ *
+ * Provides database-agnostic LIKE pattern matching with SQL standard semantics:
+ * - % matches any sequence of characters (including none)
+ * - _ matches exactly one character
+ * - Case-sensitive matching (consistent across databases)
+ *
+ * @example
+ * // Basic LIKE patterns
+ * apply("hello%", "hello world") // true
+ * apply("%world", "hello world") // true
+ * apply("h_llo", "hello") // true
+ * apply("h_llo", "hallo") // true
+ *
+ * @example
+ * // In WHERE clauses
+ * { name: { $matchesLike: "John%" } } // Names starting with "John"
+ * { email: { $matchesLike: "%@gmail.com" } } // Gmail addresses
+ * { code: { $matchesLike: "A_B_" } } // Codes like "A1B2", "AXBY"
+ */
+const $matchesLike = {
+	name: "$matchesLike",
+	apply: (operand, inputData) => {
+		if (typeof inputData !== "string") {
+			throw new Error("$matchesLike requires string input");
+		}
+
+		// Convert SQL LIKE pattern to JavaScript regex
+		// Escape regex special characters except % and _
+		let regexPattern = operand
+			.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") // Escape regex special chars
+			.replace(/%/g, ".*") // % becomes .*
+			.replace(/_/g, "."); // _ becomes .
+
+		// Anchor the pattern to match the entire string
+		regexPattern = "^" + regexPattern + "$";
+
+		const regex = new RegExp(regexPattern);
+		return regex.test(inputData);
+	},
+	evaluate([pattern, string]) {
+		return this.apply(pattern, string);
+	},
+	normalizeWhere: createComparativeWhereCompiler("$matchesLike"),
+};
+
+/**
+ * Tests if a string matches a Unix shell GLOB pattern.
+ *
+ * Provides database-agnostic GLOB pattern matching with Unix shell semantics:
+ * - * matches any sequence of characters (including none)
+ * - ? matches exactly one character
+ * - [chars] matches any single character in the set
+ * - [!chars] or [^chars] matches any character not in the set
+ * - Case-sensitive matching
+ *
+ * @example
+ * // Basic GLOB patterns
+ * apply("hello*", "hello world") // true
+ * apply("*world", "hello world") // true
+ * apply("h?llo", "hello") // true
+ * apply("h?llo", "hallo") // true
+ * apply("[hw]ello", "hello") // true
+ * apply("[hw]ello", "wello") // true
+ * apply("[!hw]ello", "bello") // true
+ *
+ * @example
+ * // In WHERE clauses
+ * { filename: { $matchesGlob: "*.txt" } } // Text files
+ * { name: { $matchesGlob: "[A-Z]*" } } // Names starting with capital
+ * { code: { $matchesGlob: "IMG_[0-9][0-9][0-9][0-9]" } } // Image codes
+ */
+const $matchesGlob = {
+	name: "$matchesGlob",
+	apply: (operand, inputData) => {
+		if (typeof inputData !== "string") {
+			throw new Error("$matchesGlob requires string input");
+		}
+
+		// Convert GLOB pattern to JavaScript regex
+		let regexPattern = "";
+		let i = 0;
+
+		while (i < operand.length) {
+			const char = operand[i];
+
+			if (char === "*") {
+				regexPattern += ".*";
+			} else if (char === "?") {
+				regexPattern += ".";
+			} else if (char === "[") {
+				// Handle character classes
+				let j = i + 1;
+				let isNegated = false;
+
+				// Check for negation
+				if (j < operand.length && (operand[j] === "!" || operand[j] === "^")) {
+					isNegated = true;
+					j++;
+				}
+
+				// Find the closing bracket
+				let classContent = "";
+				while (j < operand.length && operand[j] !== "]") {
+					classContent += operand[j];
+					j++;
+				}
+
+				if (j < operand.length) {
+					// Valid character class
+					regexPattern +=
+						"[" +
+						(isNegated ? "^" : "") +
+						classContent.replace(/\\/g, "\\\\") +
+						"]";
+					i = j;
+				} else {
+					// No closing bracket, treat as literal
+					regexPattern += "\\[";
+				}
+			} else {
+				// Escape regex special characters
+				regexPattern += char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			}
+			i++;
+		}
+
+		// Anchor the pattern to match the entire string
+		regexPattern = "^" + regexPattern + "$";
+
+		const regex = new RegExp(regexPattern);
+		return regex.test(inputData);
+	},
+	evaluate([pattern, string]) {
+		return this.apply(pattern, string);
+	},
+	normalizeWhere: createComparativeWhereCompiler("$matchesGlob"),
 };
 
 const comparativeDefinitions = {
@@ -3675,6 +3814,8 @@ const comparativeDefinitions = {
 	$in,
 	$nin,
 	$matchesRegex,
+	$matchesLike,
+	$matchesGlob,
 };
 
 const $if = {
@@ -4013,10 +4154,14 @@ const $subtract = {
 	},
 	evaluate: (operand) => {
 		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error("$subtract evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$subtract evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error("$subtract evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$subtract evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		return operand[0] - operand[1];
 	},
@@ -4035,10 +4180,14 @@ const $multiply = {
 	},
 	evaluate: (operand) => {
 		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error("$multiply evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$multiply evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error("$multiply evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$multiply evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		return operand[0] * operand[1];
 	},
@@ -4060,10 +4209,14 @@ const $divide = {
 	},
 	evaluate: (operand) => {
 		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error("$divide evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$divide evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error("$divide evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$divide evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (operand[1] === 0) {
 			throw new Error("Division by zero");
@@ -4088,10 +4241,14 @@ const $modulo = {
 	},
 	evaluate: (operand) => {
 		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error("$modulo evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$modulo evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error("$modulo evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$modulo evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (operand[1] === 0) {
 			throw new Error("Modulo by zero");
@@ -4216,7 +4373,9 @@ function createExpressionEngine(customExpressions) {
 	const normalizeWhereClause = (where) => {
 		const compileNode = (node, attribute) => {
 			if (Array.isArray(node)) {
-				throw new Error("Array found in where clause. Where clauses must be objects or expressions that test conditions.");
+				throw new Error(
+					"Array found in where clause. Where clauses must be objects or expressions that test conditions.",
+				);
 			}
 
 			if (typeof node === "object") {
@@ -4225,7 +4384,9 @@ function createExpressionEngine(customExpressions) {
 					const expression = expressions[expressionName];
 
 					if (!("normalizeWhere" in expression)) {
-						throw new Error(`Expression ${expressionName} cannot be used in where clauses. Where clauses require expressions that test conditions (comparisons like $eq, $gt or logical operators like $and, $or).`);
+						throw new Error(
+							`Expression ${expressionName} cannot be used in where clauses. Where clauses require expressions that test conditions (comparisons like $eq, $gt or logical operators like $and, $or).`,
+						);
 					}
 
 					return expression.normalizeWhere(operand, {
@@ -6405,6 +6566,30 @@ function createGraphFromResources(
 	return output;
 }
 
+/**
+ * Error thrown when a store does not support a particular expression.
+ * This allows stores to explicitly declare unsupported functionality
+ * and enables tests to handle these cases gracefully.
+ */
+class ExpressionNotSupportedError extends Error {
+	/**
+	 * @param {string} expression - The expression that is not supported (e.g., "$matchesRegex")
+	 * @param {string} storeName - The name of the store that doesn't support the expression
+	 * @param {string} [reason] - Optional reason why the expression is not supported
+	 */
+	constructor(expression, storeName, reason) {
+		const message = reason 
+			? `Expression ${expression} is not supported by ${storeName}: ${reason}`
+			: `Expression ${expression} is not supported by ${storeName}`;
+		
+		super(message);
+		this.name = "ExpressionNotSupportedError";
+		this.expression = expression;
+		this.storeName = storeName;
+		this.reason = reason;
+	}
+}
+
 const ensureValidSchema = ensure(validateSchema);
 const ensureValidQuery = ensure(validateQuery);
 const ensureValidCreateResource = ensure(validateCreateResource);
@@ -6413,6 +6598,7 @@ const ensureValidDeleteResource = ensure(validateDeleteResource);
 const ensureValidMergeResource = ensure(validateMergeResource);
 const ensureValidQueryResult = ensure(validateQueryResult);
 
+exports.ExpressionNotSupportedError = ExpressionNotSupportedError;
 exports.createEmptyGraph = createEmptyGraph;
 exports.createExpressionEngine = createExpressionEngine;
 exports.createGraphFromResources = createGraphFromResources;
