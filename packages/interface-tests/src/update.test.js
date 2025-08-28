@@ -399,7 +399,9 @@ export function runUpdateTests(createStore) {
 			});
 			expect({
 				...homeResult1,
-				residents: homeResult1.residents.sort((a, b) => a.name.localeCompare(b.name))
+				residents: homeResult1.residents.sort((a, b) =>
+					a.name.localeCompare(b.name),
+				),
 			}).toEqual({
 				name: "Paradise Valley",
 				residents: [{ name: "Always There Bear" }, { name: "Share Bear" }],
@@ -476,7 +478,9 @@ export function runUpdateTests(createStore) {
 			});
 			expect({
 				...powerResult1,
-				wielders: powerResult1.wielders.sort((a, b) => a.name.localeCompare(b.name))
+				wielders: powerResult1.wielders.sort((a, b) =>
+					a.name.localeCompare(b.name),
+				),
 			}).toEqual({
 				name: "Care Cousins Call",
 				wielders: [{ name: "Always There Bear" }, { name: "Harmony Bear" }],
@@ -504,7 +508,9 @@ export function runUpdateTests(createStore) {
 			});
 			expect({
 				...powerResult2,
-				wielders: powerResult2.wielders.sort((a, b) => a.name.localeCompare(b.name))
+				wielders: powerResult2.wielders.sort((a, b) =>
+					a.name.localeCompare(b.name),
+				),
 			}).toEqual({
 				name: "Care Cousins Call",
 				wielders: [{ name: "Always There Bear" }, { name: "Harmony Bear" }],

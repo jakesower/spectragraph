@@ -51,7 +51,9 @@ export function upsertResourceRow(resource, context) {
 	];
 
 	// Convert boolean values to integers for SQLite
-	const sqliteVars = vars.map((v) => typeof v === "boolean" ? (v ? 1 : 0) : v);
+	const sqliteVars = vars.map((v) =>
+		typeof v === "boolean" ? (v ? 1 : 0) : v,
+	);
 
 	const updateColumns = [...attributeColumns, ...relationshipColumns]
 		.map((col) => `${col} = EXCLUDED.${col}`)
@@ -134,7 +136,7 @@ export function upsertForeignRelationshipRows(resource, context) {
 			WHERE ${snakeCase(foreignIdAttribute)} = ?
 		`;
 		const updateStmt = db.prepare(updateSql);
-		
+
 		val.forEach((v) => {
 			updateStmt.run(resource.id, v.id);
 		});

@@ -56,20 +56,24 @@ export async function create(resource, context) {
   `;
 
 	// Convert boolean values to integers for SQLite
-	const sqliteVars = vars.map((v) => typeof v === "boolean" ? (v ? 1 : 0) : v);
-	
+	const sqliteVars = vars.map((v) =>
+		typeof v === "boolean" ? (v ? 1 : 0) : v,
+	);
+
 	const insertStmt = db.prepare(insertSql);
-	const result = insertStmt.run(sqliteVars);
-	
+	insertStmt.run(sqliteVars);
+
 	// Get the created resource using the UUID we inserted
 	const selectSql = `SELECT * FROM ${table} WHERE ${snakeCase(idAttribute)} = ?`;
 	const selectStmt = db.prepare(selectSql);
 	const createdRow = selectStmt.get(resourceId);
-	
+
 	if (!createdRow) {
-		throw new Error(`Failed to retrieve created resource with id ${resourceId} from table ${table}`);
+		throw new Error(
+			`Failed to retrieve created resource with id ${resourceId} from table ${table}`,
+		);
 	}
-	
+
 	const created = {};
 	Object.entries(createdRow).forEach(([k, v]) => {
 		created[camelCase(k)] = v;
@@ -105,7 +109,7 @@ export async function create(resource, context) {
 			WHERE ${snakeCase(foreignIdAttribute)} = ?
 		`;
 		const updateStmt = db.prepare(updateSql);
-		
+
 		val.forEach((v) => {
 			updateStmt.run(created[idAttribute], v.id);
 		});
