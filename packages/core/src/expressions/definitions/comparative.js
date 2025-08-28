@@ -82,32 +82,32 @@ const $nin = {
 
 /**
  * Tests if a string matches a regular expression pattern.
- * 
+ *
  * **Uses PCRE (Perl Compatible Regular Expression) semantics** as the canonical standard
  * for consistent behavior across all Data Prism store implementations.
- * 
+ *
  * Supports inline flags using the syntax (?flags)pattern where flags can be:
  * - i: case insensitive matching
  * - m: multiline mode (^ and $ match line boundaries)
  * - s: dotall mode (. matches newlines)
- * 
+ *
  * PCRE defaults (when no flags specified):
  * - Case-sensitive matching
- * - ^ and $ match string boundaries (not line boundaries)  
+ * - ^ and $ match string boundaries (not line boundaries)
  * - . does not match newlines
- * 
+ *
  * @example
  * // Basic pattern matching
  * apply("hello", "hello world") // true
  * apply("\\d+", "abc123") // true
- * 
+ *
  * @example
  * // With inline flags
  * apply("(?i)hello", "HELLO WORLD") // true (case insensitive)
  * apply("(?m)^line2", "line1\nline2") // true (multiline)
  * apply("(?s)hello.world", "hello\nworld") // true (dotall)
  * apply("(?ims)^hello.world$", "HELLO\nWORLD") // true (combined flags)
- * 
+ *
  * @example
  * // In WHERE clauses
  * { name: { $matchesRegex: "^[A-Z].*" } } // Names starting with capital letter
@@ -119,13 +119,13 @@ const $matchesRegex = {
 		if (typeof inputData !== "string") {
 			throw new Error("$matchesRegex requires string input");
 		}
-		
+
 		// Extract inline flags and clean pattern
 		const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
 		if (flagMatch) {
 			const [, flags, pattern] = flagMatch;
 			let jsFlags = "";
-			
+
 			// PCRE flag mapping - JavaScript RegExp aligns well with PCRE semantics
 			if (flags.includes("i")) {
 				jsFlags += "i";
@@ -136,11 +136,11 @@ const $matchesRegex = {
 			if (flags.includes("s")) {
 				jsFlags += "s";
 			}
-			
+
 			const regex = new RegExp(pattern, jsFlags);
 			return regex.test(inputData);
 		}
-		
+
 		// Check for unsupported inline flags and strip them
 		const unsupportedFlagMatch = operand.match(/^\(\?[^)]*\)(.*)/);
 		if (unsupportedFlagMatch) {
@@ -149,7 +149,7 @@ const $matchesRegex = {
 			const regex = new RegExp(pattern);
 			return regex.test(inputData);
 		}
-		
+
 		// No inline flags - use PCRE defaults
 		// ^ and $ match string boundaries, . doesn't match newlines, case-sensitive
 		const regex = new RegExp(operand);

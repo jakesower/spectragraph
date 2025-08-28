@@ -83,32 +83,35 @@ const sqlExpressions = {
 				const [, flags, pattern] = flagMatch;
 				let processedPattern = pattern;
 
-				// Handle PCRE flag mappings to PostgreSQL
-				let pgFlags = "";
-				
-				// Handle dotall flag - PCRE default is . doesn't match newlines
-				// When 's' flag is present, make . match newlines
-				if (flags.includes("s")) {
-					pgFlags += "n"; // PostgreSQL (?n) makes . match newlines
-				}
-				
-				// Handle multiline flag - PCRE default is ^ and $ match string boundaries
-				// When 'm' flag is present, make ^ and $ match line boundaries  
+				// Handle multiline flag FIRST - PCRE 'm' flag makes ^ and $ match line boundaries  
+				// PostgreSQL doesn't have direct equivalent, so we need to transform the pattern
 				if (flags.includes("m")) {
-					// PostgreSQL default is line boundaries, so we need string boundaries for non-m
-					// This is tricky - PostgreSQL doesn't have a direct equivalent
-					// We'll rely on the default PostgreSQL behavior which is line boundaries
+					// Transform ^ to match start of line (after newline or start of string)
+					processedPattern = processedPattern.replace(/\^/g, '(^|(?<=\\n))');
+					// Transform $ to match end of line (before newline or end of string)  
+					processedPattern = processedPattern.replace(/\$/g, '(?=\\n|$)');
 				}
-				
-				if (pgFlags) {
-					processedPattern = `(?${pgFlags})${processedPattern}`;
+
+				// Handle dotall flag AFTER multiline - PCRE 's' flag makes . match newlines
+				// We need to be explicit about . behavior when flags are present  
+				if (flags.includes("s")) {
+					// Make . explicitly match newlines by replacing . with [\s\S]
+					processedPattern = processedPattern.replace(/\./g, '[\\s\\S]');
+				} else if (processedPattern.includes('.')) {
+					// If 's' flag is NOT present but pattern contains ., ensure . does NOT match newlines
+					// Replace . with [^\n] to exclude newlines explicitly
+					processedPattern = processedPattern.replace(/\./g, '[^\\n]');
 				}
 
 				return [processedPattern];
 			}
-			// No inline flags - use PCRE defaults
-			// PostgreSQL ~ operator defaults match PCRE behavior reasonably well
-			return [operand];
+			// No inline flags - need to handle default PostgreSQL behavior
+			// PostgreSQL . might match newlines by default, so make it explicit to match PCRE behavior
+			let processedPattern = operand;
+			if (processedPattern.includes('.')) {
+				processedPattern = processedPattern.replace(/\./g, '[^\\n]');
+			}
+			return [processedPattern];
 		},
 	},
 	$get: {

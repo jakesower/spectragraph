@@ -37,9 +37,9 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"private": true,
 	"dependencies": {
 		"@data-prism/core": "0.1.6",
+		"@data-prism/sql-helpers": "*",
 		"@data-prism/utils": "^0.0.7",
 		"ajv": "^8.17.1",
 		"lodash-es": "^4.17.21",

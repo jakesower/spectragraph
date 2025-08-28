@@ -117,7 +117,9 @@ export function createExpressionEngine(customExpressions) {
 	const normalizeWhereClause = (where) => {
 		const compileNode = (node, attribute) => {
 			if (Array.isArray(node)) {
-				throw new Error("Array found in where clause. Where clauses must be objects or expressions that test conditions.");
+				throw new Error(
+					"Array found in where clause. Where clauses must be objects or expressions that test conditions.",
+				);
 			}
 
 			if (typeof node === "object") {
@@ -126,7 +128,9 @@ export function createExpressionEngine(customExpressions) {
 					const expression = expressions[expressionName];
 
 					if (!("normalizeWhere" in expression)) {
-						throw new Error(`Expression ${expressionName} cannot be used in where clauses. Where clauses require expressions that test conditions (comparisons like $eq, $gt or logical operators like $and, $or).`);
+						throw new Error(
+							`Expression ${expressionName} cannot be used in where clauses. Where clauses require expressions that test conditions (comparisons like $eq, $gt or logical operators like $and, $or).`,
+						);
 					}
 
 					return expression.normalizeWhere(operand, {

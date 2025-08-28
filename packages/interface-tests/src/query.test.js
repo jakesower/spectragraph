@@ -525,10 +525,7 @@ export function runQueryTests(createStore) {
 				});
 				const result = await store.query(query);
 
-				expect(result).toEqual([
-					{ name: "Cheer Bear" },
-					{ name: "Wish Bear" },
-				]);
+				expect(result).toEqual([{ name: "Cheer Bear" }, { name: "Wish Bear" }]);
 			});
 
 			it("filters using $matchesRegex operator with quantifiers", async () => {
@@ -545,10 +542,7 @@ export function runQueryTests(createStore) {
 				});
 				const result = await store.query(query);
 
-				expect(result).toEqual([
-					{ name: "Cheer Bear" },
-					{ name: "Wish Bear" },
-				]);
+				expect(result).toEqual([{ name: "Cheer Bear" }, { name: "Wish Bear" }]);
 			});
 
 			it("filters using $matchesRegex operator with alternation", async () => {

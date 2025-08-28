@@ -181,7 +181,6 @@ const normalized = engine.normalizeWhereClause(where);
 
 ### Core Operations
 
-
 #### `$compose`
 
 Composes multiple expressions together using mathematical composition order (right-to-left). The expressions are applied in the order `f(g(h(x)))` where `[f, g, h]` means `f` applied to the result of `g` applied to the result of `h` applied to `x`.
@@ -204,7 +203,6 @@ Evaluates an expression, logs the result to console, and returns the result (use
 { "$debug": { "$get": "name" } } // Logs the value of data.name, returns data.name
 { "$debug": { "$sum": [1, 2, 3] } } // Logs 6, returns 6
 ```
-
 
 #### `$ensurePath`
 
@@ -598,12 +596,14 @@ The operand is ignored - this expression always generates a new UUID.
 Binary addition operation.
 
 **Apply form** (operates on input data):
+
 ```json
 apply({ "$add": 3 }, 5)     // Returns 8 (5 + 3)
 apply({ "$add": -2 }, 10)   // Returns 8 (10 + (-2))
 ```
 
 **Evaluate form** (pure calculation):
+
 ```json
 { "$add": [5, 3] }          // Returns 8
 { "$add": [1, -2] }         // Returns -1
@@ -616,12 +616,14 @@ Apply form adds operand to input data. Evaluate form requires array of exactly 2
 Binary subtraction operation.
 
 **Apply form** (operates on input data):
+
 ```json
 apply({ "$subtract": 3 }, 10)   // Returns 7 (10 - 3)
 apply({ "$subtract": -2 }, 5)   // Returns 7 (5 - (-2))
 ```
 
 **Evaluate form** (pure calculation):
+
 ```json
 { "$subtract": [10, 3] }        // Returns 7
 { "$subtract": [5, -2] }        // Returns 7
@@ -634,12 +636,14 @@ Apply form subtracts operand from input data. Evaluate form requires array of ex
 Binary multiplication operation.
 
 **Apply form** (operates on input data):
+
 ```json
 apply({ "$multiply": 3 }, 5)    // Returns 15 (5 * 3)
 apply({ "$multiply": 0.5 }, 4)  // Returns 2 (4 * 0.5)
 ```
 
 **Evaluate form** (pure calculation):
+
 ```json
 { "$multiply": [6, 7] }         // Returns 42
 { "$multiply": [5, 0] }         // Returns 0
@@ -652,12 +656,14 @@ Apply form multiplies input data by operand. Evaluate form requires array of exa
 Binary division operation.
 
 **Apply form** (operates on input data):
+
 ```json
 apply({ "$divide": 3 }, 15)     // Returns 5 (15 / 3)
 apply({ "$divide": 0.5 }, 1)    // Returns 2 (1 / 0.5)
 ```
 
 **Evaluate form** (pure calculation):
+
 ```json
 { "$divide": [15, 3] }          // Returns 5
 { "$divide": [1, 0.5] }         // Returns 2
@@ -670,12 +676,14 @@ Apply form divides input data by operand. Evaluate form requires array of exactl
 Binary modulo (remainder) operation.
 
 **Apply form** (operates on input data):
+
 ```json
 apply({ "$modulo": 3 }, 10)     // Returns 1 (10 % 3)
 apply({ "$modulo": 4 }, 15)     // Returns 3 (15 % 4)
 ```
 
 **Evaluate form** (pure calculation):
+
 ```json
 { "$modulo": [10, 3] }          // Returns 1
 { "$modulo": [15, 4] }          // Returns 3

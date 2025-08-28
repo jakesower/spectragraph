@@ -10,7 +10,7 @@ const extractWhere = (where, table) =>
 		}
 
 		if (whereExpressionEngine.isExpression(propValOrExpr)) {
-			console.log("hi", { [operation]: [`${table}.${propKey}`, args] });
+			const [operation, args] = Object.entries(propValOrExpr)[0];
 			return { [operation]: [`${table}.${propKey}`, args] };
 		}
 
@@ -66,15 +66,24 @@ const sqlExpressions = {
 		vars: (operand) => operand[1],
 	},
 	$or: {
-		// TODO
 		name: "$or",
 		controlsEvaluation: true,
 		where: (operand, { evaluate }) => {
-			console.log("operand", operand);
-			console.log("evaled", operand.map(evaluate));
+			console.log("$or where operand:", operand, typeof operand);
+			if (!Array.isArray(operand)) {
+				console.log("$or operand is not array, it's:", typeof operand, operand);
+				throw new Error("$or operand must be an array");
+			}
+			const evaluated = operand.map(evaluate);
+			return `(${evaluated.join(" OR ")})`;
 		},
-		vars: (...args) => {
-			console.log("Var args", args);
+		vars: (operand, { evaluate }) => {
+			console.log("$or vars operand:", operand, typeof operand);
+			if (!Array.isArray(operand)) {
+				console.log("$or vars operand is not array, it's:", typeof operand, operand);
+				throw new Error("$or operand must be an array");
+			}
+			return operand.flatMap((op) => evaluate(op));
 		},
 	},
 };
