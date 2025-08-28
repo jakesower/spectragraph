@@ -14,7 +14,7 @@ export function createTables(db, schema, config) {
 		const resConfig = config.resources[resType];
 		const { idAttribute = "id", table } = resConfig;
 
-		const idCol = { name: snakeCase(idAttribute), type: "VARCHAR" };
+		const idCol = { name: snakeCase(idAttribute), type: "VARCHAR PRIMARY KEY" };
 		const attrCols = Object.entries(resDef.attributes)
 			.filter(([attrName]) => attrName !== idAttribute)
 			.map(([attrName, attrDef]) => ({
