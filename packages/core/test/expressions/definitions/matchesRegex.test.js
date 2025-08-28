@@ -94,8 +94,8 @@ describe("$matchesRegex", () => {
 			expect(result).toEqual({
 				$pipe: [
 					{ $get: "name" },
-					{ $matchesRegex: "test.*" }
-				]
+					{ $matchesRegex: "test.*" },
+				],
 			});
 		});
 
@@ -109,8 +109,8 @@ describe("$matchesRegex", () => {
 			expect(result).toEqual({
 				$pipe: [
 					{ $get: "description" },
-					{ $matchesRegex: "(?i)test.*" }
-				]
+					{ $matchesRegex: "(?i)test.*" },
+				],
 			});
 		});
 	});

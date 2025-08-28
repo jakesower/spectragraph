@@ -1,5 +1,32 @@
-import { createExpressionEngine, ExpressionNotSupportedError } from "@data-prism/core";
+import {
+	createExpressionEngine,
+	ExpressionNotSupportedError,
+} from "@data-prism/core";
 import { mapValues, snakeCase } from "lodash-es";
+
+// Per-database cache for regex support detection
+const regexSupportCache = new WeakMap();
+
+/**
+ * Tests if SQLite database has REGEXP function support
+ * @param {import('better-sqlite3').Database} db - SQLite database instance
+ * @returns {boolean} True if REGEXP is supported
+ */
+function hasRegexSupport(db) {
+	if (regexSupportCache.has(db)) {
+		return regexSupportCache.get(db);
+	}
+
+	try {
+		// Test if REGEXP function exists
+		db.prepare("SELECT 1 WHERE 'test' REGEXP ?").get("test");
+		regexSupportCache.set(db, true);
+		return true;
+	} catch {
+		regexSupportCache.set(db, false);
+		return false;
+	}
+}
 
 /**
  * @typedef {Object} SqlExpression
@@ -13,7 +40,7 @@ import { mapValues, snakeCase } from "lodash-es";
  * SQL expression definitions for building WHERE clauses and extracting variables
  * @type {Object<string, SqlExpression>}
  */
-const sqlExpressions = {
+const createSQLExpressions = (db) => ({
 	$and: {
 		controlsEvaluation: true,
 		where: (operand, { evaluate }) =>
@@ -63,19 +90,25 @@ const sqlExpressions = {
 		vars: (operand) => operand,
 	},
 	$matchesRegex: {
-		where: (operand) => {
-			throw new ExpressionNotSupportedError(
-				"$matchesRegex", 
-				"sqlite-store", 
-				"SQLite regex support requires custom REGEXP function configuration"
-			);
+		where: () => {
+			if (!hasRegexSupport(db)) {
+				throw new ExpressionNotSupportedError(
+					"$matchesRegex",
+					"sqlite-store",
+					"SQLite regex support requires custom REGEXP function configuration",
+				);
+			}
+			return " REGEXP ?";
 		},
 		vars: (operand) => {
-			throw new ExpressionNotSupportedError(
-				"$matchesRegex", 
-				"sqlite-store", 
-				"SQLite regex support requires custom REGEXP function configuration"
-			);
+			if (!hasRegexSupport(db)) {
+				throw new ExpressionNotSupportedError(
+					"$matchesRegex",
+					"sqlite-store",
+					"SQLite regex support requires custom REGEXP function configuration",
+				);
+			}
+			return operand;
 		},
 	},
 	$get: {
@@ -196,18 +229,26 @@ const sqlExpressions = {
 		where: () => " GLOB ?",
 		vars: (operand) => operand,
 	},
-};
+});
 
 /**
  * Expression engine for generating WHERE clause SQL
  */
-export const whereExpressionEngine = createExpressionEngine(
-	mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.where })),
-);
+export const createWhereExpressionEngine = ({ db }) =>
+	createExpressionEngine(
+		mapValues(createSQLExpressions(db), (expr) => ({
+			...expr,
+			evaluate: expr.where,
+		})),
+	);
 
 /**
  * Expression engine for extracting SQL variables/parameters
  */
-export const varsExpressionEngine = createExpressionEngine(
-	mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.vars })),
-);
+export const createVarsExpressionEngine = ({ db }) =>
+	createExpressionEngine(
+		mapValues(createSQLExpressions(db), (expr) => ({
+			...expr,
+			evaluate: expr.vars,
+		})),
+	);

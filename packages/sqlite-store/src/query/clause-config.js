@@ -1,5 +1,5 @@
 import { snakeCase, uniq } from "lodash-es";
-import { whereExpressionEngine } from "../helpers/where-expressions.js";
+import { createWhereExpressionEngine } from "../helpers/where-expressions.js";
 
 /**
  * @typedef {Object} SqlClauseHandler
@@ -12,9 +12,9 @@ import { whereExpressionEngine } from "../helpers/where-expressions.js";
 const composeArrays = (acc, item) => uniq([...(acc ?? []), ...(item ?? [])]);
 
 // Complex SQL generation functions
-const generateWhereSql = (val) =>
+const generateWhereSql = (val, context) =>
 	val.length > 0
-		? `WHERE ${whereExpressionEngine.evaluate({ $and: val })}`
+		? `WHERE ${createWhereExpressionEngine(context).evaluate({ $and: val }, context)}`
 		: "";
 
 const generateOrderBySql = (val) => {
