@@ -4,13 +4,18 @@ import { extractGraph } from "../extract-graph.js";
 
 /**
  * Processes raw SQL results into final query response
- * @param {any[][]} rawResults - Raw SQL query results 
+ * @param {any[][]} rawResults - Raw SQL query results
  * @param {Object} composedClauses - Composed SQL clauses
  * @param {import('data-prism').RootQuery} query - Original query
  * @param {Object} context - Query context with schema and config
  * @returns {any} Final query results
  */
-export function processQueryResults(rawResults, composedClauses, query, context) {
+export function processQueryResults(
+	rawResults,
+	composedClauses,
+	query,
+	context,
+) {
 	const { schema } = context;
 
 	// Determine if we have to-many relationships that affect result processing
@@ -25,7 +30,7 @@ export function processQueryResults(rawResults, composedClauses, query, context)
 
 	// Transform raw results into resource graph
 	const graph = extractGraph(rawResults, composedClauses.select, context);
-	
+
 	// Strip handled clauses from query for final processing
 	const strippedQuery = omit(query, handledClauses);
 

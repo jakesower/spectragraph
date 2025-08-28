@@ -1,3 +1,23 @@
+// Now using shared sql-helpers package - with adapter for sqlite-store calling convention
+import { preQueryRelationships as sharedPreQueryRelationships } from "@data-prism/sql-helpers";
+
+export const preQueryRelationships = (context) => {
+	// Adapt sqlite-store context to match shared function expectations
+	// sqlite-store has: { config, flatQuery, queryPath, rootQuery, schema, ... }
+	// shared function expects: { config, queryInfo, rootQuery, schema }
+	const { flatQuery, ...restContext } = context;
+	const adaptedContext = {
+		...restContext,
+		queryInfo: {
+			...flatQuery,
+			path: context.queryPath, // sqlite calls it queryPath, shared expects path
+		},
+	};
+	
+	return sharedPreQueryRelationships(adaptedContext);
+};
+
+/* ORIGINAL SQLITE-STORE IMPLEMENTATION - REPLACED BY sql-helpers
 import { last } from "lodash-es";
 
 function makeRelBuilders(schema) {
@@ -146,3 +166,4 @@ export const preQueryRelationships = (context) => {
 
 	return { join };
 };
+*/

@@ -1,3 +1,7 @@
+// Now using shared sql-helpers package
+export { flattenQuery } from "@data-prism/sql-helpers";
+
+/* ORIGINAL SQLITE-STORE IMPLEMENTATION - REPLACED BY sql-helpers
 import { partition, pick } from "lodash-es";
 
 /**
@@ -17,7 +21,7 @@ import { partition, pick } from "lodash-es";
  * @param {import("@data-prism/core").Schema} schema - The schema
  * @param {import("@data-prism/core").RootQuery} rootQuery - The root query
  * @returns {QueryBreakdown} The flattened query breakdown
- */
+ * /
 export function flattenQuery(schema, rootQuery) {
 	const go = (query, type, path, parent = null, parentRelationship = null) => {
 		const resDef = schema.resources[type];
@@ -56,3 +60,4 @@ export function flattenQuery(schema, rootQuery) {
 
 	return go(rootQuery, rootQuery.type, []);
 }
+*/

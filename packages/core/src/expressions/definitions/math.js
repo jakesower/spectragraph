@@ -33,10 +33,14 @@ const $subtract = {
 	},
 	evaluate: (operand) => {
 		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error("$subtract evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$subtract evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error("$subtract evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$subtract evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		return operand[0] - operand[1];
 	},
@@ -55,10 +59,14 @@ const $multiply = {
 	},
 	evaluate: (operand) => {
 		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error("$multiply evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$multiply evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error("$multiply evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$multiply evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		return operand[0] * operand[1];
 	},
@@ -80,10 +88,14 @@ const $divide = {
 	},
 	evaluate: (operand) => {
 		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error("$divide evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$divide evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error("$divide evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$divide evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (operand[1] === 0) {
 			throw new Error("Division by zero");
@@ -108,10 +120,14 @@ const $modulo = {
 	},
 	evaluate: (operand) => {
 		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error("$modulo evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$modulo evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error("$modulo evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$modulo evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (operand[1] === 0) {
 			throw new Error("Modulo by zero");
