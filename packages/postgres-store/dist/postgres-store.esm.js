@@ -1,4 +1,4 @@
-import { get, mapValues, omit, isEqual, uniqBy, orderBy, merge, snakeCase, partition, pick, last, uniq, pickBy, camelCase } from 'lodash-es';
+import { get, mapValues, omit, isEqual, uniqBy, orderBy, merge, snakeCase, partition, pick, uniq, last, pickBy, camelCase } from 'lodash-es';
 import Ajv from 'ajv';
 import { applyOrMap } from '@data-prism/utils';
 
@@ -4888,13 +4888,10 @@ const aggregativeDefinitions = {
 
 const createComparativeWhereCompiler =
 	(exprName) =>
-	(operand, { attribute }) => {
-		if (!attribute) {
-			// When used in conditional expressions, return the expression as-is
-			return { [exprName]: operand };
-		}
-		return { $pipe: [{ $get: attribute }, { [exprName]: operand }] };
-	};
+	(operand, { attribute }) =>
+		attribute
+			? { $pipe: [{ $get: attribute }, { [exprName]: operand }] }
+			: { [exprName]: operand };
 
 const $eq = {
 	name: "$eq",
@@ -4968,24 +4965,32 @@ const $nin = {
 
 /**
  * Tests if a string matches a regular expression pattern.
- * 
+ *
+ * **Uses PCRE (Perl Compatible Regular Expression) semantics** as the canonical standard
+ * for consistent behavior across all Data Prism store implementations.
+ *
  * Supports inline flags using the syntax (?flags)pattern where flags can be:
  * - i: case insensitive matching
  * - m: multiline mode (^ and $ match line boundaries)
  * - s: dotall mode (. matches newlines)
- * 
+ *
+ * PCRE defaults (when no flags specified):
+ * - Case-sensitive matching
+ * - ^ and $ match string boundaries (not line boundaries)
+ * - . does not match newlines
+ *
  * @example
  * // Basic pattern matching
  * apply("hello", "hello world") // true
  * apply("\\d+", "abc123") // true
- * 
+ *
  * @example
  * // With inline flags
  * apply("(?i)hello", "HELLO WORLD") // true (case insensitive)
  * apply("(?m)^line2", "line1\nline2") // true (multiline)
  * apply("(?s)hello.world", "hello\nworld") // true (dotall)
  * apply("(?ims)^hello.world$", "HELLO\nWORLD") // true (combined flags)
- * 
+ *
  * @example
  * // In WHERE clauses
  * { name: { $matchesRegex: "^[A-Z].*" } } // Names starting with capital letter
@@ -4997,25 +5002,39 @@ const $matchesRegex = {
 		if (typeof inputData !== "string") {
 			throw new Error("$matchesRegex requires string input");
 		}
-		
+
 		// Extract inline flags and clean pattern
 		const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
 		if (flagMatch) {
 			const [, flags, pattern] = flagMatch;
-			const regex = new RegExp(pattern, flags);
+			let jsFlags = "";
+
+			// PCRE flag mapping - JavaScript RegExp aligns well with PCRE semantics
+			if (flags.includes("i")) {
+				jsFlags += "i";
+			}
+			if (flags.includes("m")) {
+				jsFlags += "m";
+			}
+			if (flags.includes("s")) {
+				jsFlags += "s";
+			}
+
+			const regex = new RegExp(pattern, jsFlags);
 			return regex.test(inputData);
 		}
-		
+
 		// Check for unsupported inline flags and strip them
 		const unsupportedFlagMatch = operand.match(/^\(\?[^)]*\)(.*)/);
 		if (unsupportedFlagMatch) {
-			// Unsupported flags detected, use pattern without the flag syntax
+			// Unsupported flags detected, use pattern without flags (PCRE defaults)
 			const [, pattern] = unsupportedFlagMatch;
 			const regex = new RegExp(pattern);
 			return regex.test(inputData);
 		}
-		
-		// No inline flags, use pattern as-is
+
+		// No inline flags - use PCRE defaults
+		// ^ and $ match string boundaries, . doesn't match newlines, case-sensitive
 		const regex = new RegExp(operand);
 		return regex.test(inputData);
 	},
@@ -5023,6 +5042,146 @@ const $matchesRegex = {
 		return this.apply(pattern, string);
 	},
 	normalizeWhere: createComparativeWhereCompiler("$matchesRegex"),
+};
+
+/**
+ * Tests if a string matches a SQL LIKE pattern.
+ *
+ * Provides database-agnostic LIKE pattern matching with SQL standard semantics:
+ * - % matches any sequence of characters (including none)
+ * - _ matches exactly one character
+ * - Case-sensitive matching (consistent across databases)
+ *
+ * @example
+ * // Basic LIKE patterns
+ * apply("hello%", "hello world") // true
+ * apply("%world", "hello world") // true
+ * apply("h_llo", "hello") // true
+ * apply("h_llo", "hallo") // true
+ *
+ * @example
+ * // In WHERE clauses
+ * { name: { $matchesLike: "John%" } } // Names starting with "John"
+ * { email: { $matchesLike: "%@gmail.com" } } // Gmail addresses
+ * { code: { $matchesLike: "A_B_" } } // Codes like "A1B2", "AXBY"
+ */
+const $matchesLike = {
+	name: "$matchesLike",
+	apply: (operand, inputData) => {
+		if (typeof inputData !== "string") {
+			throw new Error("$matchesLike requires string input");
+		}
+
+		// Convert SQL LIKE pattern to JavaScript regex
+		// Escape regex special characters except % and _
+		let regexPattern = operand
+			.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") // Escape regex special chars
+			.replace(/%/g, ".*") // % becomes .*
+			.replace(/_/g, "."); // _ becomes .
+
+		// Anchor the pattern to match the entire string
+		regexPattern = "^" + regexPattern + "$";
+
+		const regex = new RegExp(regexPattern);
+		return regex.test(inputData);
+	},
+	evaluate([pattern, string]) {
+		return this.apply(pattern, string);
+	},
+	normalizeWhere: createComparativeWhereCompiler("$matchesLike"),
+};
+
+/**
+ * Tests if a string matches a Unix shell GLOB pattern.
+ *
+ * Provides database-agnostic GLOB pattern matching with Unix shell semantics:
+ * - * matches any sequence of characters (including none)
+ * - ? matches exactly one character
+ * - [chars] matches any single character in the set
+ * - [!chars] or [^chars] matches any character not in the set
+ * - Case-sensitive matching
+ *
+ * @example
+ * // Basic GLOB patterns
+ * apply("hello*", "hello world") // true
+ * apply("*world", "hello world") // true
+ * apply("h?llo", "hello") // true
+ * apply("h?llo", "hallo") // true
+ * apply("[hw]ello", "hello") // true
+ * apply("[hw]ello", "wello") // true
+ * apply("[!hw]ello", "bello") // true
+ *
+ * @example
+ * // In WHERE clauses
+ * { filename: { $matchesGlob: "*.txt" } } // Text files
+ * { name: { $matchesGlob: "[A-Z]*" } } // Names starting with capital
+ * { code: { $matchesGlob: "IMG_[0-9][0-9][0-9][0-9]" } } // Image codes
+ */
+const $matchesGlob = {
+	name: "$matchesGlob",
+	apply: (operand, inputData) => {
+		if (typeof inputData !== "string") {
+			throw new Error("$matchesGlob requires string input");
+		}
+
+		// Convert GLOB pattern to JavaScript regex
+		let regexPattern = "";
+		let i = 0;
+
+		while (i < operand.length) {
+			const char = operand[i];
+
+			if (char === "*") {
+				regexPattern += ".*";
+			} else if (char === "?") {
+				regexPattern += ".";
+			} else if (char === "[") {
+				// Handle character classes
+				let j = i + 1;
+				let isNegated = false;
+
+				// Check for negation
+				if (j < operand.length && (operand[j] === "!" || operand[j] === "^")) {
+					isNegated = true;
+					j++;
+				}
+
+				// Find the closing bracket
+				let classContent = "";
+				while (j < operand.length && operand[j] !== "]") {
+					classContent += operand[j];
+					j++;
+				}
+
+				if (j < operand.length) {
+					// Valid character class
+					regexPattern +=
+						"[" +
+						(isNegated ? "^" : "") +
+						classContent.replace(/\\/g, "\\\\") +
+						"]";
+					i = j;
+				} else {
+					// No closing bracket, treat as literal
+					regexPattern += "\\[";
+				}
+			} else {
+				// Escape regex special characters
+				regexPattern += char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			}
+			i++;
+		}
+
+		// Anchor the pattern to match the entire string
+		regexPattern = "^" + regexPattern + "$";
+
+		const regex = new RegExp(regexPattern);
+		return regex.test(inputData);
+	},
+	evaluate([pattern, string]) {
+		return this.apply(pattern, string);
+	},
+	normalizeWhere: createComparativeWhereCompiler("$matchesGlob"),
 };
 
 const comparativeDefinitions = {
@@ -5035,6 +5194,8 @@ const comparativeDefinitions = {
 	$in,
 	$nin,
 	$matchesRegex,
+	$matchesLike,
+	$matchesGlob,
 };
 
 const $if = {
@@ -5373,10 +5534,14 @@ const $subtract = {
 	},
 	evaluate: (operand) => {
 		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error("$subtract evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$subtract evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error("$subtract evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$subtract evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		return operand[0] - operand[1];
 	},
@@ -5395,10 +5560,14 @@ const $multiply = {
 	},
 	evaluate: (operand) => {
 		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error("$multiply evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$multiply evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error("$multiply evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$multiply evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		return operand[0] * operand[1];
 	},
@@ -5420,10 +5589,14 @@ const $divide = {
 	},
 	evaluate: (operand) => {
 		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error("$divide evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$divide evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error("$divide evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$divide evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (operand[1] === 0) {
 			throw new Error("Division by zero");
@@ -5448,10 +5621,14 @@ const $modulo = {
 	},
 	evaluate: (operand) => {
 		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error("$modulo evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$modulo evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error("$modulo evaluate form requires array of exactly 2 numbers");
+			throw new Error(
+				"$modulo evaluate form requires array of exactly 2 numbers",
+			);
 		}
 		if (operand[1] === 0) {
 			throw new Error("Modulo by zero");
@@ -5576,7 +5753,9 @@ function createExpressionEngine(customExpressions) {
 	const normalizeWhereClause = (where) => {
 		const compileNode = (node, attribute) => {
 			if (Array.isArray(node)) {
-				throw new Error("Array found in where clause. Where clauses must be objects or expressions that test conditions.");
+				throw new Error(
+					"Array found in where clause. Where clauses must be objects or expressions that test conditions.",
+				);
 			}
 
 			if (typeof node === "object") {
@@ -5585,7 +5764,9 @@ function createExpressionEngine(customExpressions) {
 					const expression = expressions[expressionName];
 
 					if (!("normalizeWhere" in expression)) {
-						throw new Error(`Expression ${expressionName} cannot be used in where clauses. Where clauses require expressions that test conditions (comparisons like $eq, $gt or logical operators like $and, $or).`);
+						throw new Error(
+							`Expression ${expressionName} cannot be used in where clauses. Where clauses require expressions that test conditions (comparisons like $eq, $gt or logical operators like $and, $or).`,
+						);
 					}
 
 					return expression.normalizeWhere(operand, {
@@ -7343,6 +7524,650 @@ function queryGraph(schema, query, graph) {
 const ensureValidSchema = ensure(validateSchema);
 
 /**
+ * @typedef {Object} QueryBreakdownItem
+ * @property {string[]} path - Path to this query level
+ * @property {any} attributes - Selected attributes
+ * @property {any} relationships - Selected relationships
+ * @property {string} type - Resource type
+ * @property {import('@data-prism/core').Query} query - The query object
+ * @property {boolean} ref - Whether this is a reference-only query
+ * @property {import('@data-prism/core').Query|null} parentQuery - Parent query if any
+ * @property {QueryBreakdownItem|null} parent - Parent breakdown item if any
+ * @property {string|null} parentRelationship - Parent relationship name if any
+ */
+
+/**
+ * @typedef {QueryBreakdownItem[]} QueryBreakdown
+ */
+
+/**
+ * Flattens a nested query into a linear array of query breakdown items
+ * @param {import('@data-prism/core').Schema} schema - The schema
+ * @param {import('@data-prism/core').RootQuery} rootQuery - The root query to flatten
+ * @returns {QueryBreakdown} Flattened query breakdown
+ */
+function flattenQuery(schema, rootQuery) {
+	const go = (query, type, path, parent = null, parentRelationship = null) => {
+		const resDef = schema.resources[type];
+		const { idAttribute = "id" } = resDef;
+		const [attributesEntries, relationshipsEntries] = partition(
+			Object.entries(query.select ?? {}),
+			([, propVal]) =>
+				typeof propVal === "string" &&
+				(propVal in resDef.attributes || propVal === idAttribute),
+		);
+
+		const attributes = attributesEntries.map((pe) => pe[1]);
+		const relationshipKeys = relationshipsEntries.map((pe) => pe[0]);
+
+		const level = {
+			parent,
+			parentQuery: parent?.query ?? null,
+			parentRelationship,
+			path,
+			attributes,
+			query,
+			ref: !query.select,
+			relationships: pick(query.select, relationshipKeys),
+			type,
+		};
+
+		return [
+			level,
+			...relationshipKeys.flatMap((relKey) => {
+				const relDef = resDef.relationships[relKey];
+				const subquery = query.select[relKey];
+
+				return go(subquery, relDef.type, [...path, relKey], level, relKey);
+			}),
+		];
+	};
+
+	return go(rootQuery, rootQuery.type, []);
+}
+
+/**
+ * Maps over each query in a flattened query structure
+ * @param {import('@data-prism/core').Schema} schema - The schema
+ * @param {import('@data-prism/core').RootQuery} query - The root query
+ * @param {(query: import('@data-prism/core').Query, info: QueryBreakdownItem) => any} fn - Mapping function
+ * @returns {any[]} Mapped results
+ */
+function flatMapQuery(schema, query, fn) {
+	return flattenQuery(schema, query).flatMap((info) => fn(info.query, info));
+}
+
+/**
+ * Iterates over each query in a flattened query structure
+ * @param {import('@data-prism/core').Schema} schema - The schema
+ * @param {import('@data-prism/core').RootQuery} query - The root query
+ * @param {(query: import('@data-prism/core').Query, info: QueryBreakdownItem) => void} fn - Iteration function
+ */
+function forEachQuery(schema, query, fn) {
+	return flattenQuery(schema, query).forEach((info) => fn(info.query, info));
+}
+
+/**
+ * Tests whether some query in a flattened query structure matches a condition
+ * @param {import('@data-prism/core').Schema} schema - The schema
+ * @param {import('@data-prism/core').RootQuery} query - The root query
+ * @param {(query: import('@data-prism/core').Query, info: QueryBreakdownItem) => boolean} fn - Test function
+ * @returns {boolean} Whether any query matches the condition
+ */
+function someQuery(schema, query, fn) {
+	return flattenQuery(schema, query).some((q) => fn(q.query, q));
+}
+
+/**
+ * Replaces ? placeholders with PostgreSQL $n placeholders
+ * @param {string} inputString - Input SQL string with ? placeholders
+ * @returns {string} SQL string with $n placeholders
+ */
+function replacePlaceholders(inputString) {
+	let counter = 1;
+	return inputString.replace(/\?/g, () => `$${counter++}`);
+}
+
+/**
+ * @typedef {Object} RelBuilderParams
+ * @property {any} foreignConfig - Foreign resource configuration
+ * @property {string} foreignTableAlias - Alias for foreign table
+ * @property {any} localConfig - Local resource configuration
+ * @property {string} localQueryTableName - Local query table name
+ * @property {string} relName - Relationship name
+ * @property {string} foreignIdCol - Foreign ID column
+ * @property {string} [localIdCol] - Local ID column
+ * @property {any} [localResSchema] - Local resource schema
+ */
+
+/**
+ * @typedef {Object} RelBuilders
+ * @property {Object} one - One-to-* relationship builders
+ * @property {(params: RelBuilderParams) => string[]} one.one - One-to-one builder
+ * @property {(params: RelBuilderParams) => string[]} one.many - One-to-many builder
+ * @property {Object} many - Many-to-* relationship builders
+ * @property {(params: RelBuilderParams) => string[]} many.one - Many-to-one builder
+ * @property {(params: RelBuilderParams) => string[]} many.many - Many-to-many builder
+ * @property {Object} none - No inverse relationship builders
+ * @property {(params: RelBuilderParams) => string[]} none.many - None-to-many builder
+ */
+
+/**
+ * Creates relationship builders for different cardinality combinations
+ * @param {import('@data-prism/core').Schema} schema - The schema
+ * @returns {RelBuilders} The relationship builders
+ */
+function makeRelationshipBuilders(schema) {
+	return {
+		one: {
+			one(params) {
+				const {
+					foreignConfig,
+					foreignTableAlias,
+					localConfig,
+					localQueryTableName,
+					relName,
+					foreignIdCol,
+				} = params;
+
+				const { localColumn } = localConfig.joins[relName];
+				const foreignTable = foreignConfig.table;
+
+				return [
+					`LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${localQueryTableName}.${localColumn} = ${foreignTableAlias}.${foreignIdCol}`,
+				];
+			},
+			many(params) {
+				const {
+					foreignConfig,
+					localIdCol,
+					localConfig,
+					localQueryTableName,
+					relName,
+					foreignTableAlias,
+				} = params;
+
+				const foreignTable = foreignConfig.table;
+				const foreignJoinColumn = localConfig.joins[relName].foreignColumn;
+
+				return [
+					`LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${localQueryTableName}.${localIdCol} = ${foreignTableAlias}.${foreignJoinColumn}`,
+				];
+			},
+		},
+		many: {
+			one(params) {
+				const {
+					localConfig,
+					localQueryTableName,
+					relName,
+					foreignConfig,
+					foreignTableAlias,
+					foreignIdCol,
+				} = params;
+
+				const localJoinColumn = localConfig.joins[relName].localColumn;
+				const foreignTable = foreignConfig.table;
+
+				return [
+					`LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${localQueryTableName}.${localJoinColumn} = ${foreignTableAlias}.${foreignIdCol}`,
+				];
+			},
+			many(params) {
+				const {
+					foreignConfig,
+					localConfig,
+					localQueryTableName,
+					relName,
+					foreignTableAlias,
+					localIdCol,
+					foreignIdCol,
+				} = params;
+
+				const foreignTable = foreignConfig.table;
+
+				const joinTableName = `${localQueryTableName}$$${relName}`;
+				const { joinTable, localJoinColumn, foreignJoinColumn } =
+					localConfig.joins[relName];
+
+				return [
+					`LEFT JOIN ${joinTable} AS ${joinTableName} ON ${localQueryTableName}.${localIdCol} = ${joinTableName}.${localJoinColumn}`,
+					`LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${foreignTableAlias}.${foreignIdCol} = ${joinTableName}.${foreignJoinColumn}`,
+				];
+			},
+		},
+		none: {
+			many({
+				localResSchema,
+				localQueryTableName,
+				relName,
+				foreignTableAlias,
+			}) {
+				const localRelDef = localResSchema.attributes[relName];
+				const localJoinColumn = localRelDef.store.join.joinColumn;
+
+				const foreignResSchema = schema.resources[localRelDef.relatedType];
+				const foreignTable = foreignResSchema.store.table;
+				const foreignRelDef =
+					foreignResSchema?.attributes?.[localRelDef.inverse];
+				const foreignJoinColumn = foreignRelDef
+					? foreignRelDef.store.join.joinColumn
+					: localRelDef.store.join.foreignJoinColumn;
+
+				const { joinTable } = localRelDef.store.join;
+				const joinTableName = `${localQueryTableName}$$${relName}`;
+
+				return [
+					`LEFT JOIN ${joinTable} AS ${joinTableName} ON ${localQueryTableName}.id = ${joinTableName}.${localJoinColumn}`,
+					`LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${foreignTableAlias}.id = ${joinTableName}.${foreignJoinColumn}`,
+				];
+			},
+		},
+	};
+}
+
+/**
+ * @typedef {Object} QueryContext
+ * @property {any} config - Database configuration
+ * @property {any} queryInfo - Query information
+ * @property {import('@data-prism/core').RootQuery} rootQuery - Root query
+ * @property {import('@data-prism/core').Schema} schema - Schema
+ */
+
+/**
+ * Handles pre-query relationship setup for JOIN clauses
+ * @param {QueryContext} context - Query context
+ * @returns {Object} Object with join clauses
+ */
+const preQueryRelationships = (context) => {
+	const { config, queryInfo, rootQuery, schema } = context;
+	const { parent, path: queryPath } = queryInfo;
+
+	if (queryPath.length === 0) return {};
+
+	const parentPath = queryPath.slice(0, -1);
+	const tablePath = [rootQuery.type, ...queryPath];
+	const parentTablePath = [rootQuery.type, ...parentPath];
+	const relName = last(queryPath);
+
+	const relationshipBuilders = makeRelationshipBuilders(schema);
+	const localQueryTableName = parentTablePath.join("$");
+
+	const localConfig = config.resources[parent.type];
+	const localResSchema = schema.resources[parent.type];
+	const localIdCol = snakeCase(localResSchema.idAttribute ?? "id");
+	const localRelDef = localResSchema.relationships[relName];
+
+	const foreignConfig = config.resources[localRelDef.type];
+	const foreignResSchema = schema.resources[localRelDef.type];
+	const foreignIdCol = snakeCase(foreignResSchema.idAttribute ?? "id");
+	const foreignRelDef = foreignResSchema.relationships[localRelDef.inverse];
+	const foreignTableAlias = tablePath.join("$");
+
+	const localResCardinality = localRelDef.cardinality;
+	const foreignResCardinality = foreignRelDef?.cardinality ?? "none";
+
+	const builderArgs = {
+		localConfig,
+		localRelDef,
+		localResSchema,
+		localQueryTableName,
+		localIdCol,
+		relName,
+		foreignConfig,
+		foreignTableAlias,
+		foreignIdCol,
+	};
+
+	const join =
+		relationshipBuilders[foreignResCardinality][localResCardinality](
+			builderArgs,
+		);
+
+	return { join };
+};
+
+/**
+ * @typedef {Object} SelectClauseItem
+ * @property {string} value - The select clause value
+ */
+
+/**
+ * @typedef {Object} GraphExtractContext
+ * @property {import('data-prism').Schema} schema - The schema
+ * @property {import('data-prism').RootQuery} query - The root query
+ * @property {Object} [columnTypeModifiers] - Optional column type modifiers for data extraction
+ */
+
+/**
+ * @typedef {Object.<string, Object.<string, any>>} Graph
+ */
+
+// Path string utilities
+const buildPathString = (path) => (path.length > 0 ? `$${path.join("$")}` : "");
+const buildParentPath = (path) =>
+	path.length > 1 ? `$${path.slice(0, -1).join("$")}` : "";
+
+// Resource creation utilities
+const findOrCreateResource = (context) => {
+	const { graph, type, id, schema } = context;
+	const resourceSchema = schema.resources[type];
+	const { idAttribute = "id" } = resourceSchema;
+
+	if (!graph[type][id]) {
+		graph[type][id] = {
+			[idAttribute]: id,
+			id,
+			type,
+			attributes: {},
+			relationships: {},
+		};
+	}
+	return graph[type][id];
+};
+
+const processRelationship = (context) => {
+	const { parent, relationshipName, relationshipDef, childType, childId } =
+		context;
+
+	if (relationshipDef.cardinality === "one") {
+		parent.relationships[relationshipName] = childId
+			? { id: childId, type: childType }
+			: null;
+	} else {
+		parent.relationships[relationshipName] =
+			parent.relationships[relationshipName] ?? [];
+
+		if (!parent.relationships[relationshipName].some((r) => r.id === childId)) {
+			if (childId !== null) {
+				parent.relationships[relationshipName].push({
+					type: childType,
+					id: childId,
+				});
+			}
+		}
+	}
+};
+
+/**
+ * Extracts a resource graph from raw SQL query results
+ * @param {any[][]} rawResults - Raw SQL query results
+ * @param {SelectClauseItem[]} selectClause - The select clause items
+ * @param {GraphExtractContext} context - Extract context with schema and query
+ * @returns {Graph} The extracted resource graph organized by type and ID
+ */
+function extractGraph$1(rawResults, selectClause, context) {
+	const { schema, query: rootQuery, columnTypeModifiers = {} } = context;
+	const graph = mapValues(schema.resources, () => ({}));
+
+	const extractors = flatMapQuery(schema, rootQuery, (_, info) => {
+		const { parent, parentQuery, parentRelationship, attributes, type } = info;
+		const resSchema = schema.resources[type];
+		const { idAttribute = "id" } = resSchema;
+
+		const selectAttributeMap = {};
+		selectClause.forEach((attr, idx) => {
+			selectAttributeMap[attr.value] = idx;
+		});
+
+		const parentType = parent?.type;
+		const parentRelDef =
+			parentQuery &&
+			schema.resources[parentType].relationships[parentRelationship];
+
+		const pathStr = buildPathString(info.path);
+		const idPath = `${rootQuery.type}${pathStr}.${snakeCase(idAttribute)}`;
+		const idIdx = selectAttributeMap[idPath];
+
+		return (result) => {
+			const id = result[idIdx];
+
+			if (parentQuery) {
+				const parentResSchema = schema.resources[parentType];
+				const parentId =
+					result[
+						selectAttributeMap[
+							`${rootQuery.type}${buildParentPath(info.path)}.${snakeCase(
+								parentResSchema.idAttribute ?? "id",
+							)}`
+						]
+					];
+
+				const parent = findOrCreateResource({
+					graph,
+					type: parentType,
+					id: parentId,
+					schema,
+				});
+
+				processRelationship({
+					parent,
+					relationshipName: parentRelationship,
+					relationshipDef: parentRelDef,
+					childType: type,
+					childId: id,
+				});
+			}
+
+			if (!id) return;
+
+			findOrCreateResource({
+				graph,
+				type,
+				id,
+				schema,
+			});
+
+			if (attributes.length > 0) {
+				attributes.forEach((attr) => {
+					const resultIdx =
+						selectAttributeMap[
+							`${rootQuery.type}${pathStr}.${snakeCase(attr)}`
+						];
+					const resourceSchema = schema.resources[type];
+					const attrType = resourceSchema.attributes[attr]?.type;
+
+					graph[type][id].attributes[attr] = columnTypeModifiers[attrType]
+						? columnTypeModifiers[attrType].extract(result[resultIdx])
+						: result[resultIdx];
+				});
+			} else {
+				graph[type][id].id = id;
+				graph[type][id].type = type;
+			}
+		};
+	});
+
+	rawResults.forEach((row) =>
+		extractors.forEach((extractor) => extractor(row)),
+	);
+
+	return graph;
+}
+
+/**
+ * @typedef {Object} StoreContext
+ * @property {import('data-prism').Schema} schema - The schema
+ * @property {Object} [columnTypeModifiers] - Optional column type modifiers for query processing
+ */
+
+/**
+ * @typedef {Object} QueryClauseContext
+ * @property {any} queryInfo - Query information
+ * @property {import('data-prism').Schema} schema - Schema
+ * @property {string} table - Table name
+ * @property {import('data-prism').Query} query - Current query
+ * @property {import('data-prism').RootQuery} rootQuery - Root query
+ * @property {Object} [columnTypeModifiers] - Optional column type modifiers
+ */
+
+/**
+ * @typedef {Object} ParsedClause
+ * @property {string[]} [where] - WHERE clauses
+ * @property {any[]} [vars] - SQL variables
+ * @property {any[]} [orderBy] - ORDER BY clauses
+ * @property {number} [limit] - LIMIT value
+ * @property {number} [offset] - OFFSET value
+ * @property {any[]} [select] - SELECT clauses
+ * @property {any[]} [join] - JOIN clauses
+ */
+
+/**
+ * Checks if a query has any to-many relationships
+ * @param {import('data-prism').Schema} schema - The schema
+ * @param {import('data-prism').RootQuery} query - The query to check
+ * @returns {boolean} Whether the query has to-many relationships
+ */
+const hasToManyRelationship = (schema, query) => {
+	return someQuery(schema, query, (_, info) =>
+		Object.keys(info.relationships).some(
+			(relName) =>
+				schema.resources[info.type].relationships[relName].cardinality ===
+				"many",
+		),
+	);
+};
+
+/**
+ * Query clause extractors for different query parts
+ * @type {Object<string, (value: any, context: QueryClauseContext) => ParsedClause>}
+ */
+const QUERY_CLAUSE_EXTRACTORS = {
+	id: (id, { queryInfo, schema }) => {
+		if (!id) return {};
+
+		const { idAttribute = "id" } = schema.resources[queryInfo.type];
+
+		return {
+			where: [`${queryInfo.type}.${snakeCase(idAttribute)} = ?`],
+			vars: [id],
+		};
+	},
+	where: (where) => ({ where: [where], vars: [where] }),
+	order: (order, { table }) => {
+		return {
+			orderBy: (Array.isArray(order) ? order : [order]).map((orderEntry) => {
+				const k = Object.keys(orderEntry)[0];
+				return {
+					property: k,
+					direction: orderEntry[k],
+					table,
+				};
+			}),
+		};
+	},
+	limit: (limit, { query, queryInfo, schema }) => {
+		if (limit < 0) {
+			throw new Error("`limit` must be at least 0");
+		}
+
+		return queryInfo.path.length > 0 || hasToManyRelationship(schema, query)
+			? {}
+			: { limit, offset: query.offset ?? 0 };
+	},
+	offset: (offset, { query }) => {
+		if (offset < 0) {
+			throw new Error("`offset` must be at least 0");
+		}
+
+		if (!query.limit) {
+			return { offset };
+		}
+		return {};
+	},
+	select: (select, context) => {
+		const { schema, table, queryInfo, columnTypeModifiers = {} } = context;
+		const { type } = queryInfo;
+		const { idAttribute = "id" } = schema.resources[type];
+		const resSchema = schema.resources[type];
+
+		const attributeProps = Object.values(select).filter(
+			(p) => typeof p === "string",
+		);
+
+		const relationshipsModifiers = preQueryRelationships(context);
+
+		return {
+			select: uniq([idAttribute, ...attributeProps]).map((col) => {
+				const attrSchema = resSchema.attributes[col];
+				const value = `${table}.${snakeCase(col)}`;
+
+				return {
+					value,
+					sql:
+						attrSchema && columnTypeModifiers[attrSchema.type]
+							? columnTypeModifiers[attrSchema.type].select(value)
+							: value,
+				};
+			}),
+			...relationshipsModifiers,
+		};
+	},
+};
+
+/**
+ * Parses a query into SQL clauses
+ * @param {import('data-prism').RootQuery} query - The query to parse
+ * @param {StoreContext} context - Store context
+ * @returns {ParsedClause[]} Array of parsed query clauses
+ */
+function extractQueryClauses$1(query, context) {
+	const { schema } = context;
+	const clauses = [];
+
+	forEachQuery(schema, query, (subquery, queryInfo) => {
+		const table = [query.type, ...queryInfo.path].join("$");
+
+		Object.entries(subquery).forEach(([key, val]) => {
+			if (QUERY_CLAUSE_EXTRACTORS[key]) {
+				clauses.push(
+					QUERY_CLAUSE_EXTRACTORS[key](val, {
+						...context,
+						queryInfo,
+						rootQuery: query,
+						query: subquery,
+						table,
+					}),
+				);
+			}
+		});
+	});
+
+	return clauses;
+}
+
+/**
+ * @typedef {Object} ColumnModifier
+ * @property {(val: string) => any} extract - Function to extract/parse stored value
+ * @property {(col: string) => string} select - Function to generate SQL for selecting value
+ */
+
+/**
+ * Column type modifiers for different data types in PostgreSQL
+ * @type {Object<string, ColumnModifier>}
+ */
+const columnTypeModifiers = {
+	geojson: {
+		extract: (val) => JSON.parse(val),
+		select: (val) => `ST_AsGeoJSON(${val})`,
+	},
+};
+
+// Now using shared sql-helpers package
+
+/**
+ * @typedef {import('./query.js').StoreContext} StoreContext
+ */
+
+// Wrapper function that provides columnTypeModifiers to the shared extractQueryClauses
+function extractQueryClauses(query, context) {
+	return extractQueryClauses$1(query, {
+		...context,
+		columnTypeModifiers,
+	});
+}
+
+/**
  * @typedef {Object} SqlExpression
  * @property {string} name - Human readable name for the expression
  * @property {(operand: any[]) => string} where - Function to generate WHERE clause SQL
@@ -7414,7 +8239,7 @@ const sqlExpressions = {
 					return " ~* ?";
 				}
 			}
-			// Default case-sensitive POSIX regex
+			// Default case-sensitive regex (PCRE defaults)
 			return " ~ ?";
 		},
 		vars: (operand) => {
@@ -7424,18 +8249,35 @@ const sqlExpressions = {
 				const [, flags, pattern] = flagMatch;
 				let processedPattern = pattern;
 
-				// Handle dotall flag - PostgreSQL . doesn't match newlines by default (POSIX behavior)
-				// So when 's' flag IS present, we need to make . match newlines
+				// Handle multiline flag FIRST - PCRE 'm' flag makes ^ and $ match line boundaries
+				// PostgreSQL doesn't have direct equivalent, so we need to transform the pattern
+				if (flags.includes("m")) {
+					// Transform ^ to match start of line (after newline or start of string)
+					processedPattern = processedPattern.replace(/\^/g, "(^|(?<=\\n))");
+					// Transform $ to match end of line (before newline or end of string)
+					processedPattern = processedPattern.replace(/\$/g, "(?=\\n|$)");
+				}
+
+				// Handle dotall flag AFTER multiline - PCRE 's' flag makes . match newlines
+				// We need to be explicit about . behavior when flags are present
 				if (flags.includes("s")) {
-					// Use PostgreSQL's (?n) flag to make . match newlines
-					processedPattern = "(?n)" + processedPattern;
+					// Make . explicitly match newlines by replacing . with [\s\S]
+					processedPattern = processedPattern.replace(/\./g, "[\\s\\S]");
+				} else if (processedPattern.includes(".")) {
+					// If 's' flag is NOT present but pattern contains ., ensure . does NOT match newlines
+					// Replace . with [^\n] to exclude newlines explicitly
+					processedPattern = processedPattern.replace(/\./g, "[^\\n]");
 				}
 
 				return [processedPattern];
 			}
-			// No inline flags - use POSIX ERE defaults
-			// ^ and $ match line boundaries, . doesn't match newlines (PostgreSQL default)
-			return [operand];
+			// No inline flags - need to handle default PostgreSQL behavior
+			// PostgreSQL . might match newlines by default, so make it explicit to match PCRE behavior
+			let processedPattern = operand;
+			if (processedPattern.includes(".")) {
+				processedPattern = processedPattern.replace(/\./g, "[^\\n]");
+			}
+			return [processedPattern];
 		},
 	},
 	$get: {
@@ -7546,6 +8388,22 @@ const sqlExpressions = {
 		where: (operand, { evaluate }) => evaluate(operand),
 		vars: (operand, { evaluate }) => evaluate(operand),
 	},
+	$matchesLike: {
+		name: "$matchesLike",
+		where: () => " LIKE ?",
+		vars: (operand) => operand,
+	},
+	$matchesGlob: {
+		name: "$matchesGlob",
+		where: () => " SIMILAR TO ?", // PostgreSQL equivalent to GLOB
+		vars: (operand) => {
+			// Convert GLOB pattern to PostgreSQL SIMILAR TO pattern
+			let pattern = operand
+				.replace(/\*/g, "%") // * becomes %
+				.replace(/\?/g, "_"); // ? becomes _
+			return [pattern];
+		},
+	},
 };
 
 /**
@@ -7563,599 +8421,164 @@ const varsExpressionEngine = createExpressionEngine(
 );
 
 /**
- * @typedef {Object} QueryBreakdownItem
- * @property {string[]} path - Path to this query level
- * @property {any} attributes - Selected attributes
- * @property {any} relationships - Selected relationships
- * @property {string} type - Resource type
- * @property {import('data-prism').Query} query - The query object
- * @property {boolean} ref - Whether this is a reference-only query
- * @property {import('data-prism').Query|null} parentQuery - Parent query if any
- * @property {QueryBreakdownItem|null} parent - Parent breakdown item if any
- * @property {string|null} parentRelationship - Parent relationship name if any
+ * @typedef {Object} SqlClauseHandler
+ * @property {any} initVal - Initial value for the clause
+ * @property {(val: any) => string} toSql - Function to convert value to SQL
+ * @property {(left: any, right: any) => any} compose - Function to compose multiple values
  */
 
-/**
- * @typedef {QueryBreakdownItem[]} QueryBreakdown
- */
+// Array composition helper
+const composeArrays = (acc, item) => uniq([...(acc ?? []), ...(item ?? [])]);
 
-/**
- * Flattens a nested query into a linear array of query breakdown items
- * @param {import('data-prism').Schema} schema - The schema
- * @param {import('data-prism').RootQuery} rootQuery - The root query to flatten
- * @returns {QueryBreakdown} Flattened query breakdown
- */
-function flattenQuery(schema, rootQuery) {
-	const go = (query, type, path, parent = null, parentRelationship = null) => {
-		const resDef = schema.resources[type];
-		const { idAttribute = "id" } = resDef;
-		const [attributesEntries, relationshipsEntries] = partition(
-			Object.entries(query.select ?? {}),
-			([, propVal]) =>
-				typeof propVal === "string" &&
-				(propVal in resDef.attributes || propVal === idAttribute),
-		);
+// Complex SQL generation functions
+const generateWhereSql = (val) =>
+	val.length > 0
+		? `WHERE ${whereExpressionEngine.evaluate({ $and: val })}`
+		: "";
 
-		const attributes = attributesEntries.map((pe) => pe[1]);
-		const relationshipKeys = relationshipsEntries.map((pe) => pe[0]);
+const generateOrderBySql = (val) => {
+	if (val.length === 0) return "";
 
-		const level = {
-			parent,
-			parentQuery: parent?.query ?? null,
-			parentRelationship,
-			path,
-			attributes,
-			query,
-			ref: !query.select,
-			relationships: pick(query.select, relationshipKeys),
-			type,
-		};
-
-		return [
-			level,
-			...relationshipKeys.flatMap((relKey) => {
-				const relDef = resDef.relationships[relKey];
-				const subquery = query.select[relKey];
-
-				return go(subquery, relDef.type, [...path, relKey], level, relKey);
-			}),
-		];
-	};
-
-	return go(rootQuery, rootQuery.type, []);
-}
-
-/**
- * Maps over each query in a flattened query structure
- * @param {import('data-prism').Schema} schema - The schema
- * @param {import('data-prism').RootQuery} query - The root query
- * @param {(query: import('data-prism').Query, info: QueryBreakdownItem) => any} fn - Mapping function
- * @returns {any[]} Mapped results
- */
-function flatMapQuery(schema, query, fn) {
-	return flattenQuery(schema, query).flatMap((info) => fn(info.query, info));
-}
-
-/**
- * Iterates over each query in a flattened query structure
- * @param {import('data-prism').Schema} schema - The schema
- * @param {import('data-prism').RootQuery} query - The root query
- * @param {(query: import('data-prism').Query, info: QueryBreakdownItem) => void} fn - Iteration function
- */
-function forEachQuery(schema, query, fn) {
-	return flattenQuery(schema, query).forEach((info) => fn(info.query, info));
-}
-
-/**
- * Tests whether some query in a flattened query structure matches a condition
- * @param {import('data-prism').Schema} schema - The schema
- * @param {import('data-prism').RootQuery} query - The root query
- * @param {(query: import('data-prism').Query, info: QueryBreakdownItem) => boolean} fn - Test function
- * @returns {boolean} Whether any query matches the condition
- */
-function someQuery(schema, query, fn) {
-	return flattenQuery(schema, query).some((q) => fn(q.query, q));
-}
-
-/**
- * @typedef {Object} RelBuilderParams
- * @property {any} foreignConfig - Foreign resource configuration
- * @property {string} foreignTableAlias - Alias for foreign table
- * @property {any} localConfig - Local resource configuration
- * @property {string} localQueryTableName - Local query table name
- * @property {string} relName - Relationship name
- * @property {string} foreignIdCol - Foreign ID column
- * @property {string} [localIdCol] - Local ID column
- * @property {any} [localResSchema] - Local resource schema
- */
-
-/**
- * @typedef {Object} RelBuilders
- * @property {Object} one - One-to-* relationship builders
- * @property {(params: RelBuilderParams) => string[]} one.one - One-to-one builder
- * @property {(params: RelBuilderParams) => string[]} one.many - One-to-many builder
- * @property {Object} many - Many-to-* relationship builders
- * @property {(params: RelBuilderParams) => string[]} many.one - Many-to-one builder
- * @property {(params: RelBuilderParams) => string[]} many.many - Many-to-many builder
- * @property {Object} none - No inverse relationship builders
- * @property {(params: RelBuilderParams) => string[]} none.many - None-to-many builder
- */
-
-/**
- * Creates relationship builders for different cardinality combinations
- * @param {import('data-prism').Schema} schema - The schema
- * @returns {RelBuilders} The relationship builders
- */
-function makeRelBuilders(schema) {
-	return {
-		one: {
-			one(params) {
-				const {
-					foreignConfig,
-					foreignTableAlias,
-					localConfig,
-					localQueryTableName,
-					relName,
-					foreignIdCol,
-				} = params;
-
-				const { localColumn } = localConfig.joins[relName];
-				const foreignTable = foreignConfig.table;
-
-				return [
-					`LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${localQueryTableName}.${localColumn} = ${foreignTableAlias}.${foreignIdCol}`,
-				];
-			},
-			many(params) {
-				const {
-					foreignConfig,
-					localIdCol,
-					localConfig,
-					localQueryTableName,
-					relName,
-					foreignTableAlias,
-				} = params;
-
-				const foreignTable = foreignConfig.table;
-				const foreignJoinColumn = localConfig.joins[relName].foreignColumn;
-
-				return [
-					`LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${localQueryTableName}.${localIdCol} = ${foreignTableAlias}.${foreignJoinColumn}`,
-				];
-			},
-		},
-		many: {
-			one(params) {
-				const {
-					localConfig,
-					localQueryTableName,
-					relName,
-					foreignConfig,
-					foreignTableAlias,
-					foreignIdCol,
-				} = params;
-
-				const localJoinColumn = localConfig.joins[relName].localColumn;
-				const foreignTable = foreignConfig.table;
-
-				return [
-					`LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${localQueryTableName}.${localJoinColumn} = ${foreignTableAlias}.${foreignIdCol}`,
-				];
-			},
-			many(params) {
-				const {
-					foreignConfig,
-					localConfig,
-					localQueryTableName,
-					relName,
-					foreignTableAlias,
-					localIdCol,
-					foreignIdCol,
-				} = params;
-
-				const foreignTable = foreignConfig.table;
-
-				const joinTableName = `${localQueryTableName}$$${relName}`;
-				const { joinTable, localJoinColumn, foreignJoinColumn } =
-					localConfig.joins[relName];
-
-				return [
-					`LEFT JOIN ${joinTable} AS ${joinTableName} ON ${localQueryTableName}.${localIdCol} = ${joinTableName}.${localJoinColumn}`,
-					`LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${foreignTableAlias}.${foreignIdCol} = ${joinTableName}.${foreignJoinColumn}`,
-				];
-			},
-		},
-		none: {
-			// one({ localResSchema, localTableAlias, relName, path }) {
-			//   // TODO
-			// },
-			many({
-				localResSchema,
-				localQueryTableName,
-				relName,
-				foreignTableAlias,
-			}) {
-				const localRelDef = localResSchema.attributes[relName];
-				const localJoinColumn = localRelDef.store.join.joinColumn;
-
-				const foreignResSchema = schema.resources[localRelDef.relatedType];
-				const foreignTable = foreignResSchema.store.table;
-				const foreignRelDef =
-					foreignResSchema?.attributes?.[localRelDef.inverse];
-				const foreignJoinColumn = foreignRelDef
-					? foreignRelDef.store.join.joinColumn
-					: localRelDef.store.join.foreignJoinColumn;
-
-				const { joinTable } = localRelDef.store.join;
-				const joinTableName = `${localQueryTableName}$$${relName}`;
-
-				return [
-					`LEFT JOIN ${joinTable} AS ${joinTableName} ON ${localQueryTableName}.id = ${joinTableName}.${localJoinColumn}`,
-					`LEFT JOIN ${foreignTable} AS ${foreignTableAlias} ON ${foreignTableAlias}.id = ${joinTableName}.${foreignJoinColumn}`,
-				];
-			},
-		},
-	};
-}
-
-/**
- * @typedef {Object} QueryContext
- * @property {any} config - Database configuration
- * @property {any} queryInfo - Query information
- * @property {import('data-prism').RootQuery} rootQuery - Root query
- * @property {import('data-prism').Schema} schema - Schema
- */
-
-/**
- * Handles pre-query relationship setup for JOIN clauses
- * @param {QueryContext} context - Query context
- * @returns {Object} Object with join clauses
- */
-const preQueryRelationships = (context) => {
-	const { config, queryInfo, rootQuery, schema } = context;
-	const { parent, path: queryPath } = queryInfo;
-
-	if (queryPath.length === 0) return {};
-
-	const parentPath = queryPath.slice(0, -1);
-	const tablePath = [rootQuery.type, ...queryPath];
-	const parentTablePath = [rootQuery.type, ...parentPath];
-	const relName = last(queryPath);
-
-	const relBuilders = makeRelBuilders(schema);
-	const localQueryTableName = parentTablePath.join("$");
-
-	const localConfig = config.resources[parent.type];
-	const localResSchema = schema.resources[parent.type];
-	const localIdCol = snakeCase(localResSchema.idAttribute ?? "id");
-	const localRelDef = localResSchema.relationships[relName];
-
-	const foreignConfig = config.resources[localRelDef.type];
-	const foreignResSchema = schema.resources[localRelDef.type];
-	const foreignIdCol = snakeCase(foreignResSchema.idAttribute ?? "id");
-	const foreignRelDef = foreignResSchema.relationships[localRelDef.inverse];
-	const foreignTableAlias = tablePath.join("$");
-
-	const localResCardinality = localRelDef.cardinality;
-	const foreignResCardinality = foreignRelDef?.cardinality ?? "none";
-
-	const builderArgs = {
-		localConfig,
-		localRelDef,
-		localResSchema,
-		localQueryTableName,
-		localIdCol,
-		relName,
-		foreignConfig,
-		foreignTableAlias,
-		foreignIdCol,
-	};
-
-	const join =
-		relBuilders[foreignResCardinality][localResCardinality](builderArgs);
-
-	return { join };
-};
-
-/**
- * @typedef {Object} ColumnModifier
- * @property {(val: string) => any} extract - Function to extract/parse stored value
- * @property {(col: string) => string} select - Function to generate SQL for selecting value
- */
-
-/**
- * Column type modifiers for different data types in PostgreSQL
- * @type {Object<string, ColumnModifier>}
- */
-const columnTypeModifiers = {
-	geojson: {
-		extract: (val) => JSON.parse(val),
-		select: (val) => `ST_AsGeoJSON(${val})`,
-	},
-};
-
-/**
- * @typedef {import('./query.js').StoreContext} StoreContext
- */
-
-/**
- * @typedef {Object} QueryClauseContext
- * @property {any} queryInfo - Query information
- * @property {import('data-prism').Schema} schema - Schema
- * @property {string} table - Table name
- * @property {import('data-prism').Query} query - Current query
- * @property {import('data-prism').RootQuery} rootQuery - Root query
- */
-
-/**
- * @typedef {Object} ParsedClause
- * @property {string[]} [where] - WHERE clauses
- * @property {any[]} [vars] - SQL variables
- * @property {any[]} [orderBy] - ORDER BY clauses
- * @property {number} [limit] - LIMIT value
- * @property {number} [offset] - OFFSET value
- * @property {any[]} [select] - SELECT clauses
- * @property {any[]} [join] - JOIN clauses
- */
-
-/**
- * Checks if a query has any to-many relationships
- * @param {import('data-prism').Schema} schema - The schema
- * @param {import('data-prism').RootQuery} query - The query to check
- * @returns {boolean} Whether the query has to-many relationships
- */
-const hasToManyRelationship = (schema, query) => {
-	return someQuery(schema, query, (_, info) =>
-		Object.keys(info.relationships).some(
-			(relName) =>
-				schema.resources[info.type].relationships[relName].cardinality ===
-				"many",
-		),
+	const orderClauses = val.map(
+		({ property, direction, table }) =>
+			`${table}.${snakeCase(property)}${direction === "desc" ? " DESC" : ""}`,
 	);
+	return `ORDER BY ${orderClauses.join(", ")}`;
 };
 
 /**
- * Query clause extractors for different query parts
- * @type {Object<string, (value: any, context: QueryClauseContext) => ParsedClause>}
+ * SQL clause configuration for different query parts
+ * @type {Object<string, SqlClauseHandler>}
  */
-const QUERY_CLAUSE_EXTRACTORS = {
-	id: (id, { queryInfo, schema }) => {
-		if (!id) return {};
-
-		const { idAttribute = "id" } = schema.resources[queryInfo.type];
-
-		return {
-			where: [`${queryInfo.type}.${snakeCase(idAttribute)} = ?`],
-			vars: [id],
-		};
+const SQL_CLAUSE_CONFIG = {
+	select: {
+		initVal: [],
+		compose: composeArrays,
+		toSql: (val) => `SELECT ${val.map((v) => v.sql).join(", ")}`,
 	},
-	where: (where, { table }) => {
-		if (whereExpressionEngine.isExpression(where)) {
-			return { where: [where], vars: [where] };
-		}
-
-		const propExprs = Object.entries(where).map(([propKey, propValOrExpr]) => {
-			if (whereExpressionEngine.isExpression(propValOrExpr)) {
-				const [operation, args] = Object.entries(propValOrExpr)[0];
-				return { [operation]: [`${table}.${snakeCase(propKey)}`, args] };
-			}
-
-			return { $eq: [`${table}.${snakeCase(propKey)}`, propValOrExpr] };
-		});
-
-		const expr = { $and: propExprs };
-
-		return { where: [expr], vars: [expr] };
+	vars: {
+		initVal: [],
+		compose: composeArrays,
+		toSql: () => "",
 	},
-	order: (order, { table }) => {
-		return {
-			orderBy: (Array.isArray(order) ? order : [order]).map((orderEntry) => {
-				const k = Object.keys(orderEntry)[0];
-				return {
-					property: k,
-					direction: orderEntry[k],
-					table,
-				};
-			}),
-		};
+	from: {
+		initVal: null,
+		compose: (_, val) => val,
+		toSql: (val) => `FROM ${val}`,
 	},
-	limit: (limit, { query, queryInfo, schema }) => {
-		if (limit < 0) {
-			throw new Error("`limit` must be at least 0");
-		}
-
-		return queryInfo.path.length > 0 || hasToManyRelationship(schema, query)
-			? {}
-			: { limit, offset: query.offset ?? 0 };
+	join: {
+		initVal: [],
+		compose: composeArrays,
+		toSql: (val) => val.join("\n"),
 	},
-	offset: (offset, { query }) => {
-		if (offset < 0) {
-			throw new Error("`offset` must be at least 0");
-		}
-
-		if (!query.limit) {
-			return { offset };
-		}
-		return {};
+	where: {
+		initVal: [],
+		compose: composeArrays,
+		toSql: generateWhereSql,
 	},
-	select: (select, context) => {
-		const { schema, table, queryInfo } = context;
-		const { type } = queryInfo;
-		const { idAttribute = "id" } = schema.resources[type];
-		const resSchema = schema.resources[type];
-
-		const attributeProps = Object.values(select).filter(
-			(p) => typeof p === "string",
-		);
-
-		const relationshipsModifiers = preQueryRelationships(context);
-
-		return {
-			select: uniq([idAttribute, ...attributeProps]).map((col) => {
-				const attrSchema = resSchema.attributes[col];
-				const value = `${table}.${snakeCase(col)}`;
-
-				return {
-					value,
-					sql:
-						attrSchema && columnTypeModifiers[attrSchema.type]
-							? columnTypeModifiers[attrSchema.type].select(value)
-							: value,
-				};
-			}),
-			...relationshipsModifiers,
-		};
+	orderBy: {
+		initVal: [],
+		compose: composeArrays,
+		toSql: generateOrderBySql,
+	},
+	limit: {
+		initVal: Infinity,
+		compose: (acc, item) => Math.min(acc, item),
+		toSql: (val) => (val < Infinity ? `LIMIT ${val}` : ""),
+	},
+	offset: {
+		initVal: 0,
+		compose: (_, item) => item,
+		toSql: (val) => (val > 0 ? `OFFSET ${val}` : ""),
 	},
 };
 
 /**
- * Parses a query into SQL clauses
- * @param {import('data-prism').RootQuery} query - The query to parse
- * @param {StoreContext} context - Store context
- * @returns {ParsedClause[]} Array of parsed query clauses
+ * Combines parsed query clauses into single values for each clause type
+ * @param {any[]} clauseBreakdown - Array of clause objects from extractQueryClauses
+ * @param {Object} initialClauses - Initial values for each clause type
+ * @returns {Object} Object with composed clause values
  */
-function parseQuery(query, context) {
-	const { schema } = context;
-	const clauses = [];
-
-	forEachQuery(schema, query, (subquery, queryInfo) => {
-		const table = [query.type, ...queryInfo.path].join("$");
-
-		Object.entries(subquery).forEach(([key, val]) => {
-			if (QUERY_CLAUSE_EXTRACTORS[key]) {
-				clauses.push(
-					QUERY_CLAUSE_EXTRACTORS[key](val, {
-						...context,
-						queryInfo,
-						rootQuery: query,
-						query: subquery,
-						table,
-					}),
-				);
-			}
-		});
-	});
-
-	return clauses;
+function composeSqlClauses(clauseBreakdown, initialClauses) {
+	return clauseBreakdown.reduce(
+		(acc, clause) => ({
+			...acc,
+			...mapValues(clause, (val, key) =>
+				SQL_CLAUSE_CONFIG[key].compose(acc[key], val),
+			),
+		}),
+		initialClauses,
+	);
 }
 
 /**
- * @typedef {Object} SelectClauseItem
- * @property {string} value - The select clause value
+ * Generates SQL string from composed clause values
+ * @param {Object} composedClauses - Composed clause values
+ * @returns {string} Complete SQL query string with $n placeholders
  */
+function assembleSqlQuery(composedClauses) {
+	return replacePlaceholders(
+		Object.entries(SQL_CLAUSE_CONFIG)
+			.map(([k, v]) => v.toSql(composedClauses[k]))
+			.filter(Boolean)
+			.join("\n"),
+	);
+}
 
 /**
- * @typedef {Object} GraphExtractContext
- * @property {import('data-prism').Schema} schema - The schema
- * @property {import('data-prism').RootQuery} query - The root query
+ * Extracts SQL parameters/variables from composed clause values
+ * @param {Object} composedClauses - Composed clause values
+ * @returns {any[]} Array of SQL parameters
  */
+function extractSqlVariables(composedClauses) {
+	return varsExpressionEngine.evaluate({
+		$and: composedClauses.vars,
+	});
+}
 
-/**
- * @typedef {Object.<string, Object.<string, import('./postgres-store.js').Resource>>} Graph
- */
+// Now using shared sql-helpers package
 
-/**
- * Extracts a resource graph from raw SQL query results
- * @param {any[][]} rawResults - Raw SQL query results
- * @param {SelectClauseItem[]} selectClause - The select clause items
- * @param {GraphExtractContext} context - Extract context with schema and query
- * @returns {Graph} The extracted resource graph organized by type and ID
- */
+// Wrapper function that provides columnTypeModifiers to the shared extractGraph
 function extractGraph(rawResults, selectClause, context) {
-	const { schema, query: rootQuery } = context;
-	const graph = mapValues(schema.resources, () => ({}));
-
-	const extractors = flatMapQuery(schema, rootQuery, (_, info) => {
-		const { parent, parentQuery, parentRelationship, attributes, type } = info;
-		const resSchema = schema.resources[type];
-		const { idAttribute = "id" } = resSchema;
-
-		const selectAttributeMap = {};
-		selectClause.forEach((attr, idx) => {
-			selectAttributeMap[attr.value] = idx;
-		});
-
-		const parentType = parent?.type;
-		const parentRelDef =
-			parentQuery &&
-			schema.resources[parentType].relationships[parentRelationship];
-
-		const pathStr = info.path.length > 0 ? `$${info.path.join("$")}` : "";
-		const idPath = `${rootQuery.type}${pathStr}.${snakeCase(idAttribute)}`;
-		const idIdx = selectAttributeMap[idPath];
-
-		return (result) => {
-			const id = result[idIdx];
-
-			if (parentQuery) {
-				const parentResSchema = schema.resources[parentType];
-				const parentPathStr =
-					info.path.length > 1 ? `$${info.path.slice(0, -1).join("$")}` : "";
-				const parentIdAttribute = parentResSchema.idAttribute ?? "id";
-				const parentIdPath = `${rootQuery.type}${parentPathStr}.${snakeCase(
-					parentIdAttribute,
-				)}`;
-				const parentIdIdx = selectAttributeMap[parentIdPath];
-				const parentId = result[parentIdIdx];
-
-				if (!graph[parentType][parentId]) {
-					graph[parentType][parentId] = {
-						[idAttribute]: parentId,
-						id: parentId,
-						type: parentType,
-						attributes: {},
-						relationships: {},
-					};
-				}
-				const parent = graph[parentType][parentId];
-
-				if (parentRelDef.cardinality === "one") {
-					parent.relationships[parentRelationship] = id ? { id, type } : null;
-				} else {
-					parent.relationships[parentRelationship] =
-						parent.relationships[parentRelationship] ?? [];
-
-					if (
-						!parent.relationships[parentRelationship].some((r) => r.id === id)
-					) {
-						if (id !== null) {
-							parent.relationships[parentRelationship].push({ type, id });
-						}
-					}
-				}
-			}
-
-			if (!id) return;
-
-			graph[type][id] = graph[type][id] ?? {
-				id,
-				type,
-				attributes: {},
-				relationships: {},
-			};
-
-			if (attributes.length > 0) {
-				attributes.forEach((attr) => {
-					const fullAttrPath = `${rootQuery.type}${pathStr}.${snakeCase(attr)}`;
-					const resultIdx = selectAttributeMap[fullAttrPath];
-					const attrType = resSchema.attributes[attr]?.type;
-
-					graph[type][id].attributes[attr] = columnTypeModifiers[attrType]
-						? columnTypeModifiers[attrType].extract(result[resultIdx])
-						: result[resultIdx];
-				});
-			} else {
-				graph[type][id].id = id;
-				graph[type][id].type = type;
-			}
-		};
+	return extractGraph$1(rawResults, selectClause, {
+		...context,
+		columnTypeModifiers,
 	});
+}
 
-	rawResults.forEach((row) =>
-		extractors.forEach((extractor) => extractor(row)),
+/**
+ * Processes raw SQL results into final query response
+ * @param {any[][]} rawResults - Raw SQL query results
+ * @param {Object} composedClauses - Composed SQL clauses
+ * @param {import('data-prism').RootQuery} query - Original query
+ * @param {Object} context - Query context with schema and config
+ * @returns {any} Final query results
+ */
+function processQueryResults(
+	rawResults,
+	composedClauses,
+	query,
+	context,
+) {
+	const { schema } = context;
+
+	// Determine if we have to-many relationships that affect result processing
+	const hasToManyJoin = Object.keys(normalizeQuery(schema, query).select).some(
+		(k) =>
+			schema.resources[query.type].relationships[k]?.cardinality === "many",
 	);
 
-	return graph;
+	const handledClauses = hasToManyJoin
+		? ["where"]
+		: ["limit", "offset", "where"];
+
+	// Transform raw results into resource graph
+	const graph = extractGraph(rawResults, composedClauses.select, context);
+
+	// Strip handled clauses from query for final processing
+	const strippedQuery = omit(query, handledClauses);
+
+	return queryGraph(schema, strippedQuery, graph);
 }
 
 /**
@@ -8166,142 +8589,41 @@ function extractGraph(rawResults, selectClause, context) {
  */
 
 /**
- * @typedef {Object} SqlClauseHandler
- * @property {any} initVal - Initial value for the clause
- * @property {(val: any) => string} toSql - Function to convert value to SQL
- * @property {(left: any, right: any) => any} compose - Function to compose multiple values
- */
-
-/**
- * Default clause configuration for composing arrays
- * @type {Partial<SqlClauseHandler>}
- */
-const defaultClause = {
-	compose: (acc, item) => uniq([...(acc ?? []), ...(item ?? [])]),
-	initVal: [],
-};
-
-/**
- * SQL clause configuration for different query parts
- * @type {Object<string, SqlClauseHandler>}
- */
-const SQL_CLAUSE_CONFIG = {
-	select: {
-		...defaultClause,
-		toSql: (val) => `SELECT ${val.map((v) => v.sql).join(", ")}`,
-	},
-	vars: {
-		...defaultClause,
-		toSql: () => "",
-	},
-	from: {
-		initVal: null,
-		compose: (_, val) => val,
-		toSql: (val) => `FROM ${val}`,
-	},
-	join: {
-		...defaultClause,
-		toSql: (val) => val.join("\n"),
-	},
-	where: {
-		...defaultClause,
-		toSql: (val) =>
-			val.length > 0
-				? `WHERE ${whereExpressionEngine.evaluate({ $and: val })}`
-				: "",
-	},
-	orderBy: {
-		...defaultClause,
-		toSql: (val) => {
-			if (val.length === 0) return "";
-
-			const orderClauses = val.map(
-				({ property, direction, table }) =>
-					`${table}.${snakeCase(property)}${
-						direction === "desc" ? " DESC" : ""
-					}`,
-			);
-			return `ORDER BY ${orderClauses.join(", ")}`;
-		},
-	},
-	limit: {
-		...defaultClause,
-		compose: (acc, item) => Math.min(acc, item),
-		initVal: Infinity,
-		toSql: (val) => (val < Infinity ? `LIMIT ${val}` : ""),
-	},
-	offset: {
-		...defaultClause,
-		compose: (_, item) => item,
-		initVal: 0,
-		toSql: (val) => (val > 0 ? `OFFSET ${val}` : ""),
-	},
-};
-
-/**
- * Replaces ? placeholders with PostgreSQL $n placeholders
- * @param {string} inputString - Input SQL string with ? placeholders
- * @returns {string} SQL string with $n placeholders
- */
-function replacePlaceholders(inputString) {
-	let counter = 1;
-	return inputString.replace(/\?/g, () => `$${counter++}`);
-}
-
-/**
- * Executes a query against the PostgreSQL database
+ * Executes a query against PostgreSQL using a 5-step pipeline:
+ * 1. Parse query into clause components
+ * 2. Reduce clause arrays into single values
+ * 3. Generate SQL strings and parameters
+ * 4. Execute against database
+ * 5. Transform results into resource graph
+ *
  * @param {import('data-prism').RootQuery} query - The query to execute
  * @param {StoreContext} context - Store context with config and schema
  * @returns {Promise<any>} Query results
  */
 async function query(query, context) {
-	const { config, schema } = context;
+	const { config } = context;
 	const { db } = config;
 
-	const clauseBreakdown = parseQuery(query, context);
+	// Step 1: Extract and flatten query and subqueries by clause type
+	const clauseBreakdown = extractQueryClauses(query, context);
 
-	const initSqlClauses = {
+	// Step 2: Combine the flattened clauses into single values
+	const initialClauses = {
 		...mapValues(SQL_CLAUSE_CONFIG, (c) => c.initVal),
 		from: `${config.resources[query.type].table} AS ${query.type}`,
 	};
+	const composedClauses = composeSqlClauses(clauseBreakdown, initialClauses);
 
-	const sqlClauses = clauseBreakdown.reduce(
-		(acc, clause) => ({
-			...acc,
-			...mapValues(clause, (val, key) =>
-				SQL_CLAUSE_CONFIG[key].compose(acc[key], val),
-			),
-		}),
-		initSqlClauses,
-	);
+	// Step 3: Generate the SQL and extract parameters
+	const sql = assembleSqlQuery(composedClauses);
+	const vars = extractSqlVariables(composedClauses);
 
-	const sql = replacePlaceholders(
-		Object.entries(SQL_CLAUSE_CONFIG)
-			.map(([k, v]) => v.toSql(sqlClauses[k]))
-			.filter(Boolean)
-			.join("\n"),
-	);
-
-	const vars = varsExpressionEngine.evaluate({
-		$and: sqlClauses.vars,
-	});
-
-	const allResults =
+	// Step 4: Execute the query
+	const rawResults =
 		(await db.query({ rowMode: "array", text: sql }, vars))?.rows ?? null;
 
-	const hasToManyJoin = Object.keys(normalizeQuery(schema, query).select).some(
-		(k) =>
-			schema.resources[query.type].relationships[k]?.cardinality === "many",
-	);
-
-	const handledClauses = hasToManyJoin
-		? ["where"]
-		: ["limit", "offset", "where"];
-
-	const graph = extractGraph(allResults, sqlClauses.select, context);
-	const strippedQuery = omit(query, handledClauses);
-
-	return queryGraph(schema, strippedQuery, graph);
+	// Step 5: Transform raw results into final response
+	return processQueryResults(rawResults, composedClauses, query, context);
 }
 
 /**
@@ -9252,7 +9574,6 @@ function createPostgresStore(schema, config) {
 
 		async query(query$1) {
 			const normalized = normalizeQuery(schema, query$1);
-
 			return query(normalized, {
 				config,
 				schema,

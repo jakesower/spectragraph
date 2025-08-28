@@ -17,3 +17,7 @@ export {
 	createConstraintOperators,
 	baseSqlExpressions,
 } from "./constraint-operators.js";
+
+export { extractGraph } from "./extract-graph.js";
+
+export { extractQueryClauses } from "./parse-query.js";
