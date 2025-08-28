@@ -1,4 +1,4 @@
-import { snakeCase, uniq } from "lodash-es";
+import { snakeCase, uniq } from "es-toolkit";
 import { forEachQuery, someQuery } from "./query-helpers.js";
 import { preQueryRelationships } from "./relationship-builders.js";
 

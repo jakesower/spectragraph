@@ -1,4 +1,4 @@
-import { mapValues } from "lodash-es";
+import { mapValues } from "es-toolkit";
 
 /**
  * Creates a JSON:API PATCH handler for updating resources

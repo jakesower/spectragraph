@@ -1,7 +1,7 @@
 const $random = {
 	name: "$random",
 	apply: (operand = {}) => {
-		const { min = 0, max = 1, precision = null } = operand;
+		const { min = 0, max = 1, precision = null } = operand ?? {};
 		const value = Math.random() * (max - min) + min;
 
 		if (precision == null) {

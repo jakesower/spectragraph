@@ -8,7 +8,7 @@ export default [
 		output: { file: "dist/index.esm.js", format: "es" },
 		plugins: [nodeResolve(), commonjs()],
 		external: [
-			"lodash-es",
+			"es-toolkit",
 			"@data-prism/utils",
 			"ajv",
 			"ajv-formats",
@@ -21,7 +21,7 @@ export default [
 		output: { file: "dist/index.cjs.js", format: "cjs" },
 		plugins: [nodeResolve(), commonjs()],
 		external: [
-			"lodash-es",
+			"es-toolkit",
 			"@data-prism/utils",
 			"ajv",
 			"ajv-formats",

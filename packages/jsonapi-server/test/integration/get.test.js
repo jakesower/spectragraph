@@ -3,7 +3,7 @@ import careBearSchema from "../fixtures/care-bears.schema.json";
 import { careBearData } from "../fixtures/care-bear-data.js";  
 import { parseRequest } from "../../src/parse-request.js";
 import { api, makeRequest } from "../helpers.js";
-import { omit, pick } from "lodash-es";
+import { omit, pick } from "es-toolkit";
 
 const tenderheart = careBearData.bears[1];
 

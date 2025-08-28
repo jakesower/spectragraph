@@ -1,4 +1,4 @@
-import { last, snakeCase } from "lodash-es";
+import { last, snakeCase } from "es-toolkit";
 
 /**
  * @typedef {Object} RelBuilderParams

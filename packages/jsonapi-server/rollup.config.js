@@ -11,7 +11,7 @@ export default [
 		external: [
 			"express",
 			"body-parser",
-			"lodash-es",
+			"es-toolkit",
 			"@data-prism/core",
 			"@data-prism/utils", 
 			"ajv",
@@ -27,7 +27,7 @@ export default [
 		external: [
 			"express",
 			"body-parser", 
-			"lodash-es",
+			"es-toolkit",
 			"@data-prism/core",
 			"@data-prism/utils",
 			"ajv",

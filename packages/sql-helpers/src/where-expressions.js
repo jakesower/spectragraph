@@ -1,5 +1,5 @@
 import { ExpressionNotSupportedError } from "@data-prism/core";
-import { snakeCase } from "lodash-es";
+import { snakeCase } from "es-toolkit";
 
 export const DEFAULT_WHERE_EXPRESSIONS = {
 	$and: {

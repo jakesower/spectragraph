@@ -42,7 +42,7 @@
 		"@data-prism/sql-helpers": "*",
 		"@data-prism/utils": "^0.0.7",
 		"ajv": "^8.17.1",
-		"lodash-es": "^4.17.21",
+		"es-toolkit": "^1.26.0",
 		"pg": "^8.12.0",
 		"vite": "7.0.6"
 	}

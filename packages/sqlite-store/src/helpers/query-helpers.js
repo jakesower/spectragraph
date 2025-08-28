@@ -5,5 +5,4 @@ export {
 	forEachQuery,
 	reduceQuery,
 	someQuery,
-	replacePlaceholders,
 } from "@data-prism/sql-helpers";

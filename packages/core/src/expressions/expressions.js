@@ -1,4 +1,4 @@
-import { mapValues } from "lodash-es";
+import { mapValues } from "es-toolkit";
 import { coreDefinitions } from "./definitions/core.js";
 import { aggregativeDefinitions } from "./definitions/aggregative.js";
 import { comparativeDefinitions } from "./definitions/comparative.js";
@@ -68,7 +68,7 @@ export function createExpressionEngine(customExpressions) {
 			if (!isExpression(expression)) {
 				return Array.isArray(expression)
 					? expression.map(step)
-					: typeof expression === "object"
+					: typeof expression === "object" && expression !== null
 						? mapValues(expression, step)
 						: expression;
 			}
@@ -91,7 +91,7 @@ export function createExpressionEngine(customExpressions) {
 		if (!isExpression(expression)) {
 			return Array.isArray(expression)
 				? expression.map(evaluate)
-				: typeof expression === "object"
+				: typeof expression === "object" && expression !== null
 					? mapValues(expression, evaluate)
 					: expression;
 		}

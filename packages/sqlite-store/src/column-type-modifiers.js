@@ -1,16 +1,13 @@
-/**
- * @typedef {Object} ColumnModifier
- * @property {(val: string) => any} extract - Function to extract/parse stored value
- * @property {(col: string) => string} select - Function to generate SQL for selecting value
- */
+// Now using shared sql-helpers package
+import { createColumnTypeModifiers } from "@data-prism/sql-helpers";
 
-/**
- * Column type modifiers for different data types in PostgreSQL
- * @type {Object<string, ColumnModifier>}
- */
-export const columnTypeModifiers = {
-	geojson: {
-		extract: (val) => JSON.parse(val),
-		select: (val) => `ST_AsGeoJSON(${val})`,
-	},
+// SQLite-specific boolean handling
+const sqliteBooleanModifier = {
+	extract: (val) => (val === 1 ? true : val === 0 ? false : val),
+	select: (val) => val,
+	store: (val) => (typeof val === "boolean" ? (val ? 1 : 0) : val),
 };
+
+export const columnTypeModifiers = createColumnTypeModifiers({
+	boolean: sqliteBooleanModifier,
+});

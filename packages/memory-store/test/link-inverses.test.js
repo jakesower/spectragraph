@@ -1,5 +1,5 @@
 import { expect, it, describe } from "vitest";
-import { mapValues, omit } from "lodash-es";
+import { mapValues, omit } from "es-toolkit";
 import { createMemoryStore } from "../src/index.js";
 import {
 	careBearSchema,

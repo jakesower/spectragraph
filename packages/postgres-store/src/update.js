@@ -1,4 +1,4 @@
-import { camelCase, pick, pickBy, snakeCase } from "lodash-es";
+import { camelCase, pick, pickBy, snakeCase } from "es-toolkit";
 
 /**
  * @typedef {import('./postgres-store.js').UpdateResource} UpdateResource

@@ -1,5 +1,5 @@
 import { normalizeQuery } from "@data-prism/core";
-import { uniq } from "lodash-es";
+import { uniq } from "es-toolkit";
 
 const objectToParamStr = (obj, rootKey) => {
 	const go = (cur) =>

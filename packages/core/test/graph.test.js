@@ -1,5 +1,5 @@
 import { expect, it, describe } from "vitest";
-import { mapValues, omit, pick } from "lodash-es";
+import { mapValues, omit, pick } from "es-toolkit";
 import {
 	createGraphFromResources,
 	linkInverses,

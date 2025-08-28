@@ -1,4 +1,4 @@
-import { mapValues, omit } from "lodash-es";
+import { mapValues, omit } from "es-toolkit";
 import { defaultExpressionEngine } from "./expressions/expressions.js";
 import { defaultValidator } from "./resource.js";
 import { createDeepCache, ensure, translateAjvErrors } from "./lib/helpers.js";

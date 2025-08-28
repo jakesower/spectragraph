@@ -1,4 +1,4 @@
-import { mapValues, merge } from "lodash-es";
+import { mapValues, merge } from "es-toolkit";
 import { defaultValidator } from "./resource.js";
 import { createDeepCache, translateAjvErrors } from "./lib/helpers.js";
 import metaschema from "./fixtures/data-prism-schema.schema.json" with { type: "json" };

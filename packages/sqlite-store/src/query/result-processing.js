@@ -1,4 +1,4 @@
-import { omit } from "lodash-es";
+import { omit } from "es-toolkit";
 import { normalizeQuery, queryGraph } from "@data-prism/core";
 import { extractGraph } from "../extract-graph.js";
 

@@ -1,5 +1,5 @@
 import { queryGraph } from "@data-prism/core";
-import { mapValues } from "lodash-es";
+import { mapValues } from "es-toolkit";
 
 /**
  * Parses a JSON:API response into Data Prism query results

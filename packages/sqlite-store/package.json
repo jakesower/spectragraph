@@ -50,6 +50,6 @@
 		"@data-prism/sql-helpers": "*",
 		"@data-prism/utils": "*",
 		"better-sqlite3": "^12.2.0",
-		"lodash-es": "^4.17.21"
+		"es-toolkit": "^1.26.0"
 	}
 }

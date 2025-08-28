@@ -1,5 +1,7 @@
-import { camelCase, pick, pickBy, snakeCase } from "lodash-es";
+import { camelCase, pick, pickBy, snakeCase } from "es-toolkit";
 import { randomUUID } from "crypto";
+import { transformValuesForStorage } from "@data-prism/sql-helpers";
+import { columnTypeModifiers } from "./column-type-modifiers.js";
 
 /**
  * @typedef {import('./sqlite-store.js').CreateResource} CreateResource
@@ -42,10 +44,25 @@ export async function create(resource, context) {
 
 	const columns = [...attributeColumns, ...relationshipColumns, ...idColumns];
 	const placeholders = columns.map(() => "?").join(", ");
+
+	const attributeValues = Object.values(resource.attributes);
+	const relationshipValues = Object.values(localRelationships).map(
+		(r) => r?.id ?? null,
+	);
+	const idValues = idVars;
+
+	// Transform attribute values using column type modifiers
+	const transformedAttributeValues = transformValuesForStorage(
+		attributeValues,
+		Object.keys(resource.attributes),
+		resSchema,
+		columnTypeModifiers,
+	);
+
 	const vars = [
-		...Object.values(resource.attributes),
-		...Object.values(localRelationships).map((r) => r?.id ?? null),
-		...idVars,
+		...transformedAttributeValues,
+		...relationshipValues,
+		...idValues,
 	];
 
 	const insertSql = `
@@ -55,13 +72,8 @@ export async function create(resource, context) {
       (${placeholders})
   `;
 
-	// Convert boolean values to integers for SQLite
-	const sqliteVars = vars.map((v) =>
-		typeof v === "boolean" ? (v ? 1 : 0) : v,
-	);
-
 	const insertStmt = db.prepare(insertSql);
-	insertStmt.run(sqliteVars);
+	insertStmt.run(vars);
 
 	// Get the created resource using the UUID we inserted
 	const selectSql = `SELECT * FROM ${table} WHERE ${snakeCase(idAttribute)} = ?`;

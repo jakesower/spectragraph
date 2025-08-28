@@ -1,4 +1,4 @@
-import { mapValues } from "lodash-es";
+import { mapValues } from "es-toolkit";
 
 /**
  * @typedef {Object} OperatorDefinition
@@ -113,54 +113,44 @@ export function createConstraintOperators(
  */
 export const baseSqlExpressions = {
 	$and: {
-		name: "$and",
 		where: (operand) => operand.join(" AND "),
 		vars: (operand) => operand.flat(),
 	},
 	$eq: {
-		name: "$equal",
 		where: (operand) => `${operand[0]} = ?`,
 		vars: (operand) => operand[1],
 	},
 	$gt: {
-		name: "$gt",
 		where: (operand) => `${operand[0]} > ?`,
 		vars: (operand) => operand[1],
 	},
 	$gte: {
-		name: "$gte",
 		where: (operand) => `${operand[0]} >= ?`,
 		vars: (operand) => operand[1],
 	},
 	$lt: {
-		name: "$lt",
 		where: (operand) => `${operand[0]} < ?`,
 		vars: (operand) => operand[1],
 	},
 	$lte: {
-		name: "$lte",
 		where: (operand) => `${operand[0]} <= ?`,
 		vars: (operand) => operand[1],
 	},
 	$ne: {
-		name: "$ne",
 		where: (operand) => `${operand[0]} != ?`,
 		vars: (operand) => operand[1],
 	},
 	$in: {
-		name: "$in",
 		where: (operand) =>
 			`${operand[0]} IN (${operand[1].map(() => "?").join(",")})`,
 		vars: (operand) => operand[1],
 	},
 	$nin: {
-		name: "$nin",
 		where: (operand) =>
 			`${operand[0]} NOT IN (${operand[1].map(() => "?").join(",")})`,
 		vars: (operand) => operand[1],
 	},
 	$or: {
-		name: "$or",
 		controlsEvaluation: true,
 		where: (operand, { evaluate }) => {
 			const evaluated = operand.map(evaluate);

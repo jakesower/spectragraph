@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { mapValues } from "lodash-es";
+import { mapValues } from "es-toolkit";
 import { applyOrMap } from "@data-prism/utils";
 import { ensureValidMergeResource } from "@data-prism/core";
 import { updateInverseRelationships } from "./lib/store-helpers.js";
