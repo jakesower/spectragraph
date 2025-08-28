@@ -10,10 +10,10 @@ export class ExpressionNotSupportedError extends Error {
 	 * @param {string} [reason] - Optional reason why the expression is not supported
 	 */
 	constructor(expression, storeName, reason) {
-		const message = reason 
+		const message = reason
 			? `Expression ${expression} is not supported by ${storeName}: ${reason}`
 			: `Expression ${expression} is not supported by ${storeName}`;
-		
+
 		super(message);
 		this.name = "ExpressionNotSupportedError";
 		this.expression = expression;

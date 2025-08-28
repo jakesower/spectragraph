@@ -15,7 +15,7 @@ describe("linkStoreInverses", () => {
 		// Get the initial state
 		const initialBear = await store.query({
 			type: "bears",
-			id: "1", 
+			id: "1",
 			select: ["name", { home: { select: ["name"] } }],
 		});
 
@@ -24,7 +24,7 @@ describe("linkStoreInverses", () => {
 
 		// Should be unchanged
 		const afterLinkBear = await store.query({
-			type: "bears", 
+			type: "bears",
 			id: "1",
 			select: ["name", { home: { select: ["name"] } }],
 		});
@@ -60,7 +60,7 @@ describe("linkStoreInverses", () => {
 
 		// Now bear should have home relationship restored
 		const bearAfterLinking = await store.query({
-			type: "bears", 
+			type: "bears",
 			id: "1",
 			select: ["name", { home: { select: ["name"] } }],
 		});
@@ -88,7 +88,7 @@ describe("linkStoreInverses", () => {
 		// Verify home initially has no residents
 		const homeBeforeLinking = await store.query({
 			type: "homes",
-			id: "1", 
+			id: "1",
 			select: ["name"],
 		});
 
@@ -140,7 +140,7 @@ describe("linkStoreInverses", () => {
 		// Now bear should have powers relationship restored
 		const bearAfterLinking = await store.query({
 			type: "bears",
-			id: "1", 
+			id: "1",
 			select: ["name", { powers: { select: ["name"] } }],
 		});
 
@@ -158,7 +158,9 @@ describe("linkStoreInverses", () => {
 			...bear,
 			relationships: {
 				// Remove home and powers, keep bestFriend if it exists
-				...(bear.relationships.bestFriend && { bestFriend: bear.relationships.bestFriend }),
+				...(bear.relationships.bestFriend && {
+					bestFriend: bear.relationships.bestFriend,
+				}),
 			},
 		}));
 
@@ -176,7 +178,7 @@ describe("linkStoreInverses", () => {
 			select: ["name"],
 		});
 		const homeBefore = await store.query({
-			type: "homes", 
+			type: "homes",
 			id: "1",
 			select: ["name", { residents: { select: ["name"] } }],
 		});
@@ -195,11 +197,15 @@ describe("linkStoreInverses", () => {
 		const bearAfter = await store.query({
 			type: "bears",
 			id: "1",
-			select: ["name", { home: { select: ["name"] } }, { powers: { select: ["name"] } }],
+			select: [
+				"name",
+				{ home: { select: ["name"] } },
+				{ powers: { select: ["name"] } },
+			],
 		});
 		const homeAfter = await store.query({
 			type: "homes",
-			id: "1", 
+			id: "1",
 			select: ["name", { residents: { select: ["name"] } }],
 		});
 

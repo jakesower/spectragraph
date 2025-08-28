@@ -1,5 +1,5 @@
 import { mapValues } from "lodash-es";
-import { varsExpressionEngine } from "../helpers/where-expressions.js";
+import { createVarsExpressionEngine } from "../helpers/where-expressions.js";
 import { SQL_CLAUSE_CONFIG } from "./clause-config.js";
 
 /**
@@ -23,11 +23,12 @@ export function composeSqlClauses(clauseBreakdown, initialClauses) {
 /**
  * Generates SQL string from composed clause values
  * @param {Object} composedClauses - Composed clause values
+ * @param {import('../sqlite-store.js').Context} context
  * @returns {string} Complete SQL query string with ? placeholders for SQLite
  */
-export function assembleSqlQuery(composedClauses) {
+export function assembleSqlQuery(composedClauses, context) {
 	return Object.entries(SQL_CLAUSE_CONFIG)
-		.map(([k, v]) => v.toSql(composedClauses[k]))
+		.map(([k, v]) => v.toSql(composedClauses[k], context))
 		.filter(Boolean)
 		.join("\n");
 }
@@ -35,10 +36,14 @@ export function assembleSqlQuery(composedClauses) {
 /**
  * Extracts SQL parameters/variables from composed clause values
  * @param {Object} composedClauses - Composed clause values
+ * @param {import('../sqlite-store.js').Context} context - Store context with db
  * @returns {any[]} Array of SQL parameters
  */
-export function extractSqlVariables(composedClauses) {
-	return varsExpressionEngine.evaluate({
-		$and: composedClauses.vars,
-	});
+export function extractSqlVariables(composedClauses, context) {
+	return createVarsExpressionEngine(context).evaluate(
+		{
+			$and: composedClauses.vars,
+		},
+		context,
+	);
 }

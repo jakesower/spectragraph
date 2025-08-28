@@ -88,6 +88,7 @@ import { upsert } from "./upsert.js";
 /**
  * @typedef {Object} Context
  * @property {Config} config
+ * @property {import('better-sqlite3').Database} db
  * @property {import('data-prism').Schema} schema
  */
 
@@ -170,6 +171,7 @@ export function sqliteStore(schema, config) {
 			const normalized = normalizeQuery(schema, query);
 			return getQuery(normalized, {
 				config,
+				db: config.db,
 				schema,
 				query: normalized,
 			});

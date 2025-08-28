@@ -28,8 +28,7 @@ import { processQueryResults } from "./result-processing.js";
  * @returns {Promise<any>} Query results
  */
 export async function query(query, context) {
-	const { config } = context;
-	const { db } = config;
+	const { config, db } = context;
 
 	// Step 1: Extract and flatten query and subqueries by clause type
 	const clauseBreakdown = extractQueryClauses(query, context);
@@ -42,15 +41,14 @@ export async function query(query, context) {
 	const composedClauses = composeSqlClauses(clauseBreakdown, initialClauses);
 
 	// Step 3: Generate the SQL and extract parameters
-	const sql = assembleSqlQuery(composedClauses);
-	const vars = extractSqlVariables(composedClauses).map((v) =>
+	const sql = assembleSqlQuery(composedClauses, context);
+	const vars = extractSqlVariables(composedClauses, context).map((v) =>
 		typeof v === "boolean" ? (v ? 1 : 0) : v,
 	);
 
 	// Step 4: Execute the query
 	const statement = db.prepare(sql).raw();
-	const rawResults =
-		vars.length > 0 ? statement.all(vars) : statement.all();
+	const rawResults = vars.length > 0 ? statement.all(vars) : statement.all();
 
 	// Step 5: Transform raw results into final response
 	return processQueryResults(rawResults, composedClauses, query, context);
