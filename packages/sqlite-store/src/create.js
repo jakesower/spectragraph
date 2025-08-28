@@ -1,10 +1,10 @@
 import { camelCase, pick, pickBy, snakeCase } from "lodash-es";
-import { replacePlaceholders } from "./helpers/query-helpers.js";
+import { randomUUID } from "crypto";
 
 /**
- * @typedef {import('./postgres-store.js').CreateResource} CreateResource
- * @typedef {import('./postgres-store.js').Resource} Resource
- * @typedef {import('./postgres-store.js').Context} Context
+ * @typedef {import('./sqlite-store.js').CreateResource} CreateResource
+ * @typedef {import('./sqlite-store.js').Resource} Resource
+ * @typedef {import('./sqlite-store.js').Context} Context
  */
 
 /**
@@ -35,28 +35,43 @@ export async function create(resource, context) {
 		(r) => resConfig.joins[r].localColumn,
 	);
 
-	const idColumns = resource.id ? [snakeCase(idAttribute)] : [];
-	const idVars = resource.id ? [resource.id] : [];
+	// Generate UUID if no ID provided
+	const resourceId = resource.id || randomUUID();
+	const idColumns = [snakeCase(idAttribute)];
+	const idVars = [resourceId];
 
 	const columns = [...attributeColumns, ...relationshipColumns, ...idColumns];
-	const placeholders = replacePlaceholders(columns.map(() => "?").join(", "));
+	const placeholders = columns.map(() => "?").join(", ");
 	const vars = [
 		...Object.values(resource.attributes),
 		...Object.values(localRelationships).map((r) => r?.id ?? null),
 		...idVars,
 	];
 
-	const sql = `
+	const insertSql = `
     INSERT INTO ${table}
       (${columns.join(", ")})
     VALUES
       (${placeholders})
-		RETURNING *
   `;
 
-	const { rows } = await db.query(sql, vars);
+	// Convert boolean values to integers for SQLite
+	const sqliteVars = vars.map((v) => typeof v === "boolean" ? (v ? 1 : 0) : v);
+	
+	const insertStmt = db.prepare(insertSql);
+	const result = insertStmt.run(sqliteVars);
+	
+	// Get the created resource using the UUID we inserted
+	const selectSql = `SELECT * FROM ${table} WHERE ${snakeCase(idAttribute)} = ?`;
+	const selectStmt = db.prepare(selectSql);
+	const createdRow = selectStmt.get(resourceId);
+	
+	if (!createdRow) {
+		throw new Error(`Failed to retrieve created resource with id ${resourceId} from table ${table}`);
+	}
+	
 	const created = {};
-	Object.entries(rows[0]).forEach(([k, v]) => {
+	Object.entries(createdRow).forEach(([k, v]) => {
 		created[camelCase(k)] = v;
 	});
 
@@ -66,34 +81,35 @@ export async function create(resource, context) {
 		(_, k) => joins[k].foreignColumn,
 	);
 
-	await Promise.all(
-		Object.entries(foreignRelationships).map(async ([relName, val]) => {
-			const { foreignColumn } = joins[relName];
-			const foreignIdAttribute =
-				schema.resources[resSchema.relationships[relName].type].idAttribute ??
-				"id";
-			const foreignTable =
-				config.resources[resSchema.relationships[relName].type].table;
+	Object.entries(foreignRelationships).forEach(([relName, val]) => {
+		const { foreignColumn } = joins[relName];
+		const foreignIdAttribute =
+			schema.resources[resSchema.relationships[relName].type].idAttribute ??
+			"id";
+		const foreignTable =
+			config.resources[resSchema.relationships[relName].type].table;
 
-			await db.query(
-				`
-				UPDATE ${foreignTable}
-				SET ${foreignColumn} = NULL
-				WHERE ${foreignColumn} = $1
-			`,
-				[resource.id],
-			);
+		// Clear existing foreign key references
+		const clearSql = `
+			UPDATE ${foreignTable}
+			SET ${foreignColumn} = NULL
+			WHERE ${foreignColumn} = ?
+		`;
+		const clearStmt = db.prepare(clearSql);
+		clearStmt.run(created[idAttribute]);
 
-			await db.query(
-				`
-				UPDATE ${foreignTable}
-				SET ${foreignColumn} = $1
-				WHERE ${foreignIdAttribute} = ANY ($2)
-			`,
-				[created[idAttribute], val.map((v) => v.id)],
-			);
-		}),
-	);
+		// Set new foreign key references
+		const updateSql = `
+			UPDATE ${foreignTable}
+			SET ${foreignColumn} = ?
+			WHERE ${snakeCase(foreignIdAttribute)} = ?
+		`;
+		const updateStmt = db.prepare(updateSql);
+		
+		val.forEach((v) => {
+			updateStmt.run(created[idAttribute], v.id);
+		});
+	});
 
 	// handle many-to-many columns
 	const m2mForeignRelationships = pickBy(
@@ -101,25 +117,20 @@ export async function create(resource, context) {
 		(_, k) => joins[k].joinTable,
 	);
 
-	await Promise.all(
-		Object.entries(m2mForeignRelationships).map(async ([relName, val]) => {
-			const { joinTable, localJoinColumn, foreignJoinColumn } = joins[relName];
+	Object.entries(m2mForeignRelationships).forEach(([relName, val]) => {
+		const { joinTable, localJoinColumn, foreignJoinColumn } = joins[relName];
 
-			await Promise.all(
-				val.map((v) =>
-					db.query(
-						`
-							INSERT INTO ${joinTable}
-							(${localJoinColumn}, ${foreignJoinColumn})
-							VALUES ($1, $2)
-							ON CONFLICT DO NOTHING
-			`,
-						[created[idAttribute], v.id],
-					),
-				),
-			);
-		}),
-	);
+		const insertSql = `
+			INSERT OR IGNORE INTO ${joinTable}
+			(${localJoinColumn}, ${foreignJoinColumn})
+			VALUES (?, ?)
+		`;
+		const insertStmt = db.prepare(insertSql);
+
+		val.forEach((v) => {
+			insertStmt.run(created[idAttribute], v.id);
+		});
+	});
 
 	return {
 		type: resource.type,

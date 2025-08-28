@@ -189,9 +189,12 @@ export function runCreateTests(createStore) {
 				id: createdHome.id,
 				select: ["name", { residents: { select: ["name"] } }],
 			});
-			expect(homeResult1).toEqual({
+			expect({
+				...homeResult1,
+				residents: homeResult1.residents.sort((a, b) => a.name.localeCompare(b.name))
+			}).toEqual({
 				name: "Paradise Valley",
-				residents: [{ name: "Share Bear" }, { name: "Always There Bear" }],
+				residents: [{ name: "Always There Bear" }, { name: "Share Bear" }],
 			});
 
 			await store.create({
@@ -258,9 +261,12 @@ export function runCreateTests(createStore) {
 				id: createdPower.id,
 				select: ["name", { wielders: { select: ["name"] } }],
 			});
-			expect(powerResult1).toEqual({
+			expect({
+				...powerResult1,
+				wielders: powerResult1.wielders.sort((a, b) => a.name.localeCompare(b.name))
+			}).toEqual({
 				name: "Care Cousins Call",
-				wielders: [{ name: "Harmony Bear" }, { name: "Always There Bear" }],
+				wielders: [{ name: "Always There Bear" }, { name: "Harmony Bear" }],
 			});
 
 			await store.create({
@@ -278,9 +284,12 @@ export function runCreateTests(createStore) {
 				id: createdPower.id,
 				select: ["name", { wielders: { select: ["name"] } }],
 			});
-			expect(powerResult2).toEqual({
+			expect({
+				...powerResult2,
+				wielders: powerResult2.wielders.sort((a, b) => a.name.localeCompare(b.name))
+			}).toEqual({
 				name: "Care Cousins Call",
-				wielders: [{ name: "Harmony Bear" }, { name: "Always There Bear" }],
+				wielders: [{ name: "Always There Bear" }, { name: "Harmony Bear" }],
 			});
 		});
 	});

@@ -1,4 +1,4 @@
-import { careBearData, runQueryTests } from "@data-prism/interface-tests";
+import { careBearData, runInterfaceTests } from "@data-prism/interface-tests";
 import Database from "better-sqlite3";
 import { createTables, seed } from "../src/seed.js";
 import { sqliteStore } from "../src/sqlite-store.js";
@@ -50,4 +50,4 @@ function createSQLiteTestStore(schema, options = {}) {
 	return sqliteStore(schema, { db, resources: careBearConfig.resources });
 }
 
-runQueryTests(createSQLiteTestStore);
+runInterfaceTests(createSQLiteTestStore);

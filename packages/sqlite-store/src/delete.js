@@ -1,17 +1,17 @@
 import { pickBy, snakeCase } from "lodash-es";
 
 /**
- * @typedef {import('./postgres-store.js').DeleteResource} DeleteResource
- * @typedef {import('./postgres-store.js').Context} Context
+ * @typedef {import('./sqlite-store.js').DeleteResource} DeleteResource
+ * @typedef {import('./sqlite-store.js').Context} Context
  */
 
 /**
  * Deletes a resource from the database
  * @param {DeleteResource} resource - The resource to delete
  * @param {Context} context - Database context with config and schema
- * @returns {Promise<DeleteResource>} The deleted resource reference
+ * @returns {DeleteResource} The deleted resource reference
  */
-export async function deleteResource(resource, context) {
+export function deleteResource(resource, context) {
 	const { config, schema } = context;
 
 	const { db } = config;
@@ -22,48 +22,42 @@ export async function deleteResource(resource, context) {
 	const resSchema = schema.resources[resource.type];
 	const { idAttribute = "id" } = resSchema;
 
-	const sql = `
+	const deleteSql = `
     DELETE FROM ${table}
-    WHERE ${snakeCase(idAttribute)} = $1
-		RETURNING *
+    WHERE ${snakeCase(idAttribute)} = ?
   `;
 
-	await db.query(sql, [resource.id]);
+	const deleteStmt = db.prepare(deleteSql);
+	deleteStmt.run(resource.id);
 
 	// handle to-one foreign columns
 	const foreignRelationships = pickBy(joins, (jr) => jr.foreignColumn);
-	await Promise.all(
-		Object.entries(foreignRelationships).map(async ([relName, join]) => {
-			const { foreignColumn } = join;
-			const foreignTable =
-				config.resources[resSchema.relationships[relName].type].table;
+	Object.entries(foreignRelationships).forEach(([relName, join]) => {
+		const { foreignColumn } = join;
+		const foreignTable =
+			config.resources[resSchema.relationships[relName].type].table;
 
-			await db.query(
-				`
-				UPDATE ${foreignTable}
-				SET ${foreignColumn} = NULL
-				WHERE ${foreignColumn} = $1
-			`,
-				[resource.id],
-			);
-		}),
-	);
+		const updateSql = `
+			UPDATE ${foreignTable}
+			SET ${foreignColumn} = NULL
+			WHERE ${foreignColumn} = ?
+		`;
+		const updateStmt = db.prepare(updateSql);
+		updateStmt.run(resource.id);
+	});
 
 	// handle many-to-many columns
 	const m2mForeignRelationships = pickBy(joins, (jr) => jr.joinTable);
-	await Promise.all(
-		Object.values(m2mForeignRelationships).map(async (join) => {
-			const { joinTable, localJoinColumn } = join;
+	Object.values(m2mForeignRelationships).forEach((join) => {
+		const { joinTable, localJoinColumn } = join;
 
-			await db.query(
-				`
-				DELETE FROM ${joinTable}
-				WHERE ${localJoinColumn} = $1
-				`,
-				[resource.id],
-			);
-		}),
-	);
+		const deleteSql = `
+			DELETE FROM ${joinTable}
+			WHERE ${localJoinColumn} = ?
+		`;
+		const deleteStmt = db.prepare(deleteSql);
+		deleteStmt.run(resource.id);
+	});
 
 	return {
 		type: resource.type,

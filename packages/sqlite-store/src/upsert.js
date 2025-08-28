@@ -1,20 +1,20 @@
 import { camelCase, pick, pickBy, snakeCase } from "lodash-es";
-import { replacePlaceholders } from "./helpers/query-helpers.js";
+import { randomUUID } from "crypto";
 
 /**
- * @typedef {import('./postgres-store.js').CreateResource} CreateResource
- * @typedef {import('./postgres-store.js').UpdateResource} UpdateResource
- * @typedef {import('./postgres-store.js').Resource} Resource
- * @typedef {import('./postgres-store.js').Context} Context
+ * @typedef {import('./sqlite-store.js').CreateResource} CreateResource
+ * @typedef {import('./sqlite-store.js').UpdateResource} UpdateResource
+ * @typedef {import('./sqlite-store.js').Resource} Resource
+ * @typedef {import('./sqlite-store.js').Context} Context
  */
 
 /**
  * Upserts a resource row (INSERT ... ON CONFLICT ... DO UPDATE)
  * @param {CreateResource|UpdateResource} resource - The resource to upsert
  * @param {Context} context - Database context with config and schema
- * @returns {Promise<Resource>} The upserted resource
+ * @returns {Resource} The upserted resource
  */
-export async function upsertResourceRow(resource, context) {
+export function upsertResourceRow(resource, context) {
 	const { config, schema } = context;
 	const { db } = config;
 
@@ -37,16 +37,21 @@ export async function upsertResourceRow(resource, context) {
 		(r) => resConfig.joins[r].localColumn,
 	);
 
-	const idColumns = resource.id ? [snakeCase(idAttribute)] : [];
-	const idVars = resource.id ? [resource.id] : [];
+	// Generate UUID if no ID provided
+	const resourceId = resource.id || randomUUID();
+	const idColumns = [snakeCase(idAttribute)];
+	const idVars = [resourceId];
 
 	const columns = [...attributeColumns, ...relationshipColumns, ...idColumns];
-	const placeholders = replacePlaceholders(columns.map(() => "?").join(", "));
+	const placeholders = columns.map(() => "?").join(", ");
 	const vars = [
 		...Object.values(resource.attributes ?? {}),
 		...Object.values(localRelationships).map((r) => r?.id ?? null),
 		...idVars,
 	];
+
+	// Convert boolean values to integers for SQLite
+	const sqliteVars = vars.map((v) => typeof v === "boolean" ? (v ? 1 : 0) : v);
 
 	const updateColumns = [...attributeColumns, ...relationshipColumns]
 		.map((col) => `${col} = EXCLUDED.${col}`)
@@ -57,17 +62,23 @@ export async function upsertResourceRow(resource, context) {
 			? "DO NOTHING"
 			: `DO UPDATE SET ${updateColumns}`;
 
-	const sql = `
+	const upsertSql = `
     INSERT INTO ${table} (${columns.join(", ")})
     VALUES (${placeholders})
 		ON CONFLICT(${snakeCase(idAttribute)})
 			${conflictClause}
-		RETURNING *
   `;
 
-	const { rows } = await db.query(sql, vars);
-	const upserted = { [idAttribute]: resource.id };
-	Object.entries(rows[0] ?? {}).forEach(([k, v]) => {
+	const upsertStmt = db.prepare(upsertSql);
+	upsertStmt.run(sqliteVars);
+
+	// Get the upserted resource
+	const selectSql = `SELECT * FROM ${table} WHERE ${snakeCase(idAttribute)} = ?`;
+	const selectStmt = db.prepare(selectSql);
+	const upsertedRow = selectStmt.get(resourceId);
+
+	const upserted = {};
+	Object.entries(upsertedRow).forEach(([k, v]) => {
 		upserted[camelCase(k)] = v;
 	});
 
@@ -83,9 +94,9 @@ export async function upsertResourceRow(resource, context) {
  * Upserts foreign relationship rows for a resource
  * @param {Resource} resource - The resource with relationships to upsert
  * @param {Context} context - Database context with config and schema
- * @returns {Promise<Resource>} The resource with upserted relationships
+ * @returns {Resource} The resource with upserted relationships
  */
-export async function upsertForeignRelationshipRows(resource, context) {
+export function upsertForeignRelationshipRows(resource, context) {
 	const { config, schema } = context;
 	const { db } = config;
 
@@ -99,34 +110,35 @@ export async function upsertForeignRelationshipRows(resource, context) {
 		(_, k) => joins[k].foreignColumn,
 	);
 
-	await Promise.all(
-		Object.entries(foreignRelationships).map(async ([relName, val]) => {
-			const { foreignColumn } = joins[relName];
-			const foreignIdAttribute =
-				schema.resources[resSchema.relationships[relName].type].idAttribute ??
-				"id";
-			const foreignTable =
-				config.resources[resSchema.relationships[relName].type].table;
+	Object.entries(foreignRelationships).forEach(([relName, val]) => {
+		const { foreignColumn } = joins[relName];
+		const foreignIdAttribute =
+			schema.resources[resSchema.relationships[relName].type].idAttribute ??
+			"id";
+		const foreignTable =
+			config.resources[resSchema.relationships[relName].type].table;
 
-			await db.query(
-				`
-					UPDATE ${foreignTable}
-					SET ${foreignColumn} = NULL
-					WHERE ${foreignColumn} = $1
-				`,
-				[resource.id],
-			);
+		// Clear existing foreign key references
+		const clearSql = `
+			UPDATE ${foreignTable}
+			SET ${foreignColumn} = NULL
+			WHERE ${foreignColumn} = ?
+		`;
+		const clearStmt = db.prepare(clearSql);
+		clearStmt.run(resource.id);
 
-			await db.query(
-				`
-					UPDATE ${foreignTable}
-					SET ${foreignColumn} = $1
-					WHERE ${foreignIdAttribute} = ANY ($2)
-				`,
-				[resource.id, val.map((v) => v.id)],
-			);
-		}),
-	);
+		// Set new foreign key references
+		const updateSql = `
+			UPDATE ${foreignTable}
+			SET ${foreignColumn} = ?
+			WHERE ${snakeCase(foreignIdAttribute)} = ?
+		`;
+		const updateStmt = db.prepare(updateSql);
+		
+		val.forEach((v) => {
+			updateStmt.run(resource.id, v.id);
+		});
+	});
 
 	// handle many-to-many columns
 	const m2mForeignRelationships = pickBy(
@@ -134,32 +146,26 @@ export async function upsertForeignRelationshipRows(resource, context) {
 		(_, k) => joins[k].joinTable,
 	);
 
-	await Promise.all(
-		Object.entries(m2mForeignRelationships).map(async ([relName, val]) => {
-			const { joinTable, localJoinColumn, foreignJoinColumn } = joins[relName];
+	Object.entries(m2mForeignRelationships).forEach(([relName, val]) => {
+		const { joinTable, localJoinColumn, foreignJoinColumn } = joins[relName];
 
-			await Promise.all(
-				val.map(async (v) => {
-					await db.query(
-						`
-								DELETE FROM ${joinTable}
-								WHERE ${localJoinColumn} = $1
-							`,
-						[resource.id],
-					);
-					await db.query(
-						`
-								INSERT INTO ${joinTable}
-								(${localJoinColumn}, ${foreignJoinColumn})
-								VALUES ($1, $2)
-								ON CONFLICT DO NOTHING
-							`,
-						[resource.id, v.id],
-					);
-				}),
-			);
-		}),
-	);
+		// Clear existing relationships
+		const deleteSql = `DELETE FROM ${joinTable} WHERE ${localJoinColumn} = ?`;
+		const deleteStmt = db.prepare(deleteSql);
+		deleteStmt.run(resource.id);
+
+		// Insert new relationships
+		const insertSql = `
+			INSERT OR IGNORE INTO ${joinTable}
+			(${localJoinColumn}, ${foreignJoinColumn})
+			VALUES (?, ?)
+		`;
+		const insertStmt = db.prepare(insertSql);
+
+		val.forEach((v) => {
+			insertStmt.run(resource.id, v.id);
+		});
+	});
 
 	return {
 		type: resource.type,
@@ -173,9 +179,9 @@ export async function upsertForeignRelationshipRows(resource, context) {
  * Upserts a resource (INSERT or UPDATE) including relationships
  * @param {CreateResource|UpdateResource} resource - The resource to upsert
  * @param {Context} context - Database context with config and schema
- * @returns {Promise<Resource>} The upserted resource
+ * @returns {Resource} The upserted resource
  */
-export async function upsert(resource, context) {
-	const upserted = await upsertResourceRow(resource, context);
+export function upsert(resource, context) {
+	const upserted = upsertResourceRow(resource, context);
 	return upsertForeignRelationshipRows(upserted, context);
 }
