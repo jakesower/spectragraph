@@ -8,7 +8,6 @@ import { careBearConfig } from "./fixtures/care-bear-config.js";
  * Global setup - starts PostgreSQL container and seeds data
  */
 export default async function setup() {
-	console.log("GLOBAL SETUP IS RUNNING!");
 	const { db, container } = await startTestDb();
 	console.log("Database container ready, seeding data...");
 	console.log("globalThis.testDb is:", globalThis.testDb ? "SET" : "NOT SET");
