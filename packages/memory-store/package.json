@@ -46,7 +46,7 @@
 	"sideEffects": false,
 	"dependencies": {
 		"@data-prism/core": "*",
-		"lodash-es": "^4.17.21",
+		"es-toolkit": "^1.26.0",
 		"uuid": "^10.0.0"
 	}
 }

@@ -1,4 +1,4 @@
-import { mapValues, omit, get, uniqBy, orderBy, isEqual, merge, snakeCase, partition, pick, uniq, last, pickBy, camelCase } from 'lodash-es';
+import { mapValues, omit, uniqBy, orderBy, isEqual, merge, snakeCase, partition, pick, uniq, last, pickBy, camelCase } from 'es-toolkit';
 import { applyOrMap } from '@data-prism/utils';
 import { randomUUID } from 'crypto';
 
@@ -10702,6 +10702,171 @@ function requireDist () {
 var distExports = requireDist();
 var addErrors = /*@__PURE__*/getDefaultExportFromCjs(distExports);
 
+function isUnsafeProperty(key) {
+    return key === '__proto__';
+}
+
+function isDeepKey(key) {
+    switch (typeof key) {
+        case 'number':
+        case 'symbol': {
+            return false;
+        }
+        case 'string': {
+            return key.includes('.') || key.includes('[') || key.includes(']');
+        }
+    }
+}
+
+function toKey(value) {
+    if (typeof value === 'string' || typeof value === 'symbol') {
+        return value;
+    }
+    if (Object.is(value?.valueOf?.(), -0)) {
+        return '-0';
+    }
+    return String(value);
+}
+
+function toPath(deepKey) {
+    const result = [];
+    const length = deepKey.length;
+    if (length === 0) {
+        return result;
+    }
+    let index = 0;
+    let key = '';
+    let quoteChar = '';
+    let bracket = false;
+    if (deepKey.charCodeAt(0) === 46) {
+        result.push('');
+        index++;
+    }
+    while (index < length) {
+        const char = deepKey[index];
+        if (quoteChar) {
+            if (char === '\\' && index + 1 < length) {
+                index++;
+                key += deepKey[index];
+            }
+            else if (char === quoteChar) {
+                quoteChar = '';
+            }
+            else {
+                key += char;
+            }
+        }
+        else if (bracket) {
+            if (char === '"' || char === "'") {
+                quoteChar = char;
+            }
+            else if (char === ']') {
+                bracket = false;
+                result.push(key);
+                key = '';
+            }
+            else {
+                key += char;
+            }
+        }
+        else {
+            if (char === '[') {
+                bracket = true;
+                if (key) {
+                    result.push(key);
+                    key = '';
+                }
+            }
+            else if (char === '.') {
+                if (key) {
+                    result.push(key);
+                    key = '';
+                }
+            }
+            else {
+                key += char;
+            }
+        }
+        index++;
+    }
+    if (key) {
+        result.push(key);
+    }
+    return result;
+}
+
+function get(object, path, defaultValue) {
+    if (object == null) {
+        return defaultValue;
+    }
+    switch (typeof path) {
+        case 'string': {
+            if (isUnsafeProperty(path)) {
+                return defaultValue;
+            }
+            const result = object[path];
+            if (result === undefined) {
+                if (isDeepKey(path)) {
+                    return get(object, toPath(path), defaultValue);
+                }
+                else {
+                    return defaultValue;
+                }
+            }
+            return result;
+        }
+        case 'number':
+        case 'symbol': {
+            if (typeof path === 'number') {
+                path = toKey(path);
+            }
+            const result = object[path];
+            if (result === undefined) {
+                return defaultValue;
+            }
+            return result;
+        }
+        default: {
+            if (Array.isArray(path)) {
+                return getWithPath(object, path, defaultValue);
+            }
+            if (Object.is(path?.valueOf(), -0)) {
+                path = '-0';
+            }
+            else {
+                path = String(path);
+            }
+            if (isUnsafeProperty(path)) {
+                return defaultValue;
+            }
+            const result = object[path];
+            if (result === undefined) {
+                return defaultValue;
+            }
+            return result;
+        }
+    }
+}
+function getWithPath(object, path, defaultValue) {
+    if (path.length === 0) {
+        return defaultValue;
+    }
+    let current = object;
+    for (let index = 0; index < path.length; index++) {
+        if (current == null) {
+            return defaultValue;
+        }
+        if (isUnsafeProperty(path[index])) {
+            return defaultValue;
+        }
+        current = current[path[index]];
+    }
+    if (current === undefined) {
+        return defaultValue;
+    }
+    return current;
+}
+
 const $isDefined = {
 	name: "$isDefined",
 	apply: (_, inputData) => inputData !== undefined,
@@ -11344,7 +11509,7 @@ const conditionalDefinitions = { $if, $case };
 const $random = {
 	name: "$random",
 	apply: (operand = {}) => {
-		const { min = 0, max = 1, precision = null } = operand;
+		const { min = 0, max = 1, precision = null } = operand || {};
 		const value = Math.random() * (max - min) + min;
 
 		if (precision == null) {
@@ -11752,7 +11917,7 @@ function createExpressionEngine(customExpressions) {
 			if (!isExpression(expression)) {
 				return Array.isArray(expression)
 					? expression.map(step)
-					: typeof expression === "object"
+					: typeof expression === "object" && expression !== null
 						? mapValues(expression, step)
 						: expression;
 			}
@@ -11775,7 +11940,7 @@ function createExpressionEngine(customExpressions) {
 		if (!isExpression(expression)) {
 			return Array.isArray(expression)
 				? expression.map(evaluate)
-				: typeof expression === "object"
+				: typeof expression === "object" && expression !== null
 					? mapValues(expression, evaluate)
 					: expression;
 		}
@@ -13244,7 +13409,7 @@ function validateSchema(schema, options = {}) {
 	return introspectiveResult;
 }
 
-// import { mapValues } from "lodash-es";
+// import { mapValues } from "es-toolkit";
 // import { defaultExpressionEngine } from "../expressions/expressions.js";
 
 /**
@@ -13581,10 +13746,10 @@ class ExpressionNotSupportedError extends Error {
 	 * @param {string} [reason] - Optional reason why the expression is not supported
 	 */
 	constructor(expression, storeName, reason) {
-		const message = reason 
+		const message = reason
 			? `Expression ${expression} is not supported by ${storeName}: ${reason}`
 			: `Expression ${expression} is not supported by ${storeName}`;
-		
+
 		super(message);
 		this.name = "ExpressionNotSupportedError";
 		this.expression = expression;
@@ -14200,20 +14365,69 @@ function extractQueryClauses$1(query, context) {
 
 /**
  * @typedef {Object} ColumnModifier
- * @property {(val: string) => any} extract - Function to extract/parse stored value
+ * @property {(val: any) => any} extract - Function to extract/parse stored value
  * @property {(col: string) => string} select - Function to generate SQL for selecting value
+ * @property {(val: any) => any} [store] - Function to transform value before storing (optional)
  */
 
 /**
- * Column type modifiers for different data types in PostgreSQL
+ * Base column type modifiers shared across SQL stores
  * @type {Object<string, ColumnModifier>}
  */
-const columnTypeModifiers = {
+const baseColumnTypeModifiers = {
 	geojson: {
 		extract: (val) => JSON.parse(val),
 		select: (val) => `ST_AsGeoJSON(${val})`,
 	},
 };
+
+/**
+ * Creates column type modifiers with custom type handlers
+ * @param {Object<string, ColumnModifier>} [customModifiers={}] - Custom type modifiers
+ * @returns {Object<string, ColumnModifier>} Combined column type modifiers
+ */
+function createColumnTypeModifiers(customModifiers = {}) {
+	return {
+		...baseColumnTypeModifiers,
+		...customModifiers,
+	};
+}
+
+/**
+ * Transforms values for storage using column type modifiers
+ * @param {any[]} values - Array of values to transform
+ * @param {string[]} attributeNames - Array of attribute names corresponding to values
+ * @param {import('data-prism').ResourceSchema} resourceSchema - Resource schema
+ * @param {Object<string, ColumnModifier>} columnTypeModifiers - Column type modifiers
+ * @returns {any[]} Transformed values ready for storage
+ */
+function transformValuesForStorage(
+	values,
+	attributeNames,
+	resourceSchema,
+	columnTypeModifiers,
+) {
+	return values.map((value, index) => {
+		const attrName = attributeNames[index];
+		const attrSchema = resourceSchema.attributes[attrName];
+		const modifier = columnTypeModifiers[attrSchema?.type];
+
+		return modifier?.store ? modifier.store(value) : value;
+	});
+}
+
+// Now using shared sql-helpers package
+
+// SQLite-specific boolean handling
+const sqliteBooleanModifier = {
+	extract: (val) => (val === 1 ? true : val === 0 ? false : val),
+	select: (val) => val,
+	store: (val) => (typeof val === "boolean" ? (val ? 1 : 0) : val),
+};
+
+const columnTypeModifiers = createColumnTypeModifiers({
+	boolean: sqliteBooleanModifier,
+});
 
 // Now using shared sql-helpers package
 
@@ -14229,43 +14443,7 @@ function extractQueryClauses(query, context) {
 	});
 }
 
-// Per-database cache for regex support detection
-const regexSupportCache = new WeakMap();
-
-/**
- * Tests if SQLite database has REGEXP function support
- * @param {import('better-sqlite3').Database} db - SQLite database instance
- * @returns {boolean} True if REGEXP is supported
- */
-function hasRegexSupport(db) {
-	if (regexSupportCache.has(db)) {
-		return regexSupportCache.get(db);
-	}
-
-	try {
-		// Test if REGEXP function exists
-		db.prepare("SELECT 1 WHERE 'test' REGEXP ?").get("test");
-		regexSupportCache.set(db, true);
-		return true;
-	} catch {
-		regexSupportCache.set(db, false);
-		return false;
-	}
-}
-
-/**
- * @typedef {Object} SqlExpression
- * @property {string} name - Human readable name for the expression
- * @property {(operand: any[]) => string} where - Function to generate WHERE clause SQL
- * @property {(operand: any[]) => any} vars - Function to extract variables for SQL operand
- * @property {boolean} [controlsEvaluation] - Whether this expression controls evaluation
- */
-
-/**
- * SQL expression definitions for building WHERE clauses and extracting variables
- * @type {Object<string, SqlExpression>}
- */
-const createSQLExpressions = (db) => ({
+const DEFAULT_WHERE_EXPRESSIONS = {
 	$and: {
 		controlsEvaluation: true,
 		where: (operand, { evaluate }) =>
@@ -14314,34 +14492,12 @@ const createSQLExpressions = (db) => ({
 		where: (operand) => ` NOT IN (${operand.map(() => "?").join(",")})`,
 		vars: (operand) => operand,
 	},
-	$matchesRegex: {
-		where: () => {
-			if (!hasRegexSupport(db)) {
-				throw new ExpressionNotSupportedError(
-					"$matchesRegex",
-					"sqlite-store",
-					"SQLite regex support requires custom REGEXP function configuration",
-				);
-			}
-			return " REGEXP ?";
-		},
-		vars: (operand) => {
-			if (!hasRegexSupport(db)) {
-				throw new ExpressionNotSupportedError(
-					"$matchesRegex",
-					"sqlite-store",
-					"SQLite regex support requires custom REGEXP function configuration",
-				);
-			}
-			return operand;
-		},
-	},
 	$get: {
 		where: (operand) => snakeCase(operand),
 		vars: () => [],
 	},
 	$pipe: {
-		where: (operand) => operand.join(" "),
+		where: (operand) => operand.join(""),
 		vars: (operand) => operand.flat(),
 	},
 	$compose: {
@@ -14443,6 +14599,105 @@ const createSQLExpressions = (db) => ({
 		controlsEvaluation: true,
 		where: (operand, { evaluate }) => evaluate(operand),
 		vars: (operand, { evaluate }) => evaluate(operand),
+	},
+	$matchesLike: {
+		name: "$matchesLike",
+		where: () => " LIKE ?",
+		vars: (operand) => operand,
+	},
+	$matchesGlob: {
+		where: () => {
+			throw new ExpressionNotSupportedError(
+				"$matchesGlob",
+				"store",
+				"glob support is distinct to each SQL store",
+			);
+		},
+		vars: () => {
+			throw new ExpressionNotSupportedError(
+				"$matchesGlob",
+				"store",
+				"glob support is distinct to each SQL store",
+			);
+		},
+	},
+	$matchesRegex: {
+		where: () => {
+			throw new ExpressionNotSupportedError(
+				"$matchesRegex",
+				"store",
+				"regex support is distinct to each SQL store",
+			);
+		},
+		vars: () => {
+			throw new ExpressionNotSupportedError(
+				"$matchesRegex",
+				"store",
+				"regex support is distinct to each SQL store",
+			);
+		},
+	},
+};
+
+// Per-database cache for regex support detection
+const regexSupportCache = new WeakMap();
+
+/**
+ * Tests if SQLite database has REGEXP function support
+ * @param {import('better-sqlite3').Database} db - SQLite database instance
+ * @returns {boolean} True if REGEXP is supported
+ */
+function hasRegexSupport(db) {
+	if (regexSupportCache.has(db)) {
+		return regexSupportCache.get(db);
+	}
+
+	try {
+		// Test if REGEXP function exists
+		db.prepare("SELECT 1 WHERE 'test' REGEXP ?").get("test");
+		regexSupportCache.set(db, true);
+		return true;
+	} catch {
+		regexSupportCache.set(db, false);
+		return false;
+	}
+}
+
+/**
+ * @typedef {Object} SqlExpression
+ * @property {string} name - Human readable name for the expression
+ * @property {(operand: any[]) => string} where - Function to generate WHERE clause SQL
+ * @property {(operand: any[]) => any} vars - Function to extract variables for SQL operand
+ * @property {boolean} [controlsEvaluation] - Whether this expression controls evaluation
+ */
+
+/**
+ * SQL expression definitions for building WHERE clauses and extracting variables
+ * @type {Object<string, SqlExpression>}
+ */
+const createSQLExpressions = (db) => ({
+	...DEFAULT_WHERE_EXPRESSIONS,
+	$matchesRegex: {
+		where: () => {
+			if (!hasRegexSupport(db)) {
+				throw new ExpressionNotSupportedError(
+					"$matchesRegex",
+					"sqlite-store",
+					"SQLite regex support requires custom REGEXP function configuration",
+				);
+			}
+			return " REGEXP ?";
+		},
+		vars: (operand) => {
+			if (!hasRegexSupport(db)) {
+				throw new ExpressionNotSupportedError(
+					"$matchesRegex",
+					"sqlite-store",
+					"SQLite regex support requires custom REGEXP function configuration",
+				);
+			}
+			return operand;
+		},
 	},
 	$matchesLike: {
 		name: "$matchesLike",
@@ -14729,10 +14984,25 @@ async function create(resource, context) {
 
 	const columns = [...attributeColumns, ...relationshipColumns, ...idColumns];
 	const placeholders = columns.map(() => "?").join(", ");
+
+	const attributeValues = Object.values(resource.attributes);
+	const relationshipValues = Object.values(localRelationships).map(
+		(r) => r?.id ?? null,
+	);
+	const idValues = idVars;
+
+	// Transform attribute values using column type modifiers
+	const transformedAttributeValues = transformValuesForStorage(
+		attributeValues,
+		Object.keys(resource.attributes),
+		resSchema,
+		columnTypeModifiers,
+	);
+
 	const vars = [
-		...Object.values(resource.attributes),
-		...Object.values(localRelationships).map((r) => r?.id ?? null),
-		...idVars,
+		...transformedAttributeValues,
+		...relationshipValues,
+		...idValues,
 	];
 
 	const insertSql = `
@@ -14742,21 +15012,20 @@ async function create(resource, context) {
       (${placeholders})
   `;
 
-	// Convert boolean values to integers for SQLite
-	const sqliteVars = vars.map((v) => typeof v === "boolean" ? (v ? 1 : 0) : v);
-	
 	const insertStmt = db.prepare(insertSql);
-	insertStmt.run(sqliteVars);
-	
+	insertStmt.run(vars);
+
 	// Get the created resource using the UUID we inserted
 	const selectSql = `SELECT * FROM ${table} WHERE ${snakeCase(idAttribute)} = ?`;
 	const selectStmt = db.prepare(selectSql);
 	const createdRow = selectStmt.get(resourceId);
-	
+
 	if (!createdRow) {
-		throw new Error(`Failed to retrieve created resource with id ${resourceId} from table ${table}`);
+		throw new Error(
+			`Failed to retrieve created resource with id ${resourceId} from table ${table}`,
+		);
 	}
-	
+
 	const created = {};
 	Object.entries(createdRow).forEach(([k, v]) => {
 		created[camelCase(k)] = v;
@@ -14792,7 +15061,7 @@ async function create(resource, context) {
 			WHERE ${snakeCase(foreignIdAttribute)} = ?
 		`;
 		const updateStmt = db.prepare(updateSql);
-		
+
 		val.forEach((v) => {
 			updateStmt.run(created[idAttribute], v.id);
 		});
@@ -14929,17 +15198,20 @@ function update(resource, context) {
 	);
 
 	const columns = [...attributeColumns, ...relationshipColumns];
-	const columnsWithPlaceholders = columns
-		.map((col) => `${col} = ?`)
-		.join(", ");
+	const columnsWithPlaceholders = columns.map((col) => `${col} = ?`).join(", ");
 
-	const vars = [
-		...Object.values(resource.attributes ?? {}),
-		...Object.values(localRelationships).map((r) => r.id),
-	];
+	const attributeValues = Object.values(resource.attributes ?? {});
+	const relationshipValues = Object.values(localRelationships).map((r) => r.id);
 
-	// Convert boolean values to integers for SQLite
-	const sqliteVars = vars.map((v) => typeof v === "boolean" ? (v ? 1 : 0) : v);
+	// Transform attribute values using column type modifiers
+	const transformedAttributeValues = transformValuesForStorage(
+		attributeValues,
+		Object.keys(resource.attributes ?? {}),
+		resSchema,
+		columnTypeModifiers,
+	);
+
+	const vars = [...transformedAttributeValues, ...relationshipValues];
 
 	const updated = {};
 	let firstResult;
@@ -14951,7 +15223,7 @@ function update(resource, context) {
 		`;
 
 		const updateStmt = db.prepare(updateSql);
-		updateStmt.run([...sqliteVars, resource.id]);
+		updateStmt.run([...vars, resource.id]);
 
 		// Get the updated resource
 		const selectSql = `SELECT * FROM ${table} WHERE ${snakeCase(idAttribute)} = ?`;
@@ -14998,7 +15270,7 @@ function update(resource, context) {
 			WHERE ${snakeCase(foreignIdAttribute)} = ?
 		`;
 		const updateStmt = db.prepare(updateSql);
-		
+
 		val.forEach((v) => {
 			updateStmt.run(updated[idAttribute], v.id);
 		});
@@ -15360,14 +15632,26 @@ function upsertResourceRow(resource, context) {
 
 	const columns = [...attributeColumns, ...relationshipColumns, ...idColumns];
 	const placeholders = columns.map(() => "?").join(", ");
-	const vars = [
-		...Object.values(resource.attributes ?? {}),
-		...Object.values(localRelationships).map((r) => r?.id ?? null),
-		...idVars,
-	];
 
-	// Convert boolean values to integers for SQLite
-	const sqliteVars = vars.map((v) => typeof v === "boolean" ? (v ? 1 : 0) : v);
+	const attributeValues = Object.values(resource.attributes ?? {});
+	const relationshipValues = Object.values(localRelationships).map(
+		(r) => r?.id ?? null,
+	);
+	const idValues = idVars;
+
+	// Transform attribute values using column type modifiers
+	const transformedAttributeValues = transformValuesForStorage(
+		attributeValues,
+		Object.keys(resource.attributes ?? {}),
+		resSchema,
+		columnTypeModifiers,
+	);
+
+	const vars = [
+		...transformedAttributeValues,
+		...relationshipValues,
+		...idValues,
+	];
 
 	const updateColumns = [...attributeColumns, ...relationshipColumns]
 		.map((col) => `${col} = EXCLUDED.${col}`)
@@ -15386,7 +15670,7 @@ function upsertResourceRow(resource, context) {
   `;
 
 	const upsertStmt = db.prepare(upsertSql);
-	upsertStmt.run(sqliteVars);
+	upsertStmt.run(vars);
 
 	// Get the upserted resource
 	const selectSql = `SELECT * FROM ${table} WHERE ${snakeCase(idAttribute)} = ?`;
@@ -15450,7 +15734,7 @@ function upsertForeignRelationshipRows(resource, context) {
 			WHERE ${snakeCase(foreignIdAttribute)} = ?
 		`;
 		const updateStmt = db.prepare(updateSql);
-		
+
 		val.forEach((v) => {
 			updateStmt.run(resource.id, v.id);
 		});

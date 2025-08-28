@@ -1,4 +1,4 @@
-import { mapValues, snakeCase } from "lodash-es";
+import { mapValues, snakeCase } from "es-toolkit";
 import { columnTypeModifiers } from "./column-type-modifiers.js";
 
 /**

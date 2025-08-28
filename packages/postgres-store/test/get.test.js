@@ -5,7 +5,7 @@ import { careBearSchema } from "../../interface-tests/src/index.js";
 import { careBearData } from "../../interface-tests/src/index.js";
 import { careBearConfig } from "./fixtures/care-bear-config.js";
 import { reset } from "../scripts/seed.js";
-import { omit } from "lodash-es";
+import { omit } from "es-toolkit";
 
 describe("Get Tests", () => {
 	let store;

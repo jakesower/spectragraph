@@ -1,4 +1,4 @@
-import { snakeCase, uniq } from "lodash-es";
+import { snakeCase, uniq } from "es-toolkit";
 import { createWhereExpressionEngine } from "../helpers/where-expressions.js";
 
 /**

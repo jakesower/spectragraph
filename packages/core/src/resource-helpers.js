@@ -1,4 +1,4 @@
-import { mapValues } from "lodash-es";
+import { mapValues } from "es-toolkit";
 
 export function buildAttribute(attrSchema, curValue) {
 	const defaultedValue = curValue === undefined ? attrSchema.default : curValue;

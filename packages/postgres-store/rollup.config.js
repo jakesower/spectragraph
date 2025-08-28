@@ -9,7 +9,7 @@ export default [
 		output: { file: "dist/postgres-store.esm.js", format: "es" },
 		plugins: [nodeResolve(), commonjs(), json()],
 		external: [
-			"lodash-es",
+			"es-toolkit",
 			"@data-prism/utils",
 			"data-prism",
 			"ajv",
@@ -22,7 +22,7 @@ export default [
 		output: { file: "dist/postgres-store.cjs.js", format: "cjs" },
 		plugins: [nodeResolve(), commonjs(), json()],
 		external: [
-			"lodash-es",
+			"es-toolkit",
 			"@data-prism/utils",
 			"data-prism",
 			"ajv",

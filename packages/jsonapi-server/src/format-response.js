@@ -4,7 +4,7 @@ import {
 	normalizeQuery,
 	normalizeResource,
 } from "@data-prism/core";
-import { mapValues, omit } from "lodash-es";
+import { mapValues, omit } from "es-toolkit";
 
 /**
  * Formats query results into JSON:API response format

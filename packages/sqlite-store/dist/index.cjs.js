@@ -1,6 +1,6 @@
 'use strict';
 
-var lodashEs = require('lodash-es');
+var esToolkit = require('es-toolkit');
 var utils$1 = require('@data-prism/utils');
 var crypto$1 = require('crypto');
 
@@ -10704,6 +10704,171 @@ function requireDist () {
 var distExports = requireDist();
 var addErrors = /*@__PURE__*/getDefaultExportFromCjs(distExports);
 
+function isUnsafeProperty(key) {
+    return key === '__proto__';
+}
+
+function isDeepKey(key) {
+    switch (typeof key) {
+        case 'number':
+        case 'symbol': {
+            return false;
+        }
+        case 'string': {
+            return key.includes('.') || key.includes('[') || key.includes(']');
+        }
+    }
+}
+
+function toKey(value) {
+    if (typeof value === 'string' || typeof value === 'symbol') {
+        return value;
+    }
+    if (Object.is(value?.valueOf?.(), -0)) {
+        return '-0';
+    }
+    return String(value);
+}
+
+function toPath(deepKey) {
+    const result = [];
+    const length = deepKey.length;
+    if (length === 0) {
+        return result;
+    }
+    let index = 0;
+    let key = '';
+    let quoteChar = '';
+    let bracket = false;
+    if (deepKey.charCodeAt(0) === 46) {
+        result.push('');
+        index++;
+    }
+    while (index < length) {
+        const char = deepKey[index];
+        if (quoteChar) {
+            if (char === '\\' && index + 1 < length) {
+                index++;
+                key += deepKey[index];
+            }
+            else if (char === quoteChar) {
+                quoteChar = '';
+            }
+            else {
+                key += char;
+            }
+        }
+        else if (bracket) {
+            if (char === '"' || char === "'") {
+                quoteChar = char;
+            }
+            else if (char === ']') {
+                bracket = false;
+                result.push(key);
+                key = '';
+            }
+            else {
+                key += char;
+            }
+        }
+        else {
+            if (char === '[') {
+                bracket = true;
+                if (key) {
+                    result.push(key);
+                    key = '';
+                }
+            }
+            else if (char === '.') {
+                if (key) {
+                    result.push(key);
+                    key = '';
+                }
+            }
+            else {
+                key += char;
+            }
+        }
+        index++;
+    }
+    if (key) {
+        result.push(key);
+    }
+    return result;
+}
+
+function get(object, path, defaultValue) {
+    if (object == null) {
+        return defaultValue;
+    }
+    switch (typeof path) {
+        case 'string': {
+            if (isUnsafeProperty(path)) {
+                return defaultValue;
+            }
+            const result = object[path];
+            if (result === undefined) {
+                if (isDeepKey(path)) {
+                    return get(object, toPath(path), defaultValue);
+                }
+                else {
+                    return defaultValue;
+                }
+            }
+            return result;
+        }
+        case 'number':
+        case 'symbol': {
+            if (typeof path === 'number') {
+                path = toKey(path);
+            }
+            const result = object[path];
+            if (result === undefined) {
+                return defaultValue;
+            }
+            return result;
+        }
+        default: {
+            if (Array.isArray(path)) {
+                return getWithPath(object, path, defaultValue);
+            }
+            if (Object.is(path?.valueOf(), -0)) {
+                path = '-0';
+            }
+            else {
+                path = String(path);
+            }
+            if (isUnsafeProperty(path)) {
+                return defaultValue;
+            }
+            const result = object[path];
+            if (result === undefined) {
+                return defaultValue;
+            }
+            return result;
+        }
+    }
+}
+function getWithPath(object, path, defaultValue) {
+    if (path.length === 0) {
+        return defaultValue;
+    }
+    let current = object;
+    for (let index = 0; index < path.length; index++) {
+        if (current == null) {
+            return defaultValue;
+        }
+        if (isUnsafeProperty(path[index])) {
+            return defaultValue;
+        }
+        current = current[path[index]];
+    }
+    if (current === undefined) {
+        return defaultValue;
+    }
+    return current;
+}
+
 const $isDefined = {
 	name: "$isDefined",
 	apply: (_, inputData) => inputData !== undefined,
@@ -10752,7 +10917,7 @@ const $ensurePath = {
 
 const $get = {
 	name: "$get",
-	apply: (operand, inputData) => lodashEs.get(inputData, operand),
+	apply: (operand, inputData) => get(inputData, operand),
 	evaluate(operand) {
 		if (!Array.isArray(operand)) {
 			throw new Error(
@@ -10945,15 +11110,15 @@ const createComparativeWhereCompiler =
 
 const $eq = {
 	name: "$eq",
-	apply: lodashEs.isEqual,
-	evaluate: ([left, right]) => lodashEs.isEqual(left, right),
+	apply: esToolkit.isEqual,
+	evaluate: ([left, right]) => esToolkit.isEqual(left, right),
 	normalizeWhere: createComparativeWhereCompiler("$eq"),
 };
 
 const $ne = {
 	name: "$ne",
-	apply: (operand, inputData) => !lodashEs.isEqual(operand, inputData),
-	evaluate: ([left, right]) => !lodashEs.isEqual(left, right),
+	apply: (operand, inputData) => !esToolkit.isEqual(operand, inputData),
+	evaluate: ([left, right]) => !esToolkit.isEqual(left, right),
 	normalizeWhere: createComparativeWhereCompiler("$ne"),
 };
 
@@ -11346,7 +11511,7 @@ const conditionalDefinitions = { $if, $case };
 const $random = {
 	name: "$random",
 	apply: (operand = {}) => {
-		const { min = 0, max = 1, precision = null } = operand;
+		const { min = 0, max = 1, precision = null } = operand || {};
 		const value = Math.random() * (max - min) + min;
 
 		if (precision == null) {
@@ -11754,8 +11919,8 @@ function createExpressionEngine(customExpressions) {
 			if (!isExpression(expression)) {
 				return Array.isArray(expression)
 					? expression.map(step)
-					: typeof expression === "object"
-						? lodashEs.mapValues(expression, step)
+					: typeof expression === "object" && expression !== null
+						? esToolkit.mapValues(expression, step)
 						: expression;
 			}
 
@@ -11777,8 +11942,8 @@ function createExpressionEngine(customExpressions) {
 		if (!isExpression(expression)) {
 			return Array.isArray(expression)
 				? expression.map(evaluate)
-				: typeof expression === "object"
-					? lodashEs.mapValues(expression, evaluate)
+				: typeof expression === "object" && expression !== null
+					? esToolkit.mapValues(expression, evaluate)
 					: expression;
 		}
 
@@ -11954,7 +12119,7 @@ function translateAjvErrors(
 		-Infinity,
 	);
 
-	const topErrors = lodashEs.uniqBy(
+	const topErrors = esToolkit.uniqBy(
 		candidateErrors.filter(
 			(err) => err.instancePath.split("/").length === maxDepth,
 		),
@@ -11968,7 +12133,7 @@ function translateAjvErrors(
 			: `${dataVar}${error.instancePath} ${error.message}`,
 		path: error.instancePath ?? error.schemaPath,
 		code: error.keyword,
-		value: lodashEs.get(subject, error.instancePath?.replaceAll("/", ".")?.slice(1)),
+		value: get(subject, error.instancePath?.replaceAll("/", ".")?.slice(1)),
 		otherErrors: ajvErrors,
 	}));
 }
@@ -12152,7 +12317,7 @@ function getResourceStructureValidator(schema, resourceType, expressionEngine) {
 					{ $ref: "#/definitions/expression" },
 					{
 						type: "object",
-						properties: lodashEs.mapValues(
+						properties: esToolkit.mapValues(
 							schema.resources[resourceType].attributes,
 							() => ({}),
 						),
@@ -12191,7 +12356,7 @@ function getResourceStructureValidator(schema, resourceType, expressionEngine) {
 				type: "object",
 				minProperties: 1,
 				maxProperties: 1,
-				properties: lodashEs.mapValues(
+				properties: esToolkit.mapValues(
 					schema.resources[resourceType].attributes,
 					() => ({}),
 				),
@@ -12446,12 +12611,12 @@ function normalizeQuery(schema, rootQuery, options = {}) {
 					for (const attr of Object.keys(resSchema.attributes)) {
 						result[attr] = attr;
 					}
-					Object.assign(result, lodashEs.omit(selectObj, ["*"]));
+					Object.assign(result, esToolkit.omit(selectObj, ["*"]));
 					return result;
 				})()
 			: selectObj;
 
-		const selectWithSubqueries = lodashEs.mapValues(selectWithStar, (sel, key) => {
+		const selectWithSubqueries = esToolkit.mapValues(selectWithStar, (sel, key) => {
 			if (
 				key in schema.resources[type].relationships &&
 				typeof sel === "object"
@@ -12593,7 +12758,7 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 			type: "object",
 			required: resSchema.requiredRelationships,
 			additionalProperties: false,
-			properties: lodashEs.mapValues(resSchema.relationships, (relSchema, relName) =>
+			properties: esToolkit.mapValues(resSchema.relationships, (relSchema, relName) =>
 				relSchema.cardinality === "one"
 					? requiredRelationships.includes(relName)
 						? {
@@ -12875,7 +13040,7 @@ function validateMergeResource(schema, resource, options = {}) {
 						type: "object",
 						required: requiredRelationships,
 						additionalProperties: false,
-						properties: lodashEs.mapValues(
+						properties: esToolkit.mapValues(
 							resSchema.relationships,
 							(relSchema, resName) =>
 								relSchema.cardinality === "one"
@@ -12899,14 +13064,14 @@ function validateMergeResource(schema, resource, options = {}) {
 					attributes: {
 						type: "object",
 						additionalProperties: false,
-						properties: lodashEs.mapValues(resSchema.attributes, (a) =>
-							lodashEs.omit(a, ["required"]),
+						properties: esToolkit.mapValues(resSchema.attributes, (a) =>
+							esToolkit.omit(a, ["required"]),
 						),
 					},
 					relationships: {
 						type: "object",
 						additionalProperties: false,
-						properties: lodashEs.mapValues(resSchema.relationships, (relSchema) =>
+						properties: esToolkit.mapValues(resSchema.relationships, (relSchema) =>
 							relSchema.cardinality === "one"
 								? relSchema.required
 									? toOneRefOfType(relSchema.type, true)
@@ -13130,7 +13295,7 @@ var metaschema = {
  */
 
 const metaschemaWithErrors = (() => {
-	const out = lodashEs.merge(structuredClone(metaschema), {
+	const out = esToolkit.merge(structuredClone(metaschema), {
 		definitions: {
 			attribute: {
 				$ref: "http://json-schema.org/draft-07/schema#",
@@ -13193,16 +13358,16 @@ function validateSchema(schema, options = {}) {
 		return attributeSchemaErrors;
 	}
 
-	const introspectiveSchema = lodashEs.merge(structuredClone(metaschema), {
+	const introspectiveSchema = esToolkit.merge(structuredClone(metaschema), {
 		properties: {
 			resources: {
-				properties: lodashEs.mapValues(schema.resources, (_, resName) => ({
+				properties: esToolkit.mapValues(schema.resources, (_, resName) => ({
 					$ref: `#/definitions/resources/${resName}`,
 				})),
 			},
 		},
 		definitions: {
-			resources: lodashEs.mapValues(schema.resources, (resSchema, resName) => ({
+			resources: esToolkit.mapValues(schema.resources, (resSchema, resName) => ({
 				allOf: [
 					{ $ref: "#/definitions/resource" },
 					{
@@ -13246,7 +13411,7 @@ function validateSchema(schema, options = {}) {
 	return introspectiveResult;
 }
 
-// import { mapValues } from "lodash-es";
+// import { mapValues } from "es-toolkit";
 // import { defaultExpressionEngine } from "../expressions/expressions.js";
 
 /**
@@ -13441,7 +13606,7 @@ function runQuery(rootQuery, data) {
 					);
 				}
 
-				return lodashEs.orderBy(results, properties, dirs);
+				return esToolkit.orderBy(results, properties, dirs);
 			},
 			limit(results) {
 				const { limit, offset = 0 } = query;
@@ -13455,7 +13620,7 @@ function runQuery(rootQuery, data) {
 			},
 			select(results) {
 				const { select } = query;
-				const projectors = lodashEs.mapValues(select, (propQuery, propName) => {
+				const projectors = esToolkit.mapValues(select, (propQuery, propName) => {
 					// possibilities: (1) property (2) expression (3) subquery
 					if (typeof propQuery === "string") {
 						// nested / shallow property
@@ -13538,7 +13703,7 @@ function runQuery(rootQuery, data) {
 				});
 
 				return results.map((result) =>
-					lodashEs.mapValues(projectors, (project) => project(result)),
+					esToolkit.mapValues(projectors, (project) => project(result)),
 				);
 			},
 		};
@@ -13583,10 +13748,10 @@ class ExpressionNotSupportedError extends Error {
 	 * @param {string} [reason] - Optional reason why the expression is not supported
 	 */
 	constructor(expression, storeName, reason) {
-		const message = reason 
+		const message = reason
 			? `Expression ${expression} is not supported by ${storeName}: ${reason}`
 			: `Expression ${expression} is not supported by ${storeName}`;
-		
+
 		super(message);
 		this.name = "ExpressionNotSupportedError";
 		this.expression = expression;
@@ -13624,7 +13789,7 @@ function flattenQuery(schema, rootQuery) {
 	const go = (query, type, path, parent = null, parentRelationship = null) => {
 		const resDef = schema.resources[type];
 		const { idAttribute = "id" } = resDef;
-		const [attributesEntries, relationshipsEntries] = lodashEs.partition(
+		const [attributesEntries, relationshipsEntries] = esToolkit.partition(
 			Object.entries(query.select ?? {}),
 			([, propVal]) =>
 				typeof propVal === "string" &&
@@ -13642,7 +13807,7 @@ function flattenQuery(schema, rootQuery) {
 			attributes,
 			query,
 			ref: !query.select,
-			relationships: lodashEs.pick(query.select, relationshipKeys),
+			relationships: esToolkit.pick(query.select, relationshipKeys),
 			type,
 		};
 
@@ -13852,19 +14017,19 @@ const preQueryRelationships = (context) => {
 	const parentPath = queryPath.slice(0, -1);
 	const tablePath = [rootQuery.type, ...queryPath];
 	const parentTablePath = [rootQuery.type, ...parentPath];
-	const relName = lodashEs.last(queryPath);
+	const relName = esToolkit.last(queryPath);
 
 	const relationshipBuilders = makeRelationshipBuilders(schema);
 	const localQueryTableName = parentTablePath.join("$");
 
 	const localConfig = config.resources[parent.type];
 	const localResSchema = schema.resources[parent.type];
-	const localIdCol = lodashEs.snakeCase(localResSchema.idAttribute ?? "id");
+	const localIdCol = esToolkit.snakeCase(localResSchema.idAttribute ?? "id");
 	const localRelDef = localResSchema.relationships[relName];
 
 	const foreignConfig = config.resources[localRelDef.type];
 	const foreignResSchema = schema.resources[localRelDef.type];
-	const foreignIdCol = lodashEs.snakeCase(foreignResSchema.idAttribute ?? "id");
+	const foreignIdCol = esToolkit.snakeCase(foreignResSchema.idAttribute ?? "id");
 	const foreignRelDef = foreignResSchema.relationships[localRelDef.inverse];
 	const foreignTableAlias = tablePath.join("$");
 
@@ -13962,7 +14127,7 @@ const processRelationship = (context) => {
  */
 function extractGraph$1(rawResults, selectClause, context) {
 	const { schema, query: rootQuery, columnTypeModifiers = {} } = context;
-	const graph = lodashEs.mapValues(schema.resources, () => ({}));
+	const graph = esToolkit.mapValues(schema.resources, () => ({}));
 
 	const extractors = flatMapQuery(schema, rootQuery, (_, info) => {
 		const { parent, parentQuery, parentRelationship, attributes, type } = info;
@@ -13980,7 +14145,7 @@ function extractGraph$1(rawResults, selectClause, context) {
 			schema.resources[parentType].relationships[parentRelationship];
 
 		const pathStr = buildPathString(info.path);
-		const idPath = `${rootQuery.type}${pathStr}.${lodashEs.snakeCase(idAttribute)}`;
+		const idPath = `${rootQuery.type}${pathStr}.${esToolkit.snakeCase(idAttribute)}`;
 		const idIdx = selectAttributeMap[idPath];
 
 		return (result) => {
@@ -13991,7 +14156,7 @@ function extractGraph$1(rawResults, selectClause, context) {
 				const parentId =
 					result[
 						selectAttributeMap[
-							`${rootQuery.type}${buildParentPath(info.path)}.${lodashEs.snakeCase(
+							`${rootQuery.type}${buildParentPath(info.path)}.${esToolkit.snakeCase(
 								parentResSchema.idAttribute ?? "id",
 							)}`
 						]
@@ -14026,7 +14191,7 @@ function extractGraph$1(rawResults, selectClause, context) {
 				attributes.forEach((attr) => {
 					const resultIdx =
 						selectAttributeMap[
-							`${rootQuery.type}${pathStr}.${lodashEs.snakeCase(attr)}`
+							`${rootQuery.type}${pathStr}.${esToolkit.snakeCase(attr)}`
 						];
 					const resourceSchema = schema.resources[type];
 					const attrType = resourceSchema.attributes[attr]?.type;
@@ -14103,7 +14268,7 @@ const QUERY_CLAUSE_EXTRACTORS = {
 		const { idAttribute = "id" } = schema.resources[queryInfo.type];
 
 		return {
-			where: [`${queryInfo.type}.${lodashEs.snakeCase(idAttribute)} = ?`],
+			where: [`${queryInfo.type}.${esToolkit.snakeCase(idAttribute)} = ?`],
 			vars: [id],
 		};
 	},
@@ -14152,9 +14317,9 @@ const QUERY_CLAUSE_EXTRACTORS = {
 		const relationshipsModifiers = preQueryRelationships(context);
 
 		return {
-			select: lodashEs.uniq([idAttribute, ...attributeProps]).map((col) => {
+			select: esToolkit.uniq([idAttribute, ...attributeProps]).map((col) => {
 				const attrSchema = resSchema.attributes[col];
-				const value = `${table}.${lodashEs.snakeCase(col)}`;
+				const value = `${table}.${esToolkit.snakeCase(col)}`;
 
 				return {
 					value,
@@ -14202,20 +14367,69 @@ function extractQueryClauses$1(query, context) {
 
 /**
  * @typedef {Object} ColumnModifier
- * @property {(val: string) => any} extract - Function to extract/parse stored value
+ * @property {(val: any) => any} extract - Function to extract/parse stored value
  * @property {(col: string) => string} select - Function to generate SQL for selecting value
+ * @property {(val: any) => any} [store] - Function to transform value before storing (optional)
  */
 
 /**
- * Column type modifiers for different data types in PostgreSQL
+ * Base column type modifiers shared across SQL stores
  * @type {Object<string, ColumnModifier>}
  */
-const columnTypeModifiers = {
+const baseColumnTypeModifiers = {
 	geojson: {
 		extract: (val) => JSON.parse(val),
 		select: (val) => `ST_AsGeoJSON(${val})`,
 	},
 };
+
+/**
+ * Creates column type modifiers with custom type handlers
+ * @param {Object<string, ColumnModifier>} [customModifiers={}] - Custom type modifiers
+ * @returns {Object<string, ColumnModifier>} Combined column type modifiers
+ */
+function createColumnTypeModifiers(customModifiers = {}) {
+	return {
+		...baseColumnTypeModifiers,
+		...customModifiers,
+	};
+}
+
+/**
+ * Transforms values for storage using column type modifiers
+ * @param {any[]} values - Array of values to transform
+ * @param {string[]} attributeNames - Array of attribute names corresponding to values
+ * @param {import('data-prism').ResourceSchema} resourceSchema - Resource schema
+ * @param {Object<string, ColumnModifier>} columnTypeModifiers - Column type modifiers
+ * @returns {any[]} Transformed values ready for storage
+ */
+function transformValuesForStorage(
+	values,
+	attributeNames,
+	resourceSchema,
+	columnTypeModifiers,
+) {
+	return values.map((value, index) => {
+		const attrName = attributeNames[index];
+		const attrSchema = resourceSchema.attributes[attrName];
+		const modifier = columnTypeModifiers[attrSchema?.type];
+
+		return modifier?.store ? modifier.store(value) : value;
+	});
+}
+
+// Now using shared sql-helpers package
+
+// SQLite-specific boolean handling
+const sqliteBooleanModifier = {
+	extract: (val) => (val === 1 ? true : val === 0 ? false : val),
+	select: (val) => val,
+	store: (val) => (typeof val === "boolean" ? (val ? 1 : 0) : val),
+};
+
+const columnTypeModifiers = createColumnTypeModifiers({
+	boolean: sqliteBooleanModifier,
+});
 
 // Now using shared sql-helpers package
 
@@ -14231,43 +14445,7 @@ function extractQueryClauses(query, context) {
 	});
 }
 
-// Per-database cache for regex support detection
-const regexSupportCache = new WeakMap();
-
-/**
- * Tests if SQLite database has REGEXP function support
- * @param {import('better-sqlite3').Database} db - SQLite database instance
- * @returns {boolean} True if REGEXP is supported
- */
-function hasRegexSupport(db) {
-	if (regexSupportCache.has(db)) {
-		return regexSupportCache.get(db);
-	}
-
-	try {
-		// Test if REGEXP function exists
-		db.prepare("SELECT 1 WHERE 'test' REGEXP ?").get("test");
-		regexSupportCache.set(db, true);
-		return true;
-	} catch {
-		regexSupportCache.set(db, false);
-		return false;
-	}
-}
-
-/**
- * @typedef {Object} SqlExpression
- * @property {string} name - Human readable name for the expression
- * @property {(operand: any[]) => string} where - Function to generate WHERE clause SQL
- * @property {(operand: any[]) => any} vars - Function to extract variables for SQL operand
- * @property {boolean} [controlsEvaluation] - Whether this expression controls evaluation
- */
-
-/**
- * SQL expression definitions for building WHERE clauses and extracting variables
- * @type {Object<string, SqlExpression>}
- */
-const createSQLExpressions = (db) => ({
+const DEFAULT_WHERE_EXPRESSIONS = {
 	$and: {
 		controlsEvaluation: true,
 		where: (operand, { evaluate }) =>
@@ -14316,34 +14494,12 @@ const createSQLExpressions = (db) => ({
 		where: (operand) => ` NOT IN (${operand.map(() => "?").join(",")})`,
 		vars: (operand) => operand,
 	},
-	$matchesRegex: {
-		where: () => {
-			if (!hasRegexSupport(db)) {
-				throw new ExpressionNotSupportedError(
-					"$matchesRegex",
-					"sqlite-store",
-					"SQLite regex support requires custom REGEXP function configuration",
-				);
-			}
-			return " REGEXP ?";
-		},
-		vars: (operand) => {
-			if (!hasRegexSupport(db)) {
-				throw new ExpressionNotSupportedError(
-					"$matchesRegex",
-					"sqlite-store",
-					"SQLite regex support requires custom REGEXP function configuration",
-				);
-			}
-			return operand;
-		},
-	},
 	$get: {
-		where: (operand) => lodashEs.snakeCase(operand),
+		where: (operand) => esToolkit.snakeCase(operand),
 		vars: () => [],
 	},
 	$pipe: {
-		where: (operand) => operand.join(" "),
+		where: (operand) => operand.join(""),
 		vars: (operand) => operand.flat(),
 	},
 	$compose: {
@@ -14452,6 +14608,105 @@ const createSQLExpressions = (db) => ({
 		vars: (operand) => operand,
 	},
 	$matchesGlob: {
+		where: () => {
+			throw new ExpressionNotSupportedError(
+				"$matchesGlob",
+				"store",
+				"glob support is distinct to each SQL store",
+			);
+		},
+		vars: () => {
+			throw new ExpressionNotSupportedError(
+				"$matchesGlob",
+				"store",
+				"glob support is distinct to each SQL store",
+			);
+		},
+	},
+	$matchesRegex: {
+		where: () => {
+			throw new ExpressionNotSupportedError(
+				"$matchesRegex",
+				"store",
+				"regex support is distinct to each SQL store",
+			);
+		},
+		vars: () => {
+			throw new ExpressionNotSupportedError(
+				"$matchesRegex",
+				"store",
+				"regex support is distinct to each SQL store",
+			);
+		},
+	},
+};
+
+// Per-database cache for regex support detection
+const regexSupportCache = new WeakMap();
+
+/**
+ * Tests if SQLite database has REGEXP function support
+ * @param {import('better-sqlite3').Database} db - SQLite database instance
+ * @returns {boolean} True if REGEXP is supported
+ */
+function hasRegexSupport(db) {
+	if (regexSupportCache.has(db)) {
+		return regexSupportCache.get(db);
+	}
+
+	try {
+		// Test if REGEXP function exists
+		db.prepare("SELECT 1 WHERE 'test' REGEXP ?").get("test");
+		regexSupportCache.set(db, true);
+		return true;
+	} catch {
+		regexSupportCache.set(db, false);
+		return false;
+	}
+}
+
+/**
+ * @typedef {Object} SqlExpression
+ * @property {string} name - Human readable name for the expression
+ * @property {(operand: any[]) => string} where - Function to generate WHERE clause SQL
+ * @property {(operand: any[]) => any} vars - Function to extract variables for SQL operand
+ * @property {boolean} [controlsEvaluation] - Whether this expression controls evaluation
+ */
+
+/**
+ * SQL expression definitions for building WHERE clauses and extracting variables
+ * @type {Object<string, SqlExpression>}
+ */
+const createSQLExpressions = (db) => ({
+	...DEFAULT_WHERE_EXPRESSIONS,
+	$matchesRegex: {
+		where: () => {
+			if (!hasRegexSupport(db)) {
+				throw new ExpressionNotSupportedError(
+					"$matchesRegex",
+					"sqlite-store",
+					"SQLite regex support requires custom REGEXP function configuration",
+				);
+			}
+			return " REGEXP ?";
+		},
+		vars: (operand) => {
+			if (!hasRegexSupport(db)) {
+				throw new ExpressionNotSupportedError(
+					"$matchesRegex",
+					"sqlite-store",
+					"SQLite regex support requires custom REGEXP function configuration",
+				);
+			}
+			return operand;
+		},
+	},
+	$matchesLike: {
+		name: "$matchesLike",
+		where: () => " LIKE ?",
+		vars: (operand) => operand,
+	},
+	$matchesGlob: {
 		name: "$matchesGlob",
 		where: () => " GLOB ?",
 		vars: (operand) => operand,
@@ -14463,7 +14718,7 @@ const createSQLExpressions = (db) => ({
  */
 const createWhereExpressionEngine = ({ db }) =>
 	createExpressionEngine(
-		lodashEs.mapValues(createSQLExpressions(db), (expr) => ({
+		esToolkit.mapValues(createSQLExpressions(db), (expr) => ({
 			...expr,
 			evaluate: expr.where,
 		})),
@@ -14474,7 +14729,7 @@ const createWhereExpressionEngine = ({ db }) =>
  */
 const createVarsExpressionEngine = ({ db }) =>
 	createExpressionEngine(
-		lodashEs.mapValues(createSQLExpressions(db), (expr) => ({
+		esToolkit.mapValues(createSQLExpressions(db), (expr) => ({
 			...expr,
 			evaluate: expr.vars,
 		})),
@@ -14488,7 +14743,7 @@ const createVarsExpressionEngine = ({ db }) =>
  */
 
 // Array composition helper
-const composeArrays = (acc, item) => lodashEs.uniq([...(acc ?? []), ...(item ?? [])]);
+const composeArrays = (acc, item) => esToolkit.uniq([...(acc ?? []), ...(item ?? [])]);
 
 // Complex SQL generation functions
 const generateWhereSql = (val, context) =>
@@ -14501,7 +14756,7 @@ const generateOrderBySql = (val) => {
 
 	const orderClauses = val.map(
 		({ property, direction, table }) =>
-			`${table}.${lodashEs.snakeCase(property)}${direction === "desc" ? " DESC" : ""}`,
+			`${table}.${esToolkit.snakeCase(property)}${direction === "desc" ? " DESC" : ""}`,
 	);
 	return `ORDER BY ${orderClauses.join(", ")}`;
 };
@@ -14563,7 +14818,7 @@ function composeSqlClauses(clauseBreakdown, initialClauses) {
 	return clauseBreakdown.reduce(
 		(acc, clause) => ({
 			...acc,
-			...lodashEs.mapValues(clause, (val, key) =>
+			...esToolkit.mapValues(clause, (val, key) =>
 				SQL_CLAUSE_CONFIG[key].compose(acc[key], val),
 			),
 		}),
@@ -14639,7 +14894,7 @@ function processQueryResults(
 	const graph = extractGraph(rawResults, composedClauses.select, context);
 
 	// Strip handled clauses from query for final processing
-	const strippedQuery = lodashEs.omit(query, handledClauses);
+	const strippedQuery = esToolkit.omit(query, handledClauses);
 
 	return queryGraph(schema, strippedQuery, graph);
 }
@@ -14671,7 +14926,7 @@ async function query(query, context) {
 
 	// Step 2: Combine the flattened clauses into single values
 	const initialClauses = {
-		...lodashEs.mapValues(SQL_CLAUSE_CONFIG, (c) => c.initVal),
+		...esToolkit.mapValues(SQL_CLAUSE_CONFIG, (c) => c.initVal),
 		from: `${config.resources[query.type].table} AS ${query.type}`,
 	};
 	const composedClauses = composeSqlClauses(clauseBreakdown, initialClauses);
@@ -14713,9 +14968,9 @@ async function create(resource, context) {
 	const resSchema = schema.resources[resource.type];
 	const { idAttribute = "id" } = resSchema;
 
-	const attributeColumns = Object.keys(resource.attributes).map(lodashEs.snakeCase);
+	const attributeColumns = Object.keys(resource.attributes).map(esToolkit.snakeCase);
 
-	const localRelationships = lodashEs.pickBy(
+	const localRelationships = esToolkit.pickBy(
 		resource.relationships ?? {},
 		(_, k) => joins[k].localColumn,
 	);
@@ -14726,15 +14981,30 @@ async function create(resource, context) {
 
 	// Generate UUID if no ID provided
 	const resourceId = resource.id || crypto$1.randomUUID();
-	const idColumns = [lodashEs.snakeCase(idAttribute)];
+	const idColumns = [esToolkit.snakeCase(idAttribute)];
 	const idVars = [resourceId];
 
 	const columns = [...attributeColumns, ...relationshipColumns, ...idColumns];
 	const placeholders = columns.map(() => "?").join(", ");
+
+	const attributeValues = Object.values(resource.attributes);
+	const relationshipValues = Object.values(localRelationships).map(
+		(r) => r?.id ?? null,
+	);
+	const idValues = idVars;
+
+	// Transform attribute values using column type modifiers
+	const transformedAttributeValues = transformValuesForStorage(
+		attributeValues,
+		Object.keys(resource.attributes),
+		resSchema,
+		columnTypeModifiers,
+	);
+
 	const vars = [
-		...Object.values(resource.attributes),
-		...Object.values(localRelationships).map((r) => r?.id ?? null),
-		...idVars,
+		...transformedAttributeValues,
+		...relationshipValues,
+		...idValues,
 	];
 
 	const insertSql = `
@@ -14744,28 +15014,27 @@ async function create(resource, context) {
       (${placeholders})
   `;
 
-	// Convert boolean values to integers for SQLite
-	const sqliteVars = vars.map((v) => typeof v === "boolean" ? (v ? 1 : 0) : v);
-	
 	const insertStmt = db.prepare(insertSql);
-	insertStmt.run(sqliteVars);
-	
+	insertStmt.run(vars);
+
 	// Get the created resource using the UUID we inserted
-	const selectSql = `SELECT * FROM ${table} WHERE ${lodashEs.snakeCase(idAttribute)} = ?`;
+	const selectSql = `SELECT * FROM ${table} WHERE ${esToolkit.snakeCase(idAttribute)} = ?`;
 	const selectStmt = db.prepare(selectSql);
 	const createdRow = selectStmt.get(resourceId);
-	
+
 	if (!createdRow) {
-		throw new Error(`Failed to retrieve created resource with id ${resourceId} from table ${table}`);
+		throw new Error(
+			`Failed to retrieve created resource with id ${resourceId} from table ${table}`,
+		);
 	}
-	
+
 	const created = {};
 	Object.entries(createdRow).forEach(([k, v]) => {
-		created[lodashEs.camelCase(k)] = v;
+		created[esToolkit.camelCase(k)] = v;
 	});
 
 	// handle to-one foreign columns
-	const foreignRelationships = lodashEs.pickBy(
+	const foreignRelationships = esToolkit.pickBy(
 		resource.relationships ?? {},
 		(_, k) => joins[k].foreignColumn,
 	);
@@ -14791,17 +15060,17 @@ async function create(resource, context) {
 		const updateSql = `
 			UPDATE ${foreignTable}
 			SET ${foreignColumn} = ?
-			WHERE ${lodashEs.snakeCase(foreignIdAttribute)} = ?
+			WHERE ${esToolkit.snakeCase(foreignIdAttribute)} = ?
 		`;
 		const updateStmt = db.prepare(updateSql);
-		
+
 		val.forEach((v) => {
 			updateStmt.run(created[idAttribute], v.id);
 		});
 	});
 
 	// handle many-to-many columns
-	const m2mForeignRelationships = lodashEs.pickBy(
+	const m2mForeignRelationships = esToolkit.pickBy(
 		resource.relationships ?? {},
 		(_, k) => joins[k].joinTable,
 	);
@@ -14824,7 +15093,7 @@ async function create(resource, context) {
 	return {
 		type: resource.type,
 		id: created[idAttribute],
-		attributes: lodashEs.pick(created, Object.keys(resSchema.attributes)),
+		attributes: esToolkit.pick(created, Object.keys(resSchema.attributes)),
 		relationships: resource.relationships ?? {},
 	};
 }
@@ -14853,14 +15122,14 @@ function deleteResource(resource, context) {
 
 	const deleteSql = `
     DELETE FROM ${table}
-    WHERE ${lodashEs.snakeCase(idAttribute)} = ?
+    WHERE ${esToolkit.snakeCase(idAttribute)} = ?
   `;
 
 	const deleteStmt = db.prepare(deleteSql);
 	deleteStmt.run(resource.id);
 
 	// handle to-one foreign columns
-	const foreignRelationships = lodashEs.pickBy(joins, (jr) => jr.foreignColumn);
+	const foreignRelationships = esToolkit.pickBy(joins, (jr) => jr.foreignColumn);
 	Object.entries(foreignRelationships).forEach(([relName, join]) => {
 		const { foreignColumn } = join;
 		const foreignTable =
@@ -14876,7 +15145,7 @@ function deleteResource(resource, context) {
 	});
 
 	// handle many-to-many columns
-	const m2mForeignRelationships = lodashEs.pickBy(joins, (jr) => jr.joinTable);
+	const m2mForeignRelationships = esToolkit.pickBy(joins, (jr) => jr.joinTable);
 	Object.values(m2mForeignRelationships).forEach((join) => {
 		const { joinTable, localJoinColumn } = join;
 
@@ -14918,10 +15187,10 @@ function update(resource, context) {
 	const { idAttribute = "id" } = resSchema;
 
 	const attributeColumns = Object.keys(resource.attributes ?? {}).map(
-		lodashEs.snakeCase,
+		esToolkit.snakeCase,
 	);
 
-	const localRelationships = lodashEs.pickBy(
+	const localRelationships = esToolkit.pickBy(
 		resource.relationships ?? {},
 		(_, k) => joins[k].localColumn,
 	);
@@ -14931,17 +15200,20 @@ function update(resource, context) {
 	);
 
 	const columns = [...attributeColumns, ...relationshipColumns];
-	const columnsWithPlaceholders = columns
-		.map((col) => `${col} = ?`)
-		.join(", ");
+	const columnsWithPlaceholders = columns.map((col) => `${col} = ?`).join(", ");
 
-	const vars = [
-		...Object.values(resource.attributes ?? {}),
-		...Object.values(localRelationships).map((r) => r.id),
-	];
+	const attributeValues = Object.values(resource.attributes ?? {});
+	const relationshipValues = Object.values(localRelationships).map((r) => r.id);
 
-	// Convert boolean values to integers for SQLite
-	const sqliteVars = vars.map((v) => typeof v === "boolean" ? (v ? 1 : 0) : v);
+	// Transform attribute values using column type modifiers
+	const transformedAttributeValues = transformValuesForStorage(
+		attributeValues,
+		Object.keys(resource.attributes ?? {}),
+		resSchema,
+		columnTypeModifiers,
+	);
+
+	const vars = [...transformedAttributeValues, ...relationshipValues];
 
 	const updated = {};
 	let firstResult;
@@ -14949,29 +15221,29 @@ function update(resource, context) {
 		const updateSql = `
 			UPDATE ${table}
 				SET ${columnsWithPlaceholders}
-			WHERE ${lodashEs.snakeCase(idAttribute)} = ?
+			WHERE ${esToolkit.snakeCase(idAttribute)} = ?
 		`;
 
 		const updateStmt = db.prepare(updateSql);
-		updateStmt.run([...sqliteVars, resource.id]);
+		updateStmt.run([...vars, resource.id]);
 
 		// Get the updated resource
-		const selectSql = `SELECT * FROM ${table} WHERE ${lodashEs.snakeCase(idAttribute)} = ?`;
+		const selectSql = `SELECT * FROM ${table} WHERE ${esToolkit.snakeCase(idAttribute)} = ?`;
 		const selectStmt = db.prepare(selectSql);
 		firstResult = selectStmt.get(resource.id);
 	} else {
 		// No attributes or relationships to update, just get the existing resource
-		const selectSql = `SELECT * FROM ${table} WHERE ${lodashEs.snakeCase(idAttribute)} = ?`;
+		const selectSql = `SELECT * FROM ${table} WHERE ${esToolkit.snakeCase(idAttribute)} = ?`;
 		const selectStmt = db.prepare(selectSql);
 		firstResult = selectStmt.get(resource.id);
 	}
 
 	Object.entries(firstResult).forEach(([k, v]) => {
-		updated[lodashEs.camelCase(k)] = v;
+		updated[esToolkit.camelCase(k)] = v;
 	});
 
 	// handle to-one foreign columns
-	const foreignRelationships = lodashEs.pickBy(
+	const foreignRelationships = esToolkit.pickBy(
 		resource.relationships ?? {},
 		(_, k) => joins[k].foreignColumn,
 	);
@@ -14997,17 +15269,17 @@ function update(resource, context) {
 		const updateSql = `
 			UPDATE ${foreignTable}
 			SET ${foreignColumn} = ?
-			WHERE ${lodashEs.snakeCase(foreignIdAttribute)} = ?
+			WHERE ${esToolkit.snakeCase(foreignIdAttribute)} = ?
 		`;
 		const updateStmt = db.prepare(updateSql);
-		
+
 		val.forEach((v) => {
 			updateStmt.run(updated[idAttribute], v.id);
 		});
 	});
 
 	// handle many-to-many columns
-	const m2mForeignRelationships = lodashEs.pickBy(
+	const m2mForeignRelationships = esToolkit.pickBy(
 		resource.relationships ?? {},
 		(_, k) => joins[k].joinTable,
 	);
@@ -15036,7 +15308,7 @@ function update(resource, context) {
 	return {
 		type: resource.type,
 		id: updated[idAttribute],
-		attributes: lodashEs.pick(updated, Object.keys(resSchema.attributes)),
+		attributes: esToolkit.pick(updated, Object.keys(resSchema.attributes)),
 		relationships: resource.relationships ?? {},
 	};
 }
@@ -15097,7 +15369,7 @@ async function getOne(type, id, context) {
 					const relResSchema = schema.resources[relSchema.type];
 					const relConfig = config.resources[relSchema.type];
 					const foreignTable = relConfig.table;
-					const foreignId = lodashEs.snakeCase(relResSchema.idAttribute ?? "id");
+					const foreignId = esToolkit.snakeCase(relResSchema.idAttribute ?? "id");
 
 					const { rows } = await db.query(
 						{
@@ -15138,16 +15410,16 @@ async function getOne(type, id, context) {
 		...attrNames.map((attrName) =>
 			columnTypeModifiers[resSchema.attributes[attrName].type]
 				? columnTypeModifiers[resSchema.attributes[attrName].type].select(
-						lodashEs.snakeCase(attrName),
+						esToolkit.snakeCase(attrName),
 					)
-				: lodashEs.snakeCase(attrName),
+				: esToolkit.snakeCase(attrName),
 		),
-		...localRelationships.map(([, r]) => lodashEs.snakeCase(r.localColumn)),
+		...localRelationships.map(([, r]) => esToolkit.snakeCase(r.localColumn)),
 	].join(", ");
 	const localQuery = db.query(
 		{
 			rowMode: "array",
-			text: `SELECT ${cols} FROM ${table} WHERE ${lodashEs.snakeCase(idAttribute)} = $1`,
+			text: `SELECT ${cols} FROM ${table} WHERE ${esToolkit.snakeCase(idAttribute)} = $1`,
 		},
 		[id],
 	);
@@ -15206,15 +15478,15 @@ async function getAll(type, context) {
 	);
 
 	const cols = [
-		lodashEs.snakeCase(resSchema.idAttribute ?? "id"),
+		esToolkit.snakeCase(resSchema.idAttribute ?? "id"),
 		...attrNames.map((attrName) =>
 			columnTypeModifiers[resSchema.attributes[attrName].type]
 				? columnTypeModifiers[resSchema.attributes[attrName].type].select(
-						lodashEs.snakeCase(attrName),
+						esToolkit.snakeCase(attrName),
 					)
-				: lodashEs.snakeCase(attrName),
+				: esToolkit.snakeCase(attrName),
 		),
-		...localRelationships.map(([, r]) => lodashEs.snakeCase(r.localColumn)),
+		...localRelationships.map(([, r]) => esToolkit.snakeCase(r.localColumn)),
 	].join(", ");
 	const localQuery = db.query({
 		rowMode: "array",
@@ -15226,7 +15498,7 @@ async function getAll(type, context) {
 	rows.forEach((row) => {
 		const resource = { type, id: row[0], attributes: {} };
 		if (includeRelationships) {
-			resource.relationships = lodashEs.mapValues(resSchema.relationships, (rel) =>
+			resource.relationships = esToolkit.mapValues(resSchema.relationships, (rel) =>
 				rel.cardinality === "one" ? null : [],
 			);
 		}
@@ -15270,7 +15542,7 @@ async function getAll(type, context) {
 				const relResSchema = schema.resources[relSchema.type];
 				const relConfig = config.resources[relSchema.type];
 				const foreignTable = relConfig.table;
-				const foreignId = lodashEs.snakeCase(relResSchema.idAttribute ?? "id");
+				const foreignId = esToolkit.snakeCase(relResSchema.idAttribute ?? "id");
 
 				const { rows } = await db.query({
 					rowMode: "array",
@@ -15343,10 +15615,10 @@ function upsertResourceRow(resource, context) {
 	const { idAttribute = "id" } = resSchema;
 
 	const attributeColumns = Object.keys(resource.attributes ?? {}).map(
-		lodashEs.snakeCase,
+		esToolkit.snakeCase,
 	);
 
-	const localRelationships = lodashEs.pickBy(
+	const localRelationships = esToolkit.pickBy(
 		resource.relationships ?? {},
 		(_, k) => joins[k].localColumn,
 	);
@@ -15357,19 +15629,31 @@ function upsertResourceRow(resource, context) {
 
 	// Generate UUID if no ID provided
 	const resourceId = resource.id || crypto$1.randomUUID();
-	const idColumns = [lodashEs.snakeCase(idAttribute)];
+	const idColumns = [esToolkit.snakeCase(idAttribute)];
 	const idVars = [resourceId];
 
 	const columns = [...attributeColumns, ...relationshipColumns, ...idColumns];
 	const placeholders = columns.map(() => "?").join(", ");
-	const vars = [
-		...Object.values(resource.attributes ?? {}),
-		...Object.values(localRelationships).map((r) => r?.id ?? null),
-		...idVars,
-	];
 
-	// Convert boolean values to integers for SQLite
-	const sqliteVars = vars.map((v) => typeof v === "boolean" ? (v ? 1 : 0) : v);
+	const attributeValues = Object.values(resource.attributes ?? {});
+	const relationshipValues = Object.values(localRelationships).map(
+		(r) => r?.id ?? null,
+	);
+	const idValues = idVars;
+
+	// Transform attribute values using column type modifiers
+	const transformedAttributeValues = transformValuesForStorage(
+		attributeValues,
+		Object.keys(resource.attributes ?? {}),
+		resSchema,
+		columnTypeModifiers,
+	);
+
+	const vars = [
+		...transformedAttributeValues,
+		...relationshipValues,
+		...idValues,
+	];
 
 	const updateColumns = [...attributeColumns, ...relationshipColumns]
 		.map((col) => `${col} = EXCLUDED.${col}`)
@@ -15383,27 +15667,27 @@ function upsertResourceRow(resource, context) {
 	const upsertSql = `
     INSERT INTO ${table} (${columns.join(", ")})
     VALUES (${placeholders})
-		ON CONFLICT(${lodashEs.snakeCase(idAttribute)})
+		ON CONFLICT(${esToolkit.snakeCase(idAttribute)})
 			${conflictClause}
   `;
 
 	const upsertStmt = db.prepare(upsertSql);
-	upsertStmt.run(sqliteVars);
+	upsertStmt.run(vars);
 
 	// Get the upserted resource
-	const selectSql = `SELECT * FROM ${table} WHERE ${lodashEs.snakeCase(idAttribute)} = ?`;
+	const selectSql = `SELECT * FROM ${table} WHERE ${esToolkit.snakeCase(idAttribute)} = ?`;
 	const selectStmt = db.prepare(selectSql);
 	const upsertedRow = selectStmt.get(resourceId);
 
 	const upserted = {};
 	Object.entries(upsertedRow).forEach(([k, v]) => {
-		upserted[lodashEs.camelCase(k)] = v;
+		upserted[esToolkit.camelCase(k)] = v;
 	});
 
 	return {
 		type: resource.type,
 		id: upserted[idAttribute],
-		attributes: lodashEs.pick(upserted, Object.keys(resSchema.attributes)),
+		attributes: esToolkit.pick(upserted, Object.keys(resSchema.attributes)),
 		relationships: resource.relationships ?? {},
 	};
 }
@@ -15423,7 +15707,7 @@ function upsertForeignRelationshipRows(resource, context) {
 	const { joins } = resConfig;
 
 	// handle to-one foreign columns
-	const foreignRelationships = lodashEs.pickBy(
+	const foreignRelationships = esToolkit.pickBy(
 		resource.relationships ?? {},
 		(_, k) => joins[k].foreignColumn,
 	);
@@ -15449,17 +15733,17 @@ function upsertForeignRelationshipRows(resource, context) {
 		const updateSql = `
 			UPDATE ${foreignTable}
 			SET ${foreignColumn} = ?
-			WHERE ${lodashEs.snakeCase(foreignIdAttribute)} = ?
+			WHERE ${esToolkit.snakeCase(foreignIdAttribute)} = ?
 		`;
 		const updateStmt = db.prepare(updateSql);
-		
+
 		val.forEach((v) => {
 			updateStmt.run(resource.id, v.id);
 		});
 	});
 
 	// handle many-to-many columns
-	const m2mForeignRelationships = lodashEs.pickBy(
+	const m2mForeignRelationships = esToolkit.pickBy(
 		resource.relationships ?? {},
 		(_, k) => joins[k].joinTable,
 	);
@@ -15488,7 +15772,7 @@ function upsertForeignRelationshipRows(resource, context) {
 	return {
 		type: resource.type,
 		id: resource.id,
-		attributes: lodashEs.pick(resource, Object.keys(resSchema.attributes)),
+		attributes: esToolkit.pick(resource, Object.keys(resSchema.attributes)),
 		relationships: resource.relationships ?? {},
 	};
 }

@@ -1,4 +1,4 @@
-import { get, isEqual, mapValues, uniqBy, omit, pickBy, merge, orderBy, uniq } from 'lodash-es';
+import { isEqual, mapValues, uniqBy, omit, pickBy, merge, orderBy, uniq } from 'es-toolkit';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import { applyOrMap } from '@data-prism/utils';
@@ -3272,6 +3272,171 @@ function requireDist () {
 var distExports = requireDist();
 var addErrors = /*@__PURE__*/getDefaultExportFromCjs(distExports);
 
+function isUnsafeProperty(key) {
+    return key === '__proto__';
+}
+
+function isDeepKey(key) {
+    switch (typeof key) {
+        case 'number':
+        case 'symbol': {
+            return false;
+        }
+        case 'string': {
+            return key.includes('.') || key.includes('[') || key.includes(']');
+        }
+    }
+}
+
+function toKey(value) {
+    if (typeof value === 'string' || typeof value === 'symbol') {
+        return value;
+    }
+    if (Object.is(value?.valueOf?.(), -0)) {
+        return '-0';
+    }
+    return String(value);
+}
+
+function toPath(deepKey) {
+    const result = [];
+    const length = deepKey.length;
+    if (length === 0) {
+        return result;
+    }
+    let index = 0;
+    let key = '';
+    let quoteChar = '';
+    let bracket = false;
+    if (deepKey.charCodeAt(0) === 46) {
+        result.push('');
+        index++;
+    }
+    while (index < length) {
+        const char = deepKey[index];
+        if (quoteChar) {
+            if (char === '\\' && index + 1 < length) {
+                index++;
+                key += deepKey[index];
+            }
+            else if (char === quoteChar) {
+                quoteChar = '';
+            }
+            else {
+                key += char;
+            }
+        }
+        else if (bracket) {
+            if (char === '"' || char === "'") {
+                quoteChar = char;
+            }
+            else if (char === ']') {
+                bracket = false;
+                result.push(key);
+                key = '';
+            }
+            else {
+                key += char;
+            }
+        }
+        else {
+            if (char === '[') {
+                bracket = true;
+                if (key) {
+                    result.push(key);
+                    key = '';
+                }
+            }
+            else if (char === '.') {
+                if (key) {
+                    result.push(key);
+                    key = '';
+                }
+            }
+            else {
+                key += char;
+            }
+        }
+        index++;
+    }
+    if (key) {
+        result.push(key);
+    }
+    return result;
+}
+
+function get(object, path, defaultValue) {
+    if (object == null) {
+        return defaultValue;
+    }
+    switch (typeof path) {
+        case 'string': {
+            if (isUnsafeProperty(path)) {
+                return defaultValue;
+            }
+            const result = object[path];
+            if (result === undefined) {
+                if (isDeepKey(path)) {
+                    return get(object, toPath(path), defaultValue);
+                }
+                else {
+                    return defaultValue;
+                }
+            }
+            return result;
+        }
+        case 'number':
+        case 'symbol': {
+            if (typeof path === 'number') {
+                path = toKey(path);
+            }
+            const result = object[path];
+            if (result === undefined) {
+                return defaultValue;
+            }
+            return result;
+        }
+        default: {
+            if (Array.isArray(path)) {
+                return getWithPath(object, path, defaultValue);
+            }
+            if (Object.is(path?.valueOf(), -0)) {
+                path = '-0';
+            }
+            else {
+                path = String(path);
+            }
+            if (isUnsafeProperty(path)) {
+                return defaultValue;
+            }
+            const result = object[path];
+            if (result === undefined) {
+                return defaultValue;
+            }
+            return result;
+        }
+    }
+}
+function getWithPath(object, path, defaultValue) {
+    if (path.length === 0) {
+        return defaultValue;
+    }
+    let current = object;
+    for (let index = 0; index < path.length; index++) {
+        if (current == null) {
+            return defaultValue;
+        }
+        if (isUnsafeProperty(path[index])) {
+            return defaultValue;
+        }
+        current = current[path[index]];
+    }
+    if (current === undefined) {
+        return defaultValue;
+    }
+    return current;
+}
+
 const $isDefined = {
 	name: "$isDefined",
 	apply: (_, inputData) => inputData !== undefined,
@@ -3914,7 +4079,7 @@ const conditionalDefinitions = { $if, $case };
 const $random = {
 	name: "$random",
 	apply: (operand = {}) => {
-		const { min = 0, max = 1, precision = null } = operand;
+		const { min = 0, max = 1, precision = null } = operand || {};
 		const value = Math.random() * (max - min) + min;
 
 		if (precision == null) {
@@ -4322,7 +4487,7 @@ function createExpressionEngine(customExpressions) {
 			if (!isExpression(expression)) {
 				return Array.isArray(expression)
 					? expression.map(step)
-					: typeof expression === "object"
+					: typeof expression === "object" && expression !== null
 						? mapValues(expression, step)
 						: expression;
 			}
@@ -4345,7 +4510,7 @@ function createExpressionEngine(customExpressions) {
 		if (!isExpression(expression)) {
 			return Array.isArray(expression)
 				? expression.map(evaluate)
-				: typeof expression === "object"
+				: typeof expression === "object" && expression !== null
 					? mapValues(expression, evaluate)
 					: expression;
 		}
@@ -6040,7 +6205,7 @@ function validateSchema(schema, options = {}) {
 	return introspectiveResult;
 }
 
-// import { mapValues } from "lodash-es";
+// import { mapValues } from "es-toolkit";
 // import { defaultExpressionEngine } from "../expressions/expressions.js";
 
 /**
@@ -6576,10 +6741,10 @@ class ExpressionNotSupportedError extends Error {
 	 * @param {string} [reason] - Optional reason why the expression is not supported
 	 */
 	constructor(expression, storeName, reason) {
-		const message = reason 
+		const message = reason
 			? `Expression ${expression} is not supported by ${storeName}: ${reason}`
 			: `Expression ${expression} is not supported by ${storeName}`;
-		
+
 		super(message);
 		this.name = "ExpressionNotSupportedError";
 		this.expression = expression;

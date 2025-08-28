@@ -1,6 +1,6 @@
 'use strict';
 
-var lodashEs = require('lodash-es');
+var esToolkit = require('es-toolkit');
 var Ajv = require('ajv');
 var addFormats = require('ajv-formats');
 var utils = require('@data-prism/utils');
@@ -3274,6 +3274,171 @@ function requireDist () {
 var distExports = requireDist();
 var addErrors = /*@__PURE__*/getDefaultExportFromCjs(distExports);
 
+function isUnsafeProperty(key) {
+    return key === '__proto__';
+}
+
+function isDeepKey(key) {
+    switch (typeof key) {
+        case 'number':
+        case 'symbol': {
+            return false;
+        }
+        case 'string': {
+            return key.includes('.') || key.includes('[') || key.includes(']');
+        }
+    }
+}
+
+function toKey(value) {
+    if (typeof value === 'string' || typeof value === 'symbol') {
+        return value;
+    }
+    if (Object.is(value?.valueOf?.(), -0)) {
+        return '-0';
+    }
+    return String(value);
+}
+
+function toPath(deepKey) {
+    const result = [];
+    const length = deepKey.length;
+    if (length === 0) {
+        return result;
+    }
+    let index = 0;
+    let key = '';
+    let quoteChar = '';
+    let bracket = false;
+    if (deepKey.charCodeAt(0) === 46) {
+        result.push('');
+        index++;
+    }
+    while (index < length) {
+        const char = deepKey[index];
+        if (quoteChar) {
+            if (char === '\\' && index + 1 < length) {
+                index++;
+                key += deepKey[index];
+            }
+            else if (char === quoteChar) {
+                quoteChar = '';
+            }
+            else {
+                key += char;
+            }
+        }
+        else if (bracket) {
+            if (char === '"' || char === "'") {
+                quoteChar = char;
+            }
+            else if (char === ']') {
+                bracket = false;
+                result.push(key);
+                key = '';
+            }
+            else {
+                key += char;
+            }
+        }
+        else {
+            if (char === '[') {
+                bracket = true;
+                if (key) {
+                    result.push(key);
+                    key = '';
+                }
+            }
+            else if (char === '.') {
+                if (key) {
+                    result.push(key);
+                    key = '';
+                }
+            }
+            else {
+                key += char;
+            }
+        }
+        index++;
+    }
+    if (key) {
+        result.push(key);
+    }
+    return result;
+}
+
+function get(object, path, defaultValue) {
+    if (object == null) {
+        return defaultValue;
+    }
+    switch (typeof path) {
+        case 'string': {
+            if (isUnsafeProperty(path)) {
+                return defaultValue;
+            }
+            const result = object[path];
+            if (result === undefined) {
+                if (isDeepKey(path)) {
+                    return get(object, toPath(path), defaultValue);
+                }
+                else {
+                    return defaultValue;
+                }
+            }
+            return result;
+        }
+        case 'number':
+        case 'symbol': {
+            if (typeof path === 'number') {
+                path = toKey(path);
+            }
+            const result = object[path];
+            if (result === undefined) {
+                return defaultValue;
+            }
+            return result;
+        }
+        default: {
+            if (Array.isArray(path)) {
+                return getWithPath(object, path, defaultValue);
+            }
+            if (Object.is(path?.valueOf(), -0)) {
+                path = '-0';
+            }
+            else {
+                path = String(path);
+            }
+            if (isUnsafeProperty(path)) {
+                return defaultValue;
+            }
+            const result = object[path];
+            if (result === undefined) {
+                return defaultValue;
+            }
+            return result;
+        }
+    }
+}
+function getWithPath(object, path, defaultValue) {
+    if (path.length === 0) {
+        return defaultValue;
+    }
+    let current = object;
+    for (let index = 0; index < path.length; index++) {
+        if (current == null) {
+            return defaultValue;
+        }
+        if (isUnsafeProperty(path[index])) {
+            return defaultValue;
+        }
+        current = current[path[index]];
+    }
+    if (current === undefined) {
+        return defaultValue;
+    }
+    return current;
+}
+
 const $isDefined = {
 	name: "$isDefined",
 	apply: (_, inputData) => inputData !== undefined,
@@ -3322,7 +3487,7 @@ const $ensurePath = {
 
 const $get = {
 	name: "$get",
-	apply: (operand, inputData) => lodashEs.get(inputData, operand),
+	apply: (operand, inputData) => get(inputData, operand),
 	evaluate(operand) {
 		if (!Array.isArray(operand)) {
 			throw new Error(
@@ -3515,15 +3680,15 @@ const createComparativeWhereCompiler =
 
 const $eq = {
 	name: "$eq",
-	apply: lodashEs.isEqual,
-	evaluate: ([left, right]) => lodashEs.isEqual(left, right),
+	apply: esToolkit.isEqual,
+	evaluate: ([left, right]) => esToolkit.isEqual(left, right),
 	normalizeWhere: createComparativeWhereCompiler("$eq"),
 };
 
 const $ne = {
 	name: "$ne",
-	apply: (operand, inputData) => !lodashEs.isEqual(operand, inputData),
-	evaluate: ([left, right]) => !lodashEs.isEqual(left, right),
+	apply: (operand, inputData) => !esToolkit.isEqual(operand, inputData),
+	evaluate: ([left, right]) => !esToolkit.isEqual(left, right),
 	normalizeWhere: createComparativeWhereCompiler("$ne"),
 };
 
@@ -3916,7 +4081,7 @@ const conditionalDefinitions = { $if, $case };
 const $random = {
 	name: "$random",
 	apply: (operand = {}) => {
-		const { min = 0, max = 1, precision = null } = operand;
+		const { min = 0, max = 1, precision = null } = operand || {};
 		const value = Math.random() * (max - min) + min;
 
 		if (precision == null) {
@@ -4324,8 +4489,8 @@ function createExpressionEngine(customExpressions) {
 			if (!isExpression(expression)) {
 				return Array.isArray(expression)
 					? expression.map(step)
-					: typeof expression === "object"
-						? lodashEs.mapValues(expression, step)
+					: typeof expression === "object" && expression !== null
+						? esToolkit.mapValues(expression, step)
 						: expression;
 			}
 
@@ -4347,8 +4512,8 @@ function createExpressionEngine(customExpressions) {
 		if (!isExpression(expression)) {
 			return Array.isArray(expression)
 				? expression.map(evaluate)
-				: typeof expression === "object"
-					? lodashEs.mapValues(expression, evaluate)
+				: typeof expression === "object" && expression !== null
+					? esToolkit.mapValues(expression, evaluate)
 					: expression;
 		}
 
@@ -4524,7 +4689,7 @@ function translateAjvErrors(
 		-Infinity,
 	);
 
-	const topErrors = lodashEs.uniqBy(
+	const topErrors = esToolkit.uniqBy(
 		candidateErrors.filter(
 			(err) => err.instancePath.split("/").length === maxDepth,
 		),
@@ -4538,7 +4703,7 @@ function translateAjvErrors(
 			: `${dataVar}${error.instancePath} ${error.message}`,
 		path: error.instancePath ?? error.schemaPath,
 		code: error.keyword,
-		value: lodashEs.get(subject, error.instancePath?.replaceAll("/", ".")?.slice(1)),
+		value: get(subject, error.instancePath?.replaceAll("/", ".")?.slice(1)),
 		otherErrors: ajvErrors,
 	}));
 }
@@ -4722,7 +4887,7 @@ function getResourceStructureValidator(schema, resourceType, expressionEngine) {
 					{ $ref: "#/definitions/expression" },
 					{
 						type: "object",
-						properties: lodashEs.mapValues(
+						properties: esToolkit.mapValues(
 							schema.resources[resourceType].attributes,
 							() => ({}),
 						),
@@ -4761,7 +4926,7 @@ function getResourceStructureValidator(schema, resourceType, expressionEngine) {
 				type: "object",
 				minProperties: 1,
 				maxProperties: 1,
-				properties: lodashEs.mapValues(
+				properties: esToolkit.mapValues(
 					schema.resources[resourceType].attributes,
 					() => ({}),
 				),
@@ -5016,12 +5181,12 @@ function normalizeQuery(schema, rootQuery, options = {}) {
 					for (const attr of Object.keys(resSchema.attributes)) {
 						result[attr] = attr;
 					}
-					Object.assign(result, lodashEs.omit(selectObj, ["*"]));
+					Object.assign(result, esToolkit.omit(selectObj, ["*"]));
 					return result;
 				})()
 			: selectObj;
 
-		const selectWithSubqueries = lodashEs.mapValues(selectWithStar, (sel, key) => {
+		const selectWithSubqueries = esToolkit.mapValues(selectWithStar, (sel, key) => {
 			if (
 				key in schema.resources[type].relationships &&
 				typeof sel === "object"
@@ -5057,12 +5222,12 @@ function buildAttribute(attrSchema, curValue) {
 
 	if (attrSchema.type === "object" && typeof defaultedValue === "object") {
 		const mergedDefaultedValue = {
-			...lodashEs.mapValues(attrSchema.properties ?? {}, () => undefined),
+			...esToolkit.mapValues(attrSchema.properties ?? {}, () => undefined),
 			...(attrSchema.default ?? {}),
 			...defaultedValue,
 		};
 
-		return lodashEs.mapValues(mergedDefaultedValue, (val, key) => {
+		return esToolkit.mapValues(mergedDefaultedValue, (val, key) => {
 			if (key in (attrSchema.properties ?? {})) {
 				return buildAttribute(attrSchema.properties[key], val);
 			}
@@ -5205,7 +5370,7 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 			type: "object",
 			required: resSchema.requiredRelationships,
 			additionalProperties: false,
-			properties: lodashEs.mapValues(resSchema.relationships, (relSchema, relName) =>
+			properties: esToolkit.mapValues(resSchema.relationships, (relSchema, relName) =>
 				relSchema.cardinality === "one"
 					? requiredRelationships.includes(relName)
 						? {
@@ -5264,12 +5429,12 @@ const getValidateQueryResultCache = createDeepCache();
 function normalizeResource(schema, resourceType, resource) {
 	const resSchema = schema.resources[resourceType];
 
-	const attributes = lodashEs.mapValues(
+	const attributes = esToolkit.mapValues(
 		resSchema.attributes,
 		(_, attr) => resource[attr],
 	);
 
-	const relationships = lodashEs.mapValues(resSchema.relationships, (relSchema, rel) => {
+	const relationships = esToolkit.mapValues(resSchema.relationships, (relSchema, rel) => {
 		const relResSchema = schema.resources[relSchema.type];
 		const emptyRel = relSchema.cardinality === "many" ? [] : null;
 		const relIdField = relResSchema.idAttribute ?? "id";
@@ -5288,8 +5453,8 @@ function normalizeResource(schema, resourceType, resource) {
 	return {
 		type: resourceType,
 		id: resource[resSchema.idAttribute ?? "id"],
-		attributes: lodashEs.pickBy(attributes, (a) => a !== undefined),
-		relationships: lodashEs.pickBy(relationships, (r) => r !== undefined),
+		attributes: esToolkit.pickBy(attributes, (a) => a !== undefined),
+		relationships: esToolkit.pickBy(relationships, (r) => r !== undefined),
 	};
 }
 
@@ -5306,12 +5471,12 @@ function createResource(schema, partialResource = {}) {
 	const id =
 		partialResource.id ?? partialResource[resSchema.idAttribute ?? "id"];
 
-	const builtAttributes = lodashEs.mapValues(
+	const builtAttributes = esToolkit.mapValues(
 		resSchema.attributes,
 		(attrSchema, attrName) => buildAttribute(attrSchema, attributes[attrName]),
 	);
 
-	const builtRelationships = lodashEs.mapValues(
+	const builtRelationships = esToolkit.mapValues(
 		resSchema.relationships,
 		(relSchema, relName) =>
 			relationships[relName] === undefined
@@ -5599,7 +5764,7 @@ function validateMergeResource(schema, resource, options = {}) {
 						type: "object",
 						required: requiredRelationships,
 						additionalProperties: false,
-						properties: lodashEs.mapValues(
+						properties: esToolkit.mapValues(
 							resSchema.relationships,
 							(relSchema, resName) =>
 								relSchema.cardinality === "one"
@@ -5623,14 +5788,14 @@ function validateMergeResource(schema, resource, options = {}) {
 					attributes: {
 						type: "object",
 						additionalProperties: false,
-						properties: lodashEs.mapValues(resSchema.attributes, (a) =>
-							lodashEs.omit(a, ["required"]),
+						properties: esToolkit.mapValues(resSchema.attributes, (a) =>
+							esToolkit.omit(a, ["required"]),
 						),
 					},
 					relationships: {
 						type: "object",
 						additionalProperties: false,
-						properties: lodashEs.mapValues(resSchema.relationships, (relSchema) =>
+						properties: esToolkit.mapValues(resSchema.relationships, (relSchema) =>
 							relSchema.cardinality === "one"
 								? relSchema.required
 									? toOneRefOfType(relSchema.type, true)
@@ -5706,7 +5871,7 @@ function validateQueryResult(schema, rootQuery, result, options = {}) {
 		const queryDefinition = (query) => ({
 			type: "object",
 			required: Object.keys(query.select),
-			properties: lodashEs.mapValues(query.select, (def, prop) => {
+			properties: esToolkit.mapValues(query.select, (def, prop) => {
 				const resDef = schema.resources[query.type];
 
 				if (defaultExpressionEngine.isExpression(def)) return {};
@@ -5926,7 +6091,7 @@ var metaschema = {
  */
 
 const metaschemaWithErrors = (() => {
-	const out = lodashEs.merge(structuredClone(metaschema), {
+	const out = esToolkit.merge(structuredClone(metaschema), {
 		definitions: {
 			attribute: {
 				$ref: "http://json-schema.org/draft-07/schema#",
@@ -5989,16 +6154,16 @@ function validateSchema(schema, options = {}) {
 		return attributeSchemaErrors;
 	}
 
-	const introspectiveSchema = lodashEs.merge(structuredClone(metaschema), {
+	const introspectiveSchema = esToolkit.merge(structuredClone(metaschema), {
 		properties: {
 			resources: {
-				properties: lodashEs.mapValues(schema.resources, (_, resName) => ({
+				properties: esToolkit.mapValues(schema.resources, (_, resName) => ({
 					$ref: `#/definitions/resources/${resName}`,
 				})),
 			},
 		},
 		definitions: {
-			resources: lodashEs.mapValues(schema.resources, (resSchema, resName) => ({
+			resources: esToolkit.mapValues(schema.resources, (resSchema, resName) => ({
 				allOf: [
 					{ $ref: "#/definitions/resource" },
 					{
@@ -6042,7 +6207,7 @@ function validateSchema(schema, options = {}) {
 	return introspectiveResult;
 }
 
-// import { mapValues } from "lodash-es";
+// import { mapValues } from "es-toolkit";
 // import { defaultExpressionEngine } from "../expressions/expressions.js";
 
 /**
@@ -6237,7 +6402,7 @@ function runQuery(rootQuery, data) {
 					);
 				}
 
-				return lodashEs.orderBy(results, properties, dirs);
+				return esToolkit.orderBy(results, properties, dirs);
 			},
 			limit(results) {
 				const { limit, offset = 0 } = query;
@@ -6251,7 +6416,7 @@ function runQuery(rootQuery, data) {
 			},
 			select(results) {
 				const { select } = query;
-				const projectors = lodashEs.mapValues(select, (propQuery, propName) => {
+				const projectors = esToolkit.mapValues(select, (propQuery, propName) => {
 					// possibilities: (1) property (2) expression (3) subquery
 					if (typeof propQuery === "string") {
 						// nested / shallow property
@@ -6334,7 +6499,7 @@ function runQuery(rootQuery, data) {
 				});
 
 				return results.map((result) =>
-					lodashEs.mapValues(projectors, (project) => project(result)),
+					esToolkit.mapValues(projectors, (project) => project(result)),
 				);
 			},
 		};
@@ -6396,7 +6561,7 @@ function queryGraph(schema, query, graph) {
 function createEmptyGraph(schema, options = {}) {
 	const { skipValidation = false } = options;
 	if (!skipValidation) ensure(validateSchema)(schema);
-	return lodashEs.mapValues(schema.resources, () => ({}));
+	return esToolkit.mapValues(schema.resources, () => ({}));
 }
 
 /**
@@ -6481,7 +6646,7 @@ function mergeGraphs(left, right) {
  */
 function mergeGraphsDeep(left, right) {
 	const output = {};
-	const allTypes = lodashEs.uniq([...Object.keys(left), ...Object.keys(right)]);
+	const allTypes = esToolkit.uniq([...Object.keys(left), ...Object.keys(right)]);
 	allTypes.forEach((type) => {
 		const leftResources = left[type] ?? {};
 		const rightResources = right[type] ?? {};
@@ -6496,7 +6661,7 @@ function mergeGraphsDeep(left, right) {
 			return;
 		}
 
-		const allIds = lodashEs.uniq([
+		const allIds = esToolkit.uniq([
 			...Object.keys(leftResources),
 			...Object.keys(rightResources),
 		]);
@@ -6578,10 +6743,10 @@ class ExpressionNotSupportedError extends Error {
 	 * @param {string} [reason] - Optional reason why the expression is not supported
 	 */
 	constructor(expression, storeName, reason) {
-		const message = reason 
+		const message = reason
 			? `Expression ${expression} is not supported by ${storeName}: ${reason}`
 			: `Expression ${expression} is not supported by ${storeName}`;
-		
+
 		super(message);
 		this.name = "ExpressionNotSupportedError";
 		this.expression = expression;

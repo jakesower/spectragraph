@@ -1,4 +1,5 @@
-import { partition, pick, last, snakeCase, mapValues, uniq } from 'lodash-es';
+import { partition, pick, last, snakeCase, mapValues, uniq, pickBy, camelCase } from 'es-toolkit';
+import { ExpressionNotSupportedError } from '@data-prism/core';
 
 /**
  * @typedef {Object} QueryBreakdownItem
@@ -108,16 +109,6 @@ function reduceQuery(schema, query, fn, initVal) {
  */
 function someQuery(schema, query, fn) {
 	return flattenQuery(schema, query).some((q) => fn(q.query, q));
-}
-
-/**
- * Replaces ? placeholders with PostgreSQL $n placeholders
- * @param {string} inputString - Input SQL string with ? placeholders
- * @returns {string} SQL string with $n placeholders
- */
-function replacePlaceholders(inputString) {
-	let counter = 1;
-	return inputString.replace(/\?/g, () => `$${counter++}`);
 }
 
 /**
@@ -432,54 +423,44 @@ function createConstraintOperators(
  */
 const baseSqlExpressions = {
 	$and: {
-		name: "$and",
 		where: (operand) => operand.join(" AND "),
 		vars: (operand) => operand.flat(),
 	},
 	$eq: {
-		name: "$equal",
 		where: (operand) => `${operand[0]} = ?`,
 		vars: (operand) => operand[1],
 	},
 	$gt: {
-		name: "$gt",
 		where: (operand) => `${operand[0]} > ?`,
 		vars: (operand) => operand[1],
 	},
 	$gte: {
-		name: "$gte",
 		where: (operand) => `${operand[0]} >= ?`,
 		vars: (operand) => operand[1],
 	},
 	$lt: {
-		name: "$lt",
 		where: (operand) => `${operand[0]} < ?`,
 		vars: (operand) => operand[1],
 	},
 	$lte: {
-		name: "$lte",
 		where: (operand) => `${operand[0]} <= ?`,
 		vars: (operand) => operand[1],
 	},
 	$ne: {
-		name: "$ne",
 		where: (operand) => `${operand[0]} != ?`,
 		vars: (operand) => operand[1],
 	},
 	$in: {
-		name: "$in",
 		where: (operand) =>
 			`${operand[0]} IN (${operand[1].map(() => "?").join(",")})`,
 		vars: (operand) => operand[1],
 	},
 	$nin: {
-		name: "$nin",
 		where: (operand) =>
 			`${operand[0]} NOT IN (${operand[1].map(() => "?").join(",")})`,
 		vars: (operand) => operand[1],
 	},
 	$or: {
-		name: "$or",
 		controlsEvaluation: true,
 		where: (operand, { evaluate }) => {
 			const evaluated = operand.map(evaluate);
@@ -801,4 +782,651 @@ function extractQueryClauses(query, context) {
 	return clauses;
 }
 
-export { baseConstraintOperatorDefinitions, baseSqlExpressions, createConstraintOperators, extractGraph, extractQueryClauses, flatMapQuery, flattenQuery, forEachQuery, makeRelationshipBuilders, preQueryRelationships, reduceQuery, replacePlaceholders, someQuery };
+const DEFAULT_WHERE_EXPRESSIONS = {
+	$and: {
+		controlsEvaluation: true,
+		where: (operand, { evaluate }) =>
+			`(${operand.map(evaluate).join(" AND ")})`,
+		vars: (operand, { evaluate }) => operand.flatMap(evaluate),
+	},
+	$or: {
+		controlsEvaluation: true,
+		where: (operand, { evaluate }) => `(${operand.map(evaluate).join(" OR ")})`,
+		vars: (operand, { evaluate }) => operand.flatMap(evaluate),
+	},
+	$not: {
+		controlsEvaluation: true,
+		where: (operand, { evaluate }) => `NOT (${evaluate(operand)})`,
+		vars: (operand, { evaluate }) => evaluate(operand),
+	},
+	$eq: {
+		where: () => " = ?",
+		vars: (operand) => operand,
+	},
+	$gt: {
+		where: () => " > ?",
+		vars: (operand) => operand,
+	},
+	$gte: {
+		where: () => " >= ?",
+		vars: (operand) => operand,
+	},
+	$lt: {
+		where: () => " < ?",
+		vars: (operand) => operand,
+	},
+	$lte: {
+		where: () => " <= ?",
+		vars: (operand) => operand,
+	},
+	$ne: {
+		where: () => " != ?",
+		vars: (operand) => operand,
+	},
+	$in: {
+		where: (operand) => ` IN (${operand.map(() => "?").join(",")})`,
+		vars: (operand) => operand,
+	},
+	$nin: {
+		where: (operand) => ` NOT IN (${operand.map(() => "?").join(",")})`,
+		vars: (operand) => operand,
+	},
+	$get: {
+		where: (operand) => snakeCase(operand),
+		vars: () => [],
+	},
+	$pipe: {
+		where: (operand) => operand.join(""),
+		vars: (operand) => operand.flat(),
+	},
+	$compose: {
+		controlsEvaluation: true,
+		where: (operand, { evaluate }) => evaluate({ $pipe: operand.toReversed() }),
+		vars: (operand, { evaluate }) => evaluate({ $pipe: operand.toReversed() }),
+	},
+	$literal: {
+		where: (operand) => String(operand),
+		vars: () => [],
+		controlsEvaluation: true,
+	},
+	$if: {
+		controlsEvaluation: true,
+		where: (operand, { evaluate, isExpression }) => {
+			const condition = evaluate(operand.if);
+			const thenClause = isExpression(operand.then)
+				? evaluate(operand.then)
+				: "?";
+			const elseClause = isExpression(operand.else)
+				? evaluate(operand.else)
+				: "?";
+			return `CASE WHEN ${condition} THEN ${thenClause} ELSE ${elseClause} END`;
+		},
+		vars: (operand, { evaluate, isExpression }) => {
+			const ifResult = evaluate(operand.if);
+			const vars =
+				Array.isArray(ifResult) && ifResult.length > 0 ? ifResult : [];
+			if (isExpression(operand.then)) {
+				const thenResult = evaluate(operand.then);
+				vars.push(...(Array.isArray(thenResult) ? thenResult : [thenResult]));
+			} else {
+				vars.push(operand.then);
+			}
+			if (isExpression(operand.else)) {
+				const elseResult = evaluate(operand.else);
+				vars.push(...(Array.isArray(elseResult) ? elseResult : [elseResult]));
+			} else {
+				vars.push(operand.else);
+			}
+			return vars.flat();
+		},
+	},
+	$case: {
+		controlsEvaluation: true,
+		where: (operand, { evaluate, isExpression }) => {
+			const value = isExpression(operand.value) ? evaluate(operand.value) : "?";
+			let sql = `CASE ${value}`;
+
+			for (const caseItem of operand.cases) {
+				const whenClause = isExpression(caseItem.when)
+					? evaluate(caseItem.when)
+					: "?";
+				const thenClause = isExpression(caseItem.then)
+					? evaluate(caseItem.then)
+					: "?";
+				sql += ` WHEN ${whenClause} THEN ${thenClause}`;
+			}
+
+			const defaultClause = isExpression(operand.default)
+				? evaluate(operand.default)
+				: "?";
+			sql += ` ELSE ${defaultClause} END`;
+
+			return sql;
+		},
+		vars: (operand, { evaluate, isExpression }) => {
+			const vars = [];
+
+			if (isExpression(operand.value)) {
+				vars.push(...evaluate(operand.value));
+			} else {
+				vars.push(operand.value);
+			}
+
+			for (const caseItem of operand.cases) {
+				if (isExpression(caseItem.when)) {
+					vars.push(...evaluate(caseItem.when));
+				} else {
+					vars.push(caseItem.when);
+				}
+				if (isExpression(caseItem.then)) {
+					vars.push(...evaluate(caseItem.then));
+				} else {
+					vars.push(caseItem.then);
+				}
+			}
+
+			if (isExpression(operand.default)) {
+				vars.push(...evaluate(operand.default));
+			} else {
+				vars.push(operand.default);
+			}
+
+			return vars.flat();
+		},
+	},
+	$debug: {
+		controlsEvaluation: true,
+		where: (operand, { evaluate }) => evaluate(operand),
+		vars: (operand, { evaluate }) => evaluate(operand),
+	},
+	$matchesLike: {
+		name: "$matchesLike",
+		where: () => " LIKE ?",
+		vars: (operand) => operand,
+	},
+	$matchesGlob: {
+		where: () => {
+			throw new ExpressionNotSupportedError(
+				"$matchesGlob",
+				"store",
+				"glob support is distinct to each SQL store",
+			);
+		},
+		vars: () => {
+			throw new ExpressionNotSupportedError(
+				"$matchesGlob",
+				"store",
+				"glob support is distinct to each SQL store",
+			);
+		},
+	},
+	$matchesRegex: {
+		where: () => {
+			throw new ExpressionNotSupportedError(
+				"$matchesRegex",
+				"store",
+				"regex support is distinct to each SQL store",
+			);
+		},
+		vars: () => {
+			throw new ExpressionNotSupportedError(
+				"$matchesRegex",
+				"store",
+				"regex support is distinct to each SQL store",
+			);
+		},
+	},
+};
+
+const DEFAULT_SELECT_EXPRESSIONS = {
+	$if: {
+		controlsEvaluation: true,
+		where: (operand, { evaluate, isExpression }) => {
+			const condition = evaluate(operand.if);
+			const thenClause = isExpression(operand.then)
+				? evaluate(operand.then)
+				: "?";
+			const elseClause = isExpression(operand.else)
+				? evaluate(operand.else)
+				: "?";
+			return `CASE WHEN ${condition} THEN ${thenClause} ELSE ${elseClause} END`;
+		},
+		vars: (operand, { evaluate, isExpression }) => {
+			const ifResult = evaluate(operand.if);
+			const vars =
+				Array.isArray(ifResult) && ifResult.length > 0 ? ifResult : [];
+			if (isExpression(operand.then)) {
+				const thenResult = evaluate(operand.then);
+				vars.push(...(Array.isArray(thenResult) ? thenResult : [thenResult]));
+			} else {
+				vars.push(operand.then);
+			}
+			if (isExpression(operand.else)) {
+				const elseResult = evaluate(operand.else);
+				vars.push(...(Array.isArray(elseResult) ? elseResult : [elseResult]));
+			} else {
+				vars.push(operand.else);
+			}
+			return vars.flat();
+		},
+	},
+};
+
+/**
+ * @typedef {Object} ColumnModifier
+ * @property {(val: any) => any} extract - Function to extract/parse stored value
+ * @property {(col: string) => string} select - Function to generate SQL for selecting value
+ * @property {(val: any) => any} [store] - Function to transform value before storing (optional)
+ */
+
+/**
+ * Base column type modifiers shared across SQL stores
+ * @type {Object<string, ColumnModifier>}
+ */
+const baseColumnTypeModifiers = {
+	geojson: {
+		extract: (val) => JSON.parse(val),
+		select: (val) => `ST_AsGeoJSON(${val})`,
+	},
+};
+
+/**
+ * Creates column type modifiers with custom type handlers
+ * @param {Object<string, ColumnModifier>} [customModifiers={}] - Custom type modifiers
+ * @returns {Object<string, ColumnModifier>} Combined column type modifiers
+ */
+function createColumnTypeModifiers(customModifiers = {}) {
+	return {
+		...baseColumnTypeModifiers,
+		...customModifiers,
+	};
+}
+
+/**
+ * Transforms values for storage using column type modifiers
+ * @param {any[]} values - Array of values to transform
+ * @param {string[]} attributeNames - Array of attribute names corresponding to values
+ * @param {import('data-prism').ResourceSchema} resourceSchema - Resource schema
+ * @param {Object<string, ColumnModifier>} columnTypeModifiers - Column type modifiers
+ * @returns {any[]} Transformed values ready for storage
+ */
+function transformValuesForStorage(
+	values,
+	attributeNames,
+	resourceSchema,
+	columnTypeModifiers,
+) {
+	return values.map((value, index) => {
+		const attrName = attributeNames[index];
+		const attrSchema = resourceSchema.attributes[attrName];
+		const modifier = columnTypeModifiers[attrSchema?.type];
+
+		return modifier?.store ? modifier.store(value) : value;
+	});
+}
+
+/**
+ * @typedef {Object} RelationshipContext
+ * @property {import('data-prism').Schema} schema - The schema
+ * @property {Object} config - Store configuration
+ * @property {string} resourceType - The resource type
+ * @property {string} resourceId - The resource ID
+ */
+
+/**
+ * @typedef {Object} DatabaseOperations
+ * @property {Function} clearForeignKey - Clear foreign key operation: (table, column, id) => void|Promise<void>
+ * @property {Function} updateForeignKey - Update foreign key operation: (table, column, resourceId, idAttr, targetId) => void|Promise<void>
+ * @property {Function} insertManyToMany - Insert many-to-many relationship: (table, localCol, foreignCol, localId, foreignId) => void|Promise<void>
+ * @property {Function} deleteManyToMany - Delete many-to-many relationships: (table, column, id) => void|Promise<void>
+ */
+
+/**
+ * Gets foreign (to-one) relationships from a resource
+ * @param {Object} resource - The resource with relationships
+ * @param {Object} joins - Join configuration
+ * @returns {Object} Foreign relationships
+ */
+function getForeignRelationships(resource, joins) {
+	return pickBy(
+		resource.relationships ?? {},
+		(_, k) => joins[k]?.foreignColumn,
+	);
+}
+
+/**
+ * Gets many-to-many relationships from a resource
+ * @param {Object} resource - The resource with relationships
+ * @param {Object} joins - Join configuration
+ * @returns {Object} Many-to-many relationships
+ */
+function getManyToManyRelationships(resource, joins) {
+	return pickBy(resource.relationships ?? {}, (_, k) => joins[k]?.joinTable);
+}
+
+/**
+ * Gets metadata for a foreign relationship
+ * @param {string} relName - Relationship name
+ * @param {string} resourceType - Current resource type
+ * @param {RelationshipContext} context - Relationship context
+ * @returns {Object} Relationship metadata
+ */
+function getForeignRelationshipMeta(relName, resourceType, context) {
+	const { schema, config } = context;
+	const resSchema = schema.resources[resourceType];
+	const resConfig = config.resources[resourceType];
+
+	const { foreignColumn } = resConfig.joins[relName];
+	const foreignResourceType = resSchema.relationships[relName].type;
+	const foreignIdAttribute =
+		schema.resources[foreignResourceType].idAttribute ?? "id";
+	const foreignTable = config.resources[foreignResourceType].table;
+
+	return {
+		foreignColumn,
+		foreignIdAttribute,
+		foreignTable,
+		foreignResourceType,
+	};
+}
+
+/**
+ * Gets metadata for a many-to-many relationship
+ * @param {string} relName - Relationship name
+ * @param {string} resourceType - Current resource type
+ * @param {RelationshipContext} context - Relationship context
+ * @returns {Object} Relationship metadata
+ */
+function getManyToManyRelationshipMeta(relName, resourceType, context) {
+	const { config } = context;
+	const resConfig = config.resources[resourceType];
+
+	const { joinTable, localJoinColumn, foreignJoinColumn } =
+		resConfig.joins[relName];
+
+	return {
+		joinTable,
+		localJoinColumn,
+		foreignJoinColumn,
+	};
+}
+
+/**
+ * Processes foreign (to-one) relationships
+ * @param {Object} resource - The resource with relationships
+ * @param {RelationshipContext} context - Relationship context
+ * @param {DatabaseOperations} dbOps - Database operations
+ * @returns {Promise<void>|void}
+ */
+function processForeignRelationships(resource, context, dbOps) {
+	const { config } = context;
+	const resConfig = config.resources[resource.type];
+	const { joins } = resConfig;
+
+	const foreignRelationships = getForeignRelationships(resource, joins);
+
+	const operations = Object.entries(foreignRelationships)
+		.map(([relName, val]) => {
+			const meta = getForeignRelationshipMeta(relName, resource.type, context);
+
+			// Clear existing foreign key references
+			const clearOp = dbOps.clearForeignKey(
+				meta.foreignTable,
+				meta.foreignColumn,
+				context.resourceId,
+			);
+
+			// Set new foreign key references
+			const updateOps = val.map((v) =>
+				dbOps.updateForeignKey(
+					meta.foreignTable,
+					meta.foreignColumn,
+					context.resourceId,
+					snakeCase(meta.foreignIdAttribute),
+					v.id,
+				),
+			);
+
+			return [clearOp, ...updateOps];
+		})
+		.flat();
+
+	// Handle both sync and async operations
+	if (operations.some((op) => op && typeof op.then === "function")) {
+		return Promise.all(operations.filter((op) => op));
+	}
+}
+
+/**
+ * Processes many-to-many relationships
+ * @param {Object} resource - The resource with relationships
+ * @param {RelationshipContext} context - Relationship context
+ * @param {DatabaseOperations} dbOps - Database operations
+ * @returns {Promise<void>|void}
+ */
+function processManyToManyRelationships(resource, context, dbOps) {
+	const { config, resourceId } = context;
+	const resConfig = config.resources[resource.type];
+	const { joins } = resConfig;
+
+	const m2mRelationships = getManyToManyRelationships(resource, joins);
+
+	const operations = Object.entries(m2mRelationships)
+		.map(([relName, val]) => {
+			const meta = getManyToManyRelationshipMeta(
+				relName,
+				resource.type,
+				context,
+			);
+
+			const ops = [];
+
+			// Clear existing relationships (for update operations)
+			if (context.clearExisting) {
+				ops.push(
+					dbOps.deleteManyToMany(
+						meta.joinTable,
+						meta.localJoinColumn,
+						resourceId,
+					),
+				);
+			}
+
+			// Insert new relationships
+			val.forEach((v) => {
+				ops.push(
+					dbOps.insertManyToMany(
+						meta.joinTable,
+						meta.localJoinColumn,
+						meta.foreignJoinColumn,
+						resourceId,
+						v.id,
+					),
+				);
+			});
+
+			return ops;
+		})
+		.flat();
+
+	// Handle both sync and async operations
+	if (operations.some((op) => op && typeof op.then === "function")) {
+		return Promise.all(operations.filter((op) => op));
+	}
+}
+
+/**
+ * Transforms attribute names from camelCase to snake_case for database columns
+ * @param {Object} attributes - Resource attributes object
+ * @returns {string[]} Array of snake_case column names
+ */
+function getAttributeColumns(attributes) {
+	return Object.keys(attributes ?? {}).map(snakeCase);
+}
+
+/**
+ * Gets local relationship data filtered by join configuration
+ * @param {Object} relationships - Resource relationships
+ * @param {Object} joins - Join configuration
+ * @returns {Object} Local relationships
+ */
+function getLocalRelationships(relationships, joins) {
+	return pickBy(relationships ?? {}, (_, k) => joins[k]?.localColumn);
+}
+
+/**
+ * Gets relationship columns for local relationships
+ * @param {Object} localRelationships - Local relationships
+ * @param {Object} joinConfig - Join configuration for the resource
+ * @returns {string[]} Array of relationship column names
+ */
+function getRelationshipColumns(localRelationships, joinConfig) {
+	return Object.keys(localRelationships).map(
+		(r) => joinConfig.joins[r].localColumn,
+	);
+}
+
+/**
+ * Gets ID columns with proper snake_case transformation
+ * @param {string} resourceId - Resource ID (optional)
+ * @param {string} idAttribute - ID attribute name
+ * @returns {string[]} Array of ID column names
+ */
+function getIdColumns(resourceId, idAttribute) {
+	return resourceId ? [snakeCase(idAttribute)] : [];
+}
+
+/**
+ * Gets ID values array
+ * @param {string} resourceId - Resource ID (optional)
+ * @returns {string[]} Array of ID values
+ */
+function getIdValues(resourceId) {
+	return resourceId ? [resourceId] : [];
+}
+
+/**
+ * Transforms database row keys from snake_case to camelCase
+ * @param {Object} row - Database row object
+ * @returns {Object} Transformed object with camelCase keys
+ */
+function transformRowKeys(row) {
+	const transformed = {};
+	Object.entries(row).forEach(([k, v]) => {
+		transformed[camelCase(k)] = v;
+	});
+	return transformed;
+}
+
+/**
+ * Builds a complete resource object from database data
+ * @param {string} resourceType - Resource type
+ * @param {string} resourceId - Resource ID
+ * @param {Object} attributes - Resource attributes (already camelCase)
+ * @param {Object} relationships - Resource relationships
+ * @param {import('data-prism').ResourceSchema} resourceSchema - Resource schema
+ * @returns {Object} Complete resource object
+ */
+function buildResourceObject(
+	resourceType,
+	resourceId,
+	attributes,
+	relationships,
+	resourceSchema,
+) {
+	return {
+		type: resourceType,
+		id: resourceId,
+		attributes: pick(attributes, Object.keys(resourceSchema.attributes)),
+		relationships: relationships ?? {},
+	};
+}
+
+/**
+ * Prepares values for database insertion/update
+ * @param {Object} resource - Resource object
+ * @param {Object} localRelationships - Local relationships
+ * @param {string[]} idValues - ID values array
+ * @returns {Object} Prepared values object
+ */
+function prepareValuesForStorage(
+	resource,
+	localRelationships,
+	idValues,
+) {
+	const attributeValues = Object.values(resource.attributes ?? {});
+	const relationshipValues = Object.values(localRelationships).map(
+		(r) => r?.id ?? null,
+	);
+
+	return {
+		attributeValues,
+		relationshipValues,
+		idValues,
+		allValues: [...attributeValues, ...relationshipValues, ...idValues],
+	};
+}
+
+/**
+ * Creates column arrays for SQL operations
+ * @param {Object} resource - Resource object
+ * @param {Object} localRelationships - Local relationships
+ * @param {string} idAttribute - ID attribute name
+ * @param {Object} joinConfig - Join configuration
+ * @param {boolean} includeId - Whether to include ID columns
+ * @returns {Object} Column configuration object
+ */
+function createColumnConfiguration(
+	resource,
+	localRelationships,
+	idAttribute,
+	joinConfig,
+	includeId = true,
+) {
+	const attributeColumns = getAttributeColumns(resource.attributes);
+	const relationshipColumns = getRelationshipColumns(
+		localRelationships,
+		joinConfig,
+	);
+	const idColumns = includeId ? [snakeCase(idAttribute)] : [];
+
+	return {
+		attributeColumns,
+		relationshipColumns,
+		idColumns,
+		allColumns: [...attributeColumns, ...relationshipColumns, ...idColumns],
+	};
+}
+
+/**
+ * Creates SQL placeholders string
+ * @param {number} count - Number of placeholders needed
+ * @param {string} placeholder - Placeholder character (default: "?")
+ * @returns {string} Comma-separated placeholders
+ */
+function createPlaceholders(count, placeholder = "?") {
+	return Array(count).fill(placeholder).join(", ");
+}
+
+/**
+ * Creates SQL SET clause for UPDATE operations
+ * @param {string[]} columns - Column names
+ * @param {string} placeholder - Placeholder character (default: "?")
+ * @returns {string} SET clause string
+ */
+function createUpdateSetClause(columns, placeholder = "?") {
+	return columns.map((col) => `${col} = ${placeholder}`).join(", ");
+}
+
+/**
+ * Creates SQL conflict clause for UPSERT operations
+ * @param {string[]} updateColumns - Columns to update on conflict
+ * @returns {string} Conflict clause string
+ */
+function createUpsertConflictClause(updateColumns) {
+	return updateColumns.length === 0
+		? "DO NOTHING"
+		: `DO UPDATE SET ${updateColumns.map((col) => `${col} = EXCLUDED.${col}`).join(", ")}`;
+}
+
+export { DEFAULT_SELECT_EXPRESSIONS, DEFAULT_WHERE_EXPRESSIONS, baseColumnTypeModifiers, baseConstraintOperatorDefinitions, baseSqlExpressions, buildResourceObject, createColumnConfiguration, createColumnTypeModifiers, createConstraintOperators, createPlaceholders, createUpdateSetClause, createUpsertConflictClause, extractGraph, extractQueryClauses, flatMapQuery, flattenQuery, forEachQuery, getAttributeColumns, getForeignRelationshipMeta, getForeignRelationships, getIdColumns, getIdValues, getLocalRelationships, getManyToManyRelationshipMeta, getManyToManyRelationships, getRelationshipColumns, makeRelationshipBuilders, preQueryRelationships, prepareValuesForStorage, processForeignRelationships, processManyToManyRelationships, reduceQuery, someQuery, transformRowKeys, transformValuesForStorage };

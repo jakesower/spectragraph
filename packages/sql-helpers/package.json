@@ -45,6 +45,6 @@
 	"dependencies": {
 		"@data-prism/core": "*",
 		"@data-prism/utils": "*",
-		"lodash-es": "^4.17.21"
+		"es-toolkit": "^1.26.0"
 	}
 }

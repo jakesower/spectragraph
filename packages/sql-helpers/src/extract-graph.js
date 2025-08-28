@@ -1,4 +1,4 @@
-import { mapValues, snakeCase } from "lodash-es";
+import { mapValues, snakeCase } from "es-toolkit";
 import { flatMapQuery } from "./query-helpers.js";
 
 /**

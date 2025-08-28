@@ -1,4 +1,4 @@
-import { mapValues } from "lodash-es";
+import { mapValues } from "es-toolkit";
 import { extractQueryClauses } from "../parse-query.js";
 import { SQL_CLAUSE_CONFIG } from "./clause-config.js";
 import {

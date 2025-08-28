@@ -1,5 +1,7 @@
-import { camelCase, pick, pickBy, snakeCase } from "lodash-es";
+import { camelCase, pick, pickBy, snakeCase } from "es-toolkit";
 import { randomUUID } from "crypto";
+import { transformValuesForStorage } from "@data-prism/sql-helpers";
+import { columnTypeModifiers } from "./column-type-modifiers.js";
 
 /**
  * @typedef {import('./sqlite-store.js').CreateResource} CreateResource
@@ -44,16 +46,26 @@ export function upsertResourceRow(resource, context) {
 
 	const columns = [...attributeColumns, ...relationshipColumns, ...idColumns];
 	const placeholders = columns.map(() => "?").join(", ");
-	const vars = [
-		...Object.values(resource.attributes ?? {}),
-		...Object.values(localRelationships).map((r) => r?.id ?? null),
-		...idVars,
-	];
 
-	// Convert boolean values to integers for SQLite
-	const sqliteVars = vars.map((v) =>
-		typeof v === "boolean" ? (v ? 1 : 0) : v,
+	const attributeValues = Object.values(resource.attributes ?? {});
+	const relationshipValues = Object.values(localRelationships).map(
+		(r) => r?.id ?? null,
 	);
+	const idValues = idVars;
+
+	// Transform attribute values using column type modifiers
+	const transformedAttributeValues = transformValuesForStorage(
+		attributeValues,
+		Object.keys(resource.attributes ?? {}),
+		resSchema,
+		columnTypeModifiers,
+	);
+
+	const vars = [
+		...transformedAttributeValues,
+		...relationshipValues,
+		...idValues,
+	];
 
 	const updateColumns = [...attributeColumns, ...relationshipColumns]
 		.map((col) => `${col} = EXCLUDED.${col}`)
@@ -72,7 +84,7 @@ export function upsertResourceRow(resource, context) {
   `;
 
 	const upsertStmt = db.prepare(upsertSql);
-	upsertStmt.run(sqliteVars);
+	upsertStmt.run(vars);
 
 	// Get the upserted resource
 	const selectSql = `SELECT * FROM ${table} WHERE ${snakeCase(idAttribute)} = ?`;

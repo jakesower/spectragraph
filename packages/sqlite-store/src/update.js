@@ -1,4 +1,6 @@
-import { camelCase, pick, pickBy, snakeCase } from "lodash-es";
+import { camelCase, pick, pickBy, snakeCase } from "es-toolkit";
+import { transformValuesForStorage } from "@data-prism/sql-helpers";
+import { columnTypeModifiers } from "./column-type-modifiers.js";
 
 /**
  * @typedef {import('./sqlite-store.js').UpdateResource} UpdateResource
@@ -39,15 +41,18 @@ export function update(resource, context) {
 	const columns = [...attributeColumns, ...relationshipColumns];
 	const columnsWithPlaceholders = columns.map((col) => `${col} = ?`).join(", ");
 
-	const vars = [
-		...Object.values(resource.attributes ?? {}),
-		...Object.values(localRelationships).map((r) => r.id),
-	];
+	const attributeValues = Object.values(resource.attributes ?? {});
+	const relationshipValues = Object.values(localRelationships).map((r) => r.id);
 
-	// Convert boolean values to integers for SQLite
-	const sqliteVars = vars.map((v) =>
-		typeof v === "boolean" ? (v ? 1 : 0) : v,
+	// Transform attribute values using column type modifiers
+	const transformedAttributeValues = transformValuesForStorage(
+		attributeValues,
+		Object.keys(resource.attributes ?? {}),
+		resSchema,
+		columnTypeModifiers,
 	);
+
+	const vars = [...transformedAttributeValues, ...relationshipValues];
 
 	const updated = {};
 	let firstResult;
@@ -59,7 +64,7 @@ export function update(resource, context) {
 		`;
 
 		const updateStmt = db.prepare(updateSql);
-		updateStmt.run([...sqliteVars, resource.id]);
+		updateStmt.run([...vars, resource.id]);
 
 		// Get the updated resource
 		const selectSql = `SELECT * FROM ${table} WHERE ${snakeCase(idAttribute)} = ?`;

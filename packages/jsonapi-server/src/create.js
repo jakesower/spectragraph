@@ -1,4 +1,4 @@
-import { mapValues } from "lodash-es";
+import { mapValues } from "es-toolkit";
 import { validateRequest } from "./validate-request.js";
 
 /**

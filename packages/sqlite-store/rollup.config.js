@@ -9,7 +9,7 @@ export default [
 		output: { file: "dist/index.esm.js", format: "es" },
 		plugins: [nodeResolve(), commonjs(), json()],
 		external: [
-			"lodash-es",
+			"es-toolkit",
 			"@data-prism/utils",
 			"better-sqlite3",
 			"data-prism",
@@ -21,7 +21,7 @@ export default [
 		output: { file: "dist/index.cjs.js", format: "cjs" },
 		plugins: [nodeResolve(), commonjs(), json()],
 		external: [
-			"lodash-es",
+			"es-toolkit",
 			"@data-prism/utils",
 			"better-sqlite3",
 			"data-prism",

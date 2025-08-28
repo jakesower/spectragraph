@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { mapValues } from "lodash-es";
+import { mapValues } from "es-toolkit";
 import {
 	ensureValidSchema,
 	ensureValidQuery,

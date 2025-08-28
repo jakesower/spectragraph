@@ -6,7 +6,8 @@
  * @property {string} value
  */
 
-import { get, uniqBy } from "lodash-es";
+import { get } from "es-toolkit/compat";
+import { uniqBy } from "es-toolkit";
 
 /**
  * Wraps a validation function so that if it returns any standardized errors, an Error is thrown.

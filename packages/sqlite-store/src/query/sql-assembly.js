@@ -1,4 +1,4 @@
-import { mapValues } from "lodash-es";
+import { mapValues } from "es-toolkit";
 import { createVarsExpressionEngine } from "../helpers/where-expressions.js";
 import { SQL_CLAUSE_CONFIG } from "./clause-config.js";
 

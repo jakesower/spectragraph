@@ -1,4 +1,4 @@
-import { pickBy, snakeCase } from "lodash-es";
+import { pickBy, snakeCase } from "es-toolkit";
 
 /**
  * @typedef {import('./sqlite-store.js').DeleteResource} DeleteResource

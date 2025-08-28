@@ -1,4 +1,4 @@
-import { mapValues, uniq } from "lodash-es";
+import { mapValues, uniq } from "es-toolkit";
 import { validateSchema } from "./schema.js";
 import { applyOrMap } from "@data-prism/utils";
 import { normalizeResource } from "./resource.js";

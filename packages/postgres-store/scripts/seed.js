@@ -1,5 +1,5 @@
 import { applyOrMap } from "@data-prism/utils";
-import { groupBy, snakeCase, uniqBy } from "lodash-es";
+import { groupBy, snakeCase, uniqBy } from "es-toolkit";
 
 const defaultColumnTypes = {
 	array: "json",
