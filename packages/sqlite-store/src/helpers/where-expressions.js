@@ -2,7 +2,7 @@ import {
 	createExpressionEngine,
 	ExpressionNotSupportedError,
 } from "@data-prism/core";
-import { mapValues, snakeCase } from "lodash-es";
+import { mapValues } from "lodash-es";
 import { DEFAULT_WHERE_EXPRESSIONS } from "../../../sql-helpers/src/where-expressions.js";
 
 // Per-database cache for regex support detection

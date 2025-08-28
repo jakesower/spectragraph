@@ -37,9 +37,7 @@ export function update(resource, context) {
 	);
 
 	const columns = [...attributeColumns, ...relationshipColumns];
-	const columnsWithPlaceholders = columns
-		.map((col) => `${col} = ?`)
-		.join(", ");
+	const columnsWithPlaceholders = columns.map((col) => `${col} = ?`).join(", ");
 
 	const vars = [
 		...Object.values(resource.attributes ?? {}),
@@ -47,7 +45,9 @@ export function update(resource, context) {
 	];
 
 	// Convert boolean values to integers for SQLite
-	const sqliteVars = vars.map((v) => typeof v === "boolean" ? (v ? 1 : 0) : v);
+	const sqliteVars = vars.map((v) =>
+		typeof v === "boolean" ? (v ? 1 : 0) : v,
+	);
 
 	const updated = {};
 	let firstResult;
@@ -106,7 +106,7 @@ export function update(resource, context) {
 			WHERE ${snakeCase(foreignIdAttribute)} = ?
 		`;
 		const updateStmt = db.prepare(updateSql);
-		
+
 		val.forEach((v) => {
 			updateStmt.run(updated[idAttribute], v.id);
 		});
