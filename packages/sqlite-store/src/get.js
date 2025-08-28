@@ -1,144 +1,280 @@
-import { mapValues, omit } from "lodash-es";
-import { normalizeQuery, queryGraph } from "@data-prism/core";
-import { buildSql, composeClauses } from "./helpers/sql.js";
-import { runQuery } from "./operations/operations.js";
-import { flattenQuery } from "./helpers/query-helpers.js";
-import { castValToDb } from "./helpers/sql.js";
-import { varsExpressionEngine } from "./helpers/sql-expressions.js";
+import { mapValues, snakeCase } from "lodash-es";
+import { columnTypeModifiers } from "./column-type-modifiers.js";
 
 /**
- *
- * @param {import('@data-prism/core').Query} query
- * @param {import('./sqlite-store.js').Context} context
- * @returns
+ * @typedef {import('./postgres-store.js').Context} Context
+ * @typedef {import('./postgres-store.js').Resource} Resource
+ * @typedef {import('./postgres-store.js').LocalJoin} LocalJoin
+ * @typedef {import('./postgres-store.js').ForeignJoin} ForeignJoin
+ * @typedef {import('./postgres-store.js').ManyToManyJoin} ManyToManyJoin
  */
-export function get(query, context) {
-	const { schema, config, rootClauses = [] } = context;
-	const { db, resources } = config;
 
-	const normalQuery = normalizeQuery(schema, query);
+/**
+ * @typedef {Object} GetOptions
+ * @property {boolean} [includeRelationships]
+ */
 
-	const resConfig = resources[normalQuery.type];
-	const rootTable = resConfig.table;
+/**
+ * @typedef {Context & {options: GetOptions}} GetContext
+ */
 
-	const initModifiers = {
-		from: rootTable,
-	};
+/**
+ * Gets a single resource by type and ID
+ * @param {string} type - Resource type
+ * @param {string} id - Resource ID
+ * @param {GetContext} context - Get context with config, schema, and options
+ * @returns {Promise<Resource>} The resource
+ */
+export async function getOne(type, id, context) {
+	const { config, options = {}, schema } = context;
+	const { includeRelationships = true } = options;
+	const { db } = config;
 
-	return runQuery(normalQuery, context, (queryModifiers) => {
-		const composedModifiers = composeClauses([
-			initModifiers,
-			...rootClauses,
-			...queryModifiers,
-		]);
+	const resConfig = config.resources[type];
+	const { joins, table } = resConfig;
 
-		const selectAttributeMap = {};
-		composedModifiers.select.forEach((attr, idx) => {
-			selectAttributeMap[attr] = idx;
+	const resSchema = schema.resources[type];
+	const { idAttribute = "id" } = resSchema;
+	const attrNames = Object.keys(resSchema.attributes);
+
+	const output = { type, id, attributes: {}, relationships: {} };
+
+	const localRelationships = Object.entries(joins).filter(
+		([, j]) => "localColumn" in j,
+	);
+	const foreignRelationships = Object.entries(joins).filter(
+		([, j]) => "foreignColumn" in j,
+	);
+	const manyToManyRelationships = Object.entries(joins).filter(
+		([, j]) => "localJoinColumn" in j,
+	);
+
+	const foreignQueries = includeRelationships
+		? [
+				...foreignRelationships.map(async ([joinName, joinInfo]) => {
+					const { foreignColumn } = joinInfo;
+					const relSchema = resSchema.relationships[joinName];
+					const relResSchema = schema.resources[relSchema.type];
+					const relConfig = config.resources[relSchema.type];
+					const foreignTable = relConfig.table;
+					const foreignId = snakeCase(relResSchema.idAttribute ?? "id");
+
+					const { rows } = await db.query(
+						{
+							rowMode: "array",
+							text: `SELECT ${foreignId} FROM ${foreignTable} WHERE ${foreignColumn} = $1`,
+						},
+						[id],
+					);
+
+					output.relationships[joinName] =
+						relSchema.cardinality === "one"
+							? rows[0]
+								? { type: relSchema.type, id: rows[0][0] }
+								: null
+							: rows.map((r) => ({ type: relSchema.type, id: r[0] }));
+				}),
+				...manyToManyRelationships.map(async ([joinName, joinInfo]) => {
+					const { foreignJoinColumn, joinTable, localJoinColumn } = joinInfo;
+					const relSchema = resSchema.relationships[joinName];
+
+					const { rows } = await db.query(
+						{
+							rowMode: "array",
+							text: `SELECT ${foreignJoinColumn} FROM ${joinTable} WHERE ${localJoinColumn} = $1`,
+						},
+						[id],
+					);
+
+					output.relationships[joinName] = rows.map((r) => ({
+						type: relSchema.type,
+						id: r[0],
+					}));
+				}),
+			]
+		: [];
+
+	const cols = [
+		...attrNames.map((attrName) =>
+			columnTypeModifiers[resSchema.attributes[attrName].type]
+				? columnTypeModifiers[resSchema.attributes[attrName].type].select(
+						snakeCase(attrName),
+					)
+				: snakeCase(attrName),
+		),
+		...localRelationships.map(([, r]) => snakeCase(r.localColumn)),
+	].join(", ");
+	const localQuery = db.query(
+		{
+			rowMode: "array",
+			text: `SELECT ${cols} FROM ${table} WHERE ${snakeCase(idAttribute)} = $1`,
+		},
+		[id],
+	);
+
+	const [localResult] = await Promise.all([localQuery, ...foreignQueries]);
+
+	const { rows } = localResult;
+	const row = rows[0];
+	if (!row) return null;
+
+	attrNames.forEach((attr, idx) => {
+		const attrType = resSchema.attributes[attr].type;
+
+		output.attributes[attr] =
+			typeof row[idx] === "string" && columnTypeModifiers[attrType]
+				? columnTypeModifiers[attrType].extract(row[idx])
+				: row[idx];
+	});
+
+	if (includeRelationships) {
+		localRelationships.forEach(([relName], idx) => {
+			const id = row[idx + attrNames.length];
+			output.relationships[relName] = id
+				? {
+						type: resSchema.relationships[relName].type,
+						id,
+					}
+				: null;
+		});
+	}
+
+	return output;
+}
+
+/**
+ * Gets all resources of a given type
+ * @param {string} type - Resource type
+ * @param {GetContext} context - Get context with config, schema, and options
+ * @returns {Promise<Resource[]>} Array of resources
+ */
+export async function getAll(type, context) {
+	const { config, options = {}, schema } = context;
+	const { includeRelationships = true } = options;
+	const { db } = config;
+
+	const resConfig = config.resources[type];
+	const { joins, table } = resConfig;
+
+	const resSchema = schema.resources[type];
+	const attrNames = Object.keys(resSchema.attributes);
+
+	const resources = {};
+
+	const localRelationships = Object.entries(joins).filter(
+		([, j]) => "localColumn" in j,
+	);
+
+	const cols = [
+		snakeCase(resSchema.idAttribute ?? "id"),
+		...attrNames.map((attrName) =>
+			columnTypeModifiers[resSchema.attributes[attrName].type]
+				? columnTypeModifiers[resSchema.attributes[attrName].type].select(
+						snakeCase(attrName),
+					)
+				: snakeCase(attrName),
+		),
+		...localRelationships.map(([, r]) => snakeCase(r.localColumn)),
+	].join(", ");
+	const localQuery = db.query({
+		rowMode: "array",
+		text: `SELECT ${cols} FROM ${table}`,
+	});
+
+	const { rows } = await localQuery;
+
+	rows.forEach((row) => {
+		const resource = { type, id: row[0], attributes: {} };
+		if (includeRelationships) {
+			resource.relationships = mapValues(resSchema.relationships, (rel) =>
+				rel.cardinality === "one" ? null : [],
+			);
+		}
+
+		attrNames.forEach((attr, idx) => {
+			const attrType = resSchema.attributes[attr].type;
+
+			resource.attributes[attr] =
+				typeof row[idx + 1] === "string" && columnTypeModifiers[attrType]
+					? columnTypeModifiers[attrType].extract(row[idx + 1])
+					: row[idx + 1];
 		});
 
-		const sql = buildSql(composedModifiers);
-		const vars = varsExpressionEngine
-			.evaluate({ $and: composedModifiers.vars })
-			.map(castValToDb);
-
-		const statement = db.prepare(sql).raw();
-		const allResults = statement.all(vars) ?? null;
-
-		const dataGraph = mapValues(schema.resources, () => ({}));
-		const flatQuery = flattenQuery(schema, normalQuery);
-
-		const buildExtractor = () => {
-			const extractors = flatQuery.flatMap((queryPart) => {
-				const { parent, parentQuery, parentRelationship, attributes, type } =
-					queryPart;
-				const queryPartConfig = config.resources[type];
-				const { idAttribute = "id" } = queryPartConfig;
-
-				const parentType = parent?.type;
-				const parentRelDef =
-					parentQuery &&
-					schema.resources[parentType].relationships[parentRelationship];
-
-				const pathStr =
-					queryPart.path.length > 0 ? `$${queryPart.path.join("$")}` : "";
-				const idPath = `${rootTable}${pathStr}.${idAttribute}`;
-				const idIdx = selectAttributeMap[idPath];
-
-				return (result) => {
-					const id = result[idIdx];
-
-					if (parentQuery) {
-						const parentPathStr =
-							queryPart.path.length > 1
-								? `$${queryPart.path.slice(0, -1).join("$")}`
-								: "";
-						const parentIdAttribute =
-							config.resources[parentType].idAttribute ?? "id";
-						const parentIdPath = `${rootTable}${parentPathStr}.${parentIdAttribute}`;
-						const parentIdIdx = selectAttributeMap[parentIdPath];
-						const parentId = result[parentIdIdx];
-
-						if (!dataGraph[parentType][parentId]) {
-							dataGraph[parentType][parentId] = {
-								[idAttribute]: parentId,
-								id: parentId,
-								type: parentType,
-							};
+		if (includeRelationships) {
+			localRelationships.forEach(([relName], idx) => {
+				const id = row[idx + attrNames.length + 1];
+				resource.relationships[relName] = id
+					? {
+							type: resSchema.relationships[relName].type,
+							id,
 						}
-						const parent = dataGraph[parentType][parentId];
-
-						if (parentRelDef.cardinality === "one") {
-							parent.relationships[parentRelationship] = id
-								? { id, type }
-								: null;
-						} else {
-							parent.relationships[parentRelationship] =
-								parent.relationships[parentRelationship] ?? [];
-
-							if (
-								!parent.relationships[parentRelationship].some(
-									(r) => r.id === id,
-								)
-							) {
-								parent.relationships[parentRelationship].push({ type, id });
-							}
-						}
-					}
-
-					if (!id) return;
-
-					dataGraph[type][id] = dataGraph[type][id] ?? {
-						id,
-						type,
-						attributes: {},
-						relationships: {},
-					};
-
-					if (attributes.length > 0) {
-						attributes.forEach((attr) => {
-							const fullAttrPath = `${rootTable}${pathStr}.${attr}`;
-							const resultIdx = selectAttributeMap[fullAttrPath];
-
-							dataGraph[type][id].attributes[attr] = result[resultIdx];
-						});
-					} else {
-						dataGraph[type][id].id = id;
-						dataGraph[type][id].type = type;
-					}
-				};
+					: null;
 			});
+		}
 
-			return (result) => extractors.forEach((extractor) => extractor(result));
-		};
-
-		const extractor = buildExtractor();
-		allResults.forEach((row) => extractor(row));
-
-		return queryGraph(
-			schema,
-			omit(normalQuery, ["limit", "offset", "where"]),
-			dataGraph,
-		);
+		resources[resource.id] = resource;
 	});
+
+	if (includeRelationships) {
+		const foreignRelationships = Object.entries(joins).filter(
+			([, j]) => "foreignColumn" in j,
+		);
+		const manyToManyRelationships = Object.entries(joins).filter(
+			([, j]) => "localJoinColumn" in j,
+		);
+
+		const foreignQueries = [
+			...foreignRelationships.map(async ([joinName, joinInfo]) => {
+				const { foreignColumn } = joinInfo;
+				const relSchema = resSchema.relationships[joinName];
+				const relResSchema = schema.resources[relSchema.type];
+				const relConfig = config.resources[relSchema.type];
+				const foreignTable = relConfig.table;
+				const foreignId = snakeCase(relResSchema.idAttribute ?? "id");
+
+				const { rows } = await db.query({
+					rowMode: "array",
+					text: `SELECT ${foreignColumn}, ${foreignId} FROM ${foreignTable} WHERE ${foreignColumn} IS NOT NULL`,
+				});
+
+				rows.forEach((row) => {
+					const resource = resources[row[0]];
+
+					if (relSchema.cardinality === "one") {
+						resource.relationships[joinName] = {
+							type: relSchema.type,
+							id: row[1],
+						};
+					} else {
+						resource.relationships[joinName].push({
+							type: relSchema.type,
+							id: row[1],
+						});
+					}
+				});
+			}),
+			...manyToManyRelationships.map(async ([joinName, joinInfo]) => {
+				const { foreignJoinColumn, joinTable, localJoinColumn } = joinInfo;
+				const relSchema = resSchema.relationships[joinName];
+
+				const { rows } = await db.query({
+					rowMode: "array",
+					text: `SELECT ${localJoinColumn}, ${foreignJoinColumn} FROM ${joinTable} WHERE ${localJoinColumn} IS NOT NULL`,
+				});
+
+				rows.forEach((row) => {
+					const resource = resources[row[0]];
+
+					resource.relationships[joinName].push({
+						type: relSchema.type,
+						id: row[1],
+					});
+				});
+			}),
+		];
+
+		await Promise.all([...foreignQueries]);
+	}
+
+	return Object.values(resources);
 }

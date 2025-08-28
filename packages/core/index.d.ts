@@ -201,6 +201,44 @@ export interface MatchesRegexExpression {
 	$matchesRegex: string;
 }
 
+/**
+ * SQL LIKE pattern matching expression.
+ * Tests if a string matches a SQL LIKE pattern.
+ * 
+ * Supports SQL standard patterns:
+ * - % matches any sequence of characters (including none)
+ * - _ matches exactly one character
+ * - Case-sensitive matching (consistent across databases)
+ * 
+ * @example
+ * { name: { $matchesLike: "John%" } } // Names starting with "John"
+ * { email: { $matchesLike: "%@gmail.com" } } // Gmail addresses
+ * { code: { $matchesLike: "A_B_" } } // Codes like "A1B2", "AXBY"
+ */
+export interface MatchesLikeExpression {
+	$matchesLike: string;
+}
+
+/**
+ * Unix shell GLOB pattern matching expression.
+ * Tests if a string matches a Unix shell GLOB pattern.
+ * 
+ * Supports Unix shell patterns:
+ * - * matches any sequence of characters (including none)
+ * - ? matches exactly one character  
+ * - [chars] matches any single character in the set
+ * - [!chars] or [^chars] matches any character not in the set
+ * - Case-sensitive matching
+ * 
+ * @example
+ * { filename: { $matchesGlob: "*.txt" } } // Text files
+ * { name: { $matchesGlob: "[A-Z]*" } } // Names starting with capital
+ * { code: { $matchesGlob: "IMG_[0-9][0-9][0-9][0-9]" } } // Image codes
+ */
+export interface MatchesGlobExpression {
+	$matchesGlob: string;
+}
+
 export interface Query {
 	id?: string;
 	limit?: number;

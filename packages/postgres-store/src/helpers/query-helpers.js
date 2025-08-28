@@ -7,4 +7,3 @@ export {
 	someQuery,
 	replacePlaceholders,
 } from "@data-prism/sql-helpers";
-

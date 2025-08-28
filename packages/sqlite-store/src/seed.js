@@ -1,5 +1,5 @@
 import { applyOrMap } from "@data-prism/utils";
-import { groupBy, mapValues, uniqBy } from "lodash-es";
+import { groupBy, mapValues, uniqBy, snakeCase } from "lodash-es";
 
 const boolToNum = (val) => (val === true ? 1 : val === false ? 0 : val) ?? null;
 const defaultColumnTypes = {
@@ -14,11 +14,11 @@ export function createTables(db, schema, config) {
 		const resConfig = config.resources[resType];
 		const { idAttribute = "id", table } = resConfig;
 
-		const idCol = { name: idAttribute, type: "VARCHAR" };
+		const idCol = { name: snakeCase(idAttribute), type: "VARCHAR" };
 		const attrCols = Object.entries(resDef.attributes)
 			.filter(([attrName]) => attrName !== idAttribute)
 			.map(([attrName, attrDef]) => ({
-				name: attrName,
+				name: snakeCase(attrName),
 				type: defaultColumnTypes[attrDef.type],
 			}));
 		const joinCols = Object.values(resConfig.joins)

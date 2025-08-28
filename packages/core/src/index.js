@@ -24,6 +24,7 @@ export {
 	defaultExpressionEngine,
 	defaultExpressions,
 } from "./expressions/expressions.js";
+export { ExpressionNotSupportedError } from "./errors.js";
 
 import { ensure } from "./lib/helpers.js";
 import { validateSchema } from "./schema.js";
