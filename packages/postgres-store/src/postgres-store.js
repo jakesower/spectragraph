@@ -11,7 +11,6 @@ import { query as getQuery } from "./query/index.js";
 import { create } from "./create.js";
 import { deleteResource } from "./delete.js";
 import { update } from "./update.js";
-import { getAll, getOne } from "./get.js";
 import { upsert } from "./upsert.js";
 
 /**
@@ -101,8 +100,6 @@ import { upsert } from "./upsert.js";
 
 /**
  * @typedef {Object} PostgresStore
- * @property {(type: string, options?: GetOptions) => Promise<Resource[]>} getAll
- * @property {(type: string, id: string, options?: GetOptions) => Promise<Resource>} getOne
  * @property {(resource: CreateResource) => Promise<Resource>} create
  * @property {(resource: UpdateResource) => Promise<Resource>} update
  * @property {(resource: CreateResource|UpdateResource) => Promise<Resource>} upsert
@@ -122,13 +119,6 @@ export function createPostgresStore(schema, config) {
 	ensureValidSchema(schema, { validator });
 
 	return {
-		async getAll(type, options = {}) {
-			return getAll(type, { config, options, schema });
-		},
-
-		async getOne(type, id, options = {}) {
-			return getOne(type, id, { config, options, schema });
-		},
 
 		async create(resource) {
 			const errors = validateCreateResource(schema, resource, { validator });
