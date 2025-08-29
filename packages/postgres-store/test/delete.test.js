@@ -6,7 +6,10 @@ import { careBearConfig } from "./fixtures/care-bear-config.js";
 import { careBearData } from "../../interface-tests/src/index.js";
 import { reset } from "../scripts/seed.js";
 
-describe("postgres-store delete tests (go deeper than interface tests)", () => {
+// Most delete tests are covered by interface-tests via interface.test.js
+// This file contains PostgreSQL-specific database-level verification tests
+
+describe("PostgreSQL-Specific Delete Tests", () => {
 	let store;
 	let db;
 
@@ -20,7 +23,7 @@ describe("postgres-store delete tests (go deeper than interface tests)", () => {
 		});
 	});
 
-	it("deletes a single resource with a foreign to-one relationship", async () => {
+	it("verifies foreign key nullification at database level", async () => {
 		const createdBear = await store.create({
 			type: "bears",
 			attributes: {
@@ -48,27 +51,14 @@ describe("postgres-store delete tests (go deeper than interface tests)", () => {
 			id: createdHome.id,
 		});
 
-		const homeResult = await store.query({
-			type: "homes",
-			id: createdHome.id,
-			select: ["name", { residents: { select: ["name"] } }],
-		});
-		expect(homeResult).toEqual(null);
-
-		const bearResult = await store.query({
-			type: "bears",
-			id: createdBear.id,
-			select: ["name", { home: { select: ["name"] } }],
-		});
-		expect(bearResult).toEqual({ name: "Birthday Bear", home: null });
-
-		const res = await db.query("SELECT * FROM bears WHERE id = $1", [
+		// Verify database state directly - this is postgres-specific verification
+		const res = await db.query("SELECT home_id FROM bears WHERE id = $1", [
 			createdBear.id,
 		]);
 		expect(res.rows[0].home_id).toEqual(null);
 	});
 
-	it("deletes all many-to-many foreign relationships that belong to a deleted resource", async () => {
+	it("verifies many-to-many junction table cleanup at database level", async () => {
 		const createdPower = await store.create({
 			type: "powers",
 			attributes: {
@@ -90,64 +80,12 @@ describe("postgres-store delete tests (go deeper than interface tests)", () => {
 			},
 		});
 
-		await store.create({
-			type: "bears",
-			attributes: {
-				name: "Always There Bear",
-				yearIntroduced: 2006,
-				bellyBadge: "pink and lavender hearts",
-				furColor: "red",
-			},
-			relationships: {
-				powers: [{ type: "powers", id: createdPower.id }],
-			},
-		});
-
-		const powerResultPre = await store.query({
-			type: "powers",
-			id: createdPower.id,
-			select: ["name", { wielders: { select: ["name"] } }],
-		});
-		expect(powerResultPre).toEqual({
-			name: "Care Cousins Call",
-			wielders: [{ name: "Share Bear" }, { name: "Always There Bear" }],
-		});
-
-		const createdPower2 = await store.create({
-			type: "powers",
-			attributes: {
-				name: "Fly",
-			},
-			relationships: {
-				wielders: [{ type: "bears", id: shareBear.id }],
-			},
-		});
-
 		await store.delete({
 			type: "bears",
 			id: shareBear.id,
 		});
 
-		const powerResult1 = await store.query({
-			type: "powers",
-			id: createdPower.id,
-			select: ["name", { wielders: { select: ["name"] } }],
-		});
-		expect(powerResult1).toEqual({
-			name: "Care Cousins Call",
-			wielders: [{ name: "Always There Bear" }],
-		});
-
-		const powerResult2 = await store.query({
-			type: "powers",
-			id: createdPower2.id,
-			select: ["name", { wielders: { select: ["name"] } }],
-		});
-		expect(powerResult2).toEqual({
-			name: "Fly",
-			wielders: [],
-		});
-
+		// Verify junction table cleanup directly - this is postgres-specific verification
 		const res = await db.query(
 			"SELECT * FROM bears_powers WHERE bear_id = $1",
 			[shareBear.id],

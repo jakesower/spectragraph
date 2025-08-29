@@ -106,6 +106,8 @@ import { upsert } from "./upsert.js";
  * @property {(resource: CreateResource|UpdateResource) => Promise<Resource>} upsert
  * @property {(resource: DeleteResource) => Promise<DeleteResource>} delete
  * @property {(query: import('data-prism').RootQuery) => Promise<any>} query
+ * @property {(resource: CreateResource|UpdateResource) => Promise<Resource>} merge
+ * @property {(resources: (CreateResource|UpdateResource)[]) => Promise<Resource[]>} merge
  */
 
 /**
@@ -119,15 +121,14 @@ export function sqliteStore(schema, config) {
 
 	ensureValidSchema(schema, { validator });
 
-	return {
-
+	const createStoreOperations = (context) => ({
 		async create(resource) {
 			const errors = validateCreateResource(schema, resource, { validator });
 			if (errors.length > 0) {
 				throw new Error("invalid resource", { cause: errors });
 			}
 
-			return create(resource, { config, schema });
+			return create(resource, context);
 		},
 
 		async update(resource) {
@@ -136,7 +137,7 @@ export function sqliteStore(schema, config) {
 				throw new Error("invalid resource", { cause: errors });
 			}
 
-			return update(resource, { config, schema });
+			return update(resource, context);
 		},
 
 		async upsert(resource) {
@@ -145,7 +146,7 @@ export function sqliteStore(schema, config) {
 				throw new Error("invalid resource", { cause: errors });
 			}
 
-			return upsert(resource, { config, schema });
+			return upsert(resource, context);
 		},
 
 		async delete(resource) {
@@ -154,17 +155,64 @@ export function sqliteStore(schema, config) {
 				throw new Error("invalid resource", { cause: errors });
 			}
 
-			return deleteResource(resource, { config, schema });
+			return deleteResource(resource, context);
 		},
 
 		async query(query) {
 			const normalized = normalizeQuery(schema, query);
 			return getQuery(normalized, {
-				config,
-				db: config.db,
-				schema,
+				...context,
 				query: normalized,
 			});
+		},
+	});
+
+	const baseContext = { config, db: config.db, schema };
+	const store = createStoreOperations(baseContext);
+
+	return {
+		...store,
+
+		async merge(resourceTreeOrTrees) {
+			const isArray = Array.isArray(resourceTreeOrTrees);
+			const trees = isArray ? resourceTreeOrTrees : [resourceTreeOrTrees];
+
+			if (trees.length === 0) {
+				return [];
+			}
+
+			// Single resource - no transaction needed
+			if (trees.length === 1) {
+				const resource = trees[0];
+				const result =
+					"id" in resource && resource.id
+						? await store.update(resource)
+						: await store.create(resource);
+				return isArray ? [result] : result;
+			}
+
+			// Multiple resources - use transaction for atomicity
+			const db = config.db;
+
+			db.prepare("BEGIN").run();
+
+			try {
+				const results = [];
+
+				for (const resource of trees) {
+					const result =
+						"id" in resource && resource.id
+							? await store.update(resource)
+							: await store.create(resource);
+					results.push(result);
+				}
+
+				db.prepare("COMMIT").run();
+				return results;
+			} catch (error) {
+				db.prepare("ROLLBACK").run();
+				throw error;
+			}
 		},
 	};
 }

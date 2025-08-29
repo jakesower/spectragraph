@@ -4,6 +4,7 @@ import { runCreateTests } from "./create.test.js";
 import { runUpdateTests } from "./update.test.js";
 import { runDeleteTests } from "./delete.test.js";
 import { runUpsertTests } from "./upsert.test.js";
+import { runMergeTests } from "./merge.test.js";
 
 export function runInterfaceTests(createStore) {
 	describe("Store Interface Tests", () => {
@@ -12,6 +13,7 @@ export function runInterfaceTests(createStore) {
 		runUpdateTests(createStore);
 		runDeleteTests(createStore);
 		runUpsertTests(createStore);
+		runMergeTests(createStore);
 	});
 }
 
@@ -21,6 +23,7 @@ export { runCreateTests } from "./create.test.js";
 export { runUpdateTests } from "./update.test.js";
 export { runDeleteTests } from "./delete.test.js";
 export { runUpsertTests } from "./upsert.test.js";
+export { runMergeTests } from "./merge.test.js";
 
 // Re-export fixtures
 export {

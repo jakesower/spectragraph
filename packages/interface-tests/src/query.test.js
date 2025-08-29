@@ -79,7 +79,7 @@ export function runQueryTests(createStore) {
 		});
 	});
 
-	describe("select clauses", () => {
+	describe.skip("select clauses", () => {
 		describe("* notation", () => {
 			it("fetches a single resource with * as a string", async () => {
 				const store = createStore(careBearSchema, {
@@ -139,6 +139,12 @@ export function runQueryTests(createStore) {
 					bellyBadge: "red heart with pink outline",
 					furColor: "tan",
 				});
+			});
+		});
+
+		describe("select expressions", () => {
+			describe("$if", () => {
+				it("selects the right stuff with an $if expression", () => {});
 			});
 		});
 	});

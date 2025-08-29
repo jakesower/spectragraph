@@ -15,9 +15,7 @@ import { columnTypeModifiers } from "./column-type-modifiers.js";
  * @returns {Resource} The updated resource
  */
 export function update(resource, context) {
-	const { config, schema } = context;
-
-	const { db } = config;
+	const { config, schema, db } = context;
 
 	const resConfig = config.resources[resource.type];
 	const { joins, table } = resConfig;
