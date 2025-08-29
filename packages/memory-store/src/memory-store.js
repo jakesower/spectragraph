@@ -6,6 +6,7 @@ import {
 	normalizeQuery,
 	createEmptyGraph,
 	linkInverses,
+	mergeGraphs,
 	mergeGraphsDeep,
 	queryGraph,
 	createValidator,
@@ -15,7 +16,7 @@ import {
 } from "@data-prism/core";
 import { createOrUpdate } from "./create-or-update.js";
 import { deleteAction } from "./delete.js";
-import { merge } from "./merge.js";
+import { merge, mergeWithTracking } from "./merge.js";
 
 /**
  * @typedef {Object} NormalResourceTree
@@ -42,7 +43,8 @@ import { merge } from "./merge.js";
 /**
  * @typedef {import('@data-prism/core').Store & {
  *   linkInverses: function(): void,
- *   merge: function(NormalResourceTree): Promise<NormalResourceTree>
+ *   merge: function(NormalResourceTree): Promise<NormalResourceTree>,
+ *   merge: function(NormalResourceTree[]): Promise<NormalResourceTree[]>
  * }} MemoryStore
  */
 
@@ -144,10 +146,8 @@ export function createMemoryStore(schema, config = {}) {
 		async query(query) {
 			return Promise.resolve(runQuery(query));
 		},
-		async merge(resource) {
-			return Promise.resolve(
-				merge(resource, { schema, validator, store: this, storeGraph }),
-			);
+		async merge(resourceTreeOrTrees) {
+			return merge(resourceTreeOrTrees, { schema, storeGraph, validator });
 		},
 	};
 }

@@ -43,7 +43,8 @@ function createSQLiteTestStore(schema, options = {}) {
 
 	createTables(db, schema, careBearConfig);
 
-	if (options.initialData) {
+	// Only seed if initialData is explicitly provided and matches careBearData
+	if (options.initialData && options.initialData === careBearData) {
 		seed(db, schema, careBearConfig, careBearData);
 	}
 

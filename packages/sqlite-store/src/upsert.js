@@ -17,8 +17,7 @@ import { columnTypeModifiers } from "./column-type-modifiers.js";
  * @returns {Resource} The upserted resource
  */
 export function upsertResourceRow(resource, context) {
-	const { config, schema } = context;
-	const { db } = config;
+	const { config, schema, db } = context;
 
 	const resSchema = schema.resources[resource.type];
 	const resConfig = config.resources[resource.type];
@@ -111,8 +110,7 @@ export function upsertResourceRow(resource, context) {
  * @returns {Resource} The resource with upserted relationships
  */
 export function upsertForeignRelationshipRows(resource, context) {
-	const { config, schema } = context;
-	const { db } = config;
+	const { config, schema, db } = context;
 
 	const resSchema = schema.resources[resource.type];
 	const resConfig = config.resources[resource.type];

@@ -1,129 +1,63 @@
 import { v4 as uuidv4 } from "uuid";
-import { mapValues } from "es-toolkit";
+import { mapValues, pick } from "es-toolkit";
 import { applyOrMap } from "@data-prism/utils";
-import { ensureValidMergeResource } from "@data-prism/core";
-import { updateInverseRelationships } from "./lib/store-helpers.js";
+import {
+	createResource,
+	ensureValidMergeResource,
+	mergeResources,
+} from "@data-prism/core";
 
-/**
- * @typedef {import('./memory-store.js').MemoryStoreContext} Context
- */
+// MUTATES
+// TODO: Consider `updateInverseRelationships`
+function unlinkRelated(schema, graph, resource, relName) {
+	const { type, id } = resource;
+	const existingRelRefs = graph[type][id]?.relationships?.[relName];
+	const relSchema = schema.resources[type].relationships[relName];
+	const relType = relSchema.type;
 
-/**
- * Checks if a relationship value contains nested resources (with attributes/relationships)
- * rather than simple references. Nested resources handle their own inverse relationships.
- *
- * @param {import('@data-prism/core').Ref | import('@data-prism/core').Ref[] | null} relValue - The relationship value to check
- * @returns {boolean} True if the relationship contains nested resources
- */
-function containsNestedResources(relValue) {
-	if (!relValue) return false;
+	// unlink existing if present
+	if (existingRelRefs) {
+		if (relSchema.inverse) {
+			applyOrMap(existingRelRefs, (relRef) => {
+				const foreignResRels = graph[relType][relRef.id].relationships;
 
-	return Array.isArray(relValue)
-		? relValue.some((r) => r.attributes || r.relationships)
-		: relValue.attributes || relValue.relationships;
+				graph[relType][relRef.id].relationships[relSchema.inverse] =
+					Array.isArray(foreignResRels[relName])
+						? foreignResRels[relName].filter((f) => f.id !== id)
+						: foreignResRels[relName].id === id
+							? null
+							: foreignResRels[relName];
+			});
+		}
+	}
 }
 
-/**
- * Recursively processes a resource tree, handling inverse relationships and store updates.
- * Orchestrates the complete resource processing pipeline.
- *
- * WARNING: MUTATES storeGraph
- *
- * @param {import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource} resource - The resource to process
- * @param {import('@data-prism/core').NormalResource | null} parent - The parent resource (for inverse relationship handling)
- * @param {any} parentRelSchema - The parent relationship schema definition
- * @param {Context} context - Context object containing schema, store, and storeGraph
- * @returns {import('@data-prism/core').NormalResource} The processed resource with all nested relationships
- */
-function processResourceTree(resource, parent, parentRelSchema, context) {
-	const { schema, storeGraph } = context;
-	const resSchema = schema.resources[resource.type];
-	const resourceCopy = structuredClone(resource);
+// MUTATES
+function linkRelated(schema, graph, resource, relName) {
+	const { type, id, relationships } = resource;
+	if (!relationships) return;
 
-	// Handle inverse relationships from parent
-	if (parent && parentRelSchema?.inverse) {
-		const { inverse } = parentRelSchema;
-		resourceCopy.relationships = resourceCopy.relationships ?? {};
-		resourceCopy.relationships[inverse] = { type: parent.type, id: parent.id };
+	const relArray = Array.isArray(relationships[relName])
+		? relationships[relName]
+		: [relationships[relName]];
+	const relRefArray = relArray.map((r) => pick(r, ["type", "id"]));
+
+	const relSchema = schema.resources[type].relationships[relName];
+	const localRef = { type, id };
+
+	if (relSchema.inverse) {
+		const inverseRelSchema =
+			schema.resources[relSchema.type].relationships[relSchema.inverse];
+
+		applyOrMap(relRefArray, (relRef) => {
+			const foreignRelRefs = graph[relRef.type][relRef.id].relationships;
+
+			graph[relRef.type][relRef.id].relationships[relSchema.inverse] =
+				inverseRelSchema.cardinality === "many"
+					? [...(foreignRelRefs[relName] ?? []), localRef]
+					: localRef;
+		});
 	}
-
-	// Prepare resource for storage and get existing reference
-	const existing = resource.id
-		? storeGraph[resource.type]?.[resource.id]
-		: null;
-	const resultId = resource.id ?? existing?.id ?? uuidv4();
-
-	// Optimize: Build final resource in-place to avoid intermediate objects
-	const finalResource = existing
-		? {
-				type: resourceCopy.type,
-				id: resultId,
-				attributes: { ...existing.attributes, ...resourceCopy.attributes },
-				relationships: {
-					...existing.relationships,
-					...resourceCopy.relationships,
-				},
-			}
-		: {
-				type: resourceCopy.type,
-				id: resultId,
-				attributes: resourceCopy.attributes ?? {},
-				relationships: {
-					...mapValues(resSchema.relationships, (r) =>
-						r.cardinality === "one" ? null : [],
-					),
-					...resourceCopy.relationships,
-				},
-			};
-
-	// Normalize relationship references inline (avoid extra function call)
-	const normalizedForStore = {
-		...finalResource,
-		relationships: mapValues(finalResource.relationships, (rel, relName) => {
-			const relSchema = resSchema.relationships[relName];
-			if (!rel) return rel;
-			return Array.isArray(rel)
-				? rel.map((r) => ({ type: relSchema.type, id: r.id }))
-				: { type: relSchema.type, id: rel.id };
-		}),
-	};
-
-	// Store the normalized resource
-	storeGraph[resource.type][resultId] = normalizedForStore;
-
-	// Process nested relationships (this handles complex trees)
-	const processedRelationships = mapValues(
-		finalResource.relationships ?? {},
-		(rel, relName) => {
-			const relSchema = resSchema.relationships[relName];
-
-			// Process nested resources first
-			const step = (relRes) =>
-				containsNestedResources(relRes)
-					? processResourceTree(relRes, finalResource, relSchema, context)
-					: relRes;
-
-			const result = applyOrMap(rel, step);
-
-			// Update normalized references in store
-			storeGraph[finalResource.type][finalResource.id].relationships[relName] =
-				applyOrMap(result, (r) => ({ type: relSchema.type, id: r.id }));
-
-			return result;
-		},
-	);
-
-	// Update inverse relationships for any simple refs (not nested resources)
-	Object.entries(finalResource.relationships ?? {}).forEach(
-		([relName, rel]) => {
-			// Only update inverses for simple refs, not nested resources
-			if (rel && !containsNestedResources(rel)) {
-				updateInverseRelationships(finalResource, relName, rel, context);
-			}
-		},
-	);
-
-	return { ...finalResource, relationships: processedRelationships };
 }
 
 /**
@@ -136,44 +70,86 @@ function processResourceTree(resource, parent, parentRelSchema, context) {
  * @param {Context} context - Context object containing schema, validator, store, and storeGraph
  * @returns {import('@data-prism/core').NormalResource} The processed resource tree with all nested resources created/updated
  */
-export function merge(resourceTree, context) {
-	const { schema, validator, storeGraph } = context;
+export function merge(resourceOrResources, context) {
+	const { schema, storeGraph, validator } = context;
 
-	ensureValidMergeResource(schema, resourceTree, { validator });
+	const nextGraph = mapValues(storeGraph, (g) => ({ ...g }));
+	const expectedToBeCreated = mapValues(storeGraph, () => new Set());
+	const created = mapValues(storeGraph, () => new Set());
 
-	/**
-	 * Recursively extracts all expected existing resource references from a resource tree.
-	 * Used to validate that all referenced resources already exist in the store.
-	 *
-	 * @param {import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource} res - The resource to extract references from
-	 * @returns {import('@data-prism/core').Ref[]} Array of resource references that should exist
-	 */
-	const expectedExistingResources = (res) => {
-		const related = Object.values(res.relationships ?? {}).flatMap((rel) =>
-			rel
-				? Array.isArray(rel)
-					? rel.flatMap((r) =>
-							("attributes" in r || "relationships" in r) && "id" in r
-								? expectedExistingResources(r)
-								: rel,
-						)
-					: "attributes" in rel || "relationships" in rel
-						? expectedExistingResources(rel)
-						: rel
-				: null,
-		);
+	// NOTE: if an error is thrown, any change that have been made are discarded (rollback)
+	const outputs = applyOrMap(resourceOrResources, (rootResource) => {
+		ensureValidMergeResource(schema, rootResource, { validator });
 
-		return !res.id ? related : [{ type: res.type, id: res.id }, ...related];
-	};
+		const go = (resource) => {
+			const { type, id = uuidv4() } = resource;
 
-	const missing = expectedExistingResources(resourceTree)
-		.filter((ref) => ref && ref.id)
-		.find(({ type, id }) => !storeGraph[type]?.[id]);
-	if (missing) {
-		throw new Error(
-			`expected { type: "${missing.type}", id: "${missing.id}" } to already exist in the graph`,
-		);
-	}
+			if (!storeGraph[type][id]) {
+				created[type].add(id);
+			}
 
-	return processResourceTree(resourceTree, null, null, context);
+			const nextRes = mergeResources(
+				nextGraph[type][id] ?? createResource(schema, { type, id }),
+				resource,
+			);
+
+			nextGraph[type][id] = nextRes;
+
+			const nextRels = mapValues(
+				resource.relationships ?? {},
+				(relOrRels, relName) => {
+					unlinkRelated(schema, nextGraph, resource, relName);
+
+					const preppedRels = applyOrMap(relOrRels, (rel) => {
+						if (rel.attributes || rel.relationships) {
+							return go(rel);
+						} else if (!nextGraph[rel.type][rel.id]) {
+							expectedToBeCreated[rel.type][rel.id];
+							nextGraph[rel.type][rel.id] = createResource(schema, {
+								rel,
+							});
+
+							return nextGraph[rel.type][rel.id];
+						}
+					});
+
+					nextGraph[type][id].relationships[relName] = preppedRels;
+
+					linkRelated(schema, nextGraph, nextGraph[type][id], relName);
+
+					return preppedRels;
+				},
+			);
+
+			nextGraph[type][id] = {
+				...nextGraph[type][id],
+				relationships: mapValues(nextGraph[type][id].relationships, (r) =>
+					r
+						? {
+								type: r.type,
+								id: r.id,
+							}
+						: null,
+				),
+			};
+
+			return { ...resource, id, relationships: nextRels };
+		};
+
+		return go(rootResource);
+	});
+
+	// ensure all the relationships that were mentioned in the merged resources actually exist
+	Object.entries(expectedToBeCreated).forEach(([type, ids]) => {
+		[...ids].forEach((id) => {
+			if (!created[type].has(id)) {
+				`Expected { type: ${type}, id: ${id} } to be created during the merge, but only found a reference to it`;
+			}
+		});
+	});
+
+	// everything went OK, apply the changes
+	Object.keys(storeGraph).forEach((r) => (storeGraph[r] = nextGraph[r]));
+
+	return outputs;
 }

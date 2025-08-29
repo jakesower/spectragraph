@@ -12,9 +12,7 @@ import { pickBy, snakeCase } from "es-toolkit";
  * @returns {DeleteResource} The deleted resource reference
  */
 export function deleteResource(resource, context) {
-	const { config, schema } = context;
-
-	const { db } = config;
+	const { config, schema, db } = context;
 
 	const resConfig = config.resources[resource.type];
 	const { joins = {}, table } = resConfig;

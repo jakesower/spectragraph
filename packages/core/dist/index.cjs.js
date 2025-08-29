@@ -4081,7 +4081,7 @@ const conditionalDefinitions = { $if, $case };
 const $random = {
 	name: "$random",
 	apply: (operand = {}) => {
-		const { min = 0, max = 1, precision = null } = operand || {};
+		const { min = 0, max = 1, precision = null } = operand ?? {};
 		const value = Math.random() * (max - min) + min;
 
 		if (precision == null) {
@@ -5495,7 +5495,8 @@ function createResource(schema, partialResource = {}) {
 }
 
 /**
- * Creates a normalized resource with schema defaults applied
+ * Creates a normalized resource with schema defaults applied. The right side's values overwrite the left's.
+ *
  * @param {import('./schema.js').Schema} schema - The schema to use for defaults
  * @param {PartialNormalResource} left - One resource to merge
  * @param {PartialNormalResource} right - The other resource to merge
@@ -5503,15 +5504,11 @@ function createResource(schema, partialResource = {}) {
  */
 function mergeResources$1(left, right) {
 	if (left.type !== right.type) {
-		throw new Error({
-			message: "only resources of the same type can be merged",
-		});
+		throw new Error("only resources of the same type can be merged");
 	}
 
 	if (left.id && right.id && left.id !== right.id) {
-		throw new Error({
-			message: "only resources with the same ID can be merged",
-		});
+		throw new Error("only resources with the same ID can be merged");
 	}
 
 	return {
@@ -6451,6 +6448,7 @@ function runQuery(rootQuery, data) {
 					// subquery
 					return (result) => {
 						if (result[propName] === undefined) {
+							console.log(result, propName);
 							throw new Error(
 								`The "${propName}" relationship is undefined on a resource of type "${query.type}". You probably have an invalid schema or constructed your graph wrong. Try linking the inverses (via "linkInverses"), check your schema to make sure all inverses have been defined correctly there, and make sure all resources have been loaded into the graph.`,
 							);

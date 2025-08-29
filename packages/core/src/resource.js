@@ -303,7 +303,8 @@ export function createResource(schema, partialResource = {}) {
 }
 
 /**
- * Creates a normalized resource with schema defaults applied
+ * Creates a normalized resource with schema defaults applied. The right side's values overwrite the left's.
+ *
  * @param {import('./schema.js').Schema} schema - The schema to use for defaults
  * @param {PartialNormalResource} left - One resource to merge
  * @param {PartialNormalResource} right - The other resource to merge
@@ -311,15 +312,11 @@ export function createResource(schema, partialResource = {}) {
  */
 export function mergeResources(left, right) {
 	if (left.type !== right.type) {
-		throw new Error({
-			message: "only resources of the same type can be merged",
-		});
+		throw new Error("only resources of the same type can be merged");
 	}
 
 	if (left.id && right.id && left.id !== right.id) {
-		throw new Error({
-			message: "only resources with the same ID can be merged",
-		});
+		throw new Error("only resources with the same ID can be merged");
 	}
 
 	return {

@@ -105,6 +105,8 @@ import { upsert } from "./upsert.js";
  * @property {(resource: CreateResource|UpdateResource) => Promise<Resource>} upsert
  * @property {(resource: DeleteResource) => Promise<DeleteResource>} delete
  * @property {(query: import('data-prism').RootQuery) => Promise<any>} query
+ * @property {(resource: CreateResource|UpdateResource) => Promise<Resource>} merge
+ * @property {(resources: (CreateResource|UpdateResource)[]) => Promise<Resource[]>} merge
  */
 
 /**
@@ -119,7 +121,6 @@ export function createPostgresStore(schema, config) {
 	ensureValidSchema(schema, { validator });
 
 	return {
-
 		async create(resource) {
 			const errors = validateCreateResource(schema, resource, { validator });
 			if (errors.length > 0) {
@@ -163,6 +164,59 @@ export function createPostgresStore(schema, config) {
 				schema,
 				query: normalized,
 			});
+		},
+
+		async merge(resourceTreeOrTrees) {
+			const isArray = Array.isArray(resourceTreeOrTrees);
+			const trees = isArray ? resourceTreeOrTrees : [resourceTreeOrTrees];
+
+			if (trees.length === 0) return [];
+
+			// Single resource - no transaction needed
+			if (trees.length === 1) {
+				const resource = trees[0];
+
+				// Validate the resource
+				const errors = validateMergeResource(schema, resource, { validator });
+				if (errors.length > 0) {
+					throw new Error("invalid resource", { cause: errors });
+				}
+
+				const result =
+					"id" in resource && resource.id
+						? await update(resource, { config, schema })
+						: await create(resource, { config, schema });
+				return isArray ? [result] : result;
+			}
+
+			// Multiple resources - use transaction for atomicity
+			const { db } = config;
+
+			await db.query("BEGIN");
+
+			try {
+				const results = [];
+
+				for (const resource of trees) {
+					// Validate each resource
+					const errors = validateMergeResource(schema, resource, { validator });
+					if (errors.length > 0) {
+						throw new Error("invalid resource", { cause: errors });
+					}
+
+					const result =
+						"id" in resource && resource.id
+							? await update(resource, { config, schema })
+							: await create(resource, { config, schema });
+					results.push(result);
+				}
+
+				await db.query("COMMIT");
+				return results;
+			} catch (error) {
+				await db.query("ROLLBACK");
+				throw error;
+			}
 		},
 	};
 }

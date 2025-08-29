@@ -86,3 +86,20 @@ it("creates resources in a tree and properly relates them", async () => {
 		home: { name: "Care-a-Lot Castle" },
 	});
 });
+
+it("fails to create a resource with a nonexistant ref", async () => {
+	await expect(async () => {
+		await store.merge({
+			type: "bears",
+			attributes: {
+				name: "Care-a-Lot Bear",
+				yearIntroduced: 2022,
+				bellyBadge: "Care-a-Lot Castle with a rainbow",
+				furColor: "purple/pink/light blue",
+			},
+			relationships: {
+				home: { type: "homes", id: "uh oh" },
+			},
+		});
+	}).rejects.toThrow();
+});
