@@ -11509,7 +11509,7 @@ const conditionalDefinitions = { $if, $case };
 const $random = {
 	name: "$random",
 	apply: (operand = {}) => {
-		const { min = 0, max = 1, precision = null } = operand || {};
+		const { min = 0, max = 1, precision = null } = operand ?? {};
 		const value = Math.random() * (max - min) + min;
 
 		if (precision == null) {
@@ -13653,6 +13653,7 @@ function runQuery(rootQuery, data) {
 					// subquery
 					return (result) => {
 						if (result[propName] === undefined) {
+							console.log(result, propName);
 							throw new Error(
 								`The "${propName}" relationship is undefined on a resource of type "${query.type}". You probably have an invalid schema or constructed your graph wrong. Try linking the inverses (via "linkInverses"), check your schema to make sure all inverses have been defined correctly there, and make sure all resources have been loaded into the graph.`,
 							);
@@ -13665,9 +13666,7 @@ function runQuery(rootQuery, data) {
 										throw new Error(
 											`A related resource was not found on resource ${
 												query.type
-											}.${query.id}. ${propName}: ${JSON.stringify(
-												result[propName],
-											)}. Check that all of the relationship refs in ${
+											}.${query.id}.${propName}. Check that all of the relationship refs in ${
 												query.type
 											}.${query.id} are valid.`,
 										);
@@ -14956,9 +14955,7 @@ async function query(query, context) {
  * @returns {Promise<Resource>} The created resource
  */
 async function create(resource, context) {
-	const { config, schema } = context;
-
-	const { db } = config;
+	const { config, schema, db } = context;
 
 	const resConfig = config.resources[resource.type];
 	const { joins, table } = resConfig;
@@ -15108,9 +15105,7 @@ async function create(resource, context) {
  * @returns {DeleteResource} The deleted resource reference
  */
 function deleteResource(resource, context) {
-	const { config, schema } = context;
-
-	const { db } = config;
+	const { config, schema, db } = context;
 
 	const resConfig = config.resources[resource.type];
 	const { joins = {}, table } = resConfig;
@@ -15174,9 +15169,7 @@ function deleteResource(resource, context) {
  * @returns {Resource} The updated resource
  */
 function update(resource, context) {
-	const { config, schema } = context;
-
-	const { db } = config;
+	const { config, schema, db } = context;
 
 	const resConfig = config.resources[resource.type];
 	const { joins, table } = resConfig;
@@ -15312,284 +15305,6 @@ function update(resource, context) {
 }
 
 /**
- * @typedef {import('./postgres-store.js').Context} Context
- * @typedef {import('./postgres-store.js').Resource} Resource
- * @typedef {import('./postgres-store.js').LocalJoin} LocalJoin
- * @typedef {import('./postgres-store.js').ForeignJoin} ForeignJoin
- * @typedef {import('./postgres-store.js').ManyToManyJoin} ManyToManyJoin
- */
-
-/**
- * @typedef {Object} GetOptions
- * @property {boolean} [includeRelationships]
- */
-
-/**
- * @typedef {Context & {options: GetOptions}} GetContext
- */
-
-/**
- * Gets a single resource by type and ID
- * @param {string} type - Resource type
- * @param {string} id - Resource ID
- * @param {GetContext} context - Get context with config, schema, and options
- * @returns {Promise<Resource>} The resource
- */
-async function getOne(type, id, context) {
-	const { config, options = {}, schema } = context;
-	const { includeRelationships = true } = options;
-	const { db } = config;
-
-	const resConfig = config.resources[type];
-	const { joins, table } = resConfig;
-
-	const resSchema = schema.resources[type];
-	const { idAttribute = "id" } = resSchema;
-	const attrNames = Object.keys(resSchema.attributes);
-
-	const output = { type, id, attributes: {}, relationships: {} };
-
-	const localRelationships = Object.entries(joins).filter(
-		([, j]) => "localColumn" in j,
-	);
-	const foreignRelationships = Object.entries(joins).filter(
-		([, j]) => "foreignColumn" in j,
-	);
-	const manyToManyRelationships = Object.entries(joins).filter(
-		([, j]) => "localJoinColumn" in j,
-	);
-
-	const foreignQueries = includeRelationships
-		? [
-				...foreignRelationships.map(async ([joinName, joinInfo]) => {
-					const { foreignColumn } = joinInfo;
-					const relSchema = resSchema.relationships[joinName];
-					const relResSchema = schema.resources[relSchema.type];
-					const relConfig = config.resources[relSchema.type];
-					const foreignTable = relConfig.table;
-					const foreignId = snakeCase(relResSchema.idAttribute ?? "id");
-
-					const { rows } = await db.query(
-						{
-							rowMode: "array",
-							text: `SELECT ${foreignId} FROM ${foreignTable} WHERE ${foreignColumn} = $1`,
-						},
-						[id],
-					);
-
-					output.relationships[joinName] =
-						relSchema.cardinality === "one"
-							? rows[0]
-								? { type: relSchema.type, id: rows[0][0] }
-								: null
-							: rows.map((r) => ({ type: relSchema.type, id: r[0] }));
-				}),
-				...manyToManyRelationships.map(async ([joinName, joinInfo]) => {
-					const { foreignJoinColumn, joinTable, localJoinColumn } = joinInfo;
-					const relSchema = resSchema.relationships[joinName];
-
-					const { rows } = await db.query(
-						{
-							rowMode: "array",
-							text: `SELECT ${foreignJoinColumn} FROM ${joinTable} WHERE ${localJoinColumn} = $1`,
-						},
-						[id],
-					);
-
-					output.relationships[joinName] = rows.map((r) => ({
-						type: relSchema.type,
-						id: r[0],
-					}));
-				}),
-			]
-		: [];
-
-	const cols = [
-		...attrNames.map((attrName) =>
-			columnTypeModifiers[resSchema.attributes[attrName].type]
-				? columnTypeModifiers[resSchema.attributes[attrName].type].select(
-						snakeCase(attrName),
-					)
-				: snakeCase(attrName),
-		),
-		...localRelationships.map(([, r]) => snakeCase(r.localColumn)),
-	].join(", ");
-	const localQuery = db.query(
-		{
-			rowMode: "array",
-			text: `SELECT ${cols} FROM ${table} WHERE ${snakeCase(idAttribute)} = $1`,
-		},
-		[id],
-	);
-
-	const [localResult] = await Promise.all([localQuery, ...foreignQueries]);
-
-	const { rows } = localResult;
-	const row = rows[0];
-	if (!row) return null;
-
-	attrNames.forEach((attr, idx) => {
-		const attrType = resSchema.attributes[attr].type;
-
-		output.attributes[attr] =
-			typeof row[idx] === "string" && columnTypeModifiers[attrType]
-				? columnTypeModifiers[attrType].extract(row[idx])
-				: row[idx];
-	});
-
-	if (includeRelationships) {
-		localRelationships.forEach(([relName], idx) => {
-			const id = row[idx + attrNames.length];
-			output.relationships[relName] = id
-				? {
-						type: resSchema.relationships[relName].type,
-						id,
-					}
-				: null;
-		});
-	}
-
-	return output;
-}
-
-/**
- * Gets all resources of a given type
- * @param {string} type - Resource type
- * @param {GetContext} context - Get context with config, schema, and options
- * @returns {Promise<Resource[]>} Array of resources
- */
-async function getAll(type, context) {
-	const { config, options = {}, schema } = context;
-	const { includeRelationships = true } = options;
-	const { db } = config;
-
-	const resConfig = config.resources[type];
-	const { joins, table } = resConfig;
-
-	const resSchema = schema.resources[type];
-	const attrNames = Object.keys(resSchema.attributes);
-
-	const resources = {};
-
-	const localRelationships = Object.entries(joins).filter(
-		([, j]) => "localColumn" in j,
-	);
-
-	const cols = [
-		snakeCase(resSchema.idAttribute ?? "id"),
-		...attrNames.map((attrName) =>
-			columnTypeModifiers[resSchema.attributes[attrName].type]
-				? columnTypeModifiers[resSchema.attributes[attrName].type].select(
-						snakeCase(attrName),
-					)
-				: snakeCase(attrName),
-		),
-		...localRelationships.map(([, r]) => snakeCase(r.localColumn)),
-	].join(", ");
-	const localQuery = db.query({
-		rowMode: "array",
-		text: `SELECT ${cols} FROM ${table}`,
-	});
-
-	const { rows } = await localQuery;
-
-	rows.forEach((row) => {
-		const resource = { type, id: row[0], attributes: {} };
-		if (includeRelationships) {
-			resource.relationships = mapValues(resSchema.relationships, (rel) =>
-				rel.cardinality === "one" ? null : [],
-			);
-		}
-
-		attrNames.forEach((attr, idx) => {
-			const attrType = resSchema.attributes[attr].type;
-
-			resource.attributes[attr] =
-				typeof row[idx + 1] === "string" && columnTypeModifiers[attrType]
-					? columnTypeModifiers[attrType].extract(row[idx + 1])
-					: row[idx + 1];
-		});
-
-		if (includeRelationships) {
-			localRelationships.forEach(([relName], idx) => {
-				const id = row[idx + attrNames.length + 1];
-				resource.relationships[relName] = id
-					? {
-							type: resSchema.relationships[relName].type,
-							id,
-						}
-					: null;
-			});
-		}
-
-		resources[resource.id] = resource;
-	});
-
-	if (includeRelationships) {
-		const foreignRelationships = Object.entries(joins).filter(
-			([, j]) => "foreignColumn" in j,
-		);
-		const manyToManyRelationships = Object.entries(joins).filter(
-			([, j]) => "localJoinColumn" in j,
-		);
-
-		const foreignQueries = [
-			...foreignRelationships.map(async ([joinName, joinInfo]) => {
-				const { foreignColumn } = joinInfo;
-				const relSchema = resSchema.relationships[joinName];
-				const relResSchema = schema.resources[relSchema.type];
-				const relConfig = config.resources[relSchema.type];
-				const foreignTable = relConfig.table;
-				const foreignId = snakeCase(relResSchema.idAttribute ?? "id");
-
-				const { rows } = await db.query({
-					rowMode: "array",
-					text: `SELECT ${foreignColumn}, ${foreignId} FROM ${foreignTable} WHERE ${foreignColumn} IS NOT NULL`,
-				});
-
-				rows.forEach((row) => {
-					const resource = resources[row[0]];
-
-					if (relSchema.cardinality === "one") {
-						resource.relationships[joinName] = {
-							type: relSchema.type,
-							id: row[1],
-						};
-					} else {
-						resource.relationships[joinName].push({
-							type: relSchema.type,
-							id: row[1],
-						});
-					}
-				});
-			}),
-			...manyToManyRelationships.map(async ([joinName, joinInfo]) => {
-				const { foreignJoinColumn, joinTable, localJoinColumn } = joinInfo;
-				const relSchema = resSchema.relationships[joinName];
-
-				const { rows } = await db.query({
-					rowMode: "array",
-					text: `SELECT ${localJoinColumn}, ${foreignJoinColumn} FROM ${joinTable} WHERE ${localJoinColumn} IS NOT NULL`,
-				});
-
-				rows.forEach((row) => {
-					const resource = resources[row[0]];
-
-					resource.relationships[joinName].push({
-						type: relSchema.type,
-						id: row[1],
-					});
-				});
-			}),
-		];
-
-		await Promise.all([...foreignQueries]);
-	}
-
-	return Object.values(resources);
-}
-
-/**
  * @typedef {import('./sqlite-store.js').CreateResource} CreateResource
  * @typedef {import('./sqlite-store.js').UpdateResource} UpdateResource
  * @typedef {import('./sqlite-store.js').Resource} Resource
@@ -15603,8 +15318,7 @@ async function getAll(type, context) {
  * @returns {Resource} The upserted resource
  */
 function upsertResourceRow(resource, context) {
-	const { config, schema } = context;
-	const { db } = config;
+	const { config, schema, db } = context;
 
 	const resSchema = schema.resources[resource.type];
 	const resConfig = config.resources[resource.type];
@@ -15697,8 +15411,7 @@ function upsertResourceRow(resource, context) {
  * @returns {Resource} The resource with upserted relationships
  */
 function upsertForeignRelationshipRows(resource, context) {
-	const { config, schema } = context;
-	const { db } = config;
+	const { config, schema, db } = context;
 
 	const resSchema = schema.resources[resource.type];
 	const resConfig = config.resources[resource.type];
@@ -15874,13 +15587,13 @@ function upsert(resource, context) {
 
 /**
  * @typedef {Object} SqliteStore
- * @property {(type: string, options?: GetOptions) => Promise<Resource[]>} getAll
- * @property {(type: string, id: string, options?: GetOptions) => Promise<Resource>} getOne
  * @property {(resource: CreateResource) => Promise<Resource>} create
  * @property {(resource: UpdateResource) => Promise<Resource>} update
  * @property {(resource: CreateResource|UpdateResource) => Promise<Resource>} upsert
  * @property {(resource: DeleteResource) => Promise<DeleteResource>} delete
  * @property {(query: import('data-prism').RootQuery) => Promise<any>} query
+ * @property {(resource: CreateResource|UpdateResource) => Promise<Resource>} merge
+ * @property {(resources: (CreateResource|UpdateResource)[]) => Promise<Resource[]>} merge
  */
 
 /**
@@ -15894,22 +15607,14 @@ function sqliteStore(schema, config) {
 
 	ensureValidSchema(schema, { validator });
 
-	return {
-		async getAll(type, options = {}) {
-			return getAll(type, { config, options, schema });
-		},
-
-		async getOne(type, id, options = {}) {
-			return getOne(type, id, { config, options, schema });
-		},
-
+	const createStoreOperations = (context) => ({
 		async create(resource) {
 			const errors = validateCreateResource(schema, resource, { validator });
 			if (errors.length > 0) {
 				throw new Error("invalid resource", { cause: errors });
 			}
 
-			return create(resource, { config, schema });
+			return create(resource, context);
 		},
 
 		async update(resource) {
@@ -15918,7 +15623,7 @@ function sqliteStore(schema, config) {
 				throw new Error("invalid resource", { cause: errors });
 			}
 
-			return update(resource, { config, schema });
+			return update(resource, context);
 		},
 
 		async upsert(resource) {
@@ -15927,7 +15632,7 @@ function sqliteStore(schema, config) {
 				throw new Error("invalid resource", { cause: errors });
 			}
 
-			return upsert(resource, { config, schema });
+			return upsert(resource, context);
 		},
 
 		async delete(resource) {
@@ -15936,17 +15641,64 @@ function sqliteStore(schema, config) {
 				throw new Error("invalid resource", { cause: errors });
 			}
 
-			return deleteResource(resource, { config, schema });
+			return deleteResource(resource, context);
 		},
 
 		async query(query$1) {
 			const normalized = normalizeQuery(schema, query$1);
 			return query(normalized, {
-				config,
-				db: config.db,
-				schema,
+				...context,
 				query: normalized,
 			});
+		},
+	});
+
+	const baseContext = { config, db: config.db, schema };
+	const store = createStoreOperations(baseContext);
+
+	return {
+		...store,
+
+		async merge(resourceTreeOrTrees) {
+			const isArray = Array.isArray(resourceTreeOrTrees);
+			const trees = isArray ? resourceTreeOrTrees : [resourceTreeOrTrees];
+
+			if (trees.length === 0) {
+				return [];
+			}
+
+			// Single resource - no transaction needed
+			if (trees.length === 1) {
+				const resource = trees[0];
+				const result =
+					"id" in resource && resource.id
+						? await store.update(resource)
+						: await store.create(resource);
+				return isArray ? [result] : result;
+			}
+
+			// Multiple resources - use transaction for atomicity
+			const db = config.db;
+
+			db.prepare("BEGIN").run();
+
+			try {
+				const results = [];
+
+				for (const resource of trees) {
+					const result =
+						"id" in resource && resource.id
+							? await store.update(resource)
+							: await store.create(resource);
+					results.push(result);
+				}
+
+				db.prepare("COMMIT").run();
+				return results;
+			} catch (error) {
+				db.prepare("ROLLBACK").run();
+				throw error;
+			}
 		},
 	};
 }

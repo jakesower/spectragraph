@@ -1,22 +1,21 @@
-import { v4 as uuidv4 } from "uuid";
-import { mapValues } from "es-toolkit";
 import {
 	ensureValidSchema,
 	ensureValidQuery,
 	normalizeQuery,
 	createEmptyGraph,
 	linkInverses,
-	mergeGraphs,
 	mergeGraphsDeep,
 	queryGraph,
-	createValidator,
 	ensureValidCreateResource,
 	ensureValidDeleteResource,
 	ensureValidUpdateResource,
+	defaultValidator,
 } from "@data-prism/core";
-import { createOrUpdate } from "./create-or-update.js";
+import { create as createAction } from "./create.js";
 import { deleteAction } from "./delete.js";
-import { merge, mergeWithTracking } from "./merge.js";
+import { update as updateAction } from "./update.js";
+import { merge } from "./merge.js";
+import { setInverseRelationships } from "./lib/store-helpers.js";
 
 /**
  * @typedef {Object} NormalResourceTree
@@ -57,7 +56,7 @@ import { merge, mergeWithTracking } from "./merge.js";
  * @returns {MemoryStore} A new memory store instance
  */
 export function createMemoryStore(schema, config = {}) {
-	const { initialData = {}, validator = createValidator() } = config;
+	const { initialData = {}, validator = defaultValidator } = config;
 
 	ensureValidSchema(schema, { validator });
 
@@ -65,51 +64,20 @@ export function createMemoryStore(schema, config = {}) {
 
 	const runQuery = (query) => {
 		const normalQuery = normalizeQuery(schema, query);
-
 		ensureValidQuery(schema, normalQuery);
 		return queryGraph(schema, normalQuery, storeGraph);
 	};
 
 	// WARNING: MUTATES storeGraph
 	const create = (resource) => {
-		const { id, type } = resource;
-		const resSchema = schema.resources[resource.type];
-		const { idAttribute = "id" } = resSchema;
-		const newId = id ?? uuidv4();
-
 		ensureValidCreateResource(schema, resource, validator);
-
-		const normalRes = {
-			attributes: { ...(resource.attributes ?? {}), [idAttribute]: newId },
-			relationships: mapValues(
-				resSchema.relationships,
-				(rel, relName) =>
-					resource.relationships?.[relName] ??
-					(rel.cardinality === "one" ? null : []),
-			),
-			id: newId,
-			type,
-		};
-
-		return createOrUpdate(normalRes, { schema, storeGraph });
+		return createAction(resource, { schema, storeGraph });
 	};
 
 	// WARNING: MUTATES storeGraph
 	const update = (resource) => {
 		ensureValidUpdateResource(schema, resource, validator);
-
-		const existingRes = storeGraph[resource.type][resource.id];
-		const normalRes = {
-			...resource,
-			attributes: { ...existingRes.attributes, ...resource.attributes },
-			relationships: {
-				...existingRes.relationships,
-				...resource.relationships,
-			},
-		};
-
-		// WARNING: MUTATES storeGraph
-		return createOrUpdate(normalRes, { schema, storeGraph });
+		return updateAction(resource, { schema, storeGraph });
 	};
 
 	const upsert = (resource) => {
@@ -120,7 +88,6 @@ export function createMemoryStore(schema, config = {}) {
 
 	const delete_ = (resource) => {
 		ensureValidDeleteResource(schema, resource, validator);
-
 		return deleteAction(resource, { schema, storeGraph });
 	};
 

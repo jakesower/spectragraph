@@ -1,8 +1,8 @@
-import { v4 } from 'uuid';
 import { uniq, mapValues, merge as merge$1, omit, uniqBy, orderBy, isEqual } from 'es-toolkit';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import { applyOrMap } from '@data-prism/utils';
+import { v4 } from 'uuid';
 
 function getDefaultExportFromCjs (x) {
 	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
@@ -4080,7 +4080,7 @@ const conditionalDefinitions = { $if, $case };
 const $random = {
 	name: "$random",
 	apply: (operand = {}) => {
-		const { min = 0, max = 1, precision = null } = operand || {};
+		const { min = 0, max = 1, precision = null } = operand ?? {};
 		const value = Math.random() * (max - min) + min;
 
 		if (precision == null) {
@@ -5216,6 +5216,48 @@ function normalizeQuery(schema, rootQuery, options = {}) {
 	return go(rootQuery, rootQuery.type);
 }
 
+function buildAttribute(attrSchema, curValue) {
+	const defaultedValue = curValue === undefined ? attrSchema.default : curValue;
+
+	if (attrSchema.type === "object" && typeof defaultedValue === "object") {
+		const mergedDefaultedValue = {
+			...mapValues(attrSchema.properties ?? {}, () => undefined),
+			...(attrSchema.default ?? {}),
+			...defaultedValue,
+		};
+
+		return mapValues(mergedDefaultedValue, (val, key) => {
+			if (key in (attrSchema.properties ?? {})) {
+				return buildAttribute(attrSchema.properties[key], val);
+			}
+
+			const patternPropKey = Object.keys(
+				attrSchema.patternProperties ?? {},
+			).find((ppKey) => new RegExp(ppKey).test(key));
+			if (patternPropKey) {
+				return buildAttribute(
+					attrSchema.patternProperties[patternPropKey],
+					val,
+				);
+			}
+
+			if (typeof attrSchema.additionalProperties === "object") {
+				return buildAttribute(attrSchema.additionalProperties, val);
+			}
+
+			return val;
+		});
+	}
+
+	if (attrSchema.type === "array" && Array.isArray(defaultedValue)) {
+		return defaultedValue.map((item) =>
+			buildAttribute(attrSchema.items ?? {}, item),
+		);
+	}
+
+	return defaultedValue;
+}
+
 /**
  * @typedef {Object} Ref
  * @property {string} type
@@ -5282,22 +5324,6 @@ const defaultValidator = new Ajv({
 });
 addFormats(defaultValidator);
 addErrors(defaultValidator);
-
-/**
- * Creates a new validator instance
- * @param {Object} options
- * @param {Array} [options.ajvSchemas] - Additional schemas to add
- * @returns {Ajv} Configured validator instance
- */
-const createValidator = ({ ajvSchemas = [] } = {}) => {
-	const ajv = new Ajv({ allErrors: true, allowUnionTypes: true });
-	addFormats(ajv);
-	addErrors(ajv);
-
-	ajvSchemas.forEach((schema) => ajv.addSchema(schema, schema.$id));
-
-	return ajv;
-};
 
 const resourceValidationProperties = (schema, resource, options = {}) => {
 	const { allowExtraAttributes = false } = options;
@@ -5369,6 +5395,70 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 const getCreateResourceCache = createDeepCache();
 const getUpdateResourceCache = createDeepCache();
 const getMergeResourceCache = createDeepCache();
+
+/**
+ * Creates a normalized resource with schema defaults applied
+ * @param {import('./schema.js').Schema} schema - The schema to use for defaults
+ * @param {CreateResource} [partialResource] - The partial resource to create from
+ * @returns {NormalResource} A complete normalized resource with defaults applied
+ */
+function createResource(schema, partialResource) {
+	const { type, attributes = {}, relationships = {} } = partialResource;
+	const resSchema = schema.resources[type];
+
+	const id =
+		partialResource.id ?? partialResource[resSchema.idAttribute ?? "id"];
+
+	const builtAttributes = mapValues(
+		resSchema.attributes,
+		(attrSchema, attrName) => buildAttribute(attrSchema, attributes[attrName]),
+	);
+
+	const builtRelationships = mapValues(
+		resSchema.relationships,
+		(relSchema, relName) =>
+			relationships[relName] === undefined
+				? relSchema.cardinality === "one"
+					? null
+					: []
+				: relationships[relName],
+	);
+
+	return {
+		id: attributes[resSchema.idAttribute ?? "id"],
+		...partialResource,
+		attributes: { ...builtAttributes, [resSchema.idAttribute ?? "id"]: id },
+		relationships: builtRelationships,
+	};
+}
+
+/**
+ * Creates a normalized resource with schema defaults applied. The right side's values overwrite the left's.
+ *
+ * @param {import('./schema.js').Schema} schema - The schema to use for defaults
+ * @param {PartialNormalResource} left - One resource to merge
+ * @param {PartialNormalResource} right - The other resource to merge
+ * @returns {PartialNormalResource} A partial normalized resource with the id, attributes, and relationships from left and right merged
+ */
+function mergeResources$1(left, right) {
+	if (left.type !== right.type) {
+		throw new Error("only resources of the same type can be merged");
+	}
+
+	if (left.id && right.id && left.id !== right.id) {
+		throw new Error("only resources with the same ID can be merged");
+	}
+
+	return {
+		type: left.type,
+		id: left.id ?? right.id,
+		attributes: { ...(left.attributes ?? {}), ...(right.attributes ?? {}) },
+		relationships: {
+			...(left.relationships ?? {}),
+			...(right.relationships ?? {}),
+		},
+	};
+}
 
 /**
  * Validates a create resource operation
@@ -6224,6 +6314,7 @@ function runQuery(rootQuery, data) {
 					// subquery
 					return (result) => {
 						if (result[propName] === undefined) {
+							console.log(result, propName);
 							throw new Error(
 								`The "${propName}" relationship is undefined on a resource of type "${query.type}". You probably have an invalid schema or constructed your graph wrong. Try linking the inverses (via "linkInverses"), check your schema to make sure all inverses have been defined correctly there, and make sure all resources have been loaded into the graph.`,
 							);
@@ -6236,9 +6327,7 @@ function runQuery(rootQuery, data) {
 										throw new Error(
 											`A related resource was not found on resource ${
 												query.type
-											}.${query.id}. ${propName}: ${JSON.stringify(
-												result[propName],
-											)}. Check that all of the relationship refs in ${
+											}.${query.id}.${propName}. Check that all of the relationship refs in ${
 												query.type
 											}.${query.id} are valid.`,
 										);
@@ -6461,6 +6550,7 @@ const ensureValidMergeResource = ensure(validateMergeResource);
  * @typedef {import('@data-prism/core').Ref} Ref
  */
 
+
 /**
  * @typedef {'one' | 'many'} RelationshipCardinality
  */
@@ -6483,176 +6573,149 @@ const ensureValidMergeResource = ensure(validateMergeResource);
  * @property {Graph} storeGraph - The graph data structure being modified
  */
 
-/**
- * Updates all inverse relationships for a single relationship on a resource.
- * Handles both one-to-one and one-to-many cardinalities appropriately.
- *
- * WARNING: MUTATES storeGraph
- *
- * @param {NormalResource} sourceRes - The resource whose relationship is being updated
- * @param {string} relName - Name of the relationship being updated
- * @param {Ref | Ref[] | null} relValue - The new relationship value
- * @param {RelationshipUpdateContext} context - Context containing schema and storeGraph
- */
-function updateInverseRelationships(
-	sourceRes,
-	relName,
-	relValue,
+function removeRef(resource, ref, relName, context) {
+	const { storeGraph } = context;
+	const { type, id } = resource;
+
+	const existing = resource.relationships[relName];
+	if (!existing) return;
+
+	if (Array.isArray(existing)) {
+		// to-many
+		storeGraph[type][id].relationships[relName] = storeGraph[type][
+			id
+		].relationships[relName].filter((r) => r.id !== ref.id);
+	} else if (storeGraph[type][id].relationships[relName].id === ref.id) {
+		storeGraph[type][id].relationships[relName] = null;
+	}
+}
+
+function addOrSetRef(resource, ref, relName, context) {
+	const { schema, storeGraph } = context;
+	const { type, id } = resource;
+
+	const existing = storeGraph[type][id].relationships[relName];
+
+	if (Array.isArray(existing)) {
+		// to-many
+		storeGraph[type][id].relationships[relName] = existing.some(
+			(e) => e.id === ref.id,
+		)
+			? existing
+			: [...existing, ref];
+	} else {
+		const original = storeGraph[type][id].relationships[relName];
+		storeGraph[type][id].relationships[relName] = ref;
+
+		// cascade
+		if (original) {
+			const { inverse } =
+				schema.resources[resource.type].relationships[relName];
+			removeRef(
+				storeGraph[original.type][original.id],
+				resource,
+				inverse,
+				context,
+			);
+		}
+	}
+}
+
+function setInversesOnRelationship(
+	resource,
+	newRefOrRefs,
+	relationshipName,
 	context,
 ) {
 	const { schema, storeGraph } = context;
-	const sourceResSchema = schema.resources[sourceRes.type];
-	const relationshipSchema = sourceResSchema.relationships[relName];
 
-	// Skip if no inverse relationship is defined
-	if (!relationshipSchema?.inverse) return;
+	const resSchema = schema.resources[resource.type];
+	const relSchema = resSchema.relationships[relationshipName];
+	const foreignType = relSchema.type;
+	const foreignRelName = relSchema.inverse;
+	const resourceRef = { type: resource.type, id: resource.id };
 
-	const { inverse: inverseRelName, type: targetType } = relationshipSchema;
-	const targetResourceSchema = schema.resources[targetType];
-	const inverseRelationshipSchema =
-		targetResourceSchema.relationships[inverseRelName];
+	if (!foreignRelName) return;
 
-	const targetRefs =
-		relValue === null ? [] : Array.isArray(relValue) ? relValue : [relValue];
+	if (relSchema.cardinality === "one") {
+		const oldRef = resource.relationships[relationshipName];
+		if (oldRef) {
+			const foreignRes = storeGraph[foreignType][oldRef.id];
+			removeRef(foreignRes, resourceRef, foreignRelName, context);
+		}
 
-	if (inverseRelationshipSchema.cardinality === "one") {
-		// Handle one-to-one relationships
-		targetRefs.forEach((targetRef) => {
-			const targetResource = storeGraph[targetRef.type][targetRef.id];
-			const currentInverseRef = targetResource.relationships[inverseRelName];
-
-			// Clean up previous relationship if target resource had a different inverse reference
-			if (currentInverseRef && currentInverseRef.id !== sourceRes.id) {
-				const previousResource =
-					storeGraph[currentInverseRef.type][currentInverseRef.id];
-				if (previousResource) {
-					// Remove the target from the previous resource's relationship
-					if (relationshipSchema.cardinality === "one") {
-						previousResource.relationships[relName] = null;
-					} else {
-						// For many-cardinality, filter out the target reference
-						const currentRefs = previousResource.relationships[relName] || [];
-						previousResource.relationships[relName] = currentRefs.filter(
-							(ref) => ref.id !== targetRef.id,
-						);
-					}
-				}
-			}
-
-			// Set the new inverse reference
-			targetResource.relationships[inverseRelName] = {
-				type: sourceRes.type,
-				id: sourceRes.id,
-			};
-		});
+		if (newRefOrRefs) {
+			const foreignRes = storeGraph[foreignType][newRefOrRefs.id];
+			addOrSetRef(foreignRes, resourceRef, foreignRelName, context);
+		}
 	} else {
-		// Handle one-to-many relationships
-		targetRefs.forEach((targetRef) => {
-			const targetResource = storeGraph[targetRef.type][targetRef.id];
-			const currentInverseRefs =
-				targetResource.relationships[inverseRelName] || [];
+		const existingRel = resource.relationships[relationshipName];
+		const existingArray = Array.isArray(existingRel)
+			? existingRel
+			: existingRel
+				? [existingRel]
+				: [];
+		const existingIds = new Set(existingArray.map((r) => r.id));
 
-			// Check if source is already referenced to avoid duplicates
-			const isAlreadyReferenced = currentInverseRefs.some(
-				(ref) => ref.id === sourceRes.id,
+		const incomingArray = Array.isArray(newRefOrRefs)
+			? newRefOrRefs
+			: newRefOrRefs
+				? [newRefOrRefs]
+				: [];
+		const incomingIds = new Set(incomingArray.map((r) => r.id));
+
+		[...existingIds.difference(incomingIds)].forEach((id) => {
+			removeRef(
+				storeGraph[foreignType][id],
+				resourceRef,
+				relSchema.inverse,
+				context,
 			);
+		});
 
-			if (!isAlreadyReferenced) {
-				targetResource.relationships[inverseRelName] = [
-					...currentInverseRefs,
-					{ type: sourceRes.type, id: sourceRes.id },
-				];
+		[...incomingIds.difference(existingIds)].forEach((id) => {
+			const foreignRes = storeGraph[foreignType][id];
+			if (foreignRes) {
+				addOrSetRef(foreignRes, resourceRef, relSchema.inverse, context);
 			}
 		});
 	}
 }
 
-/**
- * Updates all inverse relationships for a resource by processing each relationship.
- * This is a convenience function that iterates over all relationships on a resource.
- *
- * WARNING: MUTATES storeGraph
- *
- * @param {NormalResource} resource - The resource whose relationships need inverse updates
- * @param {RelationshipUpdateContext} context - Context containing schema and storeGraph
- */
-function updateAllInverseRelationships(resource, context) {
-	if (!resource.relationships) return;
+function setInverseRelationships(oldResource, newResource, context) {
+	const resSchema = context.schema.resources[oldResource.type];
 
-	Object.entries(resource.relationships).forEach(([relName, relValue]) => {
-		updateInverseRelationships(resource, relName, relValue, context);
+	mapValues(resSchema.relationships, (_, relName) => {
+		setInversesOnRelationship(
+			oldResource,
+			newResource.relationships[relName],
+			relName,
+			context,
+		);
 	});
 }
 
 /**
- * Cleans up inverse relationships when a resource is being deleted.
- * Removes references to the deleted resource from all related resources.
+ * Creates a new resource in the store and sets up all inverse relationships.
+ * Generates an ID if not provided and merges with schema defaults.
  *
  * WARNING: MUTATES storeGraph
  *
- * @param {NormalResource} deletedRes - The resource being deleted
- * @param {RelationshipUpdateContext} context - Context containing schema and storeGraph
- */
-function cleanupInverseRelationships(deletedRes, context) {
-	const { schema, storeGraph } = context;
-	const resourceSchema = schema.resources[deletedRes.type];
-
-	if (!deletedRes.relationships) return;
-
-	Object.entries(deletedRes.relationships).forEach(([relName, relValue]) => {
-		const relationshipSchema = resourceSchema.relationships[relName];
-
-		if (!relationshipSchema?.inverse) {
-			return;
-		}
-
-		const { inverse: inverseRelName, type: targetType } = relationshipSchema;
-		const targetResourceSchema = schema.resources[targetType];
-		const inverseRelationshipSchema =
-			targetResourceSchema.relationships[inverseRelName];
-
-		const targetRefs =
-			relValue === null ? [] : Array.isArray(relValue) ? relValue : [relValue];
-
-		targetRefs.forEach((targetRef) => {
-			const targetResource = storeGraph[targetRef.type][targetRef.id];
-			if (!targetResource) {
-				return;
-			}
-
-			if (inverseRelationshipSchema.cardinality === "one") {
-				targetResource.relationships[inverseRelName] = null;
-			} else {
-				const currentRefs = targetResource.relationships[inverseRelName] || [];
-				targetResource.relationships[inverseRelName] = currentRefs.filter(
-					(ref) => ref.id !== deletedRes.id,
-				);
-			}
-		});
-	});
-}
-
-/**
- * Creates or updates a resource in the store and maintains inverse relationships.
- * Updates related resources to ensure bidirectional relationship consistency.
- * Handles both one-to-one and one-to-many relationship cardinalities.
- *
- * WARNING: MUTATES storeGraph
- *
- * @param {import('@data-prism/core').NormalResource} resource - The normalized resource to create or update
+ * @param {import('@data-prism/core').CreateResource} resource - The resource to create
  * @param {import('./memory-store.js').MemoryStoreContext} context - Context object containing schema and storeGraph
- * @returns {import('@data-prism/core').NormalResource} The created or updated resource
+ * @returns {import('@data-prism/core').NormalResource} The created resource
  */
-function createOrUpdate(resource, context) {
-	const { storeGraph } = context;
+function create(resource, context) {
+	const { schema, storeGraph } = context;
+	const { type, id } = resource;
 
-	// Store the resource first
-	storeGraph[resource.type][resource.id] = resource;
+	const base = createResource(schema, { type, id: id ?? v4() });
+	const normalRes = mergeResources$1(base, resource);
 
-	// Update all inverse relationships
-	updateAllInverseRelationships(resource, context);
+	setInverseRelationships(base, normalRes, context);
 
-	return resource;
+	storeGraph[normalRes.type][normalRes.id] = normalRes;
+	return normalRes;
 }
 
 /**
@@ -6667,13 +6730,21 @@ function createOrUpdate(resource, context) {
  * @returns {import('@data-prism/core').DeleteResource} The deleted resource
  */
 function deleteAction(resource, context) {
-	const { storeGraph } = context;
+	const { schema, storeGraph } = context;
 	const { type, id } = resource;
 
+	const resSchema = schema.resources[type];
 	const existingRes = storeGraph[type][id];
 
 	// Clean up inverse relationships before deleting
-	cleanupInverseRelationships(existingRes, context);
+	mapValues(resSchema.relationships, (relSchema, relName) => {
+		setInversesOnRelationship(
+			existingRes,
+			relSchema.cardinality === "one" ? null : [],
+			relName,
+			context,
+		);
+	});
 
 	// Remove the resource from the store
 	delete storeGraph[type][id];
@@ -6682,125 +6753,32 @@ function deleteAction(resource, context) {
 }
 
 /**
- * @typedef {import('./memory-store.js').MemoryStoreContext} Context
- */
-
-/**
- * Checks if a relationship value contains nested resources (with attributes/relationships)
- * rather than simple references. Nested resources handle their own inverse relationships.
- *
- * @param {import('@data-prism/core').Ref | import('@data-prism/core').Ref[] | null} relValue - The relationship value to check
- * @returns {boolean} True if the relationship contains nested resources
- */
-function containsNestedResources(relValue) {
-	if (!relValue) return false;
-
-	return Array.isArray(relValue)
-		? relValue.some((r) => r.attributes || r.relationships)
-		: relValue.attributes || relValue.relationships;
-}
-
-/**
- * Recursively processes a resource tree, handling inverse relationships and store updates.
- * Orchestrates the complete resource processing pipeline.
+ * Updates an existing resource in the store and maintains all inverse relationships.
+ * Merges provided attributes and relationships with existing resource data.
  *
  * WARNING: MUTATES storeGraph
  *
- * @param {import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource} resource - The resource to process
- * @param {import('@data-prism/core').NormalResource | null} parent - The parent resource (for inverse relationship handling)
- * @param {any} parentRelSchema - The parent relationship schema definition
- * @param {Context} context - Context object containing schema, store, and storeGraph
- * @returns {import('@data-prism/core').NormalResource} The processed resource with all nested relationships
+ * @param {import('@data-prism/core').UpdateResource} resource - The resource to update
+ * @param {import('./memory-store.js').MemoryStoreContext} context - Context object containing schema and storeGraph
+ * @returns {import('@data-prism/core').NormalResource} The updated resource
  */
-function processResourceTree(resource, parent, parentRelSchema, context) {
-	const { schema, storeGraph } = context;
-	const resSchema = schema.resources[resource.type];
-	const resourceCopy = structuredClone(resource);
+function update(resource, context) {
+	const { storeGraph } = context;
 
-	// Handle inverse relationships from parent
-	if (parent && parentRelSchema?.inverse) {
-		const { inverse } = parentRelSchema;
-		resourceCopy.relationships = resourceCopy.relationships ?? {};
-		resourceCopy.relationships[inverse] = { type: parent.type, id: parent.id };
-	}
-
-	// Prepare resource for storage and get existing reference
-	const existing = resource.id
-		? storeGraph[resource.type]?.[resource.id]
-		: null;
-	const resultId = resource.id ?? existing?.id ?? v4();
-
-	// Optimize: Build final resource in-place to avoid intermediate objects
-	const finalResource = existing
-		? {
-				type: resourceCopy.type,
-				id: resultId,
-				attributes: { ...existing.attributes, ...resourceCopy.attributes },
-				relationships: {
-					...existing.relationships,
-					...resourceCopy.relationships,
-				},
-			}
-		: {
-				type: resourceCopy.type,
-				id: resultId,
-				attributes: resourceCopy.attributes ?? {},
-				relationships: {
-					...mapValues(resSchema.relationships, (r) =>
-						r.cardinality === "one" ? null : [],
-					),
-					...resourceCopy.relationships,
-				},
-			};
-
-	// Normalize relationship references inline (avoid extra function call)
-	const normalizedForStore = {
-		...finalResource,
-		relationships: mapValues(finalResource.relationships, (rel, relName) => {
-			const relSchema = resSchema.relationships[relName];
-			if (!rel) return rel;
-			return Array.isArray(rel)
-				? rel.map((r) => ({ type: relSchema.type, id: r.id }))
-				: { type: relSchema.type, id: rel.id };
-		}),
+	const existingRes = storeGraph[resource.type][resource.id];
+	const normalRes = {
+		...resource,
+		attributes: { ...existingRes.attributes, ...resource.attributes },
+		relationships: {
+			...existingRes.relationships,
+			...resource.relationships,
+		},
 	};
 
-	// Store the normalized resource
-	storeGraph[resource.type][resultId] = normalizedForStore;
+	setInverseRelationships(existingRes, normalRes, context);
 
-	// Process nested relationships (this handles complex trees)
-	const processedRelationships = mapValues(
-		finalResource.relationships ?? {},
-		(rel, relName) => {
-			const relSchema = resSchema.relationships[relName];
-
-			// Process nested resources first
-			const step = (relRes) =>
-				containsNestedResources(relRes)
-					? processResourceTree(relRes, finalResource, relSchema, context)
-					: relRes;
-
-			const result = applyOrMap(rel, step);
-
-			// Update normalized references in store
-			storeGraph[finalResource.type][finalResource.id].relationships[relName] =
-				applyOrMap(result, (r) => ({ type: relSchema.type, id: r.id }));
-
-			return result;
-		},
-	);
-
-	// Update inverse relationships for any simple refs (not nested resources)
-	Object.entries(finalResource.relationships ?? {}).forEach(
-		([relName, rel]) => {
-			// Only update inverses for simple refs, not nested resources
-			if (rel && !containsNestedResources(rel)) {
-				updateInverseRelationships(finalResource, relName, rel, context);
-			}
-		},
-	);
-
-	return { ...finalResource, relationships: processedRelationships };
+	storeGraph[resource.type][resource.id] = normalRes;
+	return normalRes;
 }
 
 /**
@@ -6810,49 +6788,89 @@ function processResourceTree(resource, parent, parentRelSchema, context) {
  * WARNING: MUTATES storeGraph
  *
  * @param {import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource} resourceTree - The resource tree to merge into the store
- * @param {Context} context - Context object containing schema, validator, store, and storeGraph
- * @returns {import('@data-prism/core').NormalResource} The processed resource tree with all nested resources created/updated
+ * @param {import('./memory-store.js').MemoryStoreContext} context - Context object containing schema, validator, and storeGraph
+ * @returns {import('@data-prism/core').NormalResource | import('@data-prism/core').NormalResource[]} The processed resource tree(s) with all nested resources created/updated
  */
-function merge(resourceTree, context) {
-	const { schema, validator, storeGraph } = context;
+function merge(resourceOrResources, context) {
+	const { schema, storeGraph, validator } = context;
 
-	ensureValidMergeResource(schema, resourceTree, { validator });
+	const nextGraph = mapValues(storeGraph, (g) => ({ ...g }));
+	const expectedToBeCreated = mapValues(storeGraph, () => new Set());
+	const created = mapValues(storeGraph, () => new Set());
 
-	/**
-	 * Recursively extracts all expected existing resource references from a resource tree.
-	 * Used to validate that all referenced resources already exist in the store.
-	 *
-	 * @param {import('@data-prism/core').CreateResource | import('@data-prism/core').UpdateResource} res - The resource to extract references from
-	 * @returns {import('@data-prism/core').Ref[]} Array of resource references that should exist
-	 */
-	const expectedExistingResources = (res) => {
-		const related = Object.values(res.relationships ?? {}).flatMap((rel) =>
-			rel
-				? Array.isArray(rel)
-					? rel.flatMap((r) =>
-							("attributes" in r || "relationships" in r) && "id" in r
-								? expectedExistingResources(r)
-								: rel,
-						)
-					: "attributes" in rel || "relationships" in rel
-						? expectedExistingResources(rel)
-						: rel
-				: null,
-		);
+	// NOTE: if an error is thrown, any change that have been made are discarded (rollback)
+	const outputs = applyOrMap(resourceOrResources, (rootResource) => {
+		ensureValidMergeResource(schema, rootResource, { validator });
 
-		return !res.id ? related : [{ type: res.type, id: res.id }, ...related];
-	};
+		const go = (resource) => {
+			const { type, id = v4() } = resource;
 
-	const missing = expectedExistingResources(resourceTree)
-		.filter((ref) => ref && ref.id)
-		.find(({ type, id }) => !storeGraph[type]?.[id]);
-	if (missing) {
-		throw new Error(
-			`expected { type: "${missing.type}", id: "${missing.id}" } to already exist in the graph`,
-		);
-	}
+			if (!storeGraph[type][id]) {
+				created[type].add(id);
+			}
 
-	return processResourceTree(resourceTree, null, null, context);
+			const defaultedResource = mergeResources$1(
+				nextGraph[type][id] ?? createResource(schema, { type, id }),
+				resource,
+			);
+			nextGraph[type][id] = defaultedResource;
+
+			const nextRels = mapValues(
+				resource.relationships ?? {},
+				(relOrRels, relName) => {
+					const preppedRels = applyOrMap(relOrRels, (rel) => {
+						if (rel.attributes || rel.relationships) {
+							return go(rel);
+						} else if (!nextGraph[rel.type][rel.id]) {
+							expectedToBeCreated[rel.type].add(rel.id);
+							nextGraph[rel.type][rel.id] = createResource(schema, rel);
+							return nextGraph[rel.type][rel.id];
+						} else {
+							return nextGraph[rel.type][rel.id];
+						}
+					});
+
+					nextGraph[type][id].relationships[relName] = preppedRels;
+					return preppedRels;
+				},
+			);
+
+			nextGraph[type][id] = {
+				...nextGraph[type][id],
+				relationships: mapValues(nextGraph[type][id].relationships, (r) =>
+					r ? { type: r.type, id: r.id } : null,
+				),
+			};
+
+			if (storeGraph[type][id]) {
+				setInverseRelationships(
+					storeGraph[type][id],
+					nextGraph[type][id],
+					context,
+				);
+			}
+
+			return { ...resource, id, relationships: nextRels };
+		};
+
+		return go(rootResource);
+	});
+
+	// ensure all the relationships that were mentioned in the merged resources actually exist
+	Object.entries(expectedToBeCreated).forEach(([type, ids]) => {
+		[...ids].forEach((id) => {
+			if (!created[type].has(id)) {
+				throw new Error(
+					`Expected { type: ${type}, id: ${id} } to be created during the merge, but only found a reference to it`,
+				);
+			}
+		});
+	});
+
+	// everything went OK, apply the changes
+	Object.keys(storeGraph).forEach((r) => (storeGraph[r] = nextGraph[r]));
+
+	return outputs;
 }
 
 /**
@@ -6880,7 +6898,8 @@ function merge(resourceTree, context) {
 /**
  * @typedef {import('@data-prism/core').Store & {
  *   linkInverses: function(): void,
- *   merge: function(NormalResourceTree): Promise<NormalResourceTree>
+ *   merge: function(NormalResourceTree): Promise<NormalResourceTree>,
+ *   merge: function(NormalResourceTree[]): Promise<NormalResourceTree[]>
  * }} MemoryStore
  */
 
@@ -6893,7 +6912,7 @@ function merge(resourceTree, context) {
  * @returns {MemoryStore} A new memory store instance
  */
 function createMemoryStore(schema, config = {}) {
-	const { initialData = {}, validator = createValidator() } = config;
+	const { initialData = {}, validator = defaultValidator } = config;
 
 	ensureValidSchema(schema, { validator });
 
@@ -6901,62 +6920,30 @@ function createMemoryStore(schema, config = {}) {
 
 	const runQuery = (query) => {
 		const normalQuery = normalizeQuery(schema, query);
-
 		ensureValidQuery(schema, normalQuery);
 		return queryGraph(schema, normalQuery, storeGraph);
 	};
 
 	// WARNING: MUTATES storeGraph
-	const create = (resource) => {
-		const { id, type } = resource;
-		const resSchema = schema.resources[resource.type];
-		const { idAttribute = "id" } = resSchema;
-		const newId = id ?? v4();
-
+	const create$1 = (resource) => {
 		ensureValidCreateResource(schema, resource, validator);
-
-		const normalRes = {
-			attributes: { ...(resource.attributes ?? {}), [idAttribute]: newId },
-			relationships: mapValues(
-				resSchema.relationships,
-				(rel, relName) =>
-					resource.relationships?.[relName] ??
-					(rel.cardinality === "one" ? null : []),
-			),
-			id: newId,
-			type,
-		};
-
-		return createOrUpdate(normalRes, { schema, storeGraph });
+		return create(resource, { schema, storeGraph });
 	};
 
 	// WARNING: MUTATES storeGraph
-	const update = (resource) => {
+	const update$1 = (resource) => {
 		ensureValidUpdateResource(schema, resource, validator);
-
-		const existingRes = storeGraph[resource.type][resource.id];
-		const normalRes = {
-			...resource,
-			attributes: { ...existingRes.attributes, ...resource.attributes },
-			relationships: {
-				...existingRes.relationships,
-				...resource.relationships,
-			},
-		};
-
-		// WARNING: MUTATES storeGraph
-		return createOrUpdate(normalRes, { schema, storeGraph });
+		return update(resource, { schema, storeGraph });
 	};
 
 	const upsert = (resource) => {
 		return "id" in resource && storeGraph[resource.type][resource.id]
-			? update(resource)
-			: create(resource);
+			? update$1(resource)
+			: create$1(resource);
 	};
 
 	const delete_ = (resource) => {
 		ensureValidDeleteResource(schema, resource, validator);
-
 		return deleteAction(resource, { schema, storeGraph });
 	};
 
@@ -6968,10 +6955,10 @@ function createMemoryStore(schema, config = {}) {
 	return {
 		linkInverses: linkStoreInverses,
 		async create(resource) {
-			return Promise.resolve(create(resource));
+			return Promise.resolve(create$1(resource));
 		},
 		async update(resource) {
-			return Promise.resolve(update(resource));
+			return Promise.resolve(update$1(resource));
 		},
 		async upsert(resource) {
 			return Promise.resolve(upsert(resource));
@@ -6982,10 +6969,8 @@ function createMemoryStore(schema, config = {}) {
 		async query(query) {
 			return Promise.resolve(runQuery(query));
 		},
-		async merge(resource) {
-			return Promise.resolve(
-				merge(resource, { schema, validator, storeGraph }),
-			);
+		async merge(resourceTreeOrTrees) {
+			return merge(resourceTreeOrTrees, { schema, storeGraph, validator });
 		},
 	};
 }

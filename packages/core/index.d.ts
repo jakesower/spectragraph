@@ -519,6 +519,17 @@ export function mergeResources(
 export function createValidator(options?: { ajvSchemas?: unknown[] }): Ajv;
 
 /**
+ * Creates a complete resource from a partial resource and schema
+ * @param schema - The schema defining the resource structure
+ * @param partialResource - The partial resource data
+ * @returns Complete normalized resource
+ */
+export function createResource(
+	schema: Schema,
+	partialResource: PartialNormalResource,
+): NormalResource;
+
+/**
  * Validates a create resource operation
  * @param schema - The schema to validate against
  * @param resource - The resource to validate
@@ -656,6 +667,76 @@ export function ensureValidQueryResult(
 	options?: { validator?: Ajv },
 ): void;
 
+// === EXPRESSION TYPES ===
+
+/**
+ * Expression engine for evaluating Data Prism expressions
+ */
+export interface ExpressionEngine {
+	/**
+	 * Apply an expression with input data
+	 * @param expression - The expression to apply
+	 * @param inputData - The input data context
+	 * @returns The result of the expression
+	 */
+	apply(expression: Expression, inputData: unknown): unknown;
+	
+	/**
+	 * Evaluate an expression without input data
+	 * @param expression - The expression to evaluate
+	 * @returns The evaluated result
+	 */
+	evaluate(expression: Expression): unknown;
+	
+	/**
+	 * Array of available expression names
+	 */
+	expressionNames: string[];
+	
+	/**
+	 * Check if a value is an expression
+	 * @param value - The value to check
+	 * @returns True if the value is an expression
+	 */
+	isExpression(value: unknown): boolean;
+	
+	/**
+	 * Normalize a where clause to an expression
+	 * @param where - The where clause to normalize
+	 * @returns The normalized expression
+	 */
+	normalizeWhereClause(where: { [k: string]: unknown }): Expression;
+}
+
+/**
+ * Error thrown when an expression is not supported
+ */
+export class ExpressionNotSupportedError extends Error {
+	constructor(message: string);
+}
+
+// === EXPRESSION FUNCTIONS ===
+
+/**
+ * Creates a new expression engine with optional custom expressions
+ * @param customExpressions - Custom expression definitions to add
+ * @returns Expression engine instance
+ */
+export function createExpressionEngine(customExpressions?: { [k: string]: unknown }): ExpressionEngine;
+
+/**
+ * The default expression engine with all built-in expressions
+ */
+export const defaultExpressionEngine: ExpressionEngine;
+
+/**
+ * Object containing all built-in expression definitions
+ */
+export const defaultExpressions: { [k: string]: unknown };
+
 // === EXPORTED CONSTANTS ===
 
+/**
+ * The default AJV validator instance used by Data Prism
+ */
 export const defaultValidator: Ajv;

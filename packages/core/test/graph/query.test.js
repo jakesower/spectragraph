@@ -312,4 +312,94 @@ describe("queryTree core", () => {
 			});
 		}).rejects.toThrowError();
 	});
+
+	it("doesn't get stuck in an infinite loop with a certain kind of graph 2025-08-29", () => {
+		const strangeData = {
+			bears: {
+				"14cabd9c-177e-425f-963b-41026a35c641": {
+					attributes: {
+						name: "Always There Bear",
+						yearIntroduced: 2006,
+						bellyBadge: "pink and lavender hearts",
+						furColor: "red",
+						id: "14cabd9c-177e-425f-963b-41026a35c641",
+					},
+					relationships: {
+						home: null,
+						powers: [
+							{
+								type: "powers",
+								id: "2074e365-377e-4ee8-9c17-1dddcdf6a3a7",
+							},
+						],
+						bestFriend: null,
+					},
+					id: "14cabd9c-177e-425f-963b-41026a35c641",
+					type: "bears",
+				},
+			},
+			homes: {},
+			powers: {
+				"2074e365-377e-4ee8-9c17-1dddcdf6a3a7": {
+					attributes: {
+						name: "Care Cousins Call",
+						description: "Just like the Care Bear Stare, but with the cousins.",
+						powerId: "2074e365-377e-4ee8-9c17-1dddcdf6a3a7",
+					},
+					relationships: {
+						wielders: [
+							{
+								type: "bears",
+								id: "eceabd4c-c948-44c7-bc35-ea0ca6c8c681",
+							},
+							{
+								type: "bears",
+								id: "14cabd9c-177e-425f-963b-41026a35c641",
+							},
+						],
+					},
+					id: "2074e365-377e-4ee8-9c17-1dddcdf6a3a7",
+					type: "powers",
+				},
+				"4c0f71c4-bffc-40d4-b2e4-b742eb16c582": {
+					attributes: {
+						name: "Fly",
+						powerId: "4c0f71c4-bffc-40d4-b2e4-b742eb16c582",
+					},
+					relationships: {
+						wielders: [
+							{
+								type: "bears",
+								id: "eceabd4c-c948-44c7-bc35-ea0ca6c8c681",
+							},
+						],
+					},
+					id: "4c0f71c4-bffc-40d4-b2e4-b742eb16c582",
+					type: "powers",
+				},
+			},
+			companions: {},
+			villains: {},
+		};
+
+		const query = {
+			type: "powers",
+			id: "2074e365-377e-4ee8-9c17-1dddcdf6a3a7",
+			select: {
+				name: "name",
+				wielders: {
+					select: {
+						name: "name",
+					},
+					type: "bears",
+				},
+			},
+		};
+
+		try {
+			queryGraph(careBearSchema, query, strangeData);
+		} catch (err) {
+			expect(err.message).not.toMatch("circular structure");
+		}
+	});
 });

@@ -5462,7 +5462,7 @@ function normalizeResource(schema, resourceType, resource) {
  * @param {CreateResource} [partialResource] - The partial resource to create from
  * @returns {NormalResource} A complete normalized resource with defaults applied
  */
-function createResource(schema, partialResource = {}) {
+function createResource(schema, partialResource) {
 	const { type, attributes = {}, relationships = {} } = partialResource;
 	const resSchema = schema.resources[type];
 
@@ -6459,9 +6459,7 @@ function runQuery(rootQuery, data) {
 										throw new Error(
 											`A related resource was not found on resource ${
 												query.type
-											}.${query.id}. ${propName}: ${JSON.stringify(
-												result[propName],
-											)}. Check that all of the relationship refs in ${
+											}.${query.id}.${propName}. Check that all of the relationship refs in ${
 												query.type
 											}.${query.id} are valid.`,
 										);
@@ -6759,4 +6757,4 @@ const ensureValidDeleteResource = ensure(validateDeleteResource);
 const ensureValidMergeResource = ensure(validateMergeResource);
 const ensureValidQueryResult = ensure(validateQueryResult);
 
-export { ExpressionNotSupportedError, createEmptyGraph, createExpressionEngine, createGraphFromResources, createResource, createValidator, defaultExpressionEngine, defaultExpressions, ensureValidCreateResource, ensureValidDeleteResource, ensureValidMergeResource, ensureValidQuery, ensureValidQueryResult, ensureValidSchema, ensureValidUpdateResource, linkInverses, mergeGraphs, mergeGraphsDeep, mergeResources$1 as mergeResources, normalizeQuery, normalizeResource, queryGraph, validateCreateResource, validateDeleteResource, validateMergeResource, validateQuery, validateQueryResult, validateSchema, validateUpdateResource };
+export { ExpressionNotSupportedError, createEmptyGraph, createExpressionEngine, createGraphFromResources, createResource, createValidator, defaultExpressionEngine, defaultExpressions, defaultValidator, ensureValidCreateResource, ensureValidDeleteResource, ensureValidMergeResource, ensureValidQuery, ensureValidQueryResult, ensureValidSchema, ensureValidUpdateResource, linkInverses, mergeGraphs, mergeGraphsDeep, mergeResources$1 as mergeResources, normalizeQuery, normalizeResource, queryGraph, validateCreateResource, validateDeleteResource, validateMergeResource, validateQuery, validateQueryResult, validateSchema, validateUpdateResource };

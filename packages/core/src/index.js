@@ -11,6 +11,7 @@ export { queryGraph } from "./graph/query-graph.js";
 export {
 	createValidator,
 	createResource,
+	defaultValidator,
 	mergeResources,
 	normalizeResource,
 	validateCreateResource,
