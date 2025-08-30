@@ -15,7 +15,6 @@ import { create as createAction } from "./create.js";
 import { deleteAction } from "./delete.js";
 import { update as updateAction } from "./update.js";
 import { merge } from "./merge.js";
-import { setInverseRelationships } from "./lib/store-helpers.js";
 
 /**
  * @typedef {Object} NormalResourceTree

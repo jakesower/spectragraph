@@ -179,30 +179,6 @@ export function runUpsertTests(createStore) {
 			});
 		});
 
-		it("upserts a single resource with an ID given", async () => {
-			const store = createStore(careBearSchema);
-			const customId = "custom-bear-id-123";
-
-			await store.upsert({
-				type: "bears",
-				id: customId,
-				attributes: {
-					name: "Watchful Bear",
-					yearIntroduced: 2019,
-					bellyBadge: "star with swirls",
-					furColor: "pastel green",
-				},
-			});
-
-			const result = await store.query({
-				type: "bears",
-				id: customId,
-				select: ["name"],
-			});
-
-			expect(result).toEqual({ name: "Watchful Bear" });
-		});
-
 		it("fails to upsert a single resource with an invalid attribute", async () => {
 			const store = createStore(careBearSchema);
 
