@@ -13294,7 +13294,7 @@ var metaschema = {
  * @property {Object<string, SchemaResource>} resources
  */
 
-const metaschemaWithErrors = (() => {
+(() => {
 	const out = esToolkit.merge(structuredClone(metaschema), {
 		definitions: {
 			attribute: {
@@ -13312,104 +13312,6 @@ const metaschemaWithErrors = (() => {
 	delete out.$id;
 	return out;
 })();
-
-const getValidateSchemaCache = createDeepCache();
-
-/**
- * Validates that a schema is valid
- * @param {Schema} schema - The schema to validate
- * @param {Object} options
- * @param {import('ajv').Ajv} options.validator
- * @throws {Error} If the schema is invalid
- */
-function validateSchema(schema, options = {}) {
-	const { validator = defaultValidator } = options;
-
-	if (typeof schema !== "object") {
-		return [
-			{ message: "Invalid schema: expected object, got " + typeof schema },
-		];
-	}
-	const validatorCache = getValidateSchemaCache(schema, validator);
-	if (validatorCache.hit) return validatorCache.value;
-
-	const baseValidate = validator.compile(metaschemaWithErrors);
-	if (!baseValidate(schema)) {
-		const result = translateAjvErrors(baseValidate.errors, schema, "schema");
-		validatorCache.set(result);
-		return result;
-	}
-
-	const attributeSchemaErrors = [];
-	Object.entries(schema.resources).forEach(([resName, resSchema]) =>
-		Object.entries(resSchema.attributes).forEach(([attrName, attrSchema]) => {
-			try {
-				validator.compile(attrSchema);
-			} catch (err) {
-				attributeSchemaErrors.push({
-					message: `Invalid attribute schema "${resName}.${attrName}": ${err.message}`,
-				});
-			}
-		}),
-	);
-
-	if (attributeSchemaErrors.length > 0) {
-		validatorCache.set(attributeSchemaErrors);
-		return attributeSchemaErrors;
-	}
-
-	const introspectiveSchema = esToolkit.merge(structuredClone(metaschema), {
-		properties: {
-			resources: {
-				properties: esToolkit.mapValues(schema.resources, (_, resName) => ({
-					$ref: `#/definitions/resources/${resName}`,
-				})),
-			},
-		},
-		definitions: {
-			resources: esToolkit.mapValues(schema.resources, (resSchema, resName) => ({
-				allOf: [
-					{ $ref: "#/definitions/resource" },
-					{
-						type: "object",
-						properties: {
-							type: { const: resName },
-							attributes: {
-								type: "object",
-								required: [
-									resSchema.idAttribute ?? "id",
-									...(resSchema.requiredAttributes ?? []),
-								],
-							},
-							relationships: {
-								type: "object",
-								required: resSchema.requiredRelationships ?? [],
-							},
-						},
-					},
-				],
-			})),
-			relationship: {
-				properties: {
-					type: {
-						enum: Object.keys(schema.resources),
-						errorMessage: `Invalid resource type "\${0}": use one of (${Object.keys(schema.resources).join(", ")})`,
-					},
-				},
-			},
-		},
-	});
-	delete introspectiveSchema.$id;
-	delete introspectiveSchema.properties.resources.patternProperties;
-
-	const introspectiveValidate = validator.compile(introspectiveSchema);
-	const introspectiveResult = introspectiveValidate(schema)
-		? []
-		: translateAjvErrors(introspectiveValidate.errors, schema, "schema");
-
-	validatorCache.set(introspectiveResult);
-	return introspectiveResult;
-}
 
 // import { mapValues } from "es-toolkit";
 // import { defaultExpressionEngine } from "../expressions/expressions.js";
@@ -13758,8 +13660,10 @@ class ExpressionNotSupportedError extends Error {
 		this.reason = reason;
 	}
 }
-
-const ensureValidSchema = ensure(validateSchema);
+const ensureValidCreateResource = ensure(validateCreateResource);
+const ensureValidUpdateResource = ensure(validateUpdateResource);
+const ensureValidDeleteResource = ensure(validateDeleteResource);
+const ensureValidMergeResource = ensure(validateMergeResource);
 
 /**
  * @typedef {Object} QueryBreakdownItem
@@ -15307,198 +15211,51 @@ function update(resource, context) {
 }
 
 /**
- * @typedef {import('./sqlite-store.js').CreateResource} CreateResource
- * @typedef {import('./sqlite-store.js').UpdateResource} UpdateResource
- * @typedef {import('./sqlite-store.js').Resource} Resource
- * @typedef {import('./sqlite-store.js').Context} Context
+ * @typedef {import("./sqlite-store.js").CreateResource | import("./sqlite-store.js").UpdateResource} UpsertResource
  */
 
 /**
- * Upserts a resource row (INSERT ... ON CONFLICT ... DO UPDATE)
- * @param {CreateResource|UpdateResource} resource - The resource to upsert
- * @param {Context} context - Database context with config and schema
- * @returns {Resource} The upserted resource
+ * Handles merge operations for SQLite store
+ * @param {UpsertResource|UpsertResource[]} resourceTreeOrTrees - Single resource or array of resources
+ * @param {import('./sqlite-store.js').Context} context - Store context
+ * @returns {Promise<import('./sqlite-store.js').Resource|import('./sqlite-store.js').Resource[]>}
  */
-function upsertResourceRow(resource, context) {
-	const { config, schema, db } = context;
+async function merge(resourceTreeOrTrees, context) {
+	const { db} = context;
+	const isArray = Array.isArray(resourceTreeOrTrees);
+	const resourceTrees = isArray ? resourceTreeOrTrees : [resourceTreeOrTrees];
 
-	const resSchema = schema.resources[resource.type];
-	const resConfig = config.resources[resource.type];
-	const { joins, table } = resConfig;
+	// const expectedToBeCreated = mapValues(schema.resources, () => new Set());
+	// const created = mapValues(schema.resources, () => new Set());
 
-	const { idAttribute = "id" } = resSchema;
+	db.prepare("BEGIN").run();
+	try {
+		const go = async (resource) => {
+			const processedRels = await utils$1.promiseObjectAll(
+				esToolkit.mapValues(resource.relationships ?? {}, (relOrRels) =>
+					utils$1.applyOrMap(relOrRels, (rel) => {
+						return rel.attributes || rel.relationships ? go(rel) : rel;
+					}),
+				),
+			);
 
-	const attributeColumns = Object.keys(resource.attributes ?? {}).map(
-		esToolkit.snakeCase,
-	);
+			const processed = resource.id
+				? await update(resource, context)
+				: await create(resource, context);
 
-	const localRelationships = esToolkit.pickBy(
-		resource.relationships ?? {},
-		(_, k) => joins[k].localColumn,
-	);
+			return {
+				...processed,
+				relationships: processedRels,
+			};
+		};
 
-	const relationshipColumns = Object.keys(localRelationships).map(
-		(r) => resConfig.joins[r].localColumn,
-	);
-
-	// Generate UUID if no ID provided
-	const resourceId = resource.id || crypto$1.randomUUID();
-	const idColumns = [esToolkit.snakeCase(idAttribute)];
-	const idVars = [resourceId];
-
-	const columns = [...attributeColumns, ...relationshipColumns, ...idColumns];
-	const placeholders = columns.map(() => "?").join(", ");
-
-	const attributeValues = Object.values(resource.attributes ?? {});
-	const relationshipValues = Object.values(localRelationships).map(
-		(r) => r?.id ?? null,
-	);
-	const idValues = idVars;
-
-	// Transform attribute values using column type modifiers
-	const transformedAttributeValues = transformValuesForStorage(
-		attributeValues,
-		Object.keys(resource.attributes ?? {}),
-		resSchema,
-		columnTypeModifiers,
-	);
-
-	const vars = [
-		...transformedAttributeValues,
-		...relationshipValues,
-		...idValues,
-	];
-
-	const updateColumns = [...attributeColumns, ...relationshipColumns]
-		.map((col) => `${col} = EXCLUDED.${col}`)
-		.join(", ");
-
-	const conflictClause =
-		updateColumns.length === 0
-			? "DO NOTHING"
-			: `DO UPDATE SET ${updateColumns}`;
-
-	const upsertSql = `
-    INSERT INTO ${table} (${columns.join(", ")})
-    VALUES (${placeholders})
-		ON CONFLICT(${esToolkit.snakeCase(idAttribute)})
-			${conflictClause}
-  `;
-
-	const upsertStmt = db.prepare(upsertSql);
-	upsertStmt.run(vars);
-
-	// Get the upserted resource
-	const selectSql = `SELECT * FROM ${table} WHERE ${esToolkit.snakeCase(idAttribute)} = ?`;
-	const selectStmt = db.prepare(selectSql);
-	const upsertedRow = selectStmt.get(resourceId);
-
-	const upserted = {};
-	Object.entries(upsertedRow).forEach(([k, v]) => {
-		upserted[esToolkit.camelCase(k)] = v;
-	});
-
-	return {
-		type: resource.type,
-		id: upserted[idAttribute],
-		attributes: esToolkit.pick(upserted, Object.keys(resSchema.attributes)),
-		relationships: resource.relationships ?? {},
-	};
-}
-
-/**
- * Upserts foreign relationship rows for a resource
- * @param {Resource} resource - The resource with relationships to upsert
- * @param {Context} context - Database context with config and schema
- * @returns {Resource} The resource with upserted relationships
- */
-function upsertForeignRelationshipRows(resource, context) {
-	const { config, schema, db } = context;
-
-	const resSchema = schema.resources[resource.type];
-	const resConfig = config.resources[resource.type];
-	const { joins } = resConfig;
-
-	// handle to-one foreign columns
-	const foreignRelationships = esToolkit.pickBy(
-		resource.relationships ?? {},
-		(_, k) => joins[k].foreignColumn,
-	);
-
-	Object.entries(foreignRelationships).forEach(([relName, val]) => {
-		const { foreignColumn } = joins[relName];
-		const foreignIdAttribute =
-			schema.resources[resSchema.relationships[relName].type].idAttribute ??
-			"id";
-		const foreignTable =
-			config.resources[resSchema.relationships[relName].type].table;
-
-		// Clear existing foreign key references
-		const clearSql = `
-			UPDATE ${foreignTable}
-			SET ${foreignColumn} = NULL
-			WHERE ${foreignColumn} = ?
-		`;
-		const clearStmt = db.prepare(clearSql);
-		clearStmt.run(resource.id);
-
-		// Set new foreign key references
-		const updateSql = `
-			UPDATE ${foreignTable}
-			SET ${foreignColumn} = ?
-			WHERE ${esToolkit.snakeCase(foreignIdAttribute)} = ?
-		`;
-		const updateStmt = db.prepare(updateSql);
-
-		val.forEach((v) => {
-			updateStmt.run(resource.id, v.id);
-		});
-	});
-
-	// handle many-to-many columns
-	const m2mForeignRelationships = esToolkit.pickBy(
-		resource.relationships ?? {},
-		(_, k) => joins[k].joinTable,
-	);
-
-	Object.entries(m2mForeignRelationships).forEach(([relName, val]) => {
-		const { joinTable, localJoinColumn, foreignJoinColumn } = joins[relName];
-
-		// Clear existing relationships
-		const deleteSql = `DELETE FROM ${joinTable} WHERE ${localJoinColumn} = ?`;
-		const deleteStmt = db.prepare(deleteSql);
-		deleteStmt.run(resource.id);
-
-		// Insert new relationships
-		const insertSql = `
-			INSERT OR IGNORE INTO ${joinTable}
-			(${localJoinColumn}, ${foreignJoinColumn})
-			VALUES (?, ?)
-		`;
-		const insertStmt = db.prepare(insertSql);
-
-		val.forEach((v) => {
-			insertStmt.run(resource.id, v.id);
-		});
-	});
-
-	return {
-		type: resource.type,
-		id: resource.id,
-		attributes: esToolkit.pick(resource, Object.keys(resSchema.attributes)),
-		relationships: resource.relationships ?? {},
-	};
-}
-
-/**
- * Upserts a resource (INSERT or UPDATE) including relationships
- * @param {CreateResource|UpdateResource} resource - The resource to upsert
- * @param {Context} context - Database context with config and schema
- * @returns {Resource} The upserted resource
- */
-function upsert(resource, context) {
-	const upserted = upsertResourceRow(resource, context);
-	return upsertForeignRelationshipRows(upserted, context);
+		const result = await Promise.all(utils$1.applyOrMap(resourceTrees, go));
+		db.prepare("COMMIT").run();
+		return isArray ? result : result[0];
+	} catch (error) {
+		db.prepare("ROLLBACK").run();
+		throw error;
+	}
 }
 
 /**
@@ -15577,6 +15334,7 @@ function upsert(resource, context) {
  * @property {Config} config
  * @property {import('better-sqlite3').Database} db
  * @property {import('data-prism').Schema} schema
+ * @property {Ajv} validator
  */
 
 /**
@@ -15606,43 +15364,25 @@ function upsert(resource, context) {
  */
 function sqliteStore(schema, config) {
 	const { validator = createValidator() } = config;
+	const context = { config, db: config.db, schema };
 
-	ensureValidSchema(schema, { validator });
-
-	const createStoreOperations = (context) => ({
+	return {
 		async create(resource) {
-			const errors = validateCreateResource(schema, resource, { validator });
-			if (errors.length > 0) {
-				throw new Error("invalid resource", { cause: errors });
-			}
-
+			ensureValidCreateResource(schema, resource, { validator });
 			return create(resource, context);
 		},
 
 		async update(resource) {
-			const errors = validateUpdateResource(schema, resource, { validator });
-			if (errors.length > 0) {
-				throw new Error("invalid resource", { cause: errors });
-			}
-
+			ensureValidUpdateResource(schema, resource, { validator });
 			return update(resource, context);
 		},
 
 		async upsert(resource) {
-			const errors = validateMergeResource(schema, resource, { validator });
-			if (errors.length > 0) {
-				throw new Error("invalid resource", { cause: errors });
-			}
-
-			return upsert(resource, context);
+			return resource.id ? this.update(resource) : this.create(resource);
 		},
 
 		async delete(resource) {
-			const errors = validateDeleteResource(schema, resource);
-			if (errors.length > 0) {
-				throw new Error("invalid resource", { cause: errors });
-			}
-
+			ensureValidDeleteResource(schema, resource);
 			return deleteResource(resource, context);
 		},
 
@@ -15653,54 +15393,12 @@ function sqliteStore(schema, config) {
 				query: normalized,
 			});
 		},
-	});
-
-	const baseContext = { config, db: config.db, schema };
-	const store = createStoreOperations(baseContext);
-
-	return {
-		...store,
 
 		async merge(resourceTreeOrTrees) {
-			const isArray = Array.isArray(resourceTreeOrTrees);
-			const trees = isArray ? resourceTreeOrTrees : [resourceTreeOrTrees];
-
-			if (trees.length === 0) {
-				return [];
-			}
-
-			// Single resource - no transaction needed
-			if (trees.length === 1) {
-				const resource = trees[0];
-				const result =
-					"id" in resource && resource.id
-						? await store.update(resource)
-						: await store.create(resource);
-				return isArray ? [result] : result;
-			}
-
-			// Multiple resources - use transaction for atomicity
-			const db = config.db;
-
-			db.prepare("BEGIN").run();
-
-			try {
-				const results = [];
-
-				for (const resource of trees) {
-					const result =
-						"id" in resource && resource.id
-							? await store.update(resource)
-							: await store.create(resource);
-					results.push(result);
-				}
-
-				db.prepare("COMMIT").run();
-				return results;
-			} catch (error) {
-				db.prepare("ROLLBACK").run();
-				throw error;
-			}
+			utils$1.applyOrMap(resourceTreeOrTrees, (tree) =>
+				ensureValidMergeResource(schema, tree, { validator }),
+			);
+			return merge(resourceTreeOrTrees, context);
 		},
 	};
 }

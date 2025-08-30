@@ -1,17 +1,17 @@
 import {
 	createValidator,
-	ensureValidSchema,
+	ensureValidCreateResource,
+	ensureValidDeleteResource,
+	ensureValidMergeResource,
+	ensureValidUpdateResource,
 	normalizeQuery,
-	validateCreateResource,
-	validateDeleteResource,
-	validateMergeResource,
-	validateUpdateResource,
 } from "@data-prism/core";
 import { query as getQuery } from "./query/index.js";
 import { create } from "./create.js";
 import { deleteResource } from "./delete.js";
 import { update } from "./update.js";
-import { upsert } from "./upsert.js";
+import { merge } from "./merge.js";
+import { applyOrMap } from "@data-prism/utils";
 
 /**
  * @typedef {Object} Ref
@@ -89,6 +89,7 @@ import { upsert } from "./upsert.js";
  * @property {Config} config
  * @property {import('better-sqlite3').Database} db
  * @property {import('data-prism').Schema} schema
+ * @property {Ajv} validator
  */
 
 /**
@@ -118,43 +119,25 @@ import { upsert } from "./upsert.js";
  */
 export function sqliteStore(schema, config) {
 	const { validator = createValidator() } = config;
+	const context = { config, db: config.db, schema };
 
-	ensureValidSchema(schema, { validator });
-
-	const createStoreOperations = (context) => ({
+	return {
 		async create(resource) {
-			const errors = validateCreateResource(schema, resource, { validator });
-			if (errors.length > 0) {
-				throw new Error("invalid resource", { cause: errors });
-			}
-
+			ensureValidCreateResource(schema, resource, { validator });
 			return create(resource, context);
 		},
 
 		async update(resource) {
-			const errors = validateUpdateResource(schema, resource, { validator });
-			if (errors.length > 0) {
-				throw new Error("invalid resource", { cause: errors });
-			}
-
+			ensureValidUpdateResource(schema, resource, { validator });
 			return update(resource, context);
 		},
 
 		async upsert(resource) {
-			const errors = validateMergeResource(schema, resource, { validator });
-			if (errors.length > 0) {
-				throw new Error("invalid resource", { cause: errors });
-			}
-
-			return upsert(resource, context);
+			return resource.id ? this.update(resource) : this.create(resource);
 		},
 
 		async delete(resource) {
-			const errors = validateDeleteResource(schema, resource);
-			if (errors.length > 0) {
-				throw new Error("invalid resource", { cause: errors });
-			}
-
+			ensureValidDeleteResource(schema, resource);
 			return deleteResource(resource, context);
 		},
 
@@ -165,54 +148,12 @@ export function sqliteStore(schema, config) {
 				query: normalized,
 			});
 		},
-	});
-
-	const baseContext = { config, db: config.db, schema };
-	const store = createStoreOperations(baseContext);
-
-	return {
-		...store,
 
 		async merge(resourceTreeOrTrees) {
-			const isArray = Array.isArray(resourceTreeOrTrees);
-			const trees = isArray ? resourceTreeOrTrees : [resourceTreeOrTrees];
-
-			if (trees.length === 0) {
-				return [];
-			}
-
-			// Single resource - no transaction needed
-			if (trees.length === 1) {
-				const resource = trees[0];
-				const result =
-					"id" in resource && resource.id
-						? await store.update(resource)
-						: await store.create(resource);
-				return isArray ? [result] : result;
-			}
-
-			// Multiple resources - use transaction for atomicity
-			const db = config.db;
-
-			db.prepare("BEGIN").run();
-
-			try {
-				const results = [];
-
-				for (const resource of trees) {
-					const result =
-						"id" in resource && resource.id
-							? await store.update(resource)
-							: await store.create(resource);
-					results.push(result);
-				}
-
-				db.prepare("COMMIT").run();
-				return results;
-			} catch (error) {
-				db.prepare("ROLLBACK").run();
-				throw error;
-			}
+			applyOrMap(resourceTreeOrTrees, (tree) =>
+				ensureValidMergeResource(schema, tree, { validator }),
+			);
+			return merge(resourceTreeOrTrees, context);
 		},
 	};
 }

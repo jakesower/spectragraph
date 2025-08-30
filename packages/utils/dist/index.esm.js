@@ -76,4 +76,27 @@ function pipeThru(init, fns) {
 	return fns.reduce((acc, fn) => fn(acc), init);
 }
 
-export { applyOrMap, applyOrMapAsync, pipeThru };
+/**
+ * Takes an object with promises as values and returns a single promise
+ * that resolves to an object with all the promises resolved.
+ *
+ * @template {Record<string, Promise<any>>} T
+ * @param {T} obj - Object with promises as values
+ * @returns {Promise<{[K in keyof T]: Awaited<T[K]>}>} Promise that resolves to object with resolved values
+ *
+ * @example
+ * const obj = {
+ *   a: Promise.resolve(1),
+ *   b: Promise.resolve(2),
+ *   c: Promise.resolve(3)
+ * };
+ * const resolved = await promiseObjectAll(obj);
+ * // resolved: { a: 1, b: 2, c: 3 }
+ */
+function promiseObjectAll(obj) {
+	return Promise.all(
+		Object.entries(obj).map(async ([key, promise]) => [key, await promise]),
+	).then(Object.fromEntries);
+}
+
+export { applyOrMap, applyOrMapAsync, pipeThru, promiseObjectAll };
