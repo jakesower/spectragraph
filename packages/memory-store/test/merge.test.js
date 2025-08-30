@@ -5,7 +5,7 @@ import { careBearSchema } from "../../interface-tests/src/index.js";
 const store = createMemoryStore(careBearSchema);
 
 it("merges a single resource with only attributes", async () => {
-	const merged = await store.merge({
+	const bedtimeBear = await store.merge({
 		type: "bears",
 		attributes: {
 			name: "Bedtime Bear",
@@ -15,17 +15,17 @@ it("merges a single resource with only attributes", async () => {
 		},
 	});
 
-	const result = await store.query({
+	const bedtimeBearResult = await store.query({
 		type: "bears",
-		id: merged.id,
+		id: bedtimeBear.id,
 		select: ["name"],
 	});
 
-	expect(result).toEqual({ name: "Bedtime Bear" });
+	expect(bedtimeBearResult).toEqual({ name: "Bedtime Bear" });
 });
 
 it("updates a single resource with only attributes", async () => {
-	const created = await store.create({
+	const friendBear = await store.create({
 		type: "bears",
 		attributes: {
 			name: "Friend Bear",
@@ -37,26 +37,93 @@ it("updates a single resource with only attributes", async () => {
 
 	await store.merge({
 		type: "bears",
-		id: created.id,
+		id: friendBear.id,
 		attributes: {
 			bellyBadge: "two yellow smiling flowers with hearts",
 		},
 	});
 
-	const result = await store.query({
+	const friendBearResult = await store.query({
 		type: "bears",
-		id: created.id,
+		id: friendBear.id,
 		select: ["name", "bellyBadge"],
 	});
 
-	expect(result).toEqual({
+	expect(friendBearResult).toEqual({
 		name: "Friend Bear",
 		bellyBadge: "two yellow smiling flowers with hearts",
 	});
 });
 
+it("updates a single resource with attributes and relationships", async () => {
+	const careALot = await store.create({
+		type: "homes",
+		attributes: {
+			name: "Care-a-Lot",
+		},
+	});
+
+	const cloudForest = await store.create({
+		type: "homes",
+		attributes: {
+			name: "Cloud Forest",
+		},
+	});
+
+	const friendBear = await store.create({
+		type: "bears",
+		attributes: {
+			name: "Friend Bear",
+			yearIntroduced: 1982,
+			bellyBadge: "two yellow smiling flowers",
+			furColor: "orange",
+		},
+		relationships: { home: { type: "homes", id: careALot.id } },
+	});
+
+	const careALotBefore = await store.query({
+		type: "homes",
+		id: careALot.id,
+		select: ["name", { residents: { select: ["name"] } }],
+	});
+
+	expect(careALotBefore).toEqual({
+		name: "Care-a-Lot",
+		residents: [{ name: "Friend Bear" }],
+	});
+
+	await store.merge({
+		type: "bears",
+		id: friendBear.id,
+		attributes: {
+			bellyBadge: "two yellow smiling flowers with hearts",
+		},
+		relationships: { home: { type: "homes", id: cloudForest.id } },
+	});
+
+	const friendBearAfter = await store.query({
+		type: "bears",
+		id: friendBear.id,
+		select: ["name", "bellyBadge", { home: { select: ["name"] } }],
+	});
+
+	expect(friendBearAfter).toEqual({
+		name: "Friend Bear",
+		bellyBadge: "two yellow smiling flowers with hearts",
+		home: { name: "Cloud Forest" },
+	});
+
+	const careALotAfter = await store.query({
+		type: "homes",
+		id: careALot.id,
+		select: ["name", { residents: { select: ["name"] } }],
+	});
+
+	expect(careALotAfter).toEqual({ name: "Care-a-Lot", residents: [] });
+});
+
 it("creates resources in a tree and properly relates them", async () => {
-	const merged = await store.merge({
+	const careALotBear = await store.merge({
 		type: "bears",
 		attributes: {
 			name: "Care-a-Lot Bear",
@@ -75,13 +142,13 @@ it("creates resources in a tree and properly relates them", async () => {
 		},
 	});
 
-	const bearResult = await store.query({
+	const careALotBearResult = await store.query({
 		type: "bears",
-		id: merged.id,
+		id: careALotBear.id,
 		select: ["yearIntroduced", { home: { select: ["name"] } }],
 	});
 
-	expect(bearResult).toEqual({
+	expect(careALotBearResult).toEqual({
 		yearIntroduced: 2022,
 		home: { name: "Care-a-Lot Castle" },
 	});

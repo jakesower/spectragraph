@@ -1,4 +1,5 @@
-import { cleanupInverseRelationships } from "./lib/store-helpers.js";
+import { mapValues } from "es-toolkit";
+import { setInversesOnRelationship } from "./lib/store-helpers.js";
 
 /**
  * Deletes a resource from the store and cleans up all inverse relationships.
@@ -12,13 +13,21 @@ import { cleanupInverseRelationships } from "./lib/store-helpers.js";
  * @returns {import('@data-prism/core').DeleteResource} The deleted resource
  */
 export function deleteAction(resource, context) {
-	const { storeGraph } = context;
+	const { schema, storeGraph } = context;
 	const { type, id } = resource;
 
+	const resSchema = schema.resources[type];
 	const existingRes = storeGraph[type][id];
 
 	// Clean up inverse relationships before deleting
-	cleanupInverseRelationships(existingRes, context);
+	mapValues(resSchema.relationships, (relSchema, relName) => {
+		setInversesOnRelationship(
+			existingRes,
+			relSchema.cardinality === "one" ? null : [],
+			relName,
+			context,
+		);
+	});
 
 	// Remove the resource from the store
 	delete storeGraph[type][id];

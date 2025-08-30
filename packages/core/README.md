@@ -167,7 +167,7 @@ Expressions support a wide range of operations including:
 - **Array operations**: `$filter`, `$map`, `$find`, `$any`, `$all`
 - **Data access**: `$get`, `$pipe`, `$compose`
 
-For comprehensive documentation on all available expressions, examples, and advanced usage patterns, see the **[Expressions README](src/expressions/README.md)**.
+The expression system provides a comprehensive set of operators for data transformation and filtering.
 
 ## API Reference
 
@@ -431,6 +431,24 @@ const graph = createGraphFromResources(schema, "teams", [flatTeam]);
 // with proper normalization and relationship structure
 ```
 
+### Error Classes
+
+#### `ExpressionNotSupportedError`
+
+Error thrown when an unsupported expression is encountered.
+
+```javascript
+import { ExpressionNotSupportedError } from "@data-prism/core";
+
+try {
+	// Code that might use unsupported expressions
+} catch (error) {
+	if (error instanceof ExpressionNotSupportedError) {
+		console.error("Expression not supported:", error.message);
+	}
+}
+```
+
 ### Validation Functions
 
 #### `validateSchema(schema, options?)`
@@ -491,6 +509,60 @@ import { createValidator } from "@data-prism/core";
 const validator = createValidator({
 	ajvSchemas: [myCustomSchema],
 });
+```
+
+### Expression Functions
+
+#### `createExpressionEngine(customExpressions?)`
+
+Creates a new expression engine with optional custom expressions.
+
+**Parameters:**
+
+- `customExpressions` (object, optional) - Custom expression definitions to add
+
+**Returns:** ExpressionEngine instance
+
+```javascript
+import { createExpressionEngine } from "@data-prism/core";
+
+const customEngine = createExpressionEngine({
+	$customOp: {
+		apply: (operand, inputData) => operand * 2,
+		evaluate: (operand) => operand * 2,
+	},
+});
+```
+
+#### `defaultExpressionEngine`
+
+The default expression engine with all built-in expressions.
+
+```javascript
+import { defaultExpressionEngine } from "@data-prism/core";
+
+const result = defaultExpressionEngine.apply({ $add: [1, 2] }, {});
+```
+
+#### `defaultExpressions`
+
+Object containing all built-in expression definitions.
+
+```javascript
+import { defaultExpressions } from "@data-prism/core";
+
+console.log(defaultExpressions); // Contains $add, $eq, $get, etc.
+```
+
+#### `defaultValidator`
+
+The default AJV validator instance used by Data Prism.
+
+```javascript
+import { defaultValidator } from "@data-prism/core";
+
+// Use the default validator directly
+const isValid = defaultValidator.validate(schema, data);
 ```
 
 #### `validateCreateResource(schema, resource, options?)`

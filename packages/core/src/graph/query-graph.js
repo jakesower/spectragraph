@@ -153,7 +153,7 @@ function runQuery(rootQuery, data) {
 					// subquery
 					return (result) => {
 						if (result[propName] === undefined) {
-							console.log(result, propName)
+							console.log(result, propName);
 							throw new Error(
 								`The "${propName}" relationship is undefined on a resource of type "${query.type}". You probably have an invalid schema or constructed your graph wrong. Try linking the inverses (via "linkInverses"), check your schema to make sure all inverses have been defined correctly there, and make sure all resources have been loaded into the graph.`,
 							);
@@ -166,9 +166,7 @@ function runQuery(rootQuery, data) {
 										throw new Error(
 											`A related resource was not found on resource ${
 												query.type
-											}.${query.id}. ${propName}: ${JSON.stringify(
-												result[propName],
-											)}. Check that all of the relationship refs in ${
+											}.${query.id}.${propName}. Check that all of the relationship refs in ${
 												query.type
 											}.${query.id} are valid.`,
 										);
