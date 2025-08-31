@@ -1,5 +1,5 @@
 import { snakeCase, uniq } from "es-toolkit";
-import { forEachQuery, someQuery } from "./query-helpers.js";
+import { forEachQuery, someQuery } from "@data-prism/query-helpers";
 import { preQueryRelationships } from "./relationship-builders.js";
 
 /**

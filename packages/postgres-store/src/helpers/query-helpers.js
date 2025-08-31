@@ -1,11 +1,10 @@
-// Now using shared sql-helpers package
+// Now using shared query-helpers package
 export {
 	flattenQuery,
 	flatMapQuery,
 	forEachQuery,
-	reduceQuery,
 	someQuery,
-} from "@data-prism/sql-helpers";
+} from "@data-prism/query-helpers";
 
 /**
  * Replaces ? placeholders with PostgreSQL $n placeholders
