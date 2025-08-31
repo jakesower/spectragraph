@@ -2,6 +2,7 @@ import { camelCase, pick, pickBy, snakeCase } from "es-toolkit";
 import { randomUUID } from "crypto";
 import { transformValuesForStorage } from "@data-prism/sql-helpers";
 import { columnTypeModifiers } from "./column-type-modifiers.js";
+import { setInverseRelationships } from "./lib/store-helpers.js";
 
 /**
  * @typedef {import('./sqlite-store.js').CreateResource} CreateResource
@@ -89,67 +90,15 @@ export async function create(resource, context) {
 		created[camelCase(k)] = v;
 	});
 
-	// handle to-one foreign columns
-	const foreignRelationships = pickBy(
-		resource.relationships ?? {},
-		(_, k) => joins[k].foreignColumn,
-	);
-
-	Object.entries(foreignRelationships).forEach(([relName, val]) => {
-		const { foreignColumn } = joins[relName];
-		const foreignIdAttribute =
-			schema.resources[resSchema.relationships[relName].type].idAttribute ??
-			"id";
-		const foreignTable =
-			config.resources[resSchema.relationships[relName].type].table;
-
-		// Clear existing foreign key references
-		const clearSql = `
-			UPDATE ${foreignTable}
-			SET ${foreignColumn} = NULL
-			WHERE ${foreignColumn} = ?
-		`;
-		const clearStmt = db.prepare(clearSql);
-		clearStmt.run(created[idAttribute]);
-
-		// Set new foreign key references
-		const updateSql = `
-			UPDATE ${foreignTable}
-			SET ${foreignColumn} = ?
-			WHERE ${snakeCase(foreignIdAttribute)} = ?
-		`;
-		const updateStmt = db.prepare(updateSql);
-
-		val.forEach((v) => {
-			updateStmt.run(created[idAttribute], v.id);
-		});
-	});
-
-	// handle many-to-many columns
-	const m2mForeignRelationships = pickBy(
-		resource.relationships ?? {},
-		(_, k) => joins[k].joinTable,
-	);
-
-	Object.entries(m2mForeignRelationships).forEach(([relName, val]) => {
-		const { joinTable, localJoinColumn, foreignJoinColumn } = joins[relName];
-
-		const insertSql = `
-			INSERT OR IGNORE INTO ${joinTable}
-			(${localJoinColumn}, ${foreignJoinColumn})
-			VALUES (?, ?)
-		`;
-		const insertStmt = db.prepare(insertSql);
-
-		val.forEach((v) => {
-			insertStmt.run(created[idAttribute], v.id);
-		});
-	});
-
-	return {
+	const createdResource = {
 		type: resource.type,
 		id: created[idAttribute],
 		attributes: pick(created, Object.keys(resSchema.attributes)),
 		relationships: resource.relationships ?? {},
 	};
+
+	// Set inverse relationships using the helper function
+	await setInverseRelationships(createdResource, context);
+
+	return createdResource;
 }

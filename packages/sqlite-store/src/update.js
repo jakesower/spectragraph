@@ -1,6 +1,7 @@
 import { camelCase, pick, pickBy, snakeCase } from "es-toolkit";
 import { transformValuesForStorage } from "@data-prism/sql-helpers";
 import { columnTypeModifiers } from "./column-type-modifiers.js";
+import { setInverseRelationships } from "./lib/store-helpers.js";
 
 /**
  * @typedef {import('./sqlite-store.js').UpdateResource} UpdateResource
@@ -14,7 +15,7 @@ import { columnTypeModifiers } from "./column-type-modifiers.js";
  * @param {Context} context - Database context with config and schema
  * @returns {Resource} The updated resource
  */
-export function update(resource, context) {
+export async function update(resource, context) {
 	const { config, schema, db } = context;
 
 	const resConfig = config.resources[resource.type];
@@ -79,73 +80,15 @@ export function update(resource, context) {
 		updated[camelCase(k)] = v;
 	});
 
-	// handle to-one foreign columns
-	const foreignRelationships = pickBy(
-		resource.relationships ?? {},
-		(_, k) => joins[k].foreignColumn,
-	);
-
-	Object.entries(foreignRelationships).forEach(([relName, val]) => {
-		const { foreignColumn } = joins[relName];
-		const foreignIdAttribute =
-			schema.resources[resSchema.relationships[relName].type].idAttribute ??
-			"id";
-		const foreignTable =
-			config.resources[resSchema.relationships[relName].type].table;
-
-		// Clear existing foreign key references
-		const clearSql = `
-			UPDATE ${foreignTable}
-			SET ${foreignColumn} = NULL
-			WHERE ${foreignColumn} = ?
-		`;
-		const clearStmt = db.prepare(clearSql);
-		clearStmt.run(updated[idAttribute]);
-
-		// Set new foreign key references
-		const updateSql = `
-			UPDATE ${foreignTable}
-			SET ${foreignColumn} = ?
-			WHERE ${snakeCase(foreignIdAttribute)} = ?
-		`;
-		const updateStmt = db.prepare(updateSql);
-
-		val.forEach((v) => {
-			updateStmt.run(updated[idAttribute], v.id);
-		});
-	});
-
-	// handle many-to-many columns
-	const m2mForeignRelationships = pickBy(
-		resource.relationships ?? {},
-		(_, k) => joins[k].joinTable,
-	);
-
-	Object.entries(m2mForeignRelationships).forEach(([relName, val]) => {
-		const { joinTable, localJoinColumn, foreignJoinColumn } = joins[relName];
-
-		// Clear existing relationships
-		const deleteSql = `DELETE FROM ${joinTable} WHERE ${localJoinColumn} = ?`;
-		const deleteStmt = db.prepare(deleteSql);
-		deleteStmt.run(updated[idAttribute]);
-
-		// Insert new relationships
-		const insertSql = `
-			INSERT OR IGNORE INTO ${joinTable}
-			(${localJoinColumn}, ${foreignJoinColumn})
-			VALUES (?, ?)
-		`;
-		const insertStmt = db.prepare(insertSql);
-
-		val.forEach((v) => {
-			insertStmt.run(updated[idAttribute], v.id);
-		});
-	});
-
-	return {
+	const updatedResource = {
 		type: resource.type,
 		id: updated[idAttribute],
 		attributes: pick(updated, Object.keys(resSchema.attributes)),
 		relationships: resource.relationships ?? {},
 	};
+
+	// Set inverse relationships using the helper function
+	await setInverseRelationships(updatedResource, context);
+
+	return updatedResource;
 }

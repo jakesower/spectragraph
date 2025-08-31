@@ -5,6 +5,24 @@
  */
 
 /**
+ * Wraps a function with transaction handling (BEGIN/COMMIT/ROLLBACK)
+ * @param {import('better-sqlite3').Database} db - SQLite database instance
+ * @param {Function} fn - Function to execute within transaction
+ * @returns {Promise<any>} Result of the function call
+ */
+export async function withTransaction(db, fn) {
+	db.prepare("BEGIN").run();
+	try {
+		const result = await fn();
+		db.prepare("COMMIT").run();
+		return result;
+	} catch (error) {
+		db.prepare("ROLLBACK").run();
+		throw error;
+	}
+}
+
+/**
  * Updates many-to-many relationship inverses via join table
  */
 async function replaceManyToManyInverses(resourceId, relValue, joinConfig, db) {
