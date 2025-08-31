@@ -1,17 +1,16 @@
 import {
 	createValidator,
+	ensureValidCreateResource,
+	ensureValidDeleteResource,
+	ensureValidMergeResource,
 	ensureValidSchema,
+	ensureValidUpdateResource,
 	normalizeQuery,
-	validateCreateResource,
-	validateDeleteResource,
-	validateMergeResource,
-	validateUpdateResource,
 } from "@data-prism/core";
 import { query as getQuery } from "./query/index.js";
 import { create } from "./create.js";
 import { deleteResource } from "./delete.js";
 import { update } from "./update.js";
-import { upsert } from "./upsert.js";
 import { merge } from "./merge.js";
 import { withTransaction } from "./lib/store-helpers.js";
 import { applyOrMap } from "@data-prism/utils";
@@ -127,42 +126,25 @@ export function createPostgresStore(schema, config) {
 
 	return {
 		async create(resource) {
-			const errors = validateCreateResource(schema, resource, { validator });
-			if (errors.length > 0) {
-				throw new Error("invalid resource", { cause: errors });
-			}
-
+			ensureValidCreateResource(schema, resource, { validator });
 			return withTransaction(config.db, (client) =>
 				create(resource, { ...context, client }),
 			);
 		},
 
 		async update(resource) {
-			const errors = validateUpdateResource(schema, resource, { validator });
-			if (errors.length > 0) {
-				throw new Error("invalid resource", { cause: errors });
-			}
-
+			ensureValidUpdateResource(schema, resource, { validator });
 			return withTransaction(config.db, (client) =>
 				update(resource, { ...context, client }),
 			);
 		},
 
 		async upsert(resource) {
-			const errors = validateMergeResource(schema, resource, { validator });
-			if (errors.length > 0) {
-				throw new Error("invalid resource", { cause: errors });
-			}
-
-			return upsert(resource, { config, schema });
+			return resource.id ? this.update(resource) : this.create(resource);
 		},
 
 		async delete(resource) {
-			const errors = validateDeleteResource(schema, resource);
-			if (errors.length > 0) {
-				throw new Error("invalid resource", { cause: errors });
-			}
-
+			ensureValidDeleteResource(schema, resource);
 			return deleteResource(resource, { config, schema });
 		},
 
@@ -177,7 +159,7 @@ export function createPostgresStore(schema, config) {
 
 		async merge(resourceTreeOrTrees) {
 			applyOrMap(resourceTreeOrTrees, (tree) =>
-				validateMergeResource(schema, tree, { validator }),
+				ensureValidMergeResource(schema, tree, { validator }),
 			);
 
 			return withTransaction(config.db, (client) =>
