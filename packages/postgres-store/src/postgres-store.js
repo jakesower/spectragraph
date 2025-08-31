@@ -12,6 +12,9 @@ import { create } from "./create.js";
 import { deleteResource } from "./delete.js";
 import { update } from "./update.js";
 import { upsert } from "./upsert.js";
+import { merge } from "./merge.js";
+import { withTransaction } from "./lib/store-helpers.js";
+import { applyOrMap } from "@data-prism/utils";
 
 /**
  * @typedef {Object} Ref
@@ -120,6 +123,8 @@ export function createPostgresStore(schema, config) {
 
 	ensureValidSchema(schema, { validator });
 
+	const context = { config, schema };
+
 	return {
 		async create(resource) {
 			const errors = validateCreateResource(schema, resource, { validator });
@@ -127,7 +132,9 @@ export function createPostgresStore(schema, config) {
 				throw new Error("invalid resource", { cause: errors });
 			}
 
-			return create(resource, { config, schema });
+			return withTransaction(config.db, (client) =>
+				create(resource, { ...context, client }),
+			);
 		},
 
 		async update(resource) {
@@ -136,7 +143,9 @@ export function createPostgresStore(schema, config) {
 				throw new Error("invalid resource", { cause: errors });
 			}
 
-			return update(resource, { config, schema });
+			return withTransaction(config.db, (client) =>
+				update(resource, { ...context, client }),
+			);
 		},
 
 		async upsert(resource) {
@@ -167,56 +176,13 @@ export function createPostgresStore(schema, config) {
 		},
 
 		async merge(resourceTreeOrTrees) {
-			const isArray = Array.isArray(resourceTreeOrTrees);
-			const trees = isArray ? resourceTreeOrTrees : [resourceTreeOrTrees];
+			applyOrMap(resourceTreeOrTrees, (tree) =>
+				validateMergeResource(schema, tree, { validator }),
+			);
 
-			if (trees.length === 0) return [];
-
-			// Single resource - no transaction needed
-			if (trees.length === 1) {
-				const resource = trees[0];
-
-				// Validate the resource
-				const errors = validateMergeResource(schema, resource, { validator });
-				if (errors.length > 0) {
-					throw new Error("invalid resource", { cause: errors });
-				}
-
-				const result =
-					"id" in resource && resource.id
-						? await update(resource, { config, schema })
-						: await create(resource, { config, schema });
-				return isArray ? [result] : result;
-			}
-
-			// Multiple resources - use transaction for atomicity
-			const { db } = config;
-
-			await db.query("BEGIN");
-
-			try {
-				const results = [];
-
-				for (const resource of trees) {
-					// Validate each resource
-					const errors = validateMergeResource(schema, resource, { validator });
-					if (errors.length > 0) {
-						throw new Error("invalid resource", { cause: errors });
-					}
-
-					const result =
-						"id" in resource && resource.id
-							? await update(resource, { config, schema })
-							: await create(resource, { config, schema });
-					results.push(result);
-				}
-
-				await db.query("COMMIT");
-				return results;
-			} catch (error) {
-				await db.query("ROLLBACK");
-				throw error;
-			}
+			return withTransaction(config.db, (client) =>
+				merge(resourceTreeOrTrees, { ...context, client }),
+			);
 		},
 	};
 }

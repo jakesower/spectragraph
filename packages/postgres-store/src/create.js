@@ -1,10 +1,6 @@
 import { camelCase, pick, pickBy, snakeCase } from "es-toolkit";
 import { replacePlaceholders } from "./helpers/query-helpers.js";
-import {
-	processForeignRelationships,
-	processManyToManyRelationships,
-} from "@data-prism/sql-helpers";
-import { createPostgreSQLOperations } from "./database-operations.js";
+import { setInverseRelationships } from "./lib/store-helpers.js";
 
 /**
  * @typedef {import('./postgres-store.js').CreateResource} CreateResource
@@ -15,13 +11,11 @@ import { createPostgreSQLOperations } from "./database-operations.js";
 /**
  * Creates a new resource in the database
  * @param {CreateResource} resource - The resource to create
- * @param {Context} context - Database context with config and schema
+ * @param {Context & {client: import('pg').PoolClient}} context - Database context with config, schema, and client
  * @returns {Promise<Resource>} The created resource
  */
 export async function create(resource, context) {
-	const { config, schema } = context;
-
-	const { db } = config;
+	const { config, schema, client } = context;
 
 	const resConfig = config.resources[resource.type];
 	const { joins, table } = resConfig;
@@ -59,29 +53,21 @@ export async function create(resource, context) {
 		RETURNING *
   `;
 
-	const { rows } = await db.query(sql, vars);
+	const { rows } = await client.query(sql, vars);
 	const created = {};
 	Object.entries(rows[0]).forEach(([k, v]) => {
 		created[camelCase(k)] = v;
 	});
 
-	// Handle relationships using shared utilities
-	const dbOps = createPostgreSQLOperations(db);
-	const relationshipContext = {
-		schema,
-		config,
-		resourceType: resource.type,
-		resourceId: created[idAttribute],
-		clearExisting: false,
-	};
-
-	await processForeignRelationships(resource, relationshipContext, dbOps);
-	await processManyToManyRelationships(resource, relationshipContext, dbOps);
-
-	return {
+	const createdResource = {
 		type: resource.type,
 		id: created[idAttribute],
 		attributes: pick(created, Object.keys(resSchema.attributes)),
 		relationships: resource.relationships ?? {},
 	};
+
+	// Set inverse relationships using the helper function
+	await setInverseRelationships(createdResource, context);
+
+	return createdResource;
 }
