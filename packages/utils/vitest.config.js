@@ -9,6 +9,7 @@ export default defineConfig({
 				"dist/",
 				"test/",
 				"*.config.js",
+				"scripts/**",
 			],
 		},
 	},

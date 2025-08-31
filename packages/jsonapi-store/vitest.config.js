@@ -4,7 +4,15 @@ export default defineConfig({
   test: {
     environment: "node",
     coverage: {
-      exclude: ["src/index.js", "**/*.d.ts", "dist/**", "**/*.config.js"],
+      exclude: [
+        "node_modules/**",
+        "dist/**",
+        "test/**",
+        "**/*.d.ts",
+        "**/*.config.js",
+        "scripts/**",
+        "src/index.js"
+      ],
     },
   },
 });

@@ -15,5 +15,15 @@ export default defineConfig({
 				singleFork: true,
 			},
 		},
+		coverage: {
+			exclude: [
+				"node_modules/**",
+				"dist/**",
+				"test/**", 
+				"**/*.d.ts",
+				"**/*.config.js",
+				"scripts/**"
+			]
+		}
 	},
 });
