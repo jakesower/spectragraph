@@ -1,0 +1,220 @@
+{
+	"skeptics": {
+		"rebecca-watson": {
+			"type": "skeptics",
+			"id": "rebecca-watson",
+			"attributes": {
+				"id": "rebecca-watson",
+				"name": "Rebecca Watson",
+				"specialty": "Feminist skepticism",
+				"yearsActive": 18,
+				"famousQuote": "Skepticism isn't a belief system. It's a method."
+			},
+			"relationships": {
+				"investigations": [
+					{ "type": "investigations", "id": "watson-homeopathy-study" },
+					{ "type": "investigations", "id": "watson-psychic-reading" }
+				],
+				"organizations": [{ "type": "organizations", "id": "skepchick" }],
+				"mentor": { "type": "skeptics", "id": "james-randi" },
+				"mentee": null
+			}
+		},
+		"james-randi": {
+			"type": "skeptics",
+			"id": "james-randi",
+			"attributes": {
+				"id": "james-randi",
+				"name": "James Randi",
+				"specialty": "Paranormal investigation",
+				"yearsActive": 50,
+				"famousQuote": "The true mark of a scientist is a healthy skepticism."
+			},
+			"relationships": {
+				"investigations": [
+					{ "type": "investigations", "id": "randi-uri-geller" },
+					{ "type": "investigations", "id": "randi-dowsing-test" }
+				],
+				"organizations": [{ "type": "organizations", "id": "jref" }],
+				"mentor": null,
+				"mentee": { "type": "skeptics", "id": "rebecca-watson" }
+			}
+		}
+	},
+	"investigations": {
+		"watson-homeopathy-study": {
+			"type": "investigations",
+			"id": "watson-homeopathy-study",
+			"attributes": {
+				"id": "watson-homeopathy-study",
+				"title": "Homeopathic Remedies: A Controlled Study",
+				"claimTested": "Homeopathic remedies are more effective than placebo",
+				"methodsUsed": [
+					"double-blind",
+					"placebo-controlled",
+					"statistical-analysis"
+				],
+				"conclusion": "No significant difference from placebo observed",
+				"publicationYear": 2010
+			},
+			"relationships": {
+				"investigator": { "type": "skeptics", "id": "rebecca-watson" },
+				"subject": { "type": "weirdBeliefs", "id": "homeopathy" }
+			}
+		},
+		"watson-psychic-reading": {
+			"type": "investigations",
+			"id": "watson-psychic-reading",
+			"attributes": {
+				"id": "watson-psychic-reading",
+				"title": "Cold Reading Techniques Exposed",
+				"claimTested": "Psychics can communicate with the dead",
+				"methodsUsed": [
+					"controlled-environment",
+					"video-analysis",
+					"statistical-analysis"
+				],
+				"conclusion": "All 'psychic' information was obtainable through cold reading",
+				"publicationYear": 2012
+			},
+			"relationships": {
+				"investigator": { "type": "skeptics", "id": "rebecca-watson" },
+				"subject": { "type": "weirdBeliefs", "id": "psychic-communication" }
+			}
+		},
+		"randi-uri-geller": {
+			"type": "investigations",
+			"id": "randi-uri-geller",
+			"attributes": {
+				"id": "randi-uri-geller",
+				"title": "The Uri Geller Spoon Bending Challenge",
+				"claimTested": "Uri Geller can bend spoons with psychic powers",
+				"methodsUsed": [
+					"controlled-conditions",
+					"magician-oversight",
+					"video-documentation"
+				],
+				"conclusion": "All effects replicated using standard magic techniques",
+				"publicationYear": 1973
+			},
+			"relationships": {
+				"investigator": { "type": "skeptics", "id": "james-randi" },
+				"subject": { "type": "weirdBeliefs", "id": "psychokinesis" }
+			}
+		},
+		"randi-dowsing-test": {
+			"type": "investigations",
+			"id": "randi-dowsing-test",
+			"attributes": {
+				"id": "randi-dowsing-test",
+				"title": "The Million Dollar Dowsing Challenge",
+				"claimTested": "Dowsing can locate underground water",
+				"methodsUsed": ["blind-testing", "statistical-analysis", "replication"],
+				"conclusion": "Results consistent with random chance",
+				"publicationYear": 1987
+			},
+			"relationships": {
+				"investigator": { "type": "skeptics", "id": "james-randi" },
+				"subject": { "type": "weirdBeliefs", "id": "dowsing" }
+			}
+		}
+	},
+	"weirdBeliefs": {
+		"homeopathy": {
+			"type": "weirdBeliefs",
+			"id": "homeopathy",
+			"attributes": {
+				"id": "homeopathy",
+				"name": "Homeopathy",
+				"description": "The belief that water has memory and extremely diluted substances can cure illness",
+				"category": "alternative medicine",
+				"believersCount": 200000000,
+				"debunked": true
+			},
+			"relationships": {
+				"investigations": [
+					{ "type": "investigations", "id": "watson-homeopathy-study" }
+				]
+			}
+		},
+		"psychic-communication": {
+			"type": "weirdBeliefs",
+			"id": "psychic-communication",
+			"attributes": {
+				"id": "psychic-communication",
+				"name": "Psychic Communication with the Dead",
+				"description": "The belief that some people can communicate with deceased spirits",
+				"category": "paranormal",
+				"believersCount": 150000000,
+				"debunked": true
+			},
+			"relationships": {
+				"investigations": [
+					{ "type": "investigations", "id": "watson-psychic-reading" }
+				]
+			}
+		},
+		"psychokinesis": {
+			"type": "weirdBeliefs",
+			"id": "psychokinesis",
+			"attributes": {
+				"id": "psychokinesis",
+				"name": "Psychokinesis",
+				"description": "The belief that mind can directly influence physical objects",
+				"category": "paranormal",
+				"believersCount": 75000000,
+				"debunked": true
+			},
+			"relationships": {
+				"investigations": [
+					{ "type": "investigations", "id": "randi-uri-geller" }
+				]
+			}
+		},
+		"dowsing": {
+			"type": "weirdBeliefs",
+			"id": "dowsing",
+			"attributes": {
+				"id": "dowsing",
+				"name": "Dowsing",
+				"description": "The belief that rods or pendulums can locate underground water or objects",
+				"category": "paranormal",
+				"believersCount": 50000000,
+				"debunked": true
+			},
+			"relationships": {
+				"investigations": [
+					{ "type": "investigations", "id": "randi-dowsing-test" }
+				]
+			}
+		}
+	},
+	"organizations": {
+		"skepchick": {
+			"type": "organizations",
+			"id": "skepchick",
+			"attributes": {
+				"id": "skepchick",
+				"name": "Skepchick",
+				"founded": 2005,
+				"mission": "Promoting critical thinking and scientific skepticism from a feminist perspective"
+			},
+			"relationships": {
+				"members": [{ "type": "skeptics", "id": "rebecca-watson" }]
+			}
+		},
+		"jref": {
+			"type": "organizations",
+			"id": "jref",
+			"attributes": {
+				"id": "jref",
+				"name": "James Randi Educational Foundation",
+				"founded": 1996,
+				"mission": "Promoting critical thinking by reaching out to the public and media with reliable information about paranormal claims"
+			},
+			"relationships": {
+				"members": [{ "type": "skeptics", "id": "james-randi" }]
+			}
+		}
+	}
+}
