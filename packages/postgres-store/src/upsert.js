@@ -14,7 +14,7 @@ import { replacePlaceholders } from "./helpers/query-helpers.js";
  * @param {Context} context - Database context with config and schema
  * @returns {Promise<Resource>} The upserted resource
  */
-export async function upsertResourceRow(resource, context) {
+async function upsertResourceRow(resource, context) {
 	const { config, schema } = context;
 	const { db } = config;
 
@@ -85,7 +85,7 @@ export async function upsertResourceRow(resource, context) {
  * @param {Context} context - Database context with config and schema
  * @returns {Promise<Resource>} The resource with upserted relationships
  */
-export async function upsertForeignRelationshipRows(resource, context) {
+async function upsertForeignRelationshipRows(resource, context) {
 	const { config, schema } = context;
 	const { db } = config;
 
