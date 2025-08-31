@@ -12,6 +12,7 @@ import { deleteResource } from "./delete.js";
 import { update } from "./update.js";
 import { merge } from "./merge.js";
 import { applyOrMap } from "@data-prism/utils";
+import { withTransaction } from "./lib/store-helpers.js";
 
 /**
  * @typedef {Object} Ref
@@ -124,12 +125,12 @@ export function sqliteStore(schema, config) {
 	return {
 		async create(resource) {
 			ensureValidCreateResource(schema, resource, { validator });
-			return create(resource, context);
+			return withTransaction(config.db, () => create(resource, context));
 		},
 
 		async update(resource) {
 			ensureValidUpdateResource(schema, resource, { validator });
-			return update(resource, context);
+			return withTransaction(config.db, () => update(resource, context));
 		},
 
 		async upsert(resource) {
@@ -153,7 +154,9 @@ export function sqliteStore(schema, config) {
 			applyOrMap(resourceTreeOrTrees, (tree) =>
 				ensureValidMergeResource(schema, tree, { validator }),
 			);
-			return merge(resourceTreeOrTrees, context);
+			return withTransaction(config.db, () =>
+				merge(resourceTreeOrTrees, context),
+			);
 		},
 	};
 }
