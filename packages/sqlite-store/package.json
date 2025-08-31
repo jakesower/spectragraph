@@ -47,6 +47,7 @@
 	"sideEffects": false,
 	"dependencies": {
 		"@data-prism/core": "*",
+		"@data-prism/query-helpers": "*",
 		"@data-prism/sql-helpers": "*",
 		"@data-prism/utils": "*",
 		"better-sqlite3": "^12.2.0",

@@ -10,9 +10,8 @@ var core = require('@data-prism/core');
  * @property {any} relationships - Selected relationships
  * @property {string} type - Resource type
  * @property {import('@data-prism/core').Query} query - The query object
- * @property {boolean} ref - Whether this is a reference-only query
- * @property {import('@data-prism/core').Query|null} parentQuery - Parent query if any
  * @property {QueryBreakdownItem|null} parent - Parent breakdown item if any
+ * @property {import('@data-prism/core').Query|null} parentQuery - Parent query if any
  * @property {string|null} parentRelationship - Parent relationship name if any
  */
 
@@ -41,13 +40,12 @@ function flattenQuery(schema, rootQuery) {
 		const relationshipKeys = relationshipsEntries.map((pe) => pe[0]);
 
 		const level = {
+			attributes,
 			parent,
 			parentQuery: parent?.query ?? null,
 			parentRelationship,
 			path,
-			attributes,
 			query,
-			ref: !query.select,
 			relationships: esToolkit.pick(query.select, relationshipKeys),
 			type,
 		};
@@ -85,21 +83,6 @@ function flatMapQuery(schema, query, fn) {
  */
 function forEachQuery(schema, query, fn) {
 	return flattenQuery(schema, query).forEach((info) => fn(info.query, info));
-}
-
-/**
- * Reduces over each query in a flattened query structure
- * @param {import('@data-prism/core').Schema} schema - The schema
- * @param {import('@data-prism/core').RootQuery} query - The root query
- * @param {(acc: any, query: import('@data-prism/core').Query, info: QueryBreakdownItem) => any} fn - Reducer function
- * @param {any} initVal - Initial value
- * @returns {any} Reduced result
- */
-function reduceQuery(schema, query, fn, initVal) {
-	return flattenQuery(schema, query).reduce(
-		(acc, q) => fn(acc, q.query, q),
-		initVal,
-	);
 }
 
 /**
@@ -1462,7 +1445,6 @@ exports.preQueryRelationships = preQueryRelationships;
 exports.prepareValuesForStorage = prepareValuesForStorage;
 exports.processForeignRelationships = processForeignRelationships;
 exports.processManyToManyRelationships = processManyToManyRelationships;
-exports.reduceQuery = reduceQuery;
 exports.someQuery = someQuery;
 exports.transformRowKeys = transformRowKeys;
 exports.transformValuesForStorage = transformValuesForStorage;

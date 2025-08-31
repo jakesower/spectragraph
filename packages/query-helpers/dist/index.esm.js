@@ -1,4 +1,4 @@
-import { partition, pick } from "es-toolkit";
+import { partition, pick } from 'es-toolkit';
 
 /**
  * @typedef {Object} QueryBreakdownItem
@@ -7,9 +7,8 @@ import { partition, pick } from "es-toolkit";
  * @property {any} relationships - Selected relationships
  * @property {string} type - Resource type
  * @property {import('@data-prism/core').Query} query - The query object
- * @property {boolean} ref - Whether this is a reference-only query
- * @property {import('@data-prism/core').Query|null} parentQuery - Parent query if any
  * @property {QueryBreakdownItem|null} parent - Parent breakdown item if any
+ * @property {import('@data-prism/core').Query|null} parentQuery - Parent query if any
  * @property {string|null} parentRelationship - Parent relationship name if any
  */
 
@@ -23,7 +22,7 @@ import { partition, pick } from "es-toolkit";
  * @param {import('@data-prism/core').RootQuery} rootQuery - The root query to flatten
  * @returns {QueryBreakdown} Flattened query breakdown
  */
-export function flattenQuery(schema, rootQuery) {
+function flattenQuery(schema, rootQuery) {
 	const go = (query, type, path, parent = null, parentRelationship = null) => {
 		const resDef = schema.resources[type];
 		const { idAttribute = "id" } = resDef;
@@ -38,13 +37,12 @@ export function flattenQuery(schema, rootQuery) {
 		const relationshipKeys = relationshipsEntries.map((pe) => pe[0]);
 
 		const level = {
+			attributes,
 			parent,
 			parentQuery: parent?.query ?? null,
 			parentRelationship,
 			path,
-			attributes,
 			query,
-			ref: !query.select,
 			relationships: pick(query.select, relationshipKeys),
 			type,
 		};
@@ -70,7 +68,7 @@ export function flattenQuery(schema, rootQuery) {
  * @param {(query: import('@data-prism/core').Query, info: QueryBreakdownItem) => any} fn - Mapping function
  * @returns {any[]} Mapped results
  */
-export function flatMapQuery(schema, query, fn) {
+function flatMapQuery(schema, query, fn) {
 	return flattenQuery(schema, query).flatMap((info) => fn(info.query, info));
 }
 
@@ -80,23 +78,8 @@ export function flatMapQuery(schema, query, fn) {
  * @param {import('@data-prism/core').RootQuery} query - The root query
  * @param {(query: import('@data-prism/core').Query, info: QueryBreakdownItem) => void} fn - Iteration function
  */
-export function forEachQuery(schema, query, fn) {
+function forEachQuery(schema, query, fn) {
 	return flattenQuery(schema, query).forEach((info) => fn(info.query, info));
-}
-
-/**
- * Reduces over each query in a flattened query structure
- * @param {import('@data-prism/core').Schema} schema - The schema
- * @param {import('@data-prism/core').RootQuery} query - The root query
- * @param {(acc: any, query: import('@data-prism/core').Query, info: QueryBreakdownItem) => any} fn - Reducer function
- * @param {any} initVal - Initial value
- * @returns {any} Reduced result
- */
-export function reduceQuery(schema, query, fn, initVal) {
-	return flattenQuery(schema, query).reduce(
-		(acc, q) => fn(acc, q.query, q),
-		initVal,
-	);
 }
 
 /**
@@ -106,6 +89,8 @@ export function reduceQuery(schema, query, fn, initVal) {
  * @param {(query: import('@data-prism/core').Query, info: QueryBreakdownItem) => boolean} fn - Test function
  * @returns {boolean} Whether any query matches the condition
  */
-export function someQuery(schema, query, fn) {
+function someQuery(schema, query, fn) {
 	return flattenQuery(schema, query).some((q) => fn(q.query, q));
 }
+
+export { flatMapQuery, flattenQuery, forEachQuery, someQuery };

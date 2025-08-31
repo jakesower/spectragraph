@@ -27,9 +27,9 @@
 	"keywords": [],
 	"author": "Jake Sower",
 	"devDependencies": {
-		"@data-prism/core": "0.1.6",
+		"@data-prism/core": "*",
 		"@data-prism/interface-tests": "*",
-		"@data-prism/jsonapi-server": "^0.0.12",
+		"@data-prism/jsonapi-server": "*",
 		"@rollup/plugin-commonjs": "^28.0.6",
 		"@rollup/plugin-json": "^6.1.0",
 		"@rollup/plugin-node-resolve": "^16.0.1",
@@ -52,7 +52,8 @@
 	],
 	"sideEffects": false,
 	"dependencies": {
-		"@data-prism/utils": "^0.0.7",
+		"@data-prism/query-helpers": "*",
+		"@data-prism/utils": "*",
 		"es-toolkit": "^1.26.0",
 		"vite": "7.1.3"
 	}

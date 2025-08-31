@@ -1,4 +1,5 @@
 import { normalizeQuery } from "@data-prism/core";
+import { forEachQuery } from "@data-prism/query-helpers";
 import { uniq } from "es-toolkit";
 
 const objectToParamStr = (obj, rootKey) => {
@@ -14,54 +15,6 @@ const objectToParamStr = (obj, rootKey) => {
 	return go(obj)
 		.map((x) => `${rootKey}${x}`)
 		.join("&");
-};
-
-// Simple implementation to replace the missing forEachQuery function
-const forEachQuery = (schema, query, callback, path = [], parent = null) => {
-	const { type } = query;
-	const attributes = [];
-
-	// Get attributes from select
-	if (Array.isArray(query.select)) {
-		query.select.forEach((item) => {
-			if (typeof item === "string") {
-				attributes.push(item);
-			} else if (typeof item === "object") {
-				Object.entries(item).forEach(([key, subquery]) => {
-					// Recursively handle relationships
-					if (typeof subquery === "object" && subquery.select) {
-						forEachQuery(
-							schema,
-							{
-								...subquery,
-								type: schema.resources[type].relationships[key].type,
-							},
-							callback,
-							[...path, key],
-							query,
-						);
-					}
-				});
-			}
-		});
-	} else if (typeof query.select === "object") {
-		Object.entries(query.select).forEach(([key, value]) => {
-			if (typeof value === "string") {
-				attributes.push(value); // Use the schema field name, not the alias
-			} else if (typeof value === "object" && value.select) {
-				// Handle relationship
-				forEachQuery(
-					schema,
-					{ ...value, type: schema.resources[type].relationships[key].type },
-					callback,
-					[...path, key],
-					query,
-				);
-			}
-		});
-	}
-
-	callback(query, { type, attributes, path, parent });
 };
 
 /**

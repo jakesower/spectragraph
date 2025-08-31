@@ -2,9 +2,8 @@ export {
 	flattenQuery,
 	flatMapQuery,
 	forEachQuery,
-	reduceQuery,
 	someQuery,
-} from "./query-helpers.js";
+} from "@data-prism/query-helpers";
 
 export {
 	makeRelationshipBuilders,

@@ -38,9 +38,10 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@data-prism/core": "0.1.6",
+		"@data-prism/core": "*",
+		"@data-prism/query-helpers": "*",
 		"@data-prism/sql-helpers": "*",
-		"@data-prism/utils": "^0.0.7",
+		"@data-prism/utils": "*",
 		"ajv": "^8.17.1",
 		"es-toolkit": "^1.26.0",
 		"pg": "^8.12.0",

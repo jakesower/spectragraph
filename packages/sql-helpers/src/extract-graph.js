@@ -1,5 +1,5 @@
 import { mapValues, snakeCase } from "es-toolkit";
-import { flatMapQuery } from "./query-helpers.js";
+import { flatMapQuery } from "@data-prism/query-helpers";
 
 /**
  * @typedef {Object} SelectClauseItem
