@@ -89,25 +89,23 @@ export function normalizeWhereClause(where) {
 			const expression = whereExpressions[expressionName];
 
 			return expression(operand, attribute, {
-				handleAttribute,
-				isExpression,
 				resolve,
 			});
 		}
 
 		// not an expression
 		return Array.isArray(node)
-			? node.map((v) =>
-					resolve(v, attribute, { handleAttribute, isExpression, resolve }),
-				)
+			? node.map((v) => resolve(v, attribute, { resolve }))
 			: node !== null && typeof node === "object"
-				? Object.keys(node).length > 1
-					? {
-							$and: Object.entries(node).map(([attr, val]) =>
-								handleAttribute(attr, val),
-							),
-						}
-					: handleAttribute(...Object.entries(node)[0])
+				? Object.keys(node).length === 0
+					? {}
+					: Object.keys(node).length > 1
+						? {
+								$and: Object.entries(node).map(([attr, val]) =>
+									handleAttribute(attr, val),
+								),
+							}
+						: handleAttribute(...Object.entries(node)[0])
 				: attribute
 					? { $pipe: [{ $get: attribute }, { $eq: node }] }
 					: node;
