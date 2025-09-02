@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { defaultExpressionEngine } from "../../../src/expressions/expressions.js";
+import { defaultExpressionEngine } from "../../../src/expressions/index.js";
 
 const { apply, evaluate, normalizeWhereClause } = defaultExpressionEngine;
 

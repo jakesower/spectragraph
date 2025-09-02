@@ -64,9 +64,7 @@ const $get = {
 const $literal = {
 	name: "$literal",
 	apply: (operand) => operand,
-	evaluate: () => {
-		throw new Error("handled in expressions.js");
-	},
+	evaluate: (operand) => operand,
 	controlsEvaluation: true,
 	normalizeWhere: (operand) => ({ $literal: operand }),
 };

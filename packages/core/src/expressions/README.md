@@ -1012,6 +1012,10 @@ const results = queryGraph(schema, query, graph, {
 });
 ```
 
+## Notes
+
+- `executionContext` is available for use by expression engines. It is _not,_ however, used in the default implementation.
+
 ## Related Packages
 
 - `@data-prism/core` - Core schema and querying functionality

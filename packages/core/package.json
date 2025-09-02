@@ -51,6 +51,7 @@
 		"ajv-errors": "^3.0.0",
 		"ajv-formats": "^3.0.1",
 		"es-toolkit": "^1.26.0",
+		"json-expressions": "^0.2.1",
 		"uuid": "^10.0.0"
 	}
 }

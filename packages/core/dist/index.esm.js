@@ -4482,7 +4482,7 @@ function createExpressionEngine(customExpressions) {
 		);
 	};
 
-	const apply = (rootExpression, inputData) => {
+	const apply = (rootExpression, inputData, executionContext = {}) => {
 		const step = (expression) => {
 			if (!isExpression(expression)) {
 				return Array.isArray(expression)
@@ -4496,7 +4496,11 @@ function createExpressionEngine(customExpressions) {
 			const expressionDef = expressions[expressionName];
 
 			if (expressionDef.controlsEvaluation) {
-				return expressionDef.apply(operand, inputData, { apply, isExpression });
+				return expressionDef.apply(operand, inputData, {
+					apply,
+					executionContext,
+					isExpression,
+				});
 			}
 
 			const evaluatedOperand = step(operand);
@@ -4506,12 +4510,12 @@ function createExpressionEngine(customExpressions) {
 		return step(rootExpression);
 	};
 
-	const evaluate = (expression) => {
+	const evaluate = (expression, executionContext = {}) => {
 		if (!isExpression(expression)) {
 			return Array.isArray(expression)
-				? expression.map(evaluate)
+				? expression.map((e) => evaluate(e, executionContext))
 				: typeof expression === "object" && expression !== null
-					? mapValues(expression, evaluate)
+					? mapValues(expression, (e) => evaluate(e, executionContext))
 					: expression;
 		}
 
@@ -5144,7 +5148,7 @@ function validateQuery(schema, rootQuery, options = {}) {
  * @param {Object} schema - The schema object
  * @param {RootQuery} rootQuery - The query to normalize
  * @param {Object} [options]
- * @param {import('./expressions/expressions.js').ExpressionEngine} [options.expressionEngine] - a @data-prism/graph expression engine
+ * @param {import('./expressions/index.js').ExpressionEngine} [options.expressionEngine] - a @data-prism/graph expression engine
  * @returns {NormalQuery} The normalized query
  */
 function normalizeQuery(schema, rootQuery, options = {}) {

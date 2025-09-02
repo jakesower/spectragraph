@@ -11,3 +11,7 @@ coverage/
 
 # LLM
 CLAUDE.md
+
+# Other
+
+tmp/
