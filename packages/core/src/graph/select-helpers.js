@@ -1,5 +1,5 @@
 // import { mapValues } from "es-toolkit";
-// import { defaultExpressionEngine } from "../expressions/expressions.js";
+// import { defaultExpressionEngine } from "../expressions/index.js";
 
 /**
  * @typedef {Object<string, any>} Projection
@@ -82,7 +82,7 @@ function distributeStrings(expression, expressionEngine) {
 // }
 
 /**
- * @param {import('../expressions/expressions.js').Expression} expression
+ * @param {import('../expressions/index.js').Expression} expression
  * @param {any} expressionEngine
  * @returns {function(any): any}
  */
