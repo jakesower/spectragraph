@@ -1,4 +1,4 @@
-import { defaultExpressionEngine } from "@data-prism/core";
+import { defaultExpressionEngine } from "json-expressions";
 import JSON5 from "json5";
 import { mapValues, pickBy, uniq } from "es-toolkit";
 

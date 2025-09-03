@@ -51,6 +51,7 @@
 		"@data-prism/sql-helpers": "*",
 		"@data-prism/utils": "*",
 		"better-sqlite3": "^12.2.0",
-		"es-toolkit": "^1.26.0"
+		"es-toolkit": "^1.26.0",
+		"json-expressions": "^0.2.1"
 	}
 }

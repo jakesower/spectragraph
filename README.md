@@ -124,7 +124,7 @@ For example:
 
 ## Upcoming Features
 
-Many arguments can make use of expressions, which are described later.
+Many arguments can make use of expressions from the [json-expressions](https://github.com/jakesower/json-expressions) library.
 
 Queries also have the ability project and do limited aggregation.
 
@@ -155,7 +155,7 @@ Produces:
 ]
 ```
 
-This example shows the use of a couple of aggregating expressions (`$count` and `$mean`) as well as the use of dot notation for nested fields (`trips.$.cost` and `company.name`). Paired with a schema and proper expression evaluators, these can make for expressive queries. Aggregating expressions are about as extensive as those implemented by SQL databases. More complex manipulations should be done programatically.
+This example shows the use of a couple of aggregating expressions (`$count` and `$mean`) as well as the use of dot notation for nested fields (`trips.$.cost` and `company.name`). These expressions are provided by the json-expressions library which offers comprehensive operators for data transformation and filtering. More complex manipulations should be done programatically.
 
 Note that queries are implemented as JSON objects, rather than strings. This makes them easier to compose, pick apart, and otherwise manipulate than string-based query languages such as SQL and GraphQL.
 

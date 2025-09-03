@@ -11,6 +11,7 @@ import {
 	ensureValidUpdateResource,
 	defaultValidator,
 } from "@data-prism/core";
+import { defaultExpressionEngine } from "json-expressions";
 import { create as createAction } from "./create.js";
 import { deleteAction } from "./delete.js";
 import { update as updateAction } from "./update.js";
@@ -55,15 +56,19 @@ import { merge } from "./merge.js";
  * @returns {MemoryStore} A new memory store instance
  */
 export function createMemoryStore(schema, config = {}) {
-	const { initialData = {}, validator = defaultValidator } = config;
+	const {
+		initialData = {},
+		validator = defaultValidator,
+		expressionEngine = defaultExpressionEngine,
+	} = config;
 
 	ensureValidSchema(schema, { validator });
 
 	let storeGraph = mergeGraphsDeep(createEmptyGraph(schema), initialData);
 
 	const runQuery = (query) => {
-		const normalQuery = normalizeQuery(schema, query);
-		ensureValidQuery(schema, normalQuery);
+		const normalQuery = normalizeQuery(schema, query, { expressionEngine });
+		ensureValidQuery(schema, normalQuery, { expressionEngine });
 		return queryGraph(schema, normalQuery, storeGraph);
 	};
 

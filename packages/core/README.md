@@ -126,48 +126,146 @@ const query = {
 
 ### Expressions
 
-Expressions are JSON objects that add computed fields and conditional logic to Data Prism queries. They provide a powerful way to transform, filter, and manipulate data using a declarative syntax:
+Data Prism queries support expressions for computed fields and conditional logic. These expressions are provided by the [json-expressions](https://github.com/jakesower/json-expressions) library, which offers a comprehensive set of operators for data transformation and filtering.
+
+#### What are Expressions?
+
+Expressions are JSON objects that describe computations to be performed on data. Each expression has a single key that identifies the operation (prefixed with `$`) and a value that provides the parameters:
+
+Simple comparison:
+
+```json
+{ "$gt": 11 }
+```
+
+Logical expressions:
+
+```json
+{ "$and": [{ "$gte": 2020 }, { "$eq": "active" }] }
+```
+
+Conditional logic:
+
+```json
+{
+	"$if": {
+		"if": { "$eq": "Phoenix" },
+		"then": { "$get": "name" },
+		"else": "Away Team"
+	}
+}
+```
+
+#### Basic Expression Examples
+
+Check if player is eligible for age group:
+
+```json
+{ "$gte": 11 }
+```
+
+Get team's home field:
+
+```json
+{ "$get": "homeField.name" }
+```
+
+Calculate total match cost:
+
+```json
+{ "$add": [150, 25] }
+```
+
+Sum all team scores:
+
+```json
+{ "$sum": [2, 1, 4, 0] }
+```
+
+Filter teams by city:
+
+```json
+{ "$filter": { "$eq": "Phoenix" } }
+```
+
+Get all team names:
+
+```json
+{ "$map": { "$get": "name" } }
+```
+
+Join team cities:
+
+```json
+{ "$join": " vs " }
+```
+
+#### Available Operations
+
+The json-expressions library provides comprehensive operations including:
+
+- **Core**: `$compose`, `$debug`, `$ensurePath`, `$get`, `$prop`, `$isDefined`, `$literal`, `$pipe`
+- **Conditionals**: `$switch`, `$case`, `$if`
+- **Logic**: `$and`, `$not`, `$or`
+- **Comparisons**: `$eq`, `$gt`, `$gte`, `$lt`, `$lte`, `$in`, `$nin`, `$ne`
+- **Pattern matching**: `$matchesRegex`, `$matchesLike`, `$matchesGlob`
+- **Aggregation**: `$count`, `$max`, `$min`, `$mean`, `$median`, `$mode`, `$sum`
+- **Array operations**: `$all`, `$any`, `$append`, `$filter`, `$find`, `$flatMap`, `$join`, `$map`, `$prepend`, `$reverse`
+- **Math**: `$add`, `$subtract`, `$multiply`, `$divide`, `$modulo`
+- **Generative**: `$random`, `$uuid`
+- **Temporal**: `$nowLocal`, `$nowUTC`, `$timestamp`
+
+For complete documentation of all available operations, see the [json-expressions documentation](https://github.com/jakesower/json-expressions).
+
+#### Using Expressions in Queries
+
+Expressions can be used in both `where` clauses for filtering and `select` clauses for computed fields:
 
 ```javascript
-// Basic comparisons and logic
-const query = {
+// Query teams with expressions in where clause
+const teamQuery = {
 	type: "teams",
 	where: {
 		$and: [
-			{ founded: { $gte: 2000 } },  // Teams founded after 2000
-			{ city: { $matchesRegex: "(?i)phoenix|tempe" } }, // Case-insensitive city matching
-		]
+			{ founded: { $gte: 2000 } }, // founded >= 2000
+			{ founded: { $lte: 2020 } }, // founded <= 2020
+			{ active: { $eq: true } }, // active === true
+		],
 	},
 	select: {
 		name: "name",
-		isNewTeam: { $if: {
-			if: { $gte: 2020 },
-			then: true,
-			else: false
-		}},
-		ageCategory: { $case: {
-			value: { $get: "founded" },
-			cases: [
-				{ when: { $gte: 2020 }, then: "New" },
-				{ when: { $gte: 2010 }, then: "Recent" },
-				{ when: { $gte: 2000 }, then: "Established" }
+		city: "city",
+		seasonsActive: { $subtract: [2024, { $get: "founded" }] }, // Computed field
+		division: "division",
+	},
+};
+
+// Complex conditional logic for match analysis
+const matchQuery = {
+	type: "matches",
+	select: {
+		field: "field",
+		ageGroup: "ageGroup",
+		status: {
+			$case: {
+				value: { $get: "ageGroup" },
+				cases: [
+					{ when: { $lt: 12 }, then: "Youth League" },
+					{ when: { $lt: 16 }, then: "Junior League" },
+					{ when: { $gte: 16 }, then: "Senior League" },
+				],
+				default: "Unassigned",
+			},
+		},
+		isPlayoff: {
+			$and: [
+				{ $gte: 10 }, // week >= 10
+				{ $eq: "important" }, // importance === "important"
 			],
-			default: "Legacy"
-		}}
-	}
+		},
+	},
 };
 ```
-
-Expressions support a wide range of operations including:
-- **Comparisons**: `$eq`, `$gt`, `$lt`, `$in`, `$matchesRegex`, etc.
-- **Logic**: `$and`, `$or`, `$not`
-- **Conditionals**: `$if`, `$case`
-- **Math**: `$add`, `$subtract`, `$multiply`, `$divide`
-- **Aggregation**: `$sum`, `$count`, `$max`, `$min`, `$mean`, `$median`
-- **Array operations**: `$filter`, `$map`, `$find`, `$any`, `$all`
-- **Data access**: `$get`, `$pipe`, `$compose`
-
-The expression system provides a comprehensive set of operators for data transformation and filtering.
 
 ## API Reference
 
@@ -270,7 +368,6 @@ Validates that a query is valid against a schema.
 
 - `schema` (Schema) - The schema to validate against
 - `query` (RootQuery) - The query to validate
-- `options.expressionEngine` (object, optional) - Custom expression engine
 
 **Throws:** Error if query is invalid
 
@@ -391,7 +488,7 @@ const merged = mergeResources(existing, update);
 // Returns:
 // {
 //   type: "teams",
-//   id: "team-1", 
+//   id: "team-1",
 //   attributes: { name: "New Name", founded: 2000, active: true },
 //   relationships: { homeField: { type: "fields", id: "field-1" } }
 // }
@@ -433,22 +530,6 @@ const graph = createGraphFromResources(schema, "teams", [flatTeam]);
 
 ### Error Classes
 
-#### `ExpressionNotSupportedError`
-
-Error thrown when an unsupported expression is encountered.
-
-```javascript
-import { ExpressionNotSupportedError } from "@data-prism/core";
-
-try {
-	// Code that might use unsupported expressions
-} catch (error) {
-	if (error instanceof ExpressionNotSupportedError) {
-		console.error("Expression not supported:", error.message);
-	}
-}
-```
-
 ### Validation Functions
 
 #### `validateSchema(schema, options?)`
@@ -479,7 +560,6 @@ Validates that a query is valid against a schema.
 
 - `schema` (Schema) - The schema to validate against
 - `query` (RootQuery) - The query to validate
-- `options.expressionEngine` (object, optional) - Custom expression engine
 - `options.validator` (Ajv, optional) - Custom validator instance
 
 **Returns:** Array of validation errors (empty if valid)
@@ -509,49 +589,6 @@ import { createValidator } from "@data-prism/core";
 const validator = createValidator({
 	ajvSchemas: [myCustomSchema],
 });
-```
-
-### Expression Functions
-
-#### `createExpressionEngine(customExpressions?)`
-
-Creates a new expression engine with optional custom expressions.
-
-**Parameters:**
-
-- `customExpressions` (object, optional) - Custom expression definitions to add
-
-**Returns:** ExpressionEngine instance
-
-```javascript
-import { createExpressionEngine } from "@data-prism/core";
-
-const customEngine = createExpressionEngine({
-	$customOp: {
-		apply: (operand, inputData) => operand * 2,
-		evaluate: (operand) => operand * 2,
-	},
-});
-```
-
-#### `defaultExpressionEngine`
-
-The default expression engine with all built-in expressions.
-
-```javascript
-import { defaultExpressionEngine } from "@data-prism/core";
-
-const result = defaultExpressionEngine.apply({ $add: [1, 2] }, {});
-```
-
-#### `defaultExpressions`
-
-Object containing all built-in expression definitions.
-
-```javascript
-import { defaultExpressions } from "@data-prism/core";
-
-console.log(defaultExpressions); // Contains $add, $eq, $get, etc.
 ```
 
 #### `defaultValidator`
@@ -827,7 +864,10 @@ const results = queryGraph(
 ### Data Validation
 
 ```javascript
-import { validateCreateResource, ensureValidCreateResource } from "@data-prism/core";
+import {
+	validateCreateResource,
+	ensureValidCreateResource,
+} from "@data-prism/core";
 
 const newTeam = {
 	type: "teams",
@@ -894,7 +934,11 @@ const schema: Schema = {
 ### Custom Validation
 
 ```javascript
-import { createValidator, validateSchema, ensureValidSchema } from "@data-prism/core";
+import {
+	createValidator,
+	validateSchema,
+	ensureValidSchema,
+} from "@data-prism/core";
 
 const customValidator = createValidator({
 	ajvSchemas: [myCustomSchema],

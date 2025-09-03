@@ -85,7 +85,7 @@ export function createSimpleEngine(templates, options = {}) {
 
 	// Build expression definitions from templates
 	const expressions = {
-		...pick(defaultExpressionEngine, ["$compose", "$pipe"]),
+		...pick(defaultExpressions, ["$pipe", "$compose"]),
 		$get: { apply: (operand) => operand },
 		$and: {
 			controlsEvaluation: true,
@@ -146,7 +146,7 @@ export function createSimpleWhereExtractor(templates, options = {}) {
 }
 
 const apiExtractors = {
-	...pick(defaultExpressionEngine, ["$compose", "$pipe"]),
+	...pick(defaultExpressions, ["$pipe", "$compose"]),
 	// core
 	$get: {
 		apply: (operand) => operand,
@@ -172,7 +172,7 @@ export function extractWhereApi(where) {
 }
 
 const graphqlWhereEngine = createExpressionEngine({
-	...pick(defaultExpressionEngine, ["$compose", "$pipe"]),
+	...pick(defaultExpressions, ["$pipe", "$compose"]),
 	// core
 	$get: {
 		apply: (operand) => operand,

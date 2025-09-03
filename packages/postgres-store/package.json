@@ -44,6 +44,7 @@
 		"@data-prism/utils": "*",
 		"ajv": "^8.17.1",
 		"es-toolkit": "^1.26.0",
+		"json-expressions": "^0.2.1",
 		"pg": "^8.12.0",
 		"vite": "7.0.6"
 	}

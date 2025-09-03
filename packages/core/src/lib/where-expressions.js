@@ -24,15 +24,17 @@ const whereExpressions = {
 		attribute
 			? { $pipe: [{ $get: attribute }, { $eq: { $literal: operand } }] }
 			: operand,
+	$pipe: (operand) => ({ $pipe: operand }),
 	$debug: (operand, attribute, { resolve }) => ({
 		$debug: resolve(operand, attribute),
 	}),
 
-	// conditional
+	// conditional - need to be included for validation 
 	$if: (operand, attribute, { resolve }) => ({
 		$if: {
-			...operand,
 			if: resolve(operand.if, attribute),
+			then: resolve(operand.then, attribute),
+			else: resolve(operand.else, attribute),
 		},
 	}),
 	$case: (operand, attribute) => ({
@@ -42,7 +44,7 @@ const whereExpressions = {
 		$switch: { ...operand, value: { $get: attribute } },
 	}),
 
-	// logical
+	// logical - need to be included for validation
 	$and: (operand, attribute, { resolve }) => ({
 		$and: operand.map((pred) => resolve(pred, attribute)),
 	}),
