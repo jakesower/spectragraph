@@ -2,8 +2,8 @@ import {
 	createExpressionEngine,
 	defaultExpressionEngine,
 	defaultExpressions,
-	normalizeQuery,
-} from "@data-prism/core";
+} from "json-expressions";
+import { normalizeQuery } from "@data-prism/core";
 import { flattenQuery } from "./traversal.js";
 import { pick, uniq } from "es-toolkit";
 

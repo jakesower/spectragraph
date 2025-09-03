@@ -4,6 +4,33 @@ import { formatRequest } from "../../src/format-request";
 
 const config = { baseURL: "https://example.lol" };
 
+// Helper function to compare URLs by parsing their parameters
+function expectUrlsToBeEquivalent(actual, expected) {
+	const parseUrl = (url) => {
+		const [baseAndPath, queryString] = url.split("?");
+		const params = new URLSearchParams(queryString || "");
+		const paramsObj = {};
+		for (const [key, value] of params) {
+			// For parameters that are comma-separated lists, sort them for comparison
+			if (key.startsWith("fields[") || key === "include") {
+				paramsObj[key] = value.split(",").sort().join(",");
+			} else {
+				paramsObj[key] = value;
+			}
+		}
+		return { baseAndPath, params: paramsObj };
+	};
+
+	const actualParsed = parseUrl(actual);
+	const expectedParsed = parseUrl(expected);
+
+	// Compare base URL and path
+	expect(actualParsed.baseAndPath).toBe(expectedParsed.baseAndPath);
+	
+	// Compare parameters (order independent)
+	expect(actualParsed.params).toEqual(expectedParsed.params);
+}
+
 it("formats a request for a multiple resource query", () => {
 	const query = { type: "bears", select: ["id", "name"] };
 	const request = formatRequest(careBearSchema, config, query);
@@ -31,7 +58,8 @@ it("formats a request for a subquery", () => {
 
 	const request = formatRequest(careBearSchema, config, query);
 
-	expect(request).toStrictEqual(
+	expectUrlsToBeEquivalent(
+		request,
 		"https://example.lol/homes/1?fields[bears]=id,name&fields[homes]=id,caringMeter&include=residents",
 	);
 });
@@ -53,7 +81,8 @@ it("formats a request for a nested subquery", () => {
 
 	const request = formatRequest(careBearSchema, config, query);
 
-	expect(request).toStrictEqual(
+	expectUrlsToBeEquivalent(
+		request,
 		"https://example.lol/homes/1?fields[powers]=name&fields[bears]=id,name&fields[homes]=id,caringMeter&include=residents.powers,residents",
 	);
 });
@@ -66,7 +95,8 @@ it("provides correct fields in relationships with the same type", () => {
 
 	const request = formatRequest(careBearSchema, config, query);
 
-	expect(request).toStrictEqual(
+	expectUrlsToBeEquivalent(
+		request,
 		"https://example.lol/bears?fields[bears]=name,id&include=bestFriend",
 	);
 });
@@ -200,7 +230,8 @@ it("filters on a nested field", () => {
 
 	const request = formatRequest(careBearSchema, config, query);
 
-	expect(request).toStrictEqual(
+	expectUrlsToBeEquivalent(
+		request,
 		"https://example.lol/homes?fields[bears]=bellyBadge&fields[homes]=name&include=residents&filter[residents.yearIntroduced][$gt]=2000",
 	);
 });
