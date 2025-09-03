@@ -824,8 +824,9 @@ const DEFAULT_WHERE_EXPRESSIONS = {
 	},
 	$compose: {
 		controlsEvaluation: true,
-		where: (operand, { evaluate }) => evaluate({ $pipe: operand.toReversed() }),
-		vars: (operand, { evaluate }) => evaluate({ $pipe: operand.toReversed() }),
+		where: (operand, { evaluate }) =>
+			operand.toReversed().map(evaluate).join(""),
+		vars: (operand, { evaluate }) => operand.toReversed().map(evaluate).flat(),
 	},
 	$literal: {
 		where: (operand) => String(operand),

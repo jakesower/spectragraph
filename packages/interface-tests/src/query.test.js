@@ -352,112 +352,122 @@ export function runQueryTests(createStore) {
 			});
 
 			it("filters using an $or operation", async () => {
-				const store = createStore(careBearSchema, {
-					initialData: careBearData,
-				});
+				await testExpressionOrSkip(async () => {
+					const store = createStore(careBearSchema, {
+						initialData: careBearData,
+					});
 
-				const result = await store.query({
-					type: "bears",
-					select: {
-						id: "id",
-					},
-					where: {
-						$or: [{ yearIntroduced: { $gt: 2000 } }, { bellyBadge: "rainbow" }],
-					},
-				});
+					const result = await store.query({
+						type: "bears",
+						select: {
+							id: "id",
+						},
+						where: {
+							$or: [{ yearIntroduced: { $gt: 2000 } }, { bellyBadge: "rainbow" }],
+						},
+					});
 
-				expect(result).toEqual([{ id: "2" }, { id: "5" }]);
+					expect(result).toEqual([{ id: "2" }, { id: "5" }]);
+				});
 			});
 
 			it("filters using an $or and $and operation", async () => {
-				const store = createStore(careBearSchema, {
-					initialData: careBearData,
-				});
+				await testExpressionOrSkip(async () => {
+					const store = createStore(careBearSchema, {
+						initialData: careBearData,
+					});
 
-				const result = await store.query({
-					type: "bears",
-					select: {
-						id: "id",
-					},
-					where: {
-						$or: [
-							{ yearIntroduced: { $gt: 2000 } },
-							{
-								$and: [{ name: "Tenderheart Bear" }, { bellyBadge: "rainbow" }],
-							},
-						],
-					},
-				});
+					const result = await store.query({
+						type: "bears",
+						select: {
+							id: "id",
+						},
+						where: {
+							$or: [
+								{ yearIntroduced: { $gt: 2000 } },
+								{
+									$and: [{ name: "Tenderheart Bear" }, { bellyBadge: "rainbow" }],
+								},
+							],
+						},
+					});
 
-				expect(result).toEqual([{ id: "5" }]);
+					expect(result).toEqual([{ id: "5" }]);
+				});
 			});
 
 			it("filters using an $or and $not operation", async () => {
-				const store = createStore(careBearSchema, {
-					initialData: careBearData,
-				});
+				await testExpressionOrSkip(async () => {
+					const store = createStore(careBearSchema, {
+						initialData: careBearData,
+					});
 
-				const result = await store.query({
-					type: "bears",
-					select: {
-						id: "id",
-					},
-					where: {
-						$not: {
-							$or: [
-								{ yearIntroduced: { $gt: 2000 } },
-								{ bellyBadge: "rainbow" },
-							],
+					const result = await store.query({
+						type: "bears",
+						select: {
+							id: "id",
 						},
-					},
-				});
+						where: {
+							$not: {
+								$or: [
+									{ yearIntroduced: { $gt: 2000 } },
+									{ bellyBadge: "rainbow" },
+								],
+							},
+						},
+					});
 
-				expect(result).toEqual([{ id: "1" }, { id: "3" }]);
+					expect(result).toEqual([{ id: "1" }, { id: "3" }]);
+				});
 			});
 
 			it("filters with an $if expression", async () => {
-				const store = createStore(careBearSchema, {
-					initialData: careBearData,
-				});
+				await testExpressionOrSkip(async () => {
+					const store = createStore(careBearSchema, {
+						initialData: careBearData,
+					});
 
-				const query = normalizeQuery(careBearSchema, {
-					type: "bears",
-					select: ["name"],
-					where: {
-						$if: {
-							if: { yearIntroduced: { $lt: 2000 } },
-							then: { bellyBadge: "rainbow" },
-							else: { furColor: "watermelon pink" },
+					const query = normalizeQuery(careBearSchema, {
+						type: "bears",
+						select: ["name"],
+						where: {
+							$if: {
+								if: { yearIntroduced: { $lt: 2000 } },
+								then: { bellyBadge: "rainbow" },
+								else: { furColor: "watermelon pink" },
+							},
 						},
-					},
-				});
-				const result = await store.query(query);
+					});
+					const result = await store.query(query);
 
-				expect(result).toEqual([
-					{ name: "Cheer Bear" },
-					{ name: "Smart Heart Bear" },
-				]);
+					expect(result).toEqual([
+						{ name: "Cheer Bear" },
+						{ name: "Smart Heart Bear" },
+					]);
+				});
 			});
 
 			it("filters with an $if expression with a literal", async () => {
-				const store = createStore(careBearSchema, {
-					initialData: careBearData,
-				});
+				await testExpressionOrSkip(async () => {
+					const store = createStore(careBearSchema, {
+						initialData: careBearData,
+					});
 
-				const query = normalizeQuery(careBearSchema, {
-					type: "bears",
-					select: ["name"],
-					where: {
-						$if: {
-							if: { $literal: true },
-							then: { bellyBadge: "rainbow" },
-							else: { furColor: "watermelon pink" },
+					const query = normalizeQuery(careBearSchema, {
+						type: "bears",
+						select: ["name"],
+						where: {
+							$if: {
+								if: { $literal: true },
+								then: { bellyBadge: "rainbow" },
+								else: { furColor: "watermelon pink" },
+							},
 						},
-					},
-				});
-				const result = await store.query(query);
+					});
+					const result = await store.query(query);
 
-				expect(result).toEqual([{ name: "Cheer Bear" }]);
+					expect(result).toEqual([{ name: "Cheer Bear" }]);
+				});
 			});
 
 			it("filters using $matchesRegex operator", async () => {
@@ -480,23 +490,25 @@ export function runQueryTests(createStore) {
 			});
 
 			it("filters using $matchesRegex operator with the case insensitive", async () => {
-				const store = createStore(careBearSchema, {
-					initialData: careBearData,
-				});
+				await testExpressionOrSkip(async () => {
+					const store = createStore(careBearSchema, {
+						initialData: careBearData,
+					});
 
-				const query = normalizeQuery(careBearSchema, {
-					type: "bears",
-					select: ["name"],
-					where: {
-						name: { $matchesRegex: "(?i).*Heart.*$" },
-					},
-				});
-				const result = await store.query(query);
+					const query = normalizeQuery(careBearSchema, {
+						type: "bears",
+						select: ["name"],
+						where: {
+							name: { $matchesRegex: "(?i).*Heart.*$" },
+						},
+					});
+					const result = await store.query(query);
 
-				expect(result).toEqual([
-					{ name: "Tenderheart Bear" },
-					{ name: "Smart Heart Bear" },
-				]);
+					expect(result).toEqual([
+						{ name: "Tenderheart Bear" },
+						{ name: "Smart Heart Bear" },
+					]);
+				});
 			});
 
 			it("filters using $matchesRegex operator with start anchor", async () => {

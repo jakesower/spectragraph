@@ -1,15 +1,16 @@
 import { normalizeQuery } from "@data-prism/core";
 import { forEachQuery } from "@data-prism/query-helpers";
 import { uniq } from "es-toolkit";
+import { processFilter } from "./lib/where-expressions.js";
 
 const objectToParamStr = (obj, rootKey) => {
 	const go = (cur) =>
 		Object.entries(cur).flatMap(([k, v]) =>
 			Array.isArray(v)
 				? `[${k}]=[${v.join(",")}]`
-				: typeof v === "object"
+				: typeof v === "object" && v !== null
 					? `[${k}]${go(v)}`
-					: `[${k}]=${v}`,
+					: `[${k}]=${encodeURIComponent(v)}`,
 		);
 
 	return go(obj)
@@ -39,10 +40,27 @@ export function formatRequest(schema, config, query) {
 		fields[info.type] = [...(fields[info.type] ?? []), ...info.attributes];
 
 		if (subquery.where) {
-			Object.entries(subquery.where).forEach(([field, filter]) => {
-				const k = [...info.path, field].join(".");
-				filters[k] = filter;
-			});
+			// Process the entire where clause as a single expression
+			const processedWhere = processFilter(subquery.where);
+
+			// If the processed where is an object, merge its properties with path prefix
+			if (
+				typeof processedWhere === "object" &&
+				processedWhere !== null &&
+				!Array.isArray(processedWhere)
+			) {
+				Object.entries(processedWhere).forEach(([field, value]) => {
+					const k =
+						info.path.length > 0 ? `${info.path.join(".")}.${field}` : field;
+					filters[k] = value;
+				});
+			} else {
+				// Fallback to old behavior
+				Object.entries(subquery.where).forEach(([field, filter]) => {
+					const k = [...info.path, field].join(".");
+					filters[k] = filter;
+				});
+			}
 		}
 	});
 
