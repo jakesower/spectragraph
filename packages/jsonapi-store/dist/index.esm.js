@@ -1,5 +1,76 @@
 import { normalizeQuery, queryGraph } from '@data-prism/core';
-import { uniq, mapValues } from 'lodash-es';
+import { partition, pick, uniq, mapValues } from 'es-toolkit';
+
+/**
+ * @typedef {Object} QueryBreakdownItem
+ * @property {string[]} path - Path to this query level
+ * @property {any} attributes - Selected attributes
+ * @property {any} relationships - Selected relationships
+ * @property {string} type - Resource type
+ * @property {import('@data-prism/core').Query} query - The query object
+ * @property {QueryBreakdownItem|null} parent - Parent breakdown item if any
+ * @property {import('@data-prism/core').Query|null} parentQuery - Parent query if any
+ * @property {string|null} parentRelationship - Parent relationship name if any
+ */
+
+/**
+ * @typedef {QueryBreakdownItem[]} QueryBreakdown
+ */
+
+/**
+ * Flattens a nested query into a linear array of query breakdown items
+ * @param {import('@data-prism/core').Schema} schema - The schema
+ * @param {import('@data-prism/core').RootQuery} rootQuery - The root query to flatten
+ * @returns {QueryBreakdown} Flattened query breakdown
+ */
+function flattenQuery(schema, rootQuery) {
+	const go = (query, type, path, parent = null, parentRelationship = null) => {
+		const resDef = schema.resources[type];
+		const { idAttribute = "id" } = resDef;
+		const [attributesEntries, relationshipsEntries] = partition(
+			Object.entries(query.select ?? {}),
+			([, propVal]) =>
+				typeof propVal === "string" &&
+				(propVal in resDef.attributes || propVal === idAttribute),
+		);
+
+		const attributes = attributesEntries.map((pe) => pe[1]);
+		const relationshipKeys = relationshipsEntries.map((pe) => pe[0]);
+
+		const level = {
+			attributes,
+			parent,
+			parentQuery: parent?.query ?? null,
+			parentRelationship,
+			path,
+			query,
+			relationships: pick(query.select, relationshipKeys),
+			type,
+		};
+
+		return [
+			level,
+			...relationshipKeys.flatMap((relKey) => {
+				const relDef = resDef.relationships[relKey];
+				const subquery = query.select[relKey];
+
+				return go(subquery, relDef.type, [...path, relKey], level, relKey);
+			}),
+		];
+	};
+
+	return go(rootQuery, rootQuery.type, []);
+}
+
+/**
+ * Iterates over each query in a flattened query structure
+ * @param {import('@data-prism/core').Schema} schema - The schema
+ * @param {import('@data-prism/core').RootQuery} query - The root query
+ * @param {(query: import('@data-prism/core').Query, info: QueryBreakdownItem) => void} fn - Iteration function
+ */
+function forEachQuery(schema, query, fn) {
+	return flattenQuery(schema, query).forEach((info) => fn(info.query, info));
+}
 
 const objectToParamStr = (obj, rootKey) => {
 	const go = (cur) =>
@@ -7,46 +78,13 @@ const objectToParamStr = (obj, rootKey) => {
 			Array.isArray(v)
 				? `[${k}]=[${v.join(",")}]`
 				: typeof v === "object"
-				? `[${k}]${go(v)}`
-				: `[${k}]=${v}`,
+					? `[${k}]${go(v)}`
+					: `[${k}]=${v}`,
 		);
 
 	return go(obj)
 		.map((x) => `${rootKey}${x}`)
 		.join("&");
-};
-
-// Simple implementation to replace the missing forEachQuery function
-const forEachQuery = (schema, query, callback, path = [], parent = null) => {
-	const type = query.type;
-	const attributes = [];
-	
-	// Get attributes from select
-	if (Array.isArray(query.select)) {
-		query.select.forEach(item => {
-			if (typeof item === 'string') {
-				attributes.push(item);
-			} else if (typeof item === 'object') {
-				Object.entries(item).forEach(([key, subquery]) => {
-					// Recursively handle relationships
-					if (typeof subquery === 'object' && subquery.select) {
-						forEachQuery(schema, {...subquery, type: schema.resources[type].relationships[key].type}, callback, [...path, key], query);
-					}
-				});
-			}
-		});
-	} else if (typeof query.select === 'object') {
-		Object.entries(query.select).forEach(([key, value]) => {
-			if (typeof value === 'string') {
-				attributes.push(value); // Use the schema field name, not the alias
-			} else if (typeof value === 'object' && value.select) {
-				// Handle relationship
-				forEachQuery(schema, {...value, type: schema.resources[type].relationships[key].type}, callback, [...path, key], query);
-			}
-		});
-	}
-	
-	callback(query, { type, attributes, path, parent });
 };
 
 /**
@@ -184,20 +222,20 @@ function createJSONAPIStore(schema, config) {
 				throw err;
 			}
 		},
-		
-		async create(_resource) {
+
+		async create() {
 			throw new Error("create method not implemented for JSON:API store");
 		},
-		
-		async update(_resource) {
+
+		async update() {
 			throw new Error("update method not implemented for JSON:API store");
 		},
-		
-		async delete(_resource) {
+
+		async delete() {
 			throw new Error("delete method not implemented for JSON:API store");
 		},
-		
-		async upsert(_resource) {
+
+		async upsert() {
 			throw new Error("upsert method not implemented for JSON:API store");
 		},
 	};

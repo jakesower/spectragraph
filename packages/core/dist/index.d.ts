@@ -150,94 +150,10 @@ export interface Expression {
 	[key: string]: unknown;
 }
 
-// === COMPARATIVE EXPRESSIONS ===
 
-export interface EqualExpression {
-	$eq: unknown;
-}
 
-export interface GreaterThanExpression {
-	$gt: number;
-}
 
-export interface GreaterThanOrEqualExpression {
-	$gte: number;
-}
 
-export interface LessThanExpression {
-	$lt: number;
-}
-
-export interface LessThanOrEqualExpression {
-	$lte: number;
-}
-
-export interface NotEqualExpression {
-	$ne: unknown;
-}
-
-export interface InExpression {
-	$in: unknown[];
-}
-
-export interface NotInExpression {
-	$nin: unknown[];
-}
-
-/**
- * Regular expression matching expression.
- * Tests if a string matches a regex pattern.
- * 
- * Supports inline flags using the syntax (?flags)pattern where flags can be:
- * - i: case insensitive matching
- * - m: multiline mode (^ and $ match line boundaries)  
- * - s: dotall mode (. matches newlines)
- * 
- * @example
- * { name: { $matchesRegex: "^[A-Z].*" } } // Names starting with capital letter
- * { email: { $matchesRegex: "(?i).*@example\\.com$" } } // Case-insensitive email check
- */
-export interface MatchesRegexExpression {
-	$matchesRegex: string;
-}
-
-/**
- * SQL LIKE pattern matching expression.
- * Tests if a string matches a SQL LIKE pattern.
- * 
- * Supports SQL standard patterns:
- * - % matches any sequence of characters (including none)
- * - _ matches exactly one character
- * - Case-sensitive matching (consistent across databases)
- * 
- * @example
- * { name: { $matchesLike: "John%" } } // Names starting with "John"
- * { email: { $matchesLike: "%@gmail.com" } } // Gmail addresses
- * { code: { $matchesLike: "A_B_" } } // Codes like "A1B2", "AXBY"
- */
-export interface MatchesLikeExpression {
-	$matchesLike: string;
-}
-
-/**
- * Unix shell GLOB pattern matching expression.
- * Tests if a string matches a Unix shell GLOB pattern.
- * 
- * Supports Unix shell patterns:
- * - * matches any sequence of characters (including none)
- * - ? matches exactly one character  
- * - [chars] matches any single character in the set
- * - [!chars] or [^chars] matches any character not in the set
- * - Case-sensitive matching
- * 
- * @example
- * { filename: { $matchesGlob: "*.txt" } } // Text files
- * { name: { $matchesGlob: "[A-Z]*" } } // Names starting with capital
- * { code: { $matchesGlob: "IMG_[0-9][0-9][0-9][0-9]" } } // Image codes
- */
-export interface MatchesGlobExpression {
-	$matchesGlob: string;
-}
 
 export interface Query {
 	id?: string;
@@ -380,14 +296,13 @@ export function ensureValidSchema(
  * @param schema - The schema object
  * @param query - The query to validate
  * @param options - Validation options
- * @param options.expressionEngine - Custom expression engine
  * @param options.validator - The validator instance to use
  * @returns Array of validation errors
  */
 export function validateQuery(
 	schema: Schema,
 	query: RootQuery,
-	options?: { expressionEngine?: unknown; validator?: Ajv },
+	options?: { validator?: Ajv },
 ): DefinedError[];
 
 /**
@@ -395,14 +310,13 @@ export function validateQuery(
  * @param schema - The schema object
  * @param query - The query to validate
  * @param options - Validation options
- * @param options.expressionEngine - Custom expression engine
  * @param options.validator - The validator instance to use
  * @throws If the query is invalid
  */
 export function ensureValidQuery(
 	schema: Schema,
 	query: RootQuery,
-	options?: { expressionEngine?: unknown; validator?: Ajv },
+	options?: { validator?: Ajv },
 ): void;
 
 /**
@@ -667,72 +581,6 @@ export function ensureValidQueryResult(
 	options?: { validator?: Ajv },
 ): void;
 
-// === EXPRESSION TYPES ===
-
-/**
- * Expression engine for evaluating Data Prism expressions
- */
-export interface ExpressionEngine {
-	/**
-	 * Apply an expression with input data
-	 * @param expression - The expression to apply
-	 * @param inputData - The input data context
-	 * @returns The result of the expression
-	 */
-	apply(expression: Expression, inputData: unknown): unknown;
-	
-	/**
-	 * Evaluate an expression without input data
-	 * @param expression - The expression to evaluate
-	 * @returns The evaluated result
-	 */
-	evaluate(expression: Expression): unknown;
-	
-	/**
-	 * Array of available expression names
-	 */
-	expressionNames: string[];
-	
-	/**
-	 * Check if a value is an expression
-	 * @param value - The value to check
-	 * @returns True if the value is an expression
-	 */
-	isExpression(value: unknown): boolean;
-	
-	/**
-	 * Normalize a where clause to an expression
-	 * @param where - The where clause to normalize
-	 * @returns The normalized expression
-	 */
-	normalizeWhereClause(where: { [k: string]: unknown }): Expression;
-}
-
-/**
- * Error thrown when an expression is not supported
- */
-export class ExpressionNotSupportedError extends Error {
-	constructor(message: string);
-}
-
-// === EXPRESSION FUNCTIONS ===
-
-/**
- * Creates a new expression engine with optional custom expressions
- * @param customExpressions - Custom expression definitions to add
- * @returns Expression engine instance
- */
-export function createExpressionEngine(customExpressions?: { [k: string]: unknown }): ExpressionEngine;
-
-/**
- * The default expression engine with all built-in expressions
- */
-export const defaultExpressionEngine: ExpressionEngine;
-
-/**
- * Object containing all built-in expression definitions
- */
-export const defaultExpressions: { [k: string]: unknown };
 
 // === EXPORTED CONSTANTS ===
 

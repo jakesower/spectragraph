@@ -1,7 +1,7 @@
 import { expect, it, describe } from "vitest";
+import { defaultExpressionEngine } from "json-expressions";
 import { normalizeQuery, validateQuery } from "../src/query.js";
 import { careBearSchema } from "../interface-tests/src/index.js";
-import { defaultExpressionEngine } from "../src/index.js";
 
 describe("validateQuery", () => {
 	describe("structure", () => {

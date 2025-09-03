@@ -1,4 +1,4 @@
-import { createExpressionEngine } from "@data-prism/core";
+import { createExpressionEngine } from "json-expressions";
 import { mapValues } from "es-toolkit";
 import { DEFAULT_WHERE_EXPRESSIONS } from "../../../sql-helpers/src/where-expressions.js";
 

@@ -55,13 +55,14 @@ export const DEFAULT_WHERE_EXPRESSIONS = {
 		vars: () => [],
 	},
 	$pipe: {
-		where: (operand) => operand.join(""),
-		vars: (operand) => operand.flat(),
+		where: (operand, { evaluate }) => operand.map(evaluate).join(""),
+		vars: (operand, { evaluate }) => operand.map(evaluate).flat(),
 	},
 	$compose: {
 		controlsEvaluation: true,
-		where: (operand, { evaluate }) => evaluate({ $pipe: operand.toReversed() }),
-		vars: (operand, { evaluate }) => evaluate({ $pipe: operand.toReversed() }),
+		where: (operand, { evaluate }) =>
+			operand.toReversed().map(evaluate).join(""),
+		vars: (operand, { evaluate }) => operand.toReversed().map(evaluate).flat(),
 	},
 	$literal: {
 		where: (operand) => String(operand),

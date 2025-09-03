@@ -46,6 +46,7 @@
 		"@data-prism/core": "*",
 		"@data-prism/query-helpers": "*",
 		"@data-prism/utils": "*",
-		"es-toolkit": "^1.26.0"
+		"es-toolkit": "^1.26.0",
+		"json-expressions": "^0.2.1"
 	}
 }

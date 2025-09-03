@@ -20,11 +20,6 @@ export {
 	validateMergeResource,
 	validateUpdateResource,
 } from "./resource.js";
-export {
-	createExpressionEngine,
-	defaultExpressionEngine,
-	defaultExpressions,
-} from "./expressions/index.js";
 export { ExpressionNotSupportedError } from "./errors.js";
 
 import { ensure } from "./lib/helpers.js";

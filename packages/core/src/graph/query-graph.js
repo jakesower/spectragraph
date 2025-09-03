@@ -1,6 +1,6 @@
 import { mapValues, orderBy } from "es-toolkit";
 import { applyOrMap } from "@data-prism/utils";
-import { defaultExpressionEngine } from "../expressions/index.js";
+import { defaultExpressionEngine } from "json-expressions";
 import { createExpressionProjector } from "./select-helpers.js";
 import { normalizeQuery } from "../query.js";
 

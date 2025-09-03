@@ -57,6 +57,7 @@
 		"body-parser": "^1.20.2",
 		"es-toolkit": "^1.26.0",
 		"express": "^4.19.2",
+		"json-expressions": "^0.2.1",
 		"json5": "^2.2.3",
 		"vite": "7.0.6"
 	}

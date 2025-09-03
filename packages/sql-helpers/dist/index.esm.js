@@ -819,8 +819,8 @@ const DEFAULT_WHERE_EXPRESSIONS = {
 		vars: () => [],
 	},
 	$pipe: {
-		where: (operand) => operand.join(""),
-		vars: (operand) => operand.flat(),
+		where: (operand, { evaluate }) => operand.map(evaluate).join(""),
+		vars: (operand, { evaluate }) => operand.map(evaluate).flat(),
 	},
 	$compose: {
 		controlsEvaluation: true,

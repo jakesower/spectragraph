@@ -1,4 +1,4 @@
-import { isEqual, mapValues, uniqBy, omit, pickBy, merge, orderBy, uniq } from 'es-toolkit';
+import { mapValues, isEqual, uniqBy, omit, pickBy, merge, orderBy, uniq } from 'es-toolkit';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import { applyOrMap } from '@data-prism/utils';
@@ -3272,6 +3272,1521 @@ function requireDist () {
 var distExports = requireDist();
 var addErrors = /*@__PURE__*/getDefaultExportFromCjs(distExports);
 
+var didYouMean1_2_1 = {exports: {}};
+
+/*
+
+didYouMean.js - A simple JavaScript matching engine
+===================================================
+
+[Available on GitHub](https://github.com/dcporter/didyoumean.js).
+
+A super-simple, highly optimized JS library for matching human-quality input to a list of potential
+matches. You can use it to suggest a misspelled command-line utility option to a user, or to offer
+links to nearby valid URLs on your 404 page. (The examples below are taken from a personal project,
+my [HTML5 business card](http://dcporter.aws.af.cm/me), which uses didYouMean.js to suggest correct
+URLs from misspelled ones, such as [dcporter.aws.af.cm/me/instagarm](http://dcporter.aws.af.cm/me/instagarm).)
+Uses the [Levenshtein distance algorithm](https://en.wikipedia.org/wiki/Levenshtein_distance).
+
+didYouMean.js works in the browser as well as in node.js. To install it for use in node:
+
+```
+npm install didyoumean
+```
+
+
+Examples
+--------
+
+Matching against a list of strings:
+```
+var input = 'insargrm'
+var list = ['facebook', 'twitter', 'instagram', 'linkedin'];
+console.log(didYouMean(input, list));
+> 'instagram'
+// The method matches 'insargrm' to 'instagram'.
+
+input = 'google plus';
+console.log(didYouMean(input, list));
+> null
+// The method was unable to find 'google plus' in the list of options.
+```
+
+Matching against a list of objects:
+```
+var input = 'insargrm';
+var list = [ { id: 'facebook' }, { id: 'twitter' }, { id: 'instagram' }, { id: 'linkedin' } ];
+var key = 'id';
+console.log(didYouMean(input, list, key));
+> 'instagram'
+// The method returns the matching value.
+
+didYouMean.returnWinningObject = true;
+console.log(didYouMean(input, list, key));
+> { id: 'instagram' }
+// The method returns the matching object.
+```
+
+
+didYouMean(str, list, [key])
+----------------------------
+
+- str: The string input to match.
+- list: An array of strings or objects to match against.
+- key (OPTIONAL): If your list array contains objects, you must specify the key which contains the string
+  to match against.
+
+Returns: the closest matching string, or null if no strings exceed the threshold.
+
+
+Options
+-------
+
+Options are set on the didYouMean function object. You may change them at any time.
+
+### threshold
+
+  By default, the method will only return strings whose edit distance is less than 40% (0.4x) of their length.
+  For example, if a ten-letter string is five edits away from its nearest match, the method will return null.
+
+  You can control this by setting the "threshold" value on the didYouMean function. For example, to set the
+  edit distance threshold to 50% of the input string's length:
+
+  ```
+  didYouMean.threshold = 0.5;
+  ```
+
+  To return the nearest match no matter the threshold, set this value to null.
+
+### thresholdAbsolute
+
+  This option behaves the same as threshold, but instead takes an integer number of edit steps. For example,
+  if thresholdAbsolute is set to 20 (the default), then the method will only return strings whose edit distance
+  is less than 20. Both options apply.
+
+### caseSensitive
+
+  By default, the method will perform case-insensitive comparisons. If you wish to force case sensitivity, set
+  the "caseSensitive" value to true:
+
+  ```
+  didYouMean.caseSensitive = true;
+  ```
+
+### nullResultValue
+
+  By default, the method will return null if there is no sufficiently close match. You can change this value here.
+
+### returnWinningObject
+
+  By default, the method will return the winning string value (if any). If your list contains objects rather
+  than strings, you may set returnWinningObject to true.
+  
+  ```
+  didYouMean.returnWinningObject = true;
+  ```
+  
+  This option has no effect on lists of strings.
+
+### returnFirstMatch
+  
+  By default, the method will search all values and return the closest match. If you're simply looking for a "good-
+  enough" match, you can set your thresholds appropriately and set returnFirstMatch to true to substantially speed
+  things up.
+
+
+License
+-------
+
+didYouMean copyright (c) 2013-2014 Dave Porter.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License
+[here](http://www.apache.org/licenses/LICENSE-2.0).
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+*/
+
+var hasRequiredDidYouMean1_2_1;
+
+function requireDidYouMean1_2_1 () {
+	if (hasRequiredDidYouMean1_2_1) return didYouMean1_2_1.exports;
+	hasRequiredDidYouMean1_2_1 = 1;
+	(function (module) {
+		(function() {
+
+		  // The didYouMean method.
+		  function didYouMean(str, list, key) {
+		    if (!str) return null;
+
+		    // If we're running a case-insensitive search, smallify str.
+		    if (!didYouMean.caseSensitive) { str = str.toLowerCase(); }
+
+		    // Calculate the initial value (the threshold) if present.
+		    var thresholdRelative = didYouMean.threshold === null ? null : didYouMean.threshold * str.length,
+		        thresholdAbsolute = didYouMean.thresholdAbsolute,
+		        winningVal;
+		    if (thresholdRelative !== null && thresholdAbsolute !== null) winningVal = Math.min(thresholdRelative, thresholdAbsolute);
+		    else if (thresholdRelative !== null) winningVal = thresholdRelative;
+		    else if (thresholdAbsolute !== null) winningVal = thresholdAbsolute;
+		    else winningVal = null;
+
+		    // Get the edit distance to each option. If the closest one is less than 40% (by default) of str's length,
+		    // then return it.
+		    var winner, candidate, testCandidate, val,
+		        i, len = list.length;
+		    for (i = 0; i < len; i++) {
+		      // Get item.
+		      candidate = list[i];
+		      // If there's a key, get the candidate value out of the object.
+		      if (key) { candidate = candidate[key]; }
+		      // Gatekeep.
+		      if (!candidate) { continue; }
+		      // If we're running a case-insensitive search, smallify the candidate.
+		      if (!didYouMean.caseSensitive) { testCandidate = candidate.toLowerCase(); }
+		      else { testCandidate = candidate; }
+		      // Get and compare edit distance.
+		      val = getEditDistance(str, testCandidate, winningVal);
+		      // If this value is smaller than our current winning value, OR if we have no winning val yet (i.e. the
+		      // threshold option is set to null, meaning the caller wants a match back no matter how bad it is), then
+		      // this is our new winner.
+		      if (winningVal === null || val < winningVal) {
+		        winningVal = val;
+		        // Set the winner to either the value or its object, depending on the returnWinningObject option.
+		        if (key && didYouMean.returnWinningObject) winner = list[i];
+		        else winner = candidate;
+		        // If we're returning the first match, return it now.
+		        if (didYouMean.returnFirstMatch) return winner;
+		      }
+		    }
+
+		    // If we have a winner, return it.
+		    return winner || didYouMean.nullResultValue;
+		  }
+
+		  // Set default options.
+		  didYouMean.threshold = 0.4;
+		  didYouMean.thresholdAbsolute = 20;
+		  didYouMean.caseSensitive = false;
+		  didYouMean.nullResultValue = null;
+		  didYouMean.returnWinningObject = null;
+		  didYouMean.returnFirstMatch = false;
+
+		  // Expose.
+		  // In node...
+		  if (module.exports) {
+		    module.exports = didYouMean;
+		  }
+		  // Otherwise...
+		  else {
+		    window.didYouMean = didYouMean;
+		  }
+
+		  var MAX_INT = Math.pow(2,32) - 1; // We could probably go higher than this, but for practical reasons let's not.
+		  function getEditDistance(a, b, max) {
+		    // Handle null or undefined max.
+		    max = max || max === 0 ? max : MAX_INT;
+
+		    var lena = a.length;
+		    var lenb = b.length;
+
+		    // Fast path - no A or B.
+		    if (lena === 0) return Math.min(max + 1, lenb);
+		    if (lenb === 0) return Math.min(max + 1, lena);
+
+		    // Fast path - length diff larger than max.
+		    if (Math.abs(lena - lenb) > max) return max + 1;
+
+		    // Slow path.
+		    var matrix = [],
+		        i, j, colMin, minJ, maxJ;
+
+		    // Set up the first row ([0, 1, 2, 3, etc]).
+		    for (i = 0; i <= lenb; i++) { matrix[i] = [i]; }
+
+		    // Set up the first column (same).
+		    for (j = 0; j <= lena; j++) { matrix[0][j] = j; }
+
+		    // Loop over the rest of the columns.
+		    for (i = 1; i <= lenb; i++) {
+		      colMin = MAX_INT;
+		      minJ = 1;
+		      if (i > max) minJ = i - max;
+		      maxJ = lenb + 1;
+		      if (maxJ > max + i) maxJ = max + i;
+		      // Loop over the rest of the rows.
+		      for (j = 1; j <= lena; j++) {
+		        // If j is out of bounds, just put a large value in the slot.
+		        if (j < minJ || j > maxJ) {
+		          matrix[i][j] = max + 1;
+		        }
+
+		        // Otherwise do the normal Levenshtein thing.
+		        else {
+		          // If the characters are the same, there's no change in edit distance.
+		          if (b.charAt(i - 1) === a.charAt(j - 1)) {
+		            matrix[i][j] = matrix[i - 1][j - 1];
+		          }
+		          // Otherwise, see if we're substituting, inserting or deleting.
+		          else {
+		            matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, // Substitute
+		                                    Math.min(matrix[i][j - 1] + 1, // Insert
+		                                    matrix[i - 1][j] + 1)); // Delete
+		          }
+		        }
+
+		        // Either way, update colMin.
+		        if (matrix[i][j] < colMin) colMin = matrix[i][j];
+		      }
+
+		      // If this column's minimum is greater than the allowed maximum, there's no point
+		      // in going on with life.
+		      if (colMin > max) return max + 1;
+		    }
+		    // If we made it this far without running into the max, then return the final matrix value.
+		    return matrix[lenb][lena];
+		  }
+
+		})(); 
+	} (didYouMean1_2_1));
+	return didYouMean1_2_1.exports;
+}
+
+var didYouMean1_2_1Exports = requireDidYouMean1_2_1();
+var didYouMean = /*@__PURE__*/getDefaultExportFromCjs(didYouMean1_2_1Exports);
+
+function isUnsafeProperty$1(key) {
+    return key === '__proto__';
+}
+
+function isDeepKey$1(key) {
+    switch (typeof key) {
+        case 'number':
+        case 'symbol': {
+            return false;
+        }
+        case 'string': {
+            return key.includes('.') || key.includes('[') || key.includes(']');
+        }
+    }
+}
+
+function toKey$1(value) {
+    if (typeof value === 'string' || typeof value === 'symbol') {
+        return value;
+    }
+    if (Object.is(value?.valueOf?.(), -0)) {
+        return '-0';
+    }
+    return String(value);
+}
+
+function toPath$1(deepKey) {
+    const result = [];
+    const length = deepKey.length;
+    if (length === 0) {
+        return result;
+    }
+    let index = 0;
+    let key = '';
+    let quoteChar = '';
+    let bracket = false;
+    if (deepKey.charCodeAt(0) === 46) {
+        result.push('');
+        index++;
+    }
+    while (index < length) {
+        const char = deepKey[index];
+        if (quoteChar) {
+            if (char === '\\' && index + 1 < length) {
+                index++;
+                key += deepKey[index];
+            }
+            else if (char === quoteChar) {
+                quoteChar = '';
+            }
+            else {
+                key += char;
+            }
+        }
+        else if (bracket) {
+            if (char === '"' || char === "'") {
+                quoteChar = char;
+            }
+            else if (char === ']') {
+                bracket = false;
+                result.push(key);
+                key = '';
+            }
+            else {
+                key += char;
+            }
+        }
+        else {
+            if (char === '[') {
+                bracket = true;
+                if (key) {
+                    result.push(key);
+                    key = '';
+                }
+            }
+            else if (char === '.') {
+                if (key) {
+                    result.push(key);
+                    key = '';
+                }
+            }
+            else {
+                key += char;
+            }
+        }
+        index++;
+    }
+    if (key) {
+        result.push(key);
+    }
+    return result;
+}
+
+function get$1(object, path, defaultValue) {
+    if (object == null) {
+        return defaultValue;
+    }
+    switch (typeof path) {
+        case 'string': {
+            if (isUnsafeProperty$1(path)) {
+                return defaultValue;
+            }
+            const result = object[path];
+            if (result === undefined) {
+                if (isDeepKey$1(path)) {
+                    return get$1(object, toPath$1(path), defaultValue);
+                }
+                else {
+                    return defaultValue;
+                }
+            }
+            return result;
+        }
+        case 'number':
+        case 'symbol': {
+            if (typeof path === 'number') {
+                path = toKey$1(path);
+            }
+            const result = object[path];
+            if (result === undefined) {
+                return defaultValue;
+            }
+            return result;
+        }
+        default: {
+            if (Array.isArray(path)) {
+                return getWithPath$1(object, path, defaultValue);
+            }
+            if (Object.is(path?.valueOf(), -0)) {
+                path = '-0';
+            }
+            else {
+                path = String(path);
+            }
+            if (isUnsafeProperty$1(path)) {
+                return defaultValue;
+            }
+            const result = object[path];
+            if (result === undefined) {
+                return defaultValue;
+            }
+            return result;
+        }
+    }
+}
+function getWithPath$1(object, path, defaultValue) {
+    if (path.length === 0) {
+        return defaultValue;
+    }
+    let current = object;
+    for (let index = 0; index < path.length; index++) {
+        if (current == null) {
+            return defaultValue;
+        }
+        if (isUnsafeProperty$1(path[index])) {
+            return defaultValue;
+        }
+        current = current[path[index]];
+    }
+    if (current === undefined) {
+        return defaultValue;
+    }
+    return current;
+}
+
+/**
+ * Creates a simple transformation expression that applies a function to the resolved operand.
+ * @param {function(any): any} transformFn - Function that transforms the resolved operand
+ * @param {string} evaluateErrorMessage - Error message for non-array operands in evaluate form
+ * @returns {object} Expression object with apply and evaluate methods
+ */
+const createSimpleExpression = (transformFn, evaluateErrorMessage) => ({
+  apply: (operand, inputData, { apply }) =>
+    transformFn(apply(operand, inputData)),
+  evaluate: (operand, { evaluate }) => {
+    if (!Array.isArray(operand)) {
+      throw new Error(evaluateErrorMessage);
+    }
+    const [value] = operand;
+    return transformFn(evaluate(value));
+  },
+});
+
+const $isDefined = createSimpleExpression(
+  (value) => value !== undefined,
+  "$isDefined evaluate form requires array operand: [value]",
+);
+
+const $ensurePath = {
+  apply: (operand, inputData, { apply }) => {
+    const path = apply(operand, inputData);
+    const go = (curValue, paths, used = []) => {
+      if (paths.length === 0) return;
+
+      const [head, ...tail] = paths;
+      if (!(head in curValue)) {
+        throw new Error(
+          `"${head}" was not found along the path ${used.join(".")}`,
+        );
+      }
+
+      go(curValue[head], tail, [...used, head]);
+    };
+
+    go(inputData, path.split("."));
+    return inputData;
+  },
+  evaluate: (operand, { evaluate }) => {
+    if (!Array.isArray(operand)) {
+      throw new Error(
+        "$ensurePath evaluate form requires array operand: [object, path]",
+      );
+    }
+    const [object, path] = operand;
+    const evaluatedObject = evaluate(object);
+    const evaluatedPath = evaluate(path);
+    const go = (curValue, paths, used = []) => {
+      if (paths.length === 0) return;
+
+      const [head, ...tail] = paths;
+      if (!(head in curValue)) {
+        throw new Error(
+          `"${head}" was not found along the path ${used.join(".")}`,
+        );
+      }
+
+      go(curValue[head], tail, [...used, head]);
+    };
+
+    go(evaluatedObject, evaluatedPath.split("."));
+    return evaluatedObject;
+  },
+};
+
+const $get = {
+  apply: (operand, inputData, { apply }) => {
+    if (typeof operand === "string") {
+      return get$1(inputData, operand);
+    }
+    if (Array.isArray(operand)) {
+      const [path, defaultValue] = operand;
+      const evaluatedPath = apply(path, inputData);
+      const result = get$1(inputData, evaluatedPath);
+      return result !== undefined ? result : apply(defaultValue, inputData);
+    }
+    throw new Error("$get operand must be string or array");
+  },
+  evaluate: (operand, { evaluate }) => {
+    if (!Array.isArray(operand)) {
+      throw new Error(
+        "$get evaluate form requires array operand: [object, path] or [object, path, default]",
+      );
+    }
+
+    if (operand.length === 2) {
+      const [object, path] = operand;
+      return get$1(evaluate(object), evaluate(path));
+    }
+
+    if (operand.length === 3) {
+      const [object, path, defaultValue] = operand;
+      const result = get$1(evaluate(object), evaluate(path));
+      return result !== undefined ? result : evaluate(defaultValue);
+    }
+
+    throw new Error(
+      "$get evaluate form requires array operand: [object, path] or [object, path, default]",
+    );
+  },
+};
+
+const $prop = {
+  apply: (operand, inputData, { apply }) => {
+    const property = apply(operand, inputData);
+    return inputData[property];
+  },
+  evaluate: (operand, { evaluate }) => {
+    if (!Array.isArray(operand)) {
+      throw new Error(
+        "$prop evaluate form requires array operand: [object, property]",
+      );
+    }
+    const [object, property] = operand;
+    const evaluatedObject = evaluate(object);
+    const evaluatedProperty = evaluate(property);
+    return evaluatedObject[evaluatedProperty];
+  },
+};
+
+const $literal = {
+  apply: (operand) => operand,
+  evaluate: (operand) => operand,
+};
+
+const $debug = {
+  apply: (operand, inputData, { apply }) => {
+    const value = apply(operand, inputData);
+    console.log(value);
+    return value;
+  },
+  evaluate: (operand, { evaluate }) => {
+    const value = evaluate(operand);
+    console.log(value);
+    return value;
+  },
+};
+
+/**
+ * Creates a composition expression that chains expressions together.
+ * @param {function(Array, function): any} composeFn - Function that takes (expressions, reduceFn) and returns result
+ * @returns {object} Expression object with apply and evaluate methods
+ */
+const createCompositionExpression = (composeFn) => ({
+  apply: (operand, inputData, { apply, isExpression }) => {
+    // Validate that all elements are expressions
+    operand.forEach((expr) => {
+      if (!isExpression(expr)) {
+        throw new Error(`${JSON.stringify(expr)} is not a valid expression`);
+      }
+    });
+    return composeFn(operand, (acc, expr) => apply(expr, acc), inputData);
+  },
+  evaluate: (operand, { apply, isExpression }) => {
+    const [expressions, initialValue] = operand;
+    // Validate that all elements are expressions
+    expressions.forEach((expr) => {
+      if (!isExpression(expr)) {
+        throw new Error(`${JSON.stringify(expr)} is not a valid expression`);
+      }
+    });
+    return composeFn(
+      expressions,
+      (acc, expr) => apply(expr, acc),
+      initialValue,
+    );
+  },
+});
+
+const $compose = createCompositionExpression(
+  (expressions, reduceFn, initialValue) =>
+    expressions.reduceRight(reduceFn, initialValue),
+);
+
+const $pipe = createCompositionExpression(
+  (expressions, reduceFn, initialValue) =>
+    expressions.reduce(reduceFn, initialValue),
+);
+
+const coreDefinitions = {
+  $compose,
+  $debug,
+  $get,
+  $isDefined,
+  $literal,
+  $pipe,
+  $prop,
+  $ensurePath,
+};
+
+/**
+ * Creates an aggregative expression that applies a calculation function to resolved values.
+ *
+ * @param {function(Array): any} calculateFn - Function that takes an array of values and returns a calculated result
+ * @returns {object} Expression object with apply and evaluate methods
+ */
+const createAggregativeExpression = (calculateFn) => ({
+  apply(operand, inputData, { apply }) {
+    const values = apply(operand, inputData);
+    return calculateFn(values);
+  },
+  evaluate: (operand, { evaluate }) => {
+    const values = evaluate(operand);
+    return calculateFn(values);
+  },
+});
+
+const $count = createAggregativeExpression((values) => values.length);
+
+const $max = createAggregativeExpression((values) => {
+  return values.length === 0
+    ? undefined
+    : values.reduce((max, v) => Math.max(max, v));
+});
+
+const $min = createAggregativeExpression((values) => {
+  return values.length === 0
+    ? undefined
+    : values.reduce((min, v) => Math.min(min, v));
+});
+
+const $sum = createAggregativeExpression((values) => {
+  return values.reduce((sum, v) => sum + v, 0);
+});
+
+const $mean = createAggregativeExpression((values) => {
+  return values.length === 0
+    ? undefined
+    : values.reduce((sum, v) => sum + v, 0) / values.length;
+});
+
+const $median = createAggregativeExpression((values) => {
+  if (values.length === 0) return undefined;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1] + sorted[mid]) / 2
+    : sorted[mid];
+});
+
+const $mode = createAggregativeExpression((values) => {
+  if (values.length === 0) return undefined;
+  const frequency = {};
+  let maxCount = 0;
+  let modes = [];
+
+  // Count frequencies
+  for (const value of values) {
+    frequency[value] = (frequency[value] ?? 0) + 1;
+    if (frequency[value] > maxCount) {
+      maxCount = frequency[value];
+      modes = [value];
+    } else if (frequency[value] === maxCount && !modes.includes(value)) {
+      modes.push(value);
+    }
+  }
+
+  // Return single mode if only one, array if multiple, or undefined if all values appear once
+  return maxCount === 1
+    ? undefined
+    : modes.length === 1
+      ? modes[0]
+      : modes.sort((a, b) => a - b);
+});
+
+const aggregativeDefinitions = {
+  $count,
+  $max,
+  $mean,
+  $median,
+  $min,
+  $mode,
+  $sum,
+};
+
+/**
+ * Creates a comparative expression that applies a comparison function to resolved operands.
+ *
+ * @param {function(any, any): boolean} compareFn - Function that takes two values and returns a boolean comparison result
+ * @returns {object} Expression object with apply and evaluate methods
+ */
+const createComparativeExpression = (compareFn) => ({
+  apply(operand, inputData, { apply }) {
+    const resolvedOperand = apply(operand, inputData);
+    return compareFn(inputData, resolvedOperand);
+  },
+  evaluate: (operand, { evaluate }) => {
+    const [left, right] = operand;
+    return compareFn(evaluate(left), evaluate(right));
+  },
+});
+
+/**
+ * Creates an inclusion expression that checks if a value is in/not in an array.
+ *
+ * @param {function(any, Array): boolean} inclusionFn - Function that takes a value and array and returns boolean
+ * @param {string} expressionName - Name of the expression for error messages
+ * @returns {object} Expression object with apply and evaluate methods
+ */
+const createInclusionExpression = (expressionName, inclusionFn) => ({
+  apply(operand, inputData, { apply }) {
+    const resolvedOperand = apply(operand, inputData);
+    if (!Array.isArray(resolvedOperand)) {
+      throw new Error(`${expressionName} parameter must be an array`);
+    }
+    return inclusionFn(inputData, resolvedOperand);
+  },
+  evaluate: (operand, { evaluate }) => {
+    const [array, value] = evaluate(operand);
+    if (!Array.isArray(array)) {
+      throw new Error(`${expressionName} parameter must be an array`);
+    }
+    return inclusionFn(value, array);
+  },
+});
+
+const $eq = createComparativeExpression((a, b) => isEqual(a, b));
+const $ne = createComparativeExpression((a, b) => !isEqual(a, b));
+const $gt = createComparativeExpression((a, b) => a > b);
+const $gte = createComparativeExpression((a, b) => a >= b);
+const $lt = createComparativeExpression((a, b) => a < b);
+const $lte = createComparativeExpression((a, b) => a <= b);
+
+const $in = createInclusionExpression("$in", (value, array) =>
+  array.includes(value),
+);
+const $nin = createInclusionExpression(
+  "$nin",
+  (value, array) => !array.includes(value),
+);
+
+/**
+ * Tests if a string matches a regular expression pattern.
+ *
+ * **Uses PCRE (Perl Compatible Regular Expression) semantics** as the canonical standard
+ *
+ * Supports inline flags using the syntax (?flags)pattern where flags can be:
+ * - i: case insensitive matching
+ * - m: multiline mode (^ and $ match line boundaries)
+ * - s: dotall mode (. matches newlines)
+ *
+ * PCRE defaults (when no flags specified):
+ * - Case-sensitive matching
+ * - ^ and $ match string boundaries (not line boundaries)
+ * - . does not match newlines
+ *
+ * @example
+ * // Basic pattern matching
+ * apply("hello", "hello world") // true
+ * apply("\\d+", "abc123") // true
+ *
+ * @example
+ * // With inline flags
+ * apply("(?i)hello", "HELLO WORLD") // true (case insensitive)
+ * apply("(?m)^line2", "line1\nline2") // true (multiline)
+ * apply("(?s)hello.world", "hello\nworld") // true (dotall)
+ * apply("(?ims)^hello.world$", "HELLO\nWORLD") // true (combined flags)
+ *
+ * @example
+ * // In WHERE clauses
+ * { name: { $matchesRegex: "^[A-Z].*" } } // Names starting with capital letter
+ * { email: { $matchesRegex: "(?i).*@example\\.com$" } } // Case-insensitive email domain check
+ */
+const $matchesRegex = {
+  apply(operand, inputData, { apply }) {
+    const resolvedOperand = apply(operand, inputData);
+    const pattern = resolvedOperand;
+    if (typeof inputData !== "string") {
+      throw new Error("$matchesRegex requires string input");
+    }
+
+    // Extract inline flags and clean pattern
+    const flagMatch = pattern.match(/^\(\?([ims]*)\)(.*)/);
+    if (flagMatch) {
+      const [, flags, patternPart] = flagMatch;
+      let jsFlags = "";
+
+      if (flags.includes("i")) jsFlags += "i";
+      if (flags.includes("m")) jsFlags += "m";
+      if (flags.includes("s")) jsFlags += "s";
+
+      const regex = new RegExp(patternPart, jsFlags);
+      return regex.test(inputData);
+    }
+
+    // Check for unsupported inline flags and strip them
+    const unsupportedFlagMatch = pattern.match(/^\(\?[^)]*\)(.*)/);
+    if (unsupportedFlagMatch) {
+      const [, patternPart] = unsupportedFlagMatch;
+      const regex = new RegExp(patternPart);
+      return regex.test(inputData);
+    }
+
+    // No inline flags - use PCRE defaults
+    const regex = new RegExp(pattern);
+    return regex.test(inputData);
+  },
+  evaluate: (operand, { evaluate }) => {
+    const [pattern, inputData] = operand;
+    const resolvedPattern = evaluate(pattern);
+    const resolvedInputData = evaluate(inputData);
+    if (typeof resolvedInputData !== "string") {
+      throw new Error("$matchesRegex requires string input");
+    }
+
+    // Extract inline flags and clean pattern
+    const flagMatch = resolvedPattern.match(/^\(\?([ims]*)\)(.*)/);
+    if (flagMatch) {
+      const [, flags, patternPart] = flagMatch;
+      let jsFlags = "";
+
+      if (flags.includes("i")) jsFlags += "i";
+      if (flags.includes("m")) jsFlags += "m";
+      if (flags.includes("s")) jsFlags += "s";
+
+      const regex = new RegExp(patternPart, jsFlags);
+      return regex.test(resolvedInputData);
+    }
+
+    // Check for unsupported inline flags and strip them
+    const unsupportedFlagMatch = resolvedPattern.match(/^\(\?[^)]*\)(.*)/);
+    if (unsupportedFlagMatch) {
+      const [, patternPart] = unsupportedFlagMatch;
+      const regex = new RegExp(patternPart);
+      return regex.test(resolvedInputData);
+    }
+
+    // No inline flags - use PCRE defaults
+    const regex = new RegExp(resolvedPattern);
+    return regex.test(resolvedInputData);
+  },
+};
+
+/**
+ * Tests if a string matches a SQL LIKE pattern.
+ *
+ * Provides database-agnostic LIKE pattern matching with SQL standard semantics:
+ * - % matches any sequence of characters (including none)
+ * - _ matches exactly one character
+ * - Case-sensitive matching (consistent across databases)
+ *
+ * @example
+ * // Basic LIKE patterns
+ * apply("hello%", "hello world") // true
+ * apply("%world", "hello world") // true
+ * apply("h_llo", "hello") // true
+ * apply("h_llo", "hallo") // true
+ *
+ * @example
+ * // In WHERE clauses
+ * { name: { $matchesLike: "John%" } } // Names starting with "John"
+ * { email: { $matchesLike: "%@gmail.com" } } // Gmail addresses
+ * { code: { $matchesLike: "A_B_" } } // Codes like "A1B2", "AXBY"
+ */
+const $matchesLike = createComparativeExpression((inputData, pattern) => {
+  if (typeof inputData !== "string") {
+    throw new Error("$matchesLike requires string input");
+  }
+
+  // Convert SQL LIKE pattern to JavaScript regex
+  let regexPattern = pattern
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&") // Escape regex special chars
+    .replace(/%/g, ".*") // % becomes .*
+    .replace(/_/g, "."); // _ becomes .
+
+  // Anchor the pattern to match the entire string
+  regexPattern = "^" + regexPattern + "$";
+
+  const regex = new RegExp(regexPattern);
+  return regex.test(inputData);
+});
+
+/**
+ * Tests if a string matches a Unix shell GLOB pattern.
+ *
+ * Provides database-agnostic GLOB pattern matching with Unix shell semantics:
+ * - * matches any sequence of characters (including none)
+ * - ? matches exactly one character
+ * - [chars] matches any single character in the set
+ * - [!chars] or [^chars] matches any character not in the set
+ * - Case-sensitive matching
+ *
+ * @example
+ * // Basic GLOB patterns
+ * apply("hello*", "hello world") // true
+ * apply("*world", "hello world") // true
+ * apply("h?llo", "hello") // true
+ * apply("h?llo", "hallo") // true
+ * apply("[hw]ello", "hello") // true
+ * apply("[hw]ello", "wello") // true
+ * apply("[!hw]ello", "bello") // true
+ *
+ * @example
+ * // In WHERE clauses
+ * { filename: { $matchesGlob: "*.txt" } } // Text files
+ * { name: { $matchesGlob: "[A-Z]*" } } // Names starting with capital
+ * { code: { $matchesGlob: "IMG_[0-9][0-9][0-9][0-9]" } } // Image codes
+ */
+const $matchesGlob = createComparativeExpression((inputData, pattern) => {
+  if (typeof inputData !== "string") {
+    throw new Error("$matchesGlob requires string input");
+  }
+
+  // Convert GLOB pattern to JavaScript regex
+  let regexPattern = "";
+  let i = 0;
+
+  while (i < pattern.length) {
+    const char = pattern[i];
+
+    if (char === "*") {
+      regexPattern += ".*";
+    } else if (char === "?") {
+      regexPattern += ".";
+    } else if (char === "[") {
+      // Handle character classes
+      let j = i + 1;
+      let isNegated = false;
+
+      // Check for negation
+      if (j < pattern.length && (pattern[j] === "!" || pattern[j] === "^")) {
+        isNegated = true;
+        j++;
+      }
+
+      // Find the closing bracket
+      let classContent = "";
+      while (j < pattern.length && pattern[j] !== "]") {
+        classContent += pattern[j];
+        j++;
+      }
+
+      if (j < pattern.length) {
+        // Valid character class
+        regexPattern +=
+          "[" +
+          (isNegated ? "^" : "") +
+          classContent.replace(/\\/g, "\\\\") +
+          "]";
+        i = j;
+      } else {
+        // No closing bracket, treat as literal
+        regexPattern += "\\[";
+      }
+    } else {
+      // Escape regex special characters
+      regexPattern += char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+    i++;
+  }
+
+  // Anchor the pattern to match the entire string
+  regexPattern = "^" + regexPattern + "$";
+
+  const regex = new RegExp(regexPattern);
+  return regex.test(inputData);
+});
+
+const comparativeDefinitions = {
+  $eq,
+  $gt,
+  $gte,
+  $lt,
+  $lte,
+  $ne,
+  $in,
+  $nin,
+  $matchesRegex,
+  $matchesLike,
+  $matchesGlob,
+};
+
+const $if = {
+  apply(operand, inputData, { apply }) {
+    const condition = apply(operand.if, inputData);
+    if (typeof condition !== "boolean") {
+      throw new Error(
+        `$if.if must be a boolean or an expression that resolves to one, got ${JSON.stringify(condition)}`,
+      );
+    }
+
+    return condition
+      ? apply(operand.then, inputData)
+      : apply(operand.else, inputData);
+  },
+  evaluate: (operand, { evaluate }) => {
+    const condition = evaluate(operand.if);
+    if (typeof condition !== "boolean") {
+      throw new Error(
+        `$if.if must be a boolean or an expression that resolves to one, got ${JSON.stringify(condition)}`,
+      );
+    }
+
+    return condition ? evaluate(operand.then) : evaluate(operand.else);
+  },
+};
+
+const $switch = {
+  apply(operand, inputData, { apply }) {
+    // Evaluate the value once
+    const value = apply(operand.value, inputData);
+    const found = operand.cases.find((caseItem) => {
+      if (caseItem.when === undefined) {
+        throw new Error("Switch case must have 'when' property");
+      }
+
+      return isEqual(apply(caseItem.when, inputData), value);
+    });
+
+    // Return default if no case matches
+    return found
+      ? apply(found.then, inputData)
+      : apply(operand.default, inputData);
+  },
+  evaluate(operand, { evaluate }) {
+    const [switchOperand] = operand;
+    // Evaluate the value once
+    const value = evaluate(switchOperand.value);
+    const found = switchOperand.cases.find((caseItem) => {
+      if (caseItem.when === undefined) {
+        throw new Error("Switch case must have 'when' property");
+      }
+
+      return isEqual(evaluate(caseItem.when), value);
+    });
+
+    // Return default if no case matches
+    return found ? evaluate(found.then) : evaluate(switchOperand.default);
+  },
+};
+
+const $case = {
+  apply(operand, inputData, { apply }) {
+    // Evaluate the value once
+    const value = apply(operand.value, inputData);
+    const found = operand.cases.find((caseItem) => {
+      if (caseItem.when === undefined) {
+        throw new Error("Case item must have 'when' property");
+      }
+
+      const condition = apply(caseItem.when, value);
+      if (typeof condition !== "boolean") {
+        throw new Error(
+          `$case.when must resolve to a boolean, got ${JSON.stringify(condition)}`,
+        );
+      }
+      return condition;
+    });
+
+    // Return default if no case matches
+    return found
+      ? apply(found.then, inputData)
+      : apply(operand.default, inputData);
+  },
+  evaluate(operand, { evaluate }) {
+    const [caseOperand] = operand;
+    const found = caseOperand.cases.find((caseItem) => {
+      if (caseItem.when === undefined) {
+        throw new Error("Case item must have 'when' property");
+      }
+
+      const condition = evaluate(caseItem.when);
+      if (typeof condition !== "boolean") {
+        throw new Error(
+          `$case.when must resolve to a boolean, got ${JSON.stringify(condition)}`,
+        );
+      }
+      return condition;
+    });
+
+    // Return default if no case matches
+    return found ? evaluate(found.then) : evaluate(caseOperand.default);
+  },
+};
+
+const conditionalDefinitions = { $if, $switch, $case };
+
+/**
+ * Creates a generative expression that produces values without needing input data or nested expressions.
+ * @param {function(any): any} generateFn - Function that takes operand and generates a value
+ * @returns {object} Expression object with apply and evaluate methods
+ */
+const createGenerativeExpression = (generateFn) => ({
+  apply: (operand) => generateFn(operand),
+  evaluate: (operand) => generateFn(operand),
+});
+
+const $random = createGenerativeExpression((operand = {}) => {
+  const { min = 0, max = 1, precision = null } = operand ?? {};
+  const value = Math.random() * (max - min) + min;
+
+  if (precision == null) {
+    return value;
+  }
+
+  if (precision >= 0) {
+    // Positive precision: decimal places
+    return Number(value.toFixed(precision));
+  } else {
+    // Negative precision: round to 10^(-precision)
+    const factor = Math.pow(10, -precision);
+    return Math.round(value / factor) * factor;
+  }
+});
+
+const $uuid = createGenerativeExpression(() => crypto.randomUUID());
+
+const generativeDefinitions = {
+  $random,
+  $uuid,
+};
+
+/**
+ * Creates an array iteration expression that applies a function to array elements.
+ * @param {function(Array, function): any} arrayMethodFn - Function that takes (array, itemFn) and returns result
+ * @param {string} expressionName - Name of the expression for evaluate form
+ * @returns {object} Expression object with apply and evaluate methods
+ */
+const createArrayIterationExpression = (arrayMethodFn, expressionName) => ({
+  apply: (operand, inputData, { apply }) =>
+    arrayMethodFn(inputData, (item) => apply(operand, item)),
+  evaluate: (operand, { apply }) => {
+    const [fn, items] = operand;
+    return apply({ [expressionName]: fn }, items);
+  },
+});
+
+/**
+ * Creates a simple array operation expression.
+ * @param {function(any, Array): any} operationFn - Function that takes (operand, inputData) and returns result
+ * @returns {object} Expression object with apply and evaluate methods
+ */
+const createArrayOperationExpression = (operationFn) => ({
+  apply: (operand, inputData) => operationFn(operand, inputData),
+  evaluate: (operand, { evaluate }) => {
+    const [arg1, arg2] = operand;
+    return operationFn(evaluate(arg1), evaluate(arg2));
+  },
+});
+
+const $filter = createArrayIterationExpression(
+  (array, itemFn) => array.filter(itemFn),
+  "$filter",
+);
+
+const $flatMap = createArrayIterationExpression(
+  (array, itemFn) => array.flatMap(itemFn),
+  "$flatMap",
+);
+
+const $map = createArrayIterationExpression(
+  (array, itemFn) => array.map(itemFn),
+  "$map",
+);
+
+const $any = createArrayIterationExpression(
+  (array, itemFn) => array.some(itemFn),
+  "$any",
+);
+
+const $all = createArrayIterationExpression(
+  (array, itemFn) => array.every(itemFn),
+  "$all",
+);
+
+const $find = createArrayIterationExpression(
+  (array, itemFn) => array.find(itemFn),
+  "$find",
+);
+
+const $append = createArrayOperationExpression((arrayToConcat, baseArray) =>
+  baseArray.concat(arrayToConcat),
+);
+
+const $prepend = createArrayOperationExpression((arrayToPrepend, baseArray) =>
+  arrayToPrepend.concat(baseArray),
+);
+
+const $join = createArrayOperationExpression((separator, array) =>
+  array.join(separator),
+);
+
+const $reverse = {
+  apply: (_, inputData) => inputData.slice().reverse(),
+  evaluate: (operand, { evaluate }) => {
+    const array = evaluate(operand);
+    return array.slice().reverse();
+  },
+};
+
+const iterativeDefinitions = {
+  $all,
+  $any,
+  $append,
+  $filter,
+  $find,
+  $flatMap,
+  $join,
+  $map,
+  $prepend,
+  $reverse,
+};
+
+/**
+ * Creates an array logical expression that applies a logical operation to an array of conditions.
+ * @param {function(Array, function): boolean} arrayMethodFn - Function that takes (array, predicate) and returns boolean
+ * @returns {object} Expression object with apply and evaluate methods
+ */
+const createArrayLogicalExpression = (arrayMethodFn) => ({
+  apply: (operand, inputData, { apply }) =>
+    arrayMethodFn(operand, (subexpr) => apply(subexpr, inputData)),
+  evaluate: (operand, { evaluate }) =>
+    arrayMethodFn(operand, (value) => {
+      return typeof value === "boolean" ? value : Boolean(evaluate(value));
+    }),
+});
+
+const $and = createArrayLogicalExpression((array, predicate) =>
+  array.every(predicate),
+);
+
+const $or = createArrayLogicalExpression((array, predicate) =>
+  array.some(predicate),
+);
+
+const $not = {
+  apply: (operand, inputData, { apply }) => !apply(operand, inputData),
+  evaluate: (operand, { evaluate }) => {
+    const value = typeof operand === "boolean" ? operand : evaluate(operand);
+    return !value;
+  },
+};
+
+const logicalDefinitions = {
+  $and,
+  $not,
+  $or,
+};
+
+/**
+ * Creates a temporal expression that generates time-based values without needing operands or input data.
+ * @param {function(): any} generateFn - Function that generates a time-based value
+ * @returns {object} Expression object with apply and evaluate methods
+ */
+const createTemporalExpression = (generateFn) => ({
+  apply: generateFn,
+  evaluate: generateFn,
+});
+
+const $nowLocal = createTemporalExpression(() => {
+  const now = new Date();
+  const offset = -now.getTimezoneOffset();
+  const sign = offset >= 0 ? "+" : "-";
+  const hours = Math.floor(Math.abs(offset) / 60)
+    .toString()
+    .padStart(2, "0");
+  const minutes = (Math.abs(offset) % 60).toString().padStart(2, "0");
+  return now.toISOString().slice(0, -1) + sign + hours + ":" + minutes;
+});
+
+const $nowUTC = createTemporalExpression(() => new Date().toISOString());
+
+const $timestamp = createTemporalExpression(() => Date.now());
+
+const temporalDefinitions = {
+  $nowLocal,
+  $nowUTC,
+  $timestamp,
+};
+
+/**
+ * Creates a math expression that performs binary operations.
+ * @param {function(number, number): number} operationFn - Function that takes (left, right) and returns result
+ * @param {function(number, number): void} [validateFn] - Optional validation function for divide by zero checks
+ * @returns {object} Expression object with apply and evaluate methods
+ */
+const createMathExpression = (operationFn, validateFn) => ({
+  apply: (operand, inputData) => {
+    if (validateFn) validateFn(inputData, operand);
+    return operationFn(inputData, operand);
+  },
+  evaluate: (operand, { evaluate }) => {
+    if (!Array.isArray(operand) || operand.length !== 2) {
+      throw new Error(
+        "Math expressions require array of exactly 2 elements in evaluate form",
+      );
+    }
+    const [left, right] = operand;
+    const leftValue = evaluate(left);
+    const rightValue = evaluate(right);
+    if (validateFn) validateFn(leftValue, rightValue);
+    return operationFn(leftValue, rightValue);
+  },
+});
+
+const $add = createMathExpression((left, right) => left + right);
+
+const $subtract = createMathExpression((left, right) => left - right);
+
+const $multiply = createMathExpression((left, right) => left * right);
+
+const $divide = createMathExpression(
+  (left, right) => left / right,
+  (left, right) => {
+    if (right === 0) {
+      throw new Error("Division by zero");
+    }
+  },
+);
+
+const $modulo = createMathExpression(
+  (left, right) => left % right,
+  (left, right) => {
+    if (right === 0) {
+      throw new Error("Modulo by zero");
+    }
+  },
+);
+
+const mathDefinitions = {
+  $add,
+  $subtract,
+  $multiply,
+  $divide,
+  $modulo,
+};
+
+/**
+ * @typedef {object} ApplicativeExpression
+ */
+
+/**
+ * @typedef {object} Expression
+ */
+
+/**
+ * @template Args, Input, Output
+ * @typedef {object} Expression
+ * @property {function(any, Input): Output} apply
+ * @property {function(Args, Input, any): Output} [applyImplicit]
+ * @property {function(Input): Output} evaluate
+ * @property {string} [name]
+ * @property {object} schema
+ */
+
+/**
+ * @typedef {object} ExpressionEngine
+ * @property {function(Expression, any): any} apply
+ * @property {function(Expression): any} evaluate
+ * @property {string[]} expressionNames
+ * @property {function(Expression): boolean} isExpression
+ */
+
+/**
+ * @template Args, Input, Output
+ * @typedef {function(...any): Expression} FunctionExpression
+ */
+
+function looksLikeExpression$1(val) {
+  return (
+    val !== null &&
+    typeof val === "object" &&
+    !Array.isArray(val) &&
+    Object.keys(val).length === 1 &&
+    Object.keys(val)[0].startsWith("$")
+  );
+}
+
+/**
+ * @param {object} definitions
+ * @param {boolean} [mergeDefaults=true] whether or not to include the core definitions in the engine
+ *
+ * @returns {ExpressionEngine}
+ */
+function createExpressionEngine(definitions, mergeDefaults = true) {
+  const expressions = mergeDefaults
+    ? { ...coreDefinitions, ...definitions }
+    : definitions;
+
+  const isExpression = (val) =>
+    looksLikeExpression$1(val) && Object.keys(val)[0] in expressions;
+
+  const checkLooksLikeExpression = (val) => {
+    if (looksLikeExpression$1(val)) {
+      const [invalidOp] = Object.keys(val);
+      const availableOps = Object.keys(expressions);
+
+      const suggestion = didYouMean(invalidOp, availableOps);
+      const helpText = suggestion
+        ? `Did you mean "${suggestion}"?`
+        : `Available operators: ${availableOps
+            .slice(0, 8)
+            .join(", ")}${availableOps.length > 8 ? ", ..." : ""}.`;
+
+      const message = `Unknown expression operator: "${invalidOp}". ${helpText} Use { $literal: ${JSON.stringify(val)} } if you meant this as a literal value.`;
+
+      throw new Error(message);
+    }
+  };
+
+  const apply = (val, inputData) => {
+    if (isExpression(val)) {
+      const [expressionName, operand] = Object.entries(val)[0];
+      const expressionDef = expressions[expressionName];
+
+      return expressionDef.apply(operand, inputData, { isExpression, apply });
+    }
+
+    checkLooksLikeExpression(val);
+
+    return Array.isArray(val)
+      ? val.map((v) => apply(v, inputData))
+      : val !== null && typeof val === "object"
+        ? mapValues(val, (v) => apply(v, inputData))
+        : val;
+  };
+
+  const evaluate = (val) => {
+    if (isExpression(val)) {
+      const [expressionName, operand] = Object.entries(val)[0];
+      const expressionDef = expressions[expressionName];
+
+      return expressionDef.evaluate(operand, { isExpression, evaluate, apply });
+    }
+
+    checkLooksLikeExpression(val);
+
+    return Array.isArray(val)
+      ? val.map(evaluate)
+      : val !== null && typeof val === "object"
+        ? mapValues(val, evaluate)
+        : val;
+  };
+
+  return {
+    apply,
+    evaluate,
+    expressionNames: Object.keys(expressions),
+    isExpression,
+  };
+}
+
+const defaultExpressions = {
+  ...coreDefinitions,
+  ...aggregativeDefinitions,
+  ...comparativeDefinitions,
+  ...conditionalDefinitions,
+  ...generativeDefinitions,
+  ...iterativeDefinitions,
+  ...logicalDefinitions,
+  ...mathDefinitions,
+  ...temporalDefinitions,
+};
+
+const defaultExpressionEngine =
+  createExpressionEngine(defaultExpressions);
+
 function isUnsafeProperty(key) {
     return key === '__proto__';
 }
@@ -3436,1171 +4951,6 @@ function getWithPath(object, path, defaultValue) {
     }
     return current;
 }
-
-const $isDefined = {
-	name: "$isDefined",
-	apply: (_, inputData) => inputData !== undefined,
-	evaluate(operand) {
-		if (!Array.isArray(operand)) {
-			throw new Error(
-				"$isDefined evaluate form requires array operand: [value]",
-			);
-		}
-
-		const [value] = operand;
-		return value !== undefined;
-	},
-};
-
-const $ensurePath = {
-	name: "$ensurePath",
-	apply: (operand, inputData) => {
-		const go = (curValue, paths, used = []) => {
-			if (paths.length === 0) return;
-
-			const [head, ...tail] = paths;
-			if (!(head in curValue)) {
-				throw new Error(
-					`"${head}" was not found along the path ${used.join(".")}`,
-				);
-			}
-
-			go(curValue[head], tail, [...used, head]);
-		};
-
-		go(inputData, operand.split("."));
-		return inputData;
-	},
-	evaluate(operand) {
-		if (!Array.isArray(operand)) {
-			throw new Error(
-				"$ensurePath evaluate form requires array operand: [object, path]",
-			);
-		}
-
-		const [object, path] = operand;
-		return this.apply(path, object);
-	},
-};
-
-const $get = {
-	name: "$get",
-	apply: (operand, inputData) => get(inputData, operand),
-	evaluate(operand) {
-		if (!Array.isArray(operand)) {
-			throw new Error(
-				"$get evaluate form requires array operand: [object, path]",
-			);
-		}
-
-		const [object, path] = operand;
-		return this.apply(path, object);
-	},
-};
-
-const $literal = {
-	name: "$literal",
-	apply: (operand) => operand,
-	evaluate: () => {
-		throw new Error("handled in expressions.js");
-	},
-	controlsEvaluation: true,
-	normalizeWhere: (operand) => ({ $literal: operand }),
-};
-
-const $debug = {
-	name: "$debug",
-	apply: (evaluatedOperand) => {
-		console.log(evaluatedOperand);
-		return evaluatedOperand;
-	},
-	evaluate(evaluatedOperand) {
-		console.log(evaluatedOperand);
-		return evaluatedOperand;
-	},
-};
-
-const $compose = {
-	name: "$compose",
-	apply: (operand, inputData, { apply, isExpression }) =>
-		operand.reduceRight((acc, expr) => {
-			if (!isExpression(expr)) {
-				throw new Error(`${JSON.stringify(expr)} is not a valid expression`);
-			}
-
-			return apply(expr, acc);
-		}, inputData),
-	evaluate: ([exprs, init], { apply }) => apply({ $compose: exprs }, init),
-	controlsEvaluation: true,
-	normalizeWhere: (operand) => ({
-		$compose: operand,
-	}),
-};
-
-const $pipe = {
-	name: "$pipe",
-	apply: (operand, inputData, { apply, isExpression }) =>
-		operand.reduce((acc, expr) => {
-			if (!isExpression(expr)) {
-				throw new Error(`${JSON.stringify(expr)} is not a valid expression`);
-			}
-
-			return apply(expr, acc);
-		}, inputData),
-	evaluate: ([exprs, init], { apply }) => apply({ $pipe: exprs }, init),
-	controlsEvaluation: true,
-	normalizeWhere: (operand) => ({
-		$pipe: operand,
-	}),
-};
-
-const coreDefinitions = {
-	$compose,
-	$debug,
-	$get,
-	$isDefined,
-	$literal,
-	$pipe,
-	$ensurePath,
-};
-
-const $count = {
-	name: "$count",
-	apply(operand) {
-		return this.evaluate(operand);
-	},
-	evaluate: (operand) => operand.length,
-};
-
-const $max = {
-	name: "$max",
-	apply(operand) {
-		return this.evaluate(operand);
-	},
-	evaluate: (operand) =>
-		operand.length === 0
-			? undefined
-			: operand.reduce((max, v) => Math.max(max, v)),
-};
-
-const $min = {
-	name: "$min",
-	apply(operand) {
-		return this.evaluate(operand);
-	},
-	evaluate: (operand) =>
-		operand.length === 0
-			? undefined
-			: operand.reduce((min, v) => Math.min(min, v)),
-};
-
-const $sum = {
-	name: "$sum",
-	apply(operand) {
-		return this.evaluate(operand);
-	},
-	evaluate: (operand) => operand.reduce((sum, v) => sum + v, 0),
-};
-
-const $mean = {
-	name: "$mean",
-	apply(operand) {
-		return this.evaluate(operand);
-	},
-	evaluate: (operand) =>
-		operand.length === 0
-			? undefined
-			: operand.reduce((sum, v) => sum + v, 0) / operand.length,
-};
-
-const $median = {
-	name: "$median",
-	apply(operand) {
-		return this.evaluate(operand);
-	},
-	evaluate: (operand) => {
-		if (operand.length === 0) return undefined;
-		const sorted = [...operand].sort((a, b) => a - b);
-		const mid = Math.floor(sorted.length / 2);
-		return sorted.length % 2 === 0
-			? (sorted[mid - 1] + sorted[mid]) / 2
-			: sorted[mid];
-	},
-};
-
-const $mode = {
-	name: "$mode",
-	apply(operand) {
-		return this.evaluate(operand);
-	},
-	evaluate: (operand) => {
-		if (operand.length === 0) return undefined;
-		const frequency = {};
-		let maxCount = 0;
-		let modes = [];
-
-		// Count frequencies
-		for (const value of operand) {
-			frequency[value] = (frequency[value] ?? 0) + 1;
-			if (frequency[value] > maxCount) {
-				maxCount = frequency[value];
-				modes = [value];
-			} else if (frequency[value] === maxCount && !modes.includes(value)) {
-				modes.push(value);
-			}
-		}
-
-		// Return single mode if only one, array if multiple, or undefined if all values appear once
-		return maxCount === 1
-			? undefined
-			: modes.length === 1
-				? modes[0]
-				: modes.sort((a, b) => a - b);
-	},
-};
-
-const aggregativeDefinitions = {
-	$count,
-	$max,
-	$mean,
-	$median,
-	$min,
-	$mode,
-	$sum,
-};
-
-const createComparativeWhereCompiler =
-	(exprName) =>
-	(operand, { attribute }) =>
-		attribute
-			? { $pipe: [{ $get: attribute }, { [exprName]: operand }] }
-			: { [exprName]: operand };
-
-const $eq = {
-	name: "$eq",
-	apply: isEqual,
-	evaluate: ([left, right]) => isEqual(left, right),
-	normalizeWhere: createComparativeWhereCompiler("$eq"),
-};
-
-const $ne = {
-	name: "$ne",
-	apply: (operand, inputData) => !isEqual(operand, inputData),
-	evaluate: ([left, right]) => !isEqual(left, right),
-	normalizeWhere: createComparativeWhereCompiler("$ne"),
-};
-
-const $gt = {
-	name: "$gt",
-	apply: (operand, inputData) => inputData > operand,
-	evaluate: ([left, right]) => left > right,
-	normalizeWhere: createComparativeWhereCompiler("$gt"),
-};
-
-const $gte = {
-	name: "$gte",
-	apply: (operand, inputData) => inputData >= operand,
-	evaluate: ([left, right]) => left >= right,
-	normalizeWhere: createComparativeWhereCompiler("$gte"),
-};
-
-const $lt = {
-	name: "$lt",
-	apply: (operand, inputData) => inputData < operand,
-	evaluate: ([left, right]) => left < right,
-	normalizeWhere: createComparativeWhereCompiler("$lt"),
-};
-
-const $lte = {
-	name: "$lte",
-	apply: (operand, inputData) => inputData <= operand,
-	evaluate: ([left, right]) => left <= right,
-	normalizeWhere: createComparativeWhereCompiler("$lte"),
-};
-
-const $in = {
-	name: "$in",
-	apply: (operand, inputData) => {
-		if (!Array.isArray(operand)) {
-			throw new Error("$in parameter must be an array");
-		}
-		return operand.includes(inputData);
-	},
-	evaluate([array, value]) {
-		return this.apply(array, value);
-	},
-	normalizeWhere: createComparativeWhereCompiler("$in"),
-};
-
-const $nin = {
-	name: "$nin",
-	apply: (operand, inputData) => {
-		if (!Array.isArray(operand)) {
-			throw new Error("$nin parameter must be an array");
-		}
-		return !operand.includes(inputData);
-	},
-	evaluate([array, value]) {
-		return this.apply(array, value);
-	},
-	normalizeWhere: createComparativeWhereCompiler("$nin"),
-};
-
-/**
- * Tests if a string matches a regular expression pattern.
- *
- * **Uses PCRE (Perl Compatible Regular Expression) semantics** as the canonical standard
- * for consistent behavior across all Data Prism store implementations.
- *
- * Supports inline flags using the syntax (?flags)pattern where flags can be:
- * - i: case insensitive matching
- * - m: multiline mode (^ and $ match line boundaries)
- * - s: dotall mode (. matches newlines)
- *
- * PCRE defaults (when no flags specified):
- * - Case-sensitive matching
- * - ^ and $ match string boundaries (not line boundaries)
- * - . does not match newlines
- *
- * @example
- * // Basic pattern matching
- * apply("hello", "hello world") // true
- * apply("\\d+", "abc123") // true
- *
- * @example
- * // With inline flags
- * apply("(?i)hello", "HELLO WORLD") // true (case insensitive)
- * apply("(?m)^line2", "line1\nline2") // true (multiline)
- * apply("(?s)hello.world", "hello\nworld") // true (dotall)
- * apply("(?ims)^hello.world$", "HELLO\nWORLD") // true (combined flags)
- *
- * @example
- * // In WHERE clauses
- * { name: { $matchesRegex: "^[A-Z].*" } } // Names starting with capital letter
- * { email: { $matchesRegex: "(?i).*@example\\.com$" } } // Case-insensitive email domain check
- */
-const $matchesRegex = {
-	name: "$matchesRegex",
-	apply: (operand, inputData) => {
-		if (typeof inputData !== "string") {
-			throw new Error("$matchesRegex requires string input");
-		}
-
-		// Extract inline flags and clean pattern
-		const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
-		if (flagMatch) {
-			const [, flags, pattern] = flagMatch;
-			let jsFlags = "";
-
-			// PCRE flag mapping - JavaScript RegExp aligns well with PCRE semantics
-			if (flags.includes("i")) {
-				jsFlags += "i";
-			}
-			if (flags.includes("m")) {
-				jsFlags += "m";
-			}
-			if (flags.includes("s")) {
-				jsFlags += "s";
-			}
-
-			const regex = new RegExp(pattern, jsFlags);
-			return regex.test(inputData);
-		}
-
-		// Check for unsupported inline flags and strip them
-		const unsupportedFlagMatch = operand.match(/^\(\?[^)]*\)(.*)/);
-		if (unsupportedFlagMatch) {
-			// Unsupported flags detected, use pattern without flags (PCRE defaults)
-			const [, pattern] = unsupportedFlagMatch;
-			const regex = new RegExp(pattern);
-			return regex.test(inputData);
-		}
-
-		// No inline flags - use PCRE defaults
-		// ^ and $ match string boundaries, . doesn't match newlines, case-sensitive
-		const regex = new RegExp(operand);
-		return regex.test(inputData);
-	},
-	evaluate([pattern, string]) {
-		return this.apply(pattern, string);
-	},
-	normalizeWhere: createComparativeWhereCompiler("$matchesRegex"),
-};
-
-/**
- * Tests if a string matches a SQL LIKE pattern.
- *
- * Provides database-agnostic LIKE pattern matching with SQL standard semantics:
- * - % matches any sequence of characters (including none)
- * - _ matches exactly one character
- * - Case-sensitive matching (consistent across databases)
- *
- * @example
- * // Basic LIKE patterns
- * apply("hello%", "hello world") // true
- * apply("%world", "hello world") // true
- * apply("h_llo", "hello") // true
- * apply("h_llo", "hallo") // true
- *
- * @example
- * // In WHERE clauses
- * { name: { $matchesLike: "John%" } } // Names starting with "John"
- * { email: { $matchesLike: "%@gmail.com" } } // Gmail addresses
- * { code: { $matchesLike: "A_B_" } } // Codes like "A1B2", "AXBY"
- */
-const $matchesLike = {
-	name: "$matchesLike",
-	apply: (operand, inputData) => {
-		if (typeof inputData !== "string") {
-			throw new Error("$matchesLike requires string input");
-		}
-
-		// Convert SQL LIKE pattern to JavaScript regex
-		// Escape regex special characters except % and _
-		let regexPattern = operand
-			.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") // Escape regex special chars
-			.replace(/%/g, ".*") // % becomes .*
-			.replace(/_/g, "."); // _ becomes .
-
-		// Anchor the pattern to match the entire string
-		regexPattern = "^" + regexPattern + "$";
-
-		const regex = new RegExp(regexPattern);
-		return regex.test(inputData);
-	},
-	evaluate([pattern, string]) {
-		return this.apply(pattern, string);
-	},
-	normalizeWhere: createComparativeWhereCompiler("$matchesLike"),
-};
-
-/**
- * Tests if a string matches a Unix shell GLOB pattern.
- *
- * Provides database-agnostic GLOB pattern matching with Unix shell semantics:
- * - * matches any sequence of characters (including none)
- * - ? matches exactly one character
- * - [chars] matches any single character in the set
- * - [!chars] or [^chars] matches any character not in the set
- * - Case-sensitive matching
- *
- * @example
- * // Basic GLOB patterns
- * apply("hello*", "hello world") // true
- * apply("*world", "hello world") // true
- * apply("h?llo", "hello") // true
- * apply("h?llo", "hallo") // true
- * apply("[hw]ello", "hello") // true
- * apply("[hw]ello", "wello") // true
- * apply("[!hw]ello", "bello") // true
- *
- * @example
- * // In WHERE clauses
- * { filename: { $matchesGlob: "*.txt" } } // Text files
- * { name: { $matchesGlob: "[A-Z]*" } } // Names starting with capital
- * { code: { $matchesGlob: "IMG_[0-9][0-9][0-9][0-9]" } } // Image codes
- */
-const $matchesGlob = {
-	name: "$matchesGlob",
-	apply: (operand, inputData) => {
-		if (typeof inputData !== "string") {
-			throw new Error("$matchesGlob requires string input");
-		}
-
-		// Convert GLOB pattern to JavaScript regex
-		let regexPattern = "";
-		let i = 0;
-
-		while (i < operand.length) {
-			const char = operand[i];
-
-			if (char === "*") {
-				regexPattern += ".*";
-			} else if (char === "?") {
-				regexPattern += ".";
-			} else if (char === "[") {
-				// Handle character classes
-				let j = i + 1;
-				let isNegated = false;
-
-				// Check for negation
-				if (j < operand.length && (operand[j] === "!" || operand[j] === "^")) {
-					isNegated = true;
-					j++;
-				}
-
-				// Find the closing bracket
-				let classContent = "";
-				while (j < operand.length && operand[j] !== "]") {
-					classContent += operand[j];
-					j++;
-				}
-
-				if (j < operand.length) {
-					// Valid character class
-					regexPattern +=
-						"[" +
-						(isNegated ? "^" : "") +
-						classContent.replace(/\\/g, "\\\\") +
-						"]";
-					i = j;
-				} else {
-					// No closing bracket, treat as literal
-					regexPattern += "\\[";
-				}
-			} else {
-				// Escape regex special characters
-				regexPattern += char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-			}
-			i++;
-		}
-
-		// Anchor the pattern to match the entire string
-		regexPattern = "^" + regexPattern + "$";
-
-		const regex = new RegExp(regexPattern);
-		return regex.test(inputData);
-	},
-	evaluate([pattern, string]) {
-		return this.apply(pattern, string);
-	},
-	normalizeWhere: createComparativeWhereCompiler("$matchesGlob"),
-};
-
-const comparativeDefinitions = {
-	$eq,
-	$gt,
-	$gte,
-	$lt,
-	$lte,
-	$ne,
-	$in,
-	$nin,
-	$matchesRegex,
-	$matchesLike,
-	$matchesGlob,
-};
-
-const $if = {
-	name: "$if",
-	apply: (operand, inputData, { apply, isExpression }) => {
-		if (
-			!isExpression(operand.if) &&
-			operand.if !== true &&
-			operand.if !== false
-		) {
-			throw new Error('"if" must be an expression, true, or false');
-		}
-
-		const outcome = apply(operand.if, inputData) ? operand.then : operand.else;
-		return isExpression(outcome) ? apply(outcome, inputData) : outcome;
-	},
-	evaluate: (operand, { evaluate }) => {
-		const conditionResult =
-			typeof operand.if === "boolean" ? operand.if : evaluate(operand.if);
-		const outcome = conditionResult ? operand.then : operand.else;
-		return typeof outcome === "object" && outcome !== null
-			? evaluate(outcome)
-			: outcome;
-	},
-	controlsEvaluation: true,
-	normalizeWhere: (operand, context) => ({
-		$if: {
-			if: context.normalizeWhere(operand.if, null),
-			then:
-				typeof operand.then === "object" && operand.then !== null
-					? context.normalizeWhere(operand.then, context)
-					: operand.then,
-			else:
-				typeof operand.else === "object" && operand.else !== null
-					? context.normalizeWhere(operand.else, context)
-					: operand.else,
-		},
-	}),
-};
-
-const $case = {
-	name: "$case",
-	apply: (operand, inputData, { apply, isExpression }) => {
-		// Evaluate the value once
-		const value = isExpression(operand.value)
-			? apply(operand.value, inputData)
-			: operand.value;
-
-		// Check each case
-		for (const caseItem of operand.cases) {
-			let matches = false;
-
-			// Handle both simple equality and complex expressions
-			if (isExpression(caseItem.when)) {
-				// For expressions that access properties from the original object (like $get),
-				// we need to evaluate with the original argument.
-				// For comparison expressions, we typically want to evaluate with the value.
-				const whenExpressionName = Object.keys(caseItem.when)[0];
-				const evaluationContext =
-					whenExpressionName === "$get" ? inputData : value;
-				matches = apply(caseItem.when, evaluationContext);
-			} else {
-				// Simple equality comparison
-				matches = value === caseItem.when;
-			}
-
-			if (matches) {
-				return isExpression(caseItem.then)
-					? apply(caseItem.then, inputData)
-					: caseItem.then;
-			}
-		}
-
-		// Return default if no case matches
-		return isExpression(operand.default)
-			? apply(operand.default, inputData)
-			: operand.default;
-	},
-	evaluate(operand, context) {
-		const [trueOperand, value] = operand;
-		return this.apply(trueOperand, value, context);
-	},
-	controlsEvaluation: true,
-	normalizeWhere: (operand) => ({
-		$case: {
-			value: operand.value,
-			cases: operand.cases.map((caseItem) => ({
-				when: caseItem.when,
-				then: caseItem.then,
-			})),
-			default: operand.default,
-		},
-	}),
-};
-
-const conditionalDefinitions = { $if, $case };
-
-const $random = {
-	name: "$random",
-	apply: (operand = {}) => {
-		const { min = 0, max = 1, precision = null } = operand ?? {};
-		const value = Math.random() * (max - min) + min;
-
-		if (precision == null) {
-			return value;
-		}
-
-		if (precision >= 0) {
-			// Positive precision: decimal places
-			return Number(value.toFixed(precision));
-		} else {
-			// Negative precision: round to 10^(-precision)
-			const factor = Math.pow(10, -precision);
-			return Math.round(value / factor) * factor;
-		}
-	},
-	evaluate(operand = {}) {
-		return this.apply(operand);
-	},
-};
-
-const $uuid = {
-	name: "$uuid",
-	apply: () => crypto.randomUUID(),
-	evaluate: () => crypto.randomUUID(),
-};
-
-const generativeDefinitions = {
-	$random,
-	$uuid,
-};
-
-const $filter = {
-	apply: (operand, inputData, { apply }) =>
-		inputData.filter((item) => apply(operand, item)),
-	controlsEvaluation: true,
-	evaluate([fn, items], { apply }) {
-		return apply({ $filter: fn }, items);
-	},
-};
-
-const $flatMap = {
-	apply: (operand, inputData, { apply }) =>
-		inputData.flatMap((item) => apply(operand, item)),
-	controlsEvaluation: true,
-	evaluate([fn, items], { apply }) {
-		return apply({ $flatMap: fn }, items);
-	},
-};
-
-const $map = {
-	apply: (operand, inputData, { apply }) =>
-		inputData.map((item) => apply(operand, item)),
-	controlsEvaluation: true,
-	evaluate([fn, items], { apply }) {
-		return apply({ $map: fn }, items);
-	},
-};
-
-const $any = {
-	apply: (operand, inputData, { apply }) =>
-		inputData.some((item) => apply(operand, item)),
-	controlsEvaluation: true,
-	evaluate([predicate, array], { apply }) {
-		return apply({ $any: predicate }, array);
-	},
-};
-
-const $all = {
-	apply: (operand, inputData, { apply }) =>
-		inputData.every((item) => apply(operand, item)),
-	controlsEvaluation: true,
-	evaluate([predicate, array], { apply }) {
-		return apply({ $all: predicate }, array);
-	},
-};
-
-const $find = {
-	apply: (operand, inputData, { apply }) =>
-		inputData.find((item) => apply(operand, item)),
-	controlsEvaluation: true,
-	evaluate([predicate, array], { apply }) {
-		return apply({ $find: predicate }, array);
-	},
-};
-
-const $concat = {
-	apply: (operand, inputData) => inputData.concat(operand),
-	evaluate([arrayToConcat, baseArray]) {
-		return this.apply(arrayToConcat, baseArray);
-	},
-};
-
-const $join = {
-	apply: (operand, inputData) => inputData.join(operand),
-	evaluate([separator, array]) {
-		return this.apply(separator, array);
-	},
-};
-
-const $reverse = {
-	apply: (_, inputData) => inputData.slice().reverse(),
-	evaluate(array) {
-		return this.apply(null, array);
-	},
-};
-
-const iterativeDefinitions = {
-	$all,
-	$any,
-	$concat,
-	$filter,
-	$find,
-	$flatMap,
-	$join,
-	$map,
-	$reverse,
-};
-
-const $and = {
-	name: "$and",
-	apply: (operand, inputData, { apply }) =>
-		operand.every((subexpr) => apply(subexpr, inputData)),
-	controlsEvaluation: true,
-	evaluate(operand) {
-		return operand.every(Boolean);
-	},
-	normalizeWhere: (operand, { attribute, normalizeWhere }) => ({
-		$and: operand.map((pred) => normalizeWhere(pred, attribute)),
-	}),
-};
-
-const $or = {
-	name: "$or",
-	apply: (operand, inputData, { apply }) =>
-		operand.some((subexpr) => apply(subexpr, inputData)),
-	controlsEvaluation: true,
-	evaluate(operand) {
-		return operand.some(Boolean);
-	},
-	normalizeWhere: (operand, { attribute, normalizeWhere }) => ({
-		$or: operand.map((pred) => normalizeWhere(pred, attribute)),
-	}),
-};
-
-const $not = {
-	name: "$not",
-	apply: (operand, inputData, { apply }) => !apply(operand, inputData),
-	controlsEvaluation: true,
-	evaluate(operand, { evaluate }) {
-		const value = typeof operand === "boolean" ? operand : evaluate(operand);
-		return !value;
-	},
-	normalizeWhere: (operand, { attribute, normalizeWhere }) => ({
-		$not: normalizeWhere(operand, attribute),
-	}),
-};
-
-const logicalDefinitions = {
-	$and,
-	$not,
-	$or,
-};
-
-const $nowLocal = {
-	name: "$nowLocal",
-	apply: () => {
-		const now = new Date();
-		const offset = -now.getTimezoneOffset();
-		const sign = offset >= 0 ? "+" : "-";
-		const hours = Math.floor(Math.abs(offset) / 60)
-			.toString()
-			.padStart(2, "0");
-		const minutes = (Math.abs(offset) % 60).toString().padStart(2, "0");
-		return now.toISOString().slice(0, -1) + sign + hours + ":" + minutes;
-	},
-	evaluate() {
-		return this.apply();
-	},
-};
-
-const $nowUTC = {
-	name: "$nowUTC",
-	apply: () => new Date().toISOString(),
-	evaluate() {
-		return this.apply();
-	},
-};
-
-const $timestamp = {
-	name: "$timestamp",
-	apply: () => Date.now(),
-	evaluate() {
-		return this.apply();
-	},
-};
-
-const temporalDefinitions = {
-	$nowLocal,
-	$nowUTC,
-	$timestamp,
-};
-
-const $add = {
-	name: "$add",
-	apply: (operand, inputData) => {
-		if (typeof operand !== "number") {
-			throw new Error("$add apply form requires number operand");
-		}
-		if (typeof inputData !== "number") {
-			throw new Error("$add apply form requires number input data");
-		}
-		return inputData + operand;
-	},
-	evaluate: (operand) => {
-		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error("$add evaluate form requires array of exactly 2 numbers");
-		}
-		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error("$add evaluate form requires array of exactly 2 numbers");
-		}
-		return operand[0] + operand[1];
-	},
-};
-
-const $subtract = {
-	name: "$subtract",
-	apply: (operand, inputData) => {
-		if (typeof operand !== "number") {
-			throw new Error("$subtract apply form requires number operand");
-		}
-		if (typeof inputData !== "number") {
-			throw new Error("$subtract apply form requires number input data");
-		}
-		return inputData - operand;
-	},
-	evaluate: (operand) => {
-		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error(
-				"$subtract evaluate form requires array of exactly 2 numbers",
-			);
-		}
-		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error(
-				"$subtract evaluate form requires array of exactly 2 numbers",
-			);
-		}
-		return operand[0] - operand[1];
-	},
-};
-
-const $multiply = {
-	name: "$multiply",
-	apply: (operand, inputData) => {
-		if (typeof operand !== "number") {
-			throw new Error("$multiply apply form requires number operand");
-		}
-		if (typeof inputData !== "number") {
-			throw new Error("$multiply apply form requires number input data");
-		}
-		return inputData * operand;
-	},
-	evaluate: (operand) => {
-		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error(
-				"$multiply evaluate form requires array of exactly 2 numbers",
-			);
-		}
-		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error(
-				"$multiply evaluate form requires array of exactly 2 numbers",
-			);
-		}
-		return operand[0] * operand[1];
-	},
-};
-
-const $divide = {
-	name: "$divide",
-	apply: (operand, inputData) => {
-		if (typeof operand !== "number") {
-			throw new Error("$divide apply form requires number operand");
-		}
-		if (typeof inputData !== "number") {
-			throw new Error("$divide apply form requires number input data");
-		}
-		if (operand === 0) {
-			throw new Error("Division by zero");
-		}
-		return inputData / operand;
-	},
-	evaluate: (operand) => {
-		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error(
-				"$divide evaluate form requires array of exactly 2 numbers",
-			);
-		}
-		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error(
-				"$divide evaluate form requires array of exactly 2 numbers",
-			);
-		}
-		if (operand[1] === 0) {
-			throw new Error("Division by zero");
-		}
-		return operand[0] / operand[1];
-	},
-};
-
-const $modulo = {
-	name: "$modulo",
-	apply: (operand, inputData) => {
-		if (typeof operand !== "number") {
-			throw new Error("$modulo apply form requires number operand");
-		}
-		if (typeof inputData !== "number") {
-			throw new Error("$modulo apply form requires number input data");
-		}
-		if (operand === 0) {
-			throw new Error("Modulo by zero");
-		}
-		return inputData % operand;
-	},
-	evaluate: (operand) => {
-		if (!Array.isArray(operand) || operand.length !== 2) {
-			throw new Error(
-				"$modulo evaluate form requires array of exactly 2 numbers",
-			);
-		}
-		if (typeof operand[0] !== "number" || typeof operand[1] !== "number") {
-			throw new Error(
-				"$modulo evaluate form requires array of exactly 2 numbers",
-			);
-		}
-		if (operand[1] === 0) {
-			throw new Error("Modulo by zero");
-		}
-		return operand[0] % operand[1];
-	},
-};
-
-const mathDefinitions = {
-	$add,
-	$subtract,
-	$multiply,
-	$divide,
-	$modulo,
-};
-
-/**
- * @typedef {object} ApplicativeExpression
- */
-
-/**
- * @typedef {object} Expression
- */
-
-/**
- * @typedef {object} WhereClause
- */
-
-/**
- * @template Args, Input, Output
- * @typedef {object} Expression
- * @property {function(any, Input): Output} apply
- * @property {function(Args, Input, any): Output} [applyImplicit]
- * @property {function(Input): Output} evaluate
- * @property {string} [name]
- * @property {object} schema
- */
-
-/**
- * @typedef {object} ExpressionEngine
- * @property {function(Expression, any): any} apply
- * @property {function(Expression): any} evaluate
- * @property {string[]} expressionNames
- * @property {function(Expression): boolean} isExpression
- * @property {function(WhereClause): Expression} normalizeWhereClause
- */
-
-/**
- * @template Args, Input, Output
- * @typedef {function(...any): Expression} FunctionExpression
- */
-
-/**
- * @param {object} definitions
- * @returns {ExpressionEngine}
- */
-function createExpressionEngine(customExpressions) {
-	const expressions = { ...coreDefinitions, ...customExpressions }; // mutated later
-	const isExpression = (val) => {
-		const expressionKeys = new Set(Object.keys(expressions));
-
-		return (
-			val !== null &&
-			typeof val === "object" &&
-			!Array.isArray(val) &&
-			Object.keys(val).length === 1 &&
-			expressionKeys.has(Object.keys(val)[0])
-		);
-	};
-
-	const apply = (rootExpression, inputData, executionContext = {}) => {
-		const step = (expression) => {
-			if (!isExpression(expression)) {
-				return Array.isArray(expression)
-					? expression.map(step)
-					: typeof expression === "object" && expression !== null
-						? mapValues(expression, step)
-						: expression;
-			}
-
-			const [expressionName, operand] = Object.entries(expression)[0];
-			const expressionDef = expressions[expressionName];
-
-			if (expressionDef.controlsEvaluation) {
-				return expressionDef.apply(operand, inputData, {
-					apply,
-					executionContext,
-					isExpression,
-				});
-			}
-
-			const evaluatedOperand = step(operand);
-			return expressionDef.apply(evaluatedOperand, inputData);
-		};
-
-		return step(rootExpression);
-	};
-
-	const evaluate = (expression, executionContext = {}) => {
-		if (!isExpression(expression)) {
-			return Array.isArray(expression)
-				? expression.map((e) => evaluate(e, executionContext))
-				: typeof expression === "object" && expression !== null
-					? mapValues(expression, (e) => evaluate(e, executionContext))
-					: expression;
-		}
-
-		const [expressionName, operand] = Object.entries(expression)[0];
-
-		// special case
-		if (expressionName === "$literal") return expression[expressionName];
-
-		const expressionDef = expressions[expressionName];
-		if (expressionDef.controlsEvaluation) {
-			return expressionDef.evaluate(operand, {
-				apply,
-				evaluate,
-				isExpression,
-			});
-		}
-
-		const evaluatedOperand = evaluate(operand);
-		return expressionDef.evaluate(evaluatedOperand);
-	};
-
-	const normalizeWhereClause = (where) => {
-		const compileNode = (node, attribute) => {
-			if (Array.isArray(node)) {
-				throw new Error(
-					"Array found in where clause. Where clauses must be objects or expressions that test conditions.",
-				);
-			}
-
-			if (typeof node === "object") {
-				if (isExpression(node)) {
-					const [expressionName, operand] = Object.entries(node)[0];
-					const expression = expressions[expressionName];
-
-					if (!("normalizeWhere" in expression)) {
-						throw new Error(
-							`Expression ${expressionName} cannot be used in where clauses. Where clauses require expressions that test conditions (comparisons like $eq, $gt or logical operators like $and, $or).`,
-						);
-					}
-
-					return expression.normalizeWhere(operand, {
-						attribute,
-						normalizeWhere: compileNode,
-					});
-				}
-
-				// not an expression
-				return Object.entries(node).length === 1
-					? compileNode(Object.entries(node)[0][1], Object.entries(node)[0][0])
-					: {
-							$and: Object.entries(node).map(([attr, value]) =>
-								compileNode(value, attr),
-							),
-						};
-			}
-
-			return { $pipe: [{ $get: attribute }, { $eq: node }] };
-		};
-
-		return compileNode(where, null);
-	};
-
-	return {
-		apply,
-		evaluate,
-		expressionNames: Object.keys(expressions),
-		isExpression,
-		normalizeWhereClause,
-	};
-}
-
-const defaultExpressions = {
-	...coreDefinitions,
-	...aggregativeDefinitions,
-	...comparativeDefinitions,
-	...conditionalDefinitions,
-	...generativeDefinitions,
-	...iterativeDefinitions,
-	...logicalDefinitions,
-	...mathDefinitions,
-	...temporalDefinitions,
-};
-
-const defaultExpressionEngine =
-	createExpressionEngine(defaultExpressions);
 
 /**
  * @typedef {Object} StandardError
@@ -4800,6 +5150,134 @@ var baseQuerySchema = {
 	$ref: $ref,
 	definitions: definitions$1
 };
+
+const createComparative = (exprName) => (operand, attribute) =>
+	attribute
+		? { $pipe: [{ $get: attribute }, { [exprName]: operand }] }
+		: { [exprName]: operand };
+
+const buildObj = (array, fn) =>
+	array.reduce((acc, item) => ({ ...acc, [item]: fn(item) }), {});
+
+const whereExpressions = {
+	// comparative
+	...buildObj(
+		["$eq", "$lt", "$lte", "$gt", "$gte", "$ne", "$in", "$nin"],
+		createComparative,
+	),
+
+	// pattern matching
+	...buildObj(
+		["$matchesRegex", "$matchesLike", "$matchesGlob"],
+		createComparative,
+	),
+
+	// core
+	$literal: (operand, attribute) =>
+		attribute
+			? { $pipe: [{ $get: attribute }, { $eq: { $literal: operand } }] }
+			: operand,
+	$pipe: (operand) => ({ $pipe: operand }),
+	$debug: (operand, attribute, { resolve }) => ({
+		$debug: resolve(operand, attribute),
+	}),
+
+	// conditional - need to be included for validation 
+	$if: (operand, attribute, { resolve }) => ({
+		$if: {
+			if: resolve(operand.if, attribute),
+			then: resolve(operand.then, attribute),
+			else: resolve(operand.else, attribute),
+		},
+	}),
+	$case: (operand, attribute) => ({
+		$case: { ...operand, value: { $get: attribute } },
+	}),
+	$switch: (operand, attribute) => ({
+		$switch: { ...operand, value: { $get: attribute } },
+	}),
+
+	// logical - need to be included for validation
+	$and: (operand, attribute, { resolve }) => ({
+		$and: operand.map((pred) => resolve(pred, attribute)),
+	}),
+	$or: (operand, attribute, { resolve }) => ({
+		$or: operand.map((pred) => resolve(pred, attribute)),
+	}),
+	$not: (operand, attribute, { resolve }) => ({
+		$not: resolve(operand, attribute),
+	}),
+
+	// $temporal
+	$nowLocal: () => ({ $nowLocal: null }),
+	$nowUTC: () => ({ $nowUTC: null }),
+	$timestamp: () => ({ $timestamp: null }),
+};
+
+const looksLikeExpression = (val) =>
+	val !== null &&
+	typeof val === "object" &&
+	!Array.isArray(val) &&
+	Object.keys(val).length === 1 &&
+	Object.keys(val)[0].startsWith("$");
+
+const isExpression = (val) =>
+	looksLikeExpression(val) && Object.keys(val)[0] in whereExpressions;
+
+const checkLooksLikeExpression = (expr) => {
+	if (looksLikeExpression(expr) && !isExpression(expr)) {
+		throw new Error(
+			`${Object.keys(expr)[0]} is not a valid expression for a where clause. Use $literal if you meant this as a literal value. ${JSON.stringify(expr)}`,
+		);
+	}
+};
+
+// Structure has already been validated, so no need for defensive coding/covering all cases.
+function normalizeWhereClause(where) {
+	let handleAttribute;
+
+	const resolve = (node, attribute) => {
+		if (typeof node === "object" && looksLikeExpression(node)) {
+			checkLooksLikeExpression(node);
+
+			const [expressionName, operand] = Object.entries(node)[0];
+			const expression = whereExpressions[expressionName];
+
+			return expression(operand, attribute, {
+				resolve,
+			});
+		}
+
+		// not an expression
+		return Array.isArray(node)
+			? node.map((v) => resolve(v, attribute))
+			: node !== null && typeof node === "object"
+				? Object.keys(node).length === 0
+					? {}
+					: Object.keys(node).length > 1
+						? {
+								$and: Object.entries(node).map(([attr, val]) =>
+									handleAttribute(attr, val),
+								),
+							}
+						: handleAttribute(...Object.entries(node)[0])
+				: attribute
+					? { $pipe: [{ $get: attribute }, { $eq: node }] }
+					: node;
+	};
+
+	handleAttribute = (attribute, value) => {
+		checkLooksLikeExpression(value);
+
+		return typeof value === "object" && value !== null
+			? Array.isArray(value) || !isExpression(value)
+				? { $pipe: [{ $get: attribute }, { $eq: { $literal: value } }] }
+				: resolve(value, attribute)
+			: { $pipe: [{ $get: attribute }, { $eq: value }] };
+	};
+
+	return resolve(where, null);
+}
 
 /**
  * @typedef {Object} Expression
@@ -5204,7 +5682,7 @@ function normalizeQuery(schema, rootQuery, options = {}) {
 			: {};
 
 		const whereObj = query.where
-			? { where: expressionEngine.normalizeWhereClause(query.where) }
+			? { where: normalizeWhereClause(query.where) }
 			: {};
 
 		return {
@@ -6207,7 +6685,7 @@ function validateSchema(schema, options = {}) {
 }
 
 // import { mapValues } from "es-toolkit";
-// import { defaultExpressionEngine } from "../expressions/expressions.js";
+// import { defaultExpressionEngine } from "json-expressions";
 
 /**
  * @typedef {Object<string, any>} Projection
@@ -6290,7 +6768,7 @@ function distributeStrings(expression, expressionEngine) {
 // }
 
 /**
- * @param {import('../expressions/expressions.js').Expression} expression
+ * @param {import('../expressions/index.js').Expression} expression
  * @param {any} expressionEngine
  * @returns {function(any): any}
  */
@@ -6761,4 +7239,4 @@ const ensureValidDeleteResource = ensure(validateDeleteResource);
 const ensureValidMergeResource = ensure(validateMergeResource);
 const ensureValidQueryResult = ensure(validateQueryResult);
 
-export { ExpressionNotSupportedError, createEmptyGraph, createExpressionEngine, createGraphFromResources, createResource, createValidator, defaultExpressionEngine, defaultExpressions, defaultValidator, ensureValidCreateResource, ensureValidDeleteResource, ensureValidMergeResource, ensureValidQuery, ensureValidQueryResult, ensureValidSchema, ensureValidUpdateResource, linkInverses, mergeGraphs, mergeGraphsDeep, mergeResources$1 as mergeResources, normalizeQuery, normalizeResource, queryGraph, validateCreateResource, validateDeleteResource, validateMergeResource, validateQuery, validateQueryResult, validateSchema, validateUpdateResource };
+export { ExpressionNotSupportedError, createEmptyGraph, createGraphFromResources, createResource, createValidator, defaultValidator, ensureValidCreateResource, ensureValidDeleteResource, ensureValidMergeResource, ensureValidQuery, ensureValidQueryResult, ensureValidSchema, ensureValidUpdateResource, linkInverses, mergeGraphs, mergeGraphsDeep, mergeResources$1 as mergeResources, normalizeQuery, normalizeResource, queryGraph, validateCreateResource, validateDeleteResource, validateMergeResource, validateQuery, validateQueryResult, validateSchema, validateUpdateResource };

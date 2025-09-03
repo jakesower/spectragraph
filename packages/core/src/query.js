@@ -1,5 +1,5 @@
 import { mapValues, omit } from "es-toolkit";
-import { defaultExpressionEngine } from "./expressions/index.js";
+import { defaultExpressionEngine } from "json-expressions";
 import { defaultValidator } from "./resource.js";
 import { createDeepCache, ensure, translateAjvErrors } from "./lib/helpers.js";
 import baseQuerySchema from "./fixtures/query.schema.json";
@@ -352,7 +352,7 @@ export function validateQuery(schema, rootQuery, options = {}) {
  * @param {Object} schema - The schema object
  * @param {RootQuery} rootQuery - The query to normalize
  * @param {Object} [options]
- * @param {import('./expressions/index.js').ExpressionEngine} [options.expressionEngine] - a @data-prism/graph expression engine
+ * @param {import('json-expressions').ExpressionEngine} [options.expressionEngine] - a @data-prism/graph expression engine
  * @returns {NormalQuery} The normalized query
  */
 export function normalizeQuery(schema, rootQuery, options = {}) {

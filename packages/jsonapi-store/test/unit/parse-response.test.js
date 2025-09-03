@@ -1,6 +1,9 @@
 import { expect, it } from "vitest";
 import { createMemoryStore } from "@data-prism/memory-store";
-import { careBearSchema, careBearData } from "@data-prism/interface-tests/fixtures";
+import {
+	careBearSchema,
+	careBearData,
+} from "@data-prism/interface-tests/fixtures";
 import { parseResponse } from "../../src/parse-response";
 import {
 	allBearsResult,
@@ -9,7 +12,7 @@ import {
 
 const store = createMemoryStore(careBearSchema, { initialData: careBearData });
 
-it("parses a response with multiple resources", async () => {
+it("parses a response with multiple resources", () => {
 	const result = parseResponse(
 		careBearSchema,
 		{
@@ -22,7 +25,7 @@ it("parses a response with multiple resources", async () => {
 	expect(result).toStrictEqual(allBearsResult);
 });
 
-it("parses a response with a single resource", async () => {
+it("parses a response with a single resource", () => {
 	const result = parseResponse(
 		careBearSchema,
 		{
@@ -42,7 +45,7 @@ it("parses a response with a single resource", async () => {
 	expect(result).toStrictEqual({ name: "Tenderheart Bear" });
 });
 
-it("parses a response with a nested resource", async () => {
+it("parses a response with a nested resource", () => {
 	const result = parseResponse(
 		careBearSchema,
 		{
@@ -76,7 +79,7 @@ it("parses a response with a nested resource", async () => {
 	});
 });
 
-it("parses a response with a nested resource", async () => {
+it("parses a response with a nested resource", () => {
 	const result = parseResponse(
 		careBearSchema,
 		{
@@ -184,5 +187,5 @@ it("parses a response with a doubly nested resource", async () => {
 		],
 	});
 
-	expect(result).toStrictEqual(store.query(query));
+	expect(result).toStrictEqual(await store.query(query));
 });

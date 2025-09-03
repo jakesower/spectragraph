@@ -2,7 +2,7 @@ import Ajv from "ajv";
 import addFormats from "ajv-formats";
 import addErrors from "ajv-errors";
 import { applyOrMap } from "@data-prism/utils";
-import { defaultExpressionEngine } from "./expressions/index.js";
+import { defaultExpressionEngine } from "json-expressions";
 import { mapValues, omit, pickBy } from "es-toolkit";
 import { normalizeQuery } from "./query.js";
 import { createDeepCache, ensure, translateAjvErrors } from "./lib/helpers.js";
