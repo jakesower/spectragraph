@@ -11,7 +11,8 @@ export default defineConfig({
 				"**/*.d.ts", 
 				"**/*.config.js",
 				"scripts/**",
-				"src/index.js"
+				"src/index.js",
+				"src/errors.js" // Error class definitions - minimal logic, difficult to test meaningfully
 			],
 		},
 	},

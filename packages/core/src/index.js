@@ -1,6 +1,11 @@
 export { validateSchema } from "./schema.js";
 export { normalizeQuery, validateQuery } from "./query.js";
 export {
+	defaultValidator,
+	defaultSelectEngine,
+	defaultWhereEngine,
+} from "./lib/defaults.js";
+export {
 	linkInverses,
 	createEmptyGraph,
 	createGraphFromResources,
@@ -11,7 +16,6 @@ export { queryGraph } from "./graph/query-graph.js";
 export {
 	createValidator,
 	createResource,
-	defaultValidator,
 	mergeResources,
 	normalizeResource,
 	validateCreateResource,

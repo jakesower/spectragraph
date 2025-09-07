@@ -452,6 +452,10 @@ const store = createPostgresStore(schema, pool);
 - Consider using limit/offset for pagination
 - Use indexes on frequently queried attributes
 
+## Testing
+
+Tests require Docker to be running for PostgreSQL test database containers.
+
 ## Related Packages
 
 - `@data-prism/core` - Core Data Prism functionality and schema definitions

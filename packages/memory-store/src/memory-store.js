@@ -10,8 +10,9 @@ import {
 	ensureValidDeleteResource,
 	ensureValidUpdateResource,
 	defaultValidator,
+	defaultSelectEngine,
+	defaultWhereEngine,
 } from "@data-prism/core";
-import { defaultExpressionEngine } from "json-expressions";
 import { create as createAction } from "./create.js";
 import { deleteAction } from "./delete.js";
 import { update as updateAction } from "./update.js";
@@ -28,7 +29,9 @@ import { merge } from "./merge.js";
 /**
  * @typedef {Object} MemoryStoreConfig
  * @property {import('@data-prism/core').Graph} [initialData] - Initial graph data to populate the store
- * @property {Ajv} [validator] - Custom AJV validator instance (defaults to createValidator())
+ * @property {Ajv} [validator] - Custom AJV validator instance (defaults to defaultValidator)
+ * @property {import('@data-prism/core').SelectExpressionEngine} [selectEngine] - Expression engine for SELECT clauses (defaults to defaultSelectEngine)
+ * @property {import('@data-prism/core').WhereExpressionEngine} [whereEngine] - Expression engine for WHERE clauses (defaults to defaultWhereEngine)
  */
 
 /**
@@ -59,7 +62,8 @@ export function createMemoryStore(schema, config = {}) {
 	const {
 		initialData = {},
 		validator = defaultValidator,
-		expressionEngine = defaultExpressionEngine,
+		selectEngine = defaultSelectEngine,
+		whereEngine = defaultWhereEngine,
 	} = config;
 
 	ensureValidSchema(schema, { validator });
@@ -67,9 +71,9 @@ export function createMemoryStore(schema, config = {}) {
 	let storeGraph = mergeGraphsDeep(createEmptyGraph(schema), initialData);
 
 	const runQuery = (query) => {
-		const normalQuery = normalizeQuery(schema, query, { expressionEngine });
-		ensureValidQuery(schema, normalQuery, { expressionEngine });
-		return queryGraph(schema, normalQuery, storeGraph);
+		const normalQuery = normalizeQuery(schema, query, { selectEngine, whereEngine });
+		ensureValidQuery(schema, normalQuery, { selectEngine, whereEngine });
+		return queryGraph(schema, normalQuery, storeGraph, { selectEngine, whereEngine });
 	};
 
 	// WARNING: MUTATES storeGraph

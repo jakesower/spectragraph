@@ -1,8 +1,8 @@
 import { mapValues, orderBy } from "es-toolkit";
 import { applyOrMap } from "@data-prism/utils";
-import { defaultExpressionEngine } from "json-expressions";
-import { createExpressionProjector } from "./select-helpers.js";
 import { normalizeQuery } from "../query.js";
+import { defaultSelectEngine, defaultWhereEngine } from "../lib/defaults.js";
+import { createExpressionProjector } from "./select-helpers.js";
 
 /**
  * @typedef {Object<string, unknown>} Result
@@ -76,9 +76,16 @@ function prepGraph(graph) {
 /**
  * @param {import('../query.js').NormalQuery} rootQuery
  * @param {Object} data
+ * @param {Object} [options]
+ * @param {import('../lib/defaults.js').SelectExpressionEngine} [options.selectEngine] - Expression engine for SELECT clauses
+ * @param {import('../lib/defaults.js').WhereExpressionEngine} [options.whereEngine] - Expression engine for WHERE clauses
  * @returns {Result}
  */
-function runQuery(rootQuery, data) {
+function runQuery(rootQuery, data, options = {}) {
+	const {
+		selectEngine = defaultSelectEngine,
+		whereEngine = defaultWhereEngine,
+	} = options;
 	const go = (query) => {
 		if (query.id && !data[query.type][query.id]) return null;
 
@@ -88,7 +95,7 @@ function runQuery(rootQuery, data) {
 				if (Object.keys(query.where).length === 0) return results;
 
 				return results.filter((result) => {
-					return defaultExpressionEngine.apply(query.where, result);
+					return whereEngine.apply(query.where, result);
 				});
 			},
 			order(results) {
@@ -143,11 +150,8 @@ function runQuery(rootQuery, data) {
 					}
 
 					// expression
-					if (defaultExpressionEngine.isExpression(propQuery)) {
-						return createExpressionProjector(
-							propQuery,
-							defaultExpressionEngine,
-						);
+					if (selectEngine.isExpression(propQuery)) {
+						return createExpressionProjector(propQuery, selectEngine);
 					}
 
 					// subquery
@@ -224,11 +228,14 @@ function runQuery(rootQuery, data) {
  * @param {import('../schema.js').Schema} schema
  * @param {import('../query.js').RootQuery} query
  * @param {import('../graph.js').Graph} graph
+ * @param {Object} [options]
+ * @param {import('../lib/defaults.js').SelectExpressionEngine} [options.selectEngine] - Expression engine for SELECT clauses
+ * @param {import('../lib/defaults.js').WhereExpressionEngine} [options.whereEngine] - Expression engine for WHERE clauses
  * @returns {Result}
  */
-export function queryGraph(schema, query, graph) {
+export function queryGraph(schema, query, graph, options = {}) {
 	const preppedGraph = prepGraph(graph);
-	const normalQuery = normalizeQuery(schema, query);
+	const normalQuery = normalizeQuery(schema, query, options);
 
-	return runQuery(normalQuery, preppedGraph);
+	return runQuery(normalQuery, preppedGraph, options);
 }

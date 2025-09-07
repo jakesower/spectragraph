@@ -25,10 +25,13 @@ The memory store maintains your data in normalized form in memory, with automati
 
 ```javascript
 import { createMemoryStore } from "@data-prism/memory-store";
+import { defaultSelectEngine, defaultWhereEngine } from "@data-prism/core";
 
 const store = createMemoryStore(schema, {
 	initialData: existingGraph, // optional
 	validator: customValidator, // optional
+	selectEngine: defaultSelectEngine, // optional - expression engine for SELECT clauses
+	whereEngine: defaultWhereEngine, // optional - expression engine for WHERE clauses
 });
 ```
 
@@ -43,6 +46,15 @@ The memory store provides standard CRUD operations plus advanced features:
 - **query** - Execute Data Prism queries against the store
 - **merge** - Insert complex resource trees with nested relationships
 
+### Expression Engines
+
+The memory store uses focused expression engines from Data Prism Core to provide different capabilities for different query contexts:
+
+- **SELECT Engine**: Full expression capabilities including filtering, aggregations, transformations, and computed fields for SELECT clauses
+- **WHERE Engine**: Filtering-only operations for WHERE clauses, excluding expensive aggregation operations for performance and security
+
+By default, the memory store uses `defaultSelectEngine` and `defaultWhereEngine` from `@data-prism/core`. You can provide custom engines in the configuration if needed for specialized use cases.
+
 ## API Reference
 
 ### `createMemoryStore(schema, config?)`
@@ -54,6 +66,8 @@ Creates a new in-memory store instance.
 - `schema` (Schema) - The Data Prism schema defining resource types and relationships
 - `config.initialData` (Graph, optional) - Initial graph data to populate the store
 - `config.validator` (Ajv, optional) - Custom AJV validator instance
+- `config.selectEngine` (SelectExpressionEngine, optional) - Expression engine for SELECT clauses
+- `config.whereEngine` (WhereExpressionEngine, optional) - Expression engine for WHERE clauses
 
 **Returns:** Memory store instance with CRUD and query operations
 

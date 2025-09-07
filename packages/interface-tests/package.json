@@ -22,7 +22,6 @@
 	"private": true,
 	"sideEffects": false,
 	"devDependencies": {
-		"vitest": "^2.0.0"
-	},
-	"dependencies": {}
+		"vitest": "^3.2.4"
+	}
 }

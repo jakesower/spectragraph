@@ -2,12 +2,12 @@ import Ajv from "ajv";
 import addFormats from "ajv-formats";
 import addErrors from "ajv-errors";
 import { applyOrMap } from "@data-prism/utils";
-import { defaultExpressionEngine } from "json-expressions";
 import { mapValues, omit, pickBy } from "es-toolkit";
 import { normalizeQuery } from "./query.js";
 import { createDeepCache, ensure, translateAjvErrors } from "./lib/helpers.js";
 import { validateSchema } from "./schema.js";
 import { buildAttribute } from "./resource-helpers.js";
+import { defaultSelectEngine, defaultValidator } from "./lib/defaults.js";
 
 /**
  * @typedef {Object} Ref
@@ -68,13 +68,6 @@ import { buildAttribute } from "./resource-helpers.js";
  * @property {function(CreateResource | UpdateResource): Promise<NormalResource>} upsert - Creates or updates a resource
  * @property {function(import('./query.js').RootQuery): Promise<*>} query - Queries the store
  */
-
-export const defaultValidator = new Ajv({
-	allErrors: true,
-	allowUnionTypes: true,
-});
-addFormats(defaultValidator);
-addErrors(defaultValidator);
 
 /**
  * Creates a new validator instance
@@ -649,10 +642,12 @@ export function validateMergeResource(schema, resource, options = {}) {
  * @param {Object|Object[]} result - The resource tree to validate
  * @param {Object} [options]
  * @param {Ajv} [options.validator] - The validator instance to use
+ * @param {import('./lib/defaults.js').SelectExpressionEngine} [options.selectEngine] - Expression engine for SELECT clause validation
  * @return {import('./lib/helpers.js').StandardError[]}
  */
 export function validateQueryResult(schema, rootQuery, result, options = {}) {
-	const { validator = defaultValidator } = options;
+	const { selectEngine = defaultSelectEngine, validator = defaultValidator } =
+		options;
 
 	ensure(validateSchema)(schema, options);
 
@@ -684,7 +679,7 @@ export function validateQueryResult(schema, rootQuery, result, options = {}) {
 			properties: mapValues(query.select, (def, prop) => {
 				const resDef = schema.resources[query.type];
 
-				if (defaultExpressionEngine.isExpression(def)) return {};
+				if (selectEngine.isExpression(def)) return {};
 
 				if (typeof def === "string") {
 					return { ...resDef.attributes[def] };

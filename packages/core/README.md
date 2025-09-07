@@ -128,6 +128,15 @@ const query = {
 
 Data Prism queries support expressions for computed fields and conditional logic. These expressions are provided by the [json-expressions](https://github.com/jakesower/json-expressions) library, which offers a comprehensive set of operators for data transformation and filtering.
 
+#### Expression Engines
+
+Data Prism uses focused expression engines to provide different capabilities for different query contexts:
+
+- **SELECT Engine** (`defaultSelectEngine`): Full expression capabilities including filtering, aggregations, transformations, and computed fields
+- **WHERE Engine** (`defaultWhereEngine`): Filtering-only operations for performance and security - excludes expensive aggregation operations
+
+This architecture ensures that resource-intensive operations are only available where appropriate, preventing performance issues from expensive aggregations in WHERE clauses.
+
 #### What are Expressions?
 
 Expressions are JSON objects that describe computations to be performed on data. Each expression has a single key that identifies the operation (prefixed with `$`) and a value that provides the parameters:
@@ -368,16 +377,18 @@ Validates that a query is valid against a schema.
 
 - `schema` (Schema) - The schema to validate against
 - `query` (RootQuery) - The query to validate
+- `options.selectEngine` (SelectExpressionEngine, optional) - Expression engine for SELECT clauses
+- `options.whereEngine` (WhereExpressionEngine, optional) - Expression engine for WHERE clauses
 
 **Throws:** Error if query is invalid
 
 ```javascript
 import { ensureValidQuery } from "@data-prism/core";
 
-ensureValidQuery(schema, query); // Throws if invalid
+ensureValidQuery(schema, query); // Uses default engines
 ```
 
-#### `normalizeQuery(schema, rootQuery)`
+#### `normalizeQuery(schema, rootQuery, options?)`
 
 Normalizes a query by expanding shorthand syntax and ensuring consistent structure.
 
@@ -385,6 +396,8 @@ Normalizes a query by expanding shorthand syntax and ensuring consistent structu
 
 - `schema` (Schema) - The schema object
 - `rootQuery` (RootQuery) - The query to normalize
+- `options.selectEngine` (SelectExpressionEngine, optional) - Expression engine for SELECT clauses
+- `options.whereEngine` (WhereExpressionEngine, optional) - Expression engine for WHERE clauses
 
 **Returns:** Normalized query with expanded selections and consistent structure
 
@@ -397,7 +410,7 @@ const normalized = normalizeQuery(schema, {
 });
 ```
 
-#### `queryGraph(schema, query, graph)`
+#### `queryGraph(schema, query, graph, options?)`
 
 Executes a query against a graph directly (convenience function).
 
@@ -406,6 +419,8 @@ Executes a query against a graph directly (convenience function).
 - `schema` (Schema) - The schema defining relationships
 - `query` (RootQuery) - The query to execute
 - `graph` (Graph) - The graph to query
+- `options.selectEngine` (SelectExpressionEngine, optional) - Expression engine for SELECT clauses
+- `options.whereEngine` (WhereExpressionEngine, optional) - Expression engine for WHERE clauses
 
 **Returns:** Query results matching the query structure
 
@@ -560,7 +575,8 @@ Validates that a query is valid against a schema.
 
 - `schema` (Schema) - The schema to validate against
 - `query` (RootQuery) - The query to validate
-- `options.validator` (Ajv, optional) - Custom validator instance
+- `options.selectEngine` (SelectExpressionEngine, optional) - Expression engine for SELECT clauses
+- `options.whereEngine` (WhereExpressionEngine, optional) - Expression engine for WHERE clauses
 
 **Returns:** Array of validation errors (empty if valid)
 
@@ -600,6 +616,32 @@ import { defaultValidator } from "@data-prism/core";
 
 // Use the default validator directly
 const isValid = defaultValidator.validate(schema, data);
+```
+
+#### `defaultSelectEngine`
+
+The default expression engine for SELECT clauses, providing full expression capabilities including filtering, aggregations, transformations, and computed fields.
+
+```javascript
+import { defaultSelectEngine } from "@data-prism/core";
+
+// Use in custom query normalization
+const normalizedQuery = normalizeQuery(schema, query, { 
+	selectEngine: defaultSelectEngine 
+});
+```
+
+#### `defaultWhereEngine`
+
+The default expression engine for WHERE clauses, providing filtering-only operations for performance and security. Excludes expensive aggregation operations.
+
+```javascript
+import { defaultWhereEngine } from "@data-prism/core";
+
+// Use in custom query validation
+const errors = validateQuery(schema, query, { 
+	whereEngine: defaultWhereEngine 
+});
 ```
 
 #### `validateCreateResource(schema, resource, options?)`
@@ -667,6 +709,7 @@ Validates that query results match the expected structure.
 - `schema` (Schema) - The schema to validate against
 - `rootQuery` (RootQuery) - The original query
 - `result` (unknown) - The query results to validate
+- `options.selectEngine` (SelectExpressionEngine, optional) - Expression engine for SELECT clauses
 - `options.validator` (Ajv, optional) - Custom validator instance
 
 **Returns:** Array of validation errors (empty if valid)
@@ -746,6 +789,7 @@ Validates that query results match the expected structure. Throws on validation 
 - `schema` (Schema) - The schema to validate against
 - `rootQuery` (RootQuery) - The original query
 - `result` (unknown) - The query results to validate
+- `options.selectEngine` (SelectExpressionEngine, optional) - Expression engine for SELECT clauses
 - `options.validator` (Ajv, optional) - Custom validator instance
 
 **Throws:** Error if results don't match expected structure
