@@ -363,7 +363,10 @@ export function runQueryTests(createStore) {
 							id: "id",
 						},
 						where: {
-							$or: [{ yearIntroduced: { $gt: 2000 } }, { bellyBadge: "rainbow" }],
+							$or: [
+								{ yearIntroduced: { $gt: 2000 } },
+								{ bellyBadge: "rainbow" },
+							],
 						},
 					});
 
@@ -386,7 +389,10 @@ export function runQueryTests(createStore) {
 							$or: [
 								{ yearIntroduced: { $gt: 2000 } },
 								{
-									$and: [{ name: "Tenderheart Bear" }, { bellyBadge: "rainbow" }],
+									$and: [
+										{ name: "Tenderheart Bear" },
+										{ bellyBadge: "rainbow" },
+									],
 								},
 							],
 						},

@@ -1,6 +1,9 @@
 import { mapValues, omit } from "es-toolkit";
-import { defaultExpressionEngine } from "json-expressions";
-import { defaultValidator } from "./resource.js";
+import {
+	defaultValidator,
+	defaultSelectEngine,
+	defaultWhereEngine,
+} from "./lib/defaults.js";
 import { createDeepCache, ensure, translateAjvErrors } from "./lib/helpers.js";
 import baseQuerySchema from "./fixtures/query.schema.json";
 import { normalizeWhereClause } from "./lib/where-expressions.js";
@@ -37,12 +40,6 @@ const getResourceSchemaCache = createDeepCache();
 const getResourceSchemaEECache = createDeepCache();
 
 let validateQueryShape;
-
-const isExpressionLike = (obj) =>
-	typeof obj === "object" &&
-	!Array.isArray(obj) &&
-	Object.keys(obj).length === 1 &&
-	!obj.select;
 
 const isValidAttribute = (attributeName, resourceSchema) =>
 	attributeName in resourceSchema.attributes;
@@ -177,11 +174,15 @@ function validateStructure(schema, query, type, expressionEngine) {
  * @param {Object} schema - The schema object
  * @param {RootQuery} query - The query to validate
  * @param {Object} [options]
- * @param {Object} [options.expressionEngine] - a @data-prism/graph expression engine
+ * @param {import('../lib/defaults.js').SelectExpressionEngine} [options.selectEngine] - Expression engine for SELECT clauses
+ * @param {import('../lib/defaults.js').WhereExpressionEngine} [options.whereEngine] - Expression engine for WHERE clauses
  * @return {import('./lib/helpers.js').StandardError[]}
  */
 export function validateQuery(schema, rootQuery, options = {}) {
-	const { expressionEngine } = options;
+	const {
+		selectEngine = defaultSelectEngine,
+		whereEngine = defaultWhereEngine,
+	} = options;
 
 	if (typeof schema !== "object") {
 		return [
@@ -193,8 +194,11 @@ export function validateQuery(schema, rootQuery, options = {}) {
 			{ message: "Invalid query: expected object, got " + typeof rootQuery },
 		];
 	}
-	if (expressionEngine && typeof expressionEngine !== "object") {
-		return [{ message: "[data-prism] expressionEngine must be an object" }];
+	if (selectEngine && typeof selectEngine !== "object") {
+		return [{ message: "[data-prism] selectEngine must be an object" }];
+	}
+	if (whereEngine && typeof whereEngine !== "object") {
+		return [{ message: "[data-prism] whereEngine must be an object" }];
 	}
 	if (!rootQuery.type) {
 		return [{ message: "Missing query type: required for validation" }];
@@ -218,7 +222,7 @@ export function validateQuery(schema, rootQuery, options = {}) {
 			schema,
 			query,
 			type,
-			expressionEngine,
+			whereEngine, // WHERE expressions validated with whereEngine
 		);
 		if (structureErrors) {
 			errors.push(...structureErrors);
@@ -226,16 +230,15 @@ export function validateQuery(schema, rootQuery, options = {}) {
 		}
 
 		// Semantic validation second
-		const isValidExpression = expressionEngine
-			? expressionEngine.isExpression
-			: isExpressionLike;
+		const isValidSelectExpression = selectEngine.isExpression;
+		const isValidWhereExpression = whereEngine.isExpression;
 
 		const resSchema = schema.resources[type];
 
 		// Validate where clause semantics
 		if (query.where) {
 			if (
-				!isValidExpression(query.where) &&
+				!isValidWhereExpression(query.where) &&
 				Object.keys(query.where).some((k) => !(k in resSchema.attributes))
 			) {
 				addError(
@@ -276,7 +279,7 @@ export function validateQuery(schema, rootQuery, options = {}) {
 				}
 
 				if (typeof val === "object") {
-					if (!isValidExpression(val)) {
+					if (!isValidSelectExpression(val)) {
 						addError(
 							`Invalid selection "${key}": not a valid relationship name. Object values must be expressions or subqueries.`,
 							currentPath,
@@ -352,13 +355,17 @@ export function validateQuery(schema, rootQuery, options = {}) {
  * @param {Object} schema - The schema object
  * @param {RootQuery} rootQuery - The query to normalize
  * @param {Object} [options]
- * @param {import('json-expressions').ExpressionEngine} [options.expressionEngine] - a @data-prism/graph expression engine
+ * @param {import('../lib/defaults.js').SelectExpressionEngine} [options.selectEngine] - Expression engine for SELECT clauses
+ * @param {import('../lib/defaults.js').WhereExpressionEngine} [options.whereEngine] - Expression engine for WHERE clauses
  * @returns {NormalQuery} The normalized query
  */
 export function normalizeQuery(schema, rootQuery, options = {}) {
-	const { expressionEngine = defaultExpressionEngine } = options;
+	const {
+		selectEngine = defaultSelectEngine,
+		whereEngine = defaultWhereEngine,
+	} = options;
 
-	ensure(validateQuery)(schema, rootQuery, expressionEngine);
+	ensure(validateQuery)(schema, rootQuery, { selectEngine, whereEngine });
 
 	const go = (query, type) => {
 		const { select } = query;

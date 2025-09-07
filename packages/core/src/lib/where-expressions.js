@@ -29,12 +29,12 @@ const whereExpressions = {
 		$debug: resolve(operand, attribute),
 	}),
 
-	// conditional - need to be included for validation 
+	// conditional - need to be included for validation
 	$if: (operand, attribute, { resolve }) => ({
 		$if: {
 			if: resolve(operand.if, attribute),
-			then: resolve(operand.then, attribute),
-			else: resolve(operand.else, attribute),
+			then: resolve(operand.then, null),
+			else: resolve(operand.else, null),
 		},
 	}),
 	$case: (operand, attribute) => ({

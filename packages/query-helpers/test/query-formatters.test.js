@@ -70,10 +70,13 @@ describe("createSimpleWhereExtractor", () => {
 	});
 
 	it("handles AND operations with custom joiner", () => {
-		const extract = createSimpleWhereExtractor({
-			eq: "${field}=${value}",
-			ne: "${field}[ne]=${value}",
-		}, { andJoiner: "&" });
+		const extract = createSimpleWhereExtractor(
+			{
+				eq: "${field}=${value}",
+				ne: "${field}[ne]=${value}",
+			},
+			{ andJoiner: "&" },
+		);
 
 		const result = extract({
 			$and: [
@@ -85,10 +88,13 @@ describe("createSimpleWhereExtractor", () => {
 	});
 
 	it("creates GraphQL-style extractor with different syntax", () => {
-		const extract = createSimpleWhereExtractor({
-			eq: "${field}: ${value}",
-			gt: "${field}_gt: ${value}",
-		}, { andJoiner: ", " });
+		const extract = createSimpleWhereExtractor(
+			{
+				eq: "${field}: ${value}",
+				gt: "${field}_gt: ${value}",
+			},
+			{ andJoiner: ", " },
+		);
 
 		const result = extract({
 			$and: [
@@ -96,7 +102,9 @@ describe("createSimpleWhereExtractor", () => {
 				{ $pipe: [{ $get: "specialty" }, { $eq: "paranormal investigation" }] },
 			],
 		});
-		expect(result).toEqual('yearsActive_gt: 10, specialty: paranormal investigation');
+		expect(result).toEqual(
+			"yearsActive_gt: 10, specialty: paranormal investigation",
+		);
 	});
 });
 

@@ -13,6 +13,7 @@ export default [
 				crypto: "readonly",
 				process: "readonly",
 				Buffer: "readonly",
+				URLSearchParams: "readonly",
 				__dirname: "readonly",
 				__filename: "readonly",
 				global: "readonly",

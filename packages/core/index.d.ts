@@ -296,13 +296,17 @@ export function ensureValidSchema(
  * @param schema - The schema object
  * @param query - The query to validate
  * @param options - Validation options
- * @param options.validator - The validator instance to use
+ * @param options.selectEngine - Expression engine for SELECT clauses
+ * @param options.whereEngine - Expression engine for WHERE clauses
  * @returns Array of validation errors
  */
 export function validateQuery(
 	schema: Schema,
 	query: RootQuery,
-	options?: { validator?: Ajv },
+	options?: { 
+		selectEngine?: SelectExpressionEngine;
+		whereEngine?: WhereExpressionEngine;
+	},
 ): DefinedError[];
 
 /**
@@ -310,24 +314,35 @@ export function validateQuery(
  * @param schema - The schema object
  * @param query - The query to validate
  * @param options - Validation options
- * @param options.validator - The validator instance to use
+ * @param options.selectEngine - Expression engine for SELECT clauses
+ * @param options.whereEngine - Expression engine for WHERE clauses
  * @throws If the query is invalid
  */
 export function ensureValidQuery(
 	schema: Schema,
 	query: RootQuery,
-	options?: { validator?: Ajv },
+	options?: { 
+		selectEngine?: SelectExpressionEngine;
+		whereEngine?: WhereExpressionEngine;
+	},
 ): void;
 
 /**
  * Normalizes a query by expanding shorthand syntax and ensuring consistent structure
  * @param schema - The schema object
  * @param rootQuery - The query to normalize
+ * @param options - Normalization options
+ * @param options.selectEngine - Expression engine for SELECT clauses
+ * @param options.whereEngine - Expression engine for WHERE clauses
  * @returns The normalized query
  */
 export function normalizeQuery(
 	schema: Schema,
 	rootQuery: RootQuery,
+	options?: { 
+		selectEngine?: SelectExpressionEngine;
+		whereEngine?: WhereExpressionEngine;
+	},
 ): NormalQuery;
 
 // === GRAPH FUNCTIONS ===
@@ -389,12 +404,19 @@ export function createQueryGraph(schema: Schema, graph: Graph): QueryGraph;
  * @param schema - The schema defining relationships
  * @param query - The query to execute
  * @param graph - The graph to query
+ * @param options - Query options
+ * @param options.selectEngine - Expression engine for SELECT clauses
+ * @param options.whereEngine - Expression engine for WHERE clauses
  * @returns Query result
  */
 export function queryGraph(
 	schema: Schema,
 	query: RootQuery,
 	graph: Graph,
+	options?: { 
+		selectEngine?: SelectExpressionEngine;
+		whereEngine?: WhereExpressionEngine;
+	},
 ): QueryResult;
 
 // === RESOURCE FUNCTIONS ===
@@ -500,6 +522,7 @@ export function validateMergeResource(
  * @param rootQuery - The root query
  * @param result - The resource tree to validate
  * @param options - Validation options
+ * @param options.selectEngine - Expression engine for SELECT clauses
  * @param options.validator - The validator instance to use
  * @returns Array of validation errors
  */
@@ -507,7 +530,10 @@ export function validateQueryResult(
 	schema: Schema,
 	rootQuery: RootQuery,
 	result: unknown,
-	options?: { validator?: Ajv },
+	options?: { 
+		selectEngine?: SelectExpressionEngine;
+		validator?: Ajv;
+	},
 ): DefinedError[];
 
 // === ENSURE FUNCTIONS ===
@@ -571,6 +597,7 @@ export function ensureValidMergeResource(
  * @param rootQuery - The root query
  * @param result - The resource tree to validate
  * @param options - Validation options
+ * @param options.selectEngine - Expression engine for SELECT clauses
  * @param options.validator - The validator instance to use
  * @throws If the resource tree is invalid
  */
@@ -578,7 +605,10 @@ export function ensureValidQueryResult(
 	schema: Schema,
 	rootQuery: RootQuery,
 	result: unknown,
-	options?: { validator?: Ajv },
+	options?: { 
+		selectEngine?: SelectExpressionEngine;
+		validator?: Ajv;
+	},
 ): void;
 
 
@@ -588,3 +618,39 @@ export function ensureValidQueryResult(
  * The default AJV validator instance used by Data Prism
  */
 export const defaultValidator: Ajv;
+
+// === EXPRESSION ENGINE TYPES ===
+
+/**
+ * Expression engine for SELECT clauses - supports filtering, aggregation, and transformation operations
+ */
+export interface SelectExpressionEngine {
+	/** Array of supported expression names */
+	expressionNames: string[];
+	/** Check if an object is a valid expression */
+	isExpression(obj: any): boolean;
+	/** Evaluate an expression against input data */
+	apply(expression: any, data: any): any;
+}
+
+/**
+ * Expression engine for WHERE clauses - supports filtering and logic operations only
+ */
+export interface WhereExpressionEngine {
+	/** Array of supported expression names */
+	expressionNames: string[];
+	/** Check if an object is a valid expression */
+	isExpression(obj: any): boolean;
+	/** Evaluate an expression against input data */
+	apply(expression: any, data: any): any;
+}
+
+/**
+ * Default expression engine for SELECT clauses
+ */
+export const defaultSelectEngine: SelectExpressionEngine;
+
+/**
+ * Default expression engine for WHERE clauses
+ */
+export const defaultWhereEngine: WhereExpressionEngine;

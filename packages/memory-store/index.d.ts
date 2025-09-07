@@ -9,7 +9,9 @@ import type {
   UpdateResource, 
   DeleteResource, 
   NormalResource,
-  QueryResult
+  QueryResult,
+  SelectExpressionEngine,
+  WhereExpressionEngine
 } from "@data-prism/core";
 
 export interface NormalResourceTree {
@@ -27,6 +29,8 @@ import type { Ajv } from "ajv";
 export interface MemoryStoreConfig {
   initialData?: Graph;
   validator?: Ajv;
+  selectEngine?: SelectExpressionEngine;
+  whereEngine?: WhereExpressionEngine;
 }
 
 /**
