@@ -7,7 +7,6 @@ import {
 	oDataFormatter,
 	extractWhereApi,
 	extractWhereGraphql,
-	createSimpleEngine,
 	createSimpleWhereExtractor,
 } from "../src/query-formatters.js";
 import skepticismSchema from "./fixtures/skepticism.schema.json";

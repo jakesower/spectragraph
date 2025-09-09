@@ -44,7 +44,7 @@ const jsonComparative = (expressionName) => ({
 	}),
 });
 
-export const baseWhereExtractors = {
+export const whereEngine = createExpressionEngine({
 	...Object.fromEntries(
 		["$eq", "$ne", "$lt", "$lte", "$gt", "$gte", "$in", "$nin"].map((expr) => [
 			expr,
@@ -61,11 +61,20 @@ export const baseWhereExtractors = {
 		apply: (operand, inputData, { apply }) =>
 			operand.map((op) => apply(op, inputData)),
 	},
-};
+});
 
 export function extractWhere(where) {
-	const extracted = genericExtractors.apply(where, {});
+	const extracted = whereEngine.apply(where, {});
 	return Array.isArray(extracted) ? extracted : [extracted];
+}
+
+export function extractOrder(order) {
+	return order.flatMap((o) =>
+		Object.entries(o).map(([attribute, direction]) => ({
+			attribute,
+			direction,
+		})),
+	);
 }
 
 // export function formatWhere(extractedWhere, formatter) {

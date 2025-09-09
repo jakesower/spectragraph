@@ -299,13 +299,14 @@ ensureValidSchema(mySchema); // Throws if invalid
 
 ### Graph Functions
 
-#### `createEmptyGraph(schema)`
+#### `createEmptyGraph(schema, options?)`
 
 Creates an empty graph structure based on a schema.
 
 **Parameters:**
 
 - `schema` (Schema) - The schema to base the graph on
+- `options.skipValidation` (boolean, optional) - Skip schema validation for performance
 
 **Returns:** Empty graph with resource type placeholders
 
@@ -314,6 +315,9 @@ import { createEmptyGraph } from "@data-prism/core";
 
 const emptyGraph = createEmptyGraph(schema);
 // Returns: { teams: {}, matches: {} }
+
+// Skip validation for performance
+const emptyGraph = createEmptyGraph(schema, { skipValidation: true });
 ```
 
 #### `linkInverses(schema, graph)`
@@ -509,15 +513,15 @@ const merged = mergeResources(existing, update);
 // }
 ```
 
-#### `createGraphFromResources(schema, resourceType, resources)`
+#### `createGraphFromResources(schema, rootResourceType, rootResources)`
 
 Creates a complete graph from an array of resource objects, recursively processing nested relationships. **This function is particularly useful for handling nested resources.**
 
 **Parameters:**
 
 - `schema` (Schema) - The schema defining the resource structure
-- `resourceType` (string) - The root resource type to process
-- `resources` (Array) - Array of flat resource objects to convert
+- `rootResourceType` (string) - The root resource type to process
+- `rootResources` (Array) - Array of flat resource objects to convert
 
 **Returns:** Complete graph with all discoverable resources from the input data
 

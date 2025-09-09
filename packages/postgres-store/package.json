@@ -32,6 +32,7 @@
 		"@rollup/plugin-node-resolve": "^16.0.0",
 		"rollup": "^4.28.1",
 		"testcontainers": "^10.15.0",
+		"vite": "7.0.6",
 		"vitest": "^3.2.4"
 	},
 	"publishConfig": {
@@ -45,7 +46,6 @@
 		"ajv": "^8.17.1",
 		"es-toolkit": "^1.26.0",
 		"json-expressions": "^0.2.1",
-		"pg": "^8.12.0",
-		"vite": "7.0.6"
+		"pg": "^8.12.0"
 	}
 }
