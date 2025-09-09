@@ -39,6 +39,7 @@
 		"express": "^5.1.0",
 		"rollup": "^4.48.0",
 		"start-server-and-test": "^2.0.13",
+		"vite": "7.1.3",
 		"vitest": "^3.2.4"
 	},
 	"publishConfig": {
@@ -55,7 +56,6 @@
 		"@data-prism/query-helpers": "*",
 		"@data-prism/utils": "*",
 		"es-toolkit": "^1.26.0",
-		"json-expressions": "^0.2.1",
-		"vite": "7.1.3"
+		"json-expressions": "^0.2.1"
 	}
 }
