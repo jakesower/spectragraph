@@ -77,53 +77,64 @@ function getResourceStructureValidator(schema, resourceType, expressionEngine) {
 		: {};
 
 	const ajvSchema = {
-		type: "object",
-		required: ["select"],
-		properties: {
-			type: { type: "string", const: resourceType },
-			id: { type: "string" },
-			select: {}, // validated programatically
-			limit: { type: "integer", minimum: 1 },
-			offset: { type: "integer", minimum: 0 },
-			where: {
-				anyOf: [
-					{ $ref: "#/definitions/expression" },
-					{
-						type: "object",
-						properties: mapValues(
-							schema.resources[resourceType].attributes,
-							() => ({}),
-						),
-						additionalProperties: {
-							not: true,
-							errorMessage:
-								"is neither be an expression nor an object that uses valid attributes as keys",
-						},
-					},
-				],
+		oneOf: [
+			{ type: "string", const: "*" },
+			{ type: "array" },
+			{
+				type: "object",
+				not: { required: ["select"] },
 			},
-			order: {
-				oneOf: [
-					{
-						$ref: "#/definitions/orderItem",
-					},
-					{
-						type: "array",
-						items: {
-							$ref: "#/definitions/orderItem",
-						},
-					},
-				],
-				errorMessage:
-					'must be a value or array of values of the form { "attribute": "asc/desc" }',
-			},
-		},
+			{ $ref: "#/definitions/fullQuery" },
+		],
 		definitions: {
 			expression: {
 				type: "object",
 				minProperties: 1,
 				maxProperties: 1,
 				...extraExpressionRules,
+			},
+			fullQuery: {
+				type: "object",
+				required: ["select"],
+				properties: {
+					type: { type: "string", const: resourceType },
+					id: { type: "string" },
+					select: {}, // validated programatically
+					limit: { type: "integer", minimum: 1 },
+					offset: { type: "integer", minimum: 0 },
+					where: {
+						anyOf: [
+							{ $ref: "#/definitions/expression" },
+							{
+								type: "object",
+								properties: mapValues(
+									schema.resources[resourceType].attributes,
+									() => ({}),
+								),
+								additionalProperties: {
+									not: true,
+									errorMessage:
+										"is neither be an expression nor an object that uses valid attributes as keys",
+								},
+							},
+						],
+					},
+					order: {
+						oneOf: [
+							{
+								$ref: "#/definitions/orderItem",
+							},
+							{
+								type: "array",
+								items: {
+									$ref: "#/definitions/orderItem",
+								},
+							},
+						],
+						errorMessage:
+							'must be a value or array of values of the form { "attribute": "asc/desc" }',
+					},
+				},
 			},
 			orderItem: {
 				type: "object",
@@ -257,9 +268,9 @@ export function validateQuery(schema, rootQuery, options = {}) {
 				if (key === "*") return;
 
 				if (key in resSchema.relationships) {
-					if (typeof val !== "object") {
+					if (typeof val !== "object" && val !== "*") {
 						addError(
-							`Invalid value for relationship "${key}": expected object, got ${typeof val} "${val}".`,
+							`Invalid value for relationship "${key}": expected object or "*", got ${typeof val} "${val}".`,
 							currentPath,
 							val,
 						);
@@ -332,14 +343,16 @@ export function validateQuery(schema, rootQuery, options = {}) {
 			});
 		};
 
-		if (Array.isArray(query.select)) validateSelectArray(query.select);
-		else if (typeof query.select === "object") {
-			validateSelectObject(query.select, [...path, "select"]);
-		} else if (query.select !== "*") {
+		const select = query.select ?? query;
+
+		if (Array.isArray(select)) validateSelectArray(select);
+		else if (typeof select === "object") {
+			validateSelectObject(select, [...path, "select"]);
+		} else if (select !== "*") {
 			addError(
 				'Invalid select value: must be "*", an object, or an array.',
 				[...path, "select"],
-				query.select,
+				select,
 			);
 		}
 
@@ -368,7 +381,7 @@ export function normalizeQuery(schema, rootQuery, options = {}) {
 	ensure(validateQuery)(schema, rootQuery, { selectEngine, whereEngine });
 
 	const go = (query, type) => {
-		const { select } = query;
+		const select = query.select ?? query;
 		const resSchema = schema.resources[type];
 
 		const selectWithExpandedStar =
@@ -402,7 +415,7 @@ export function normalizeQuery(schema, rootQuery, options = {}) {
 		const selectWithSubqueries = mapValues(selectWithStar, (sel, key) => {
 			if (
 				key in schema.resources[type].relationships &&
-				typeof sel === "object"
+				(typeof sel === "object" || sel === "*")
 			) {
 				const relType = schema.resources[type].relationships[key].type;
 				return go(sel, relType);
@@ -418,13 +431,15 @@ export function normalizeQuery(schema, rootQuery, options = {}) {
 			? { where: normalizeWhereClause(query.where) }
 			: {};
 
-		return {
-			...query,
-			select: selectWithSubqueries,
-			type,
-			...orderObj,
-			...whereObj,
-		};
+		return query.select
+			? {
+					...query,
+					select: selectWithSubqueries,
+					type,
+					...orderObj,
+					...whereObj,
+				}
+			: { type, select: selectWithSubqueries };
 	};
 
 	return go(rootQuery, rootQuery.type);
