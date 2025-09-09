@@ -22,6 +22,16 @@ describe("validateQuery", () => {
 			expect(result.length).toEqual(0);
 		});
 
+		it("should validate with nested select shorthand", () => {
+			const query = {
+				type: "bears",
+				select: { home: ["name"] },
+			};
+
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toEqual(0);
+		});
+
 		it("should validate a valid query in another mixed array/object form", () => {
 			const query = {
 				type: "homes",
@@ -310,7 +320,6 @@ describe("validateQuery", () => {
 			const result = validateQuery(careBearSchema, query);
 			expect(result.length).toBeGreaterThan(0);
 		});
-
 	});
 });
 
@@ -322,6 +331,42 @@ describe("normalizeQuery", () => {
 		});
 
 		expect(normal.select.home.type).toEqual("homes");
+	});
+
+	it("normalizes select array shorthand in subqueries", () => {
+		const normal = normalizeQuery(careBearSchema, {
+			type: "bears",
+			select: { home: ["id"] },
+		});
+
+		expect(normal.select.home).toEqual({ type: "homes", select: { id: "id" } });
+	});
+
+	it("normalizes select object shorthand in subqueries", () => {
+		const normal = normalizeQuery(careBearSchema, {
+			type: "bears",
+			select: { home: { id: "id" } },
+		});
+
+		expect(normal.select.home).toEqual({ type: "homes", select: { id: "id" } });
+	});
+
+	it("normalizes select object with * as subquery", () => {
+		const normal = normalizeQuery(careBearSchema, {
+			type: "bears",
+			select: { home: "*" },
+		});
+
+		expect(normal.select.home).toEqual({
+			type: "homes",
+			select: {
+				id: "id",
+				name: "name",
+				location: "location",
+				caringMeter: "caringMeter",
+				isInClouds: "isInClouds",
+			},
+		});
 	});
 
 	it("expands * strings in select", () => {
