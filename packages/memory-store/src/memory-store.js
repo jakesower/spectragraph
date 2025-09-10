@@ -71,9 +71,15 @@ export function createMemoryStore(schema, config = {}) {
 	let storeGraph = mergeGraphsDeep(createEmptyGraph(schema), initialData);
 
 	const runQuery = (query) => {
-		const normalQuery = normalizeQuery(schema, query, { selectEngine, whereEngine });
+		const normalQuery = normalizeQuery(schema, query, {
+			selectEngine,
+			whereEngine,
+		});
 		ensureValidQuery(schema, normalQuery, { selectEngine, whereEngine });
-		return queryGraph(schema, normalQuery, storeGraph, { selectEngine, whereEngine });
+		return queryGraph(schema, normalQuery, storeGraph, {
+			selectEngine,
+			whereEngine,
+		});
 	};
 
 	// WARNING: MUTATES storeGraph

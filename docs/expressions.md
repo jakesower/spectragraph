@@ -1,277 +1,391 @@
-# Data Prism Expression Reference
+# Expression Reference Guide
 
-Expressions are something like well defined functions given JSON form. They must be implemented by an expressions engine within the language they run. Given a property implementation, they grant a way of representing the application of logic to values. **Detailed examples of usage are part of the test suite and should be referenced there.**
+Data Prism expressions provide powerful data transformation, computation, and aggregation capabilities within queries. Expressions are JSON objects that start with `$` and can be used in `select` fields, `where` clauses, and `order` specifications.
 
-Expressions have three components: param (what is specified at definition), arg (what is given at evaluation time), and output (the result of the application).
+## Table of Contents
 
-## Aggregative Expressions
+- [Expression Basics](#expression-basics)
+- [Expression Engines](#expression-engines)
+- [JSON Expressions Library](#json-expressions-library)
+- [Available Expressions](#available-expressions)
+- [Usage Examples](#usage-examples)
+- [Store-Specific Behavior](#store-specific-behavior)
 
-These expressions are used to take arrays of values and reduce them to a single value.
+## Expression Basics
 
-### `$count`
+### Syntax
 
-Param: -
-Arg: any[]
-Output: integer
+All expressions are JSON objects with keys starting with `$`:
 
-Returns the number of elements in the arg.
+```javascript
+{
+  type: "users",
+  select: {
+    name: "name",
+    uppercaseName: { $uppercase: "name" },    // Expression
+    postCount: { $count: "posts" }           // Another expression
+  }
+}
+```
 
-### `$max`
+### Expression Context
 
-Param: -
-Arg: number[]
-Output: number
+Expressions evaluate within the context of the current resource:
 
-Returns the maximum value within the arg.
+- Field references like `"name"` refer to attributes of the current resource
+- Relationship paths like `"posts.$.title"` traverse to related resources
+- Dot notation like `"address.city"` accesses nested object properties
 
-### `$min`
+## Expression Engines
 
-Param: -
-Arg: number[]
-Output: number
+Data Prism uses expression engines to evaluate expressions in different contexts. Each engine supports a specific set of expressions optimized for their use case.
 
-Returns the maximum value within the arg.
+### defaultSelectEngine
 
-### `$sum`
+The default expression engine for SELECT clauses supports filtering, aggregation, transformation, and projection operations.
 
-Param: -
-Arg: number[]
-Output: number
+**Available expressions:** `$and`, `$case`, `$concat`, `$count`, `$debug`, `$distinct`, `$eq`, `$filter`, `$flatMap`, `$get`, `$gt`, `$gte`, `$if`, `$in`, `$isDefined`, `$isNotNull`, `$isNull`, `$join`, `$literal`, `$lowercase`, `$lt`, `$lte`, `$map`, `$matchesGlob`, `$matchesLike`, `$matchesRegex`, `$max`, `$mean`, `$min`, `$ne`, `$nin`, `$not`, `$or`, `$pipe`, `$prop`, `$substring`, `$sum`, `$uppercase`
 
-Sums the values of the arg.
+**JSON Expressions packs:** `filtering` + `projection`
 
-## Comparative
+### defaultWhereEngine
 
-These compare the param and the arg in some fashion. They always return boolean values.
+The default expression engine for WHERE clauses supports filtering and logic operations only (no aggregation or transformation).
 
-### `$eq`
+**Available expressions:** `$and`, `$debug`, `$eq`, `$filter`, `$get`, `$gt`, `$gte`, `$if`, `$in`, `$isDefined`, `$isNotNull`, `$isNull`, `$literal`, `$lt`, `$lte`, `$map`, `$matchesGlob`, `$matchesLike`, `$matchesRegex`, `$ne`, `$nin`, `$not`, `$or`, `$pipe`, `$prop`
 
-Param: any
-Arg: any
-Output: boolean
+**JSON Expressions packs:** `filtering`
 
-Returns `true` if the param and arg are equal to each other.
+### Custom Expression Engines
 
-### `$ne`
+You can create custom expression engines with different capabilities:
 
-Param: any
-Arg: any
-Output: boolean
+```javascript
+import {
+	createExpressionEngine,
+	filtering,
+	projection,
+} from "json-expressions";
 
-Returns `true` if the param and arg are not equal to each other.
+// Custom engine with only basic operations
+const basicEngine = createExpressionEngine({
+	packs: [filtering],
+});
 
-### `$gt`
+// Use in store configuration
+const store = createMemoryStore(schema, {
+	selectEngine: basicEngine,
+	whereEngine: basicEngine,
+});
+```
 
-Param: number
-Arg: number
-Output: boolean
+## JSON Expressions Library
 
-Returns `true` if the arg is greater than the param.
+Data Prism expressions are powered by the [json-expressions](https://github.com/jakesower/json-expressions) library. This library provides a comprehensive set of expressions organized into packs:
 
-### `$gte`
+### Expression Packs Used
 
-Param: number
-Arg: number
-Output: boolean
+- **filtering**: Comparison, logical, and pattern matching expressions
+- **projection**: Aggregation, transformation, and collection operations
 
-Returns `true` if the arg is greater than or equal to the param.
+Each pack can be imported and used independently:
 
-### `$lt`
+```javascript
+import {
+	createExpressionEngine,
+	filtering,
+	projection,
+} from "json-expressions";
 
-Param: number
-Arg: number
-Output: boolean
-
-Returns `true` if the arg is less than the param.
-
-### `$lte`
-
-Param: number
-Arg: number
-Output: boolean
-
-Returns `true` if the arg is less than or equal to the param.
-
-### `$in`
-
-Param: any[]
-Arg: any
-Output: boolean
-
-Returns `true` if the arg equal to any item in the param.
-
-### `$nin`
-
-Param: number
-Arg: number
-Output: boolean
-
-Returns `true` if the arg is not equal to every item in the param.
-
-## Core Expressions
-
-These are mostly plumbing expressions that will seldom be needed by end users.
-
-### `$isDefined`
-
-Param: -
-Arg: any
-Output: boolean
-
-Returns `false` if the argument is undefined, otherwise returns `true`.
-
-
-### `$get`
-
-Param: string
-Arg: object
-Output: any
-
-Returns the value at the path of param within the arg, using dot notation to traverse. For example a param of `home.name` and an arg of `{ "home": { "name": "Care-a-Lot" } }` would return `"Care-a-Lot"`.
-
-### `$literal`
-
-Param: any
-Arg: -
-Output: any
-
-Returns whatever input it was given without evaluation.
-
-### `$compose`
-
-Param: expression[]
-Arg: any
-Output: any
-
-Takes an arg input and applies the expressions in the param in turn. That is, the original arg is given to the first pipe expression, then the result of that expression is given as the arg to the second expression, and so on.
-
-### `$prop`
-
-Param: string
-Arg: object
-Output: any
-
-Returns the property of the arg specified as the param. For example a param of `name` and an arg of `{ "name": "Tenderheart Bear" }` would return `"Tenderheart Bear"`.
-
-## Iterative Expressions
-
-These expressions are responsible for iterating over arrays of things.
-
-### `$filter`
-
-Param: expression
-Arg: any[]
-Output: any[]
-
-Returns elements of arg that return `true` when the param expression is applied to them.
-
-### `$flatMap`
-
-Param: expression
-Arg: any[]
-Output: any[]
-
-Returns the arg after applying the expression to each member and flattening the result.
-
-### `$map`
-
-Param: expression
-Arg: any[]
-Output: any[]
-
-Returns the arg after applying the expression to each member.
-
-## Logical Expressions
-
-### `$and`
-
-Param: expression[]
-Arg: any
-Output: boolean
-
-Returns `true` if every expression in param returns `true` when applied to the arg.
-
-### `$or`
-
-Param: expression[]
-Arg: any
-Output: boolean
-
-Returns `true` if any expression in param returns `true` when applied to the arg.
-
-## Math Expressions
-
-### `$add`
-
-**Apply form:**
-Param: number
-Arg: number
-Output: number
-
-Adds param to arg.
-
-**Evaluate form:**
-Param: [number, number]
-Output: number
-
-Adds the two numbers in the param array.
-
-### `$subtract`
-
-**Apply form:**
-Param: number
-Arg: number
-Output: number
-
-Subtracts param from arg.
-
-**Evaluate form:**
-Param: [number, number]
-Output: number
-
-Subtracts the second number from the first in the param array.
-
-### `$multiply`
-
-**Apply form:**
-Param: number
-Arg: number
-Output: number
-
-Multiplies arg by param.
-
-**Evaluate form:**
-Param: [number, number]
-Output: number
-
-Multiplies the two numbers in the param array.
-
-### `$divide`
-
-**Apply form:**
-Param: number
-Arg: number
-Output: number
-
-Divides arg by param. Throws error on division by zero.
-
-**Evaluate form:**
-Param: [number, number]
-Output: number
-
-Divides the first number by the second in the param array. Throws error on division by zero.
-
-### `$modulo`
-
-**Apply form:**
-Param: number
-Arg: number
-Output: number
-
-Computes arg modulo param. Throws error on modulo by zero.
-
-**Evaluate form:**
-Param: [number, number]
-Output: number
-
-Computes the first number modulo the second in the param array. Throws error on modulo by zero.
+const customSelectEngine = createExpressionEngine({
+	packs: [filtering, projection],
+});
+```
+
+Data Prism provides widely applicable expressions by default. Exploring the various packs can bring powerful functionality geared toward your particular application.
+
+For detailed documentation on individual expressions, see the [json-expressions documentation](https://github.com/jakesower/json-expressions).
+
+## Available Expressions
+
+### Comparison Expressions
+
+**Available in:** SELECT, WHERE
+
+- `$eq` - Equal to
+- `$ne` - Not equal to
+- `$gt` - Greater than
+- `$gte` - Greater than or equal
+- `$lt` - Less than
+- `$lte` - Less than or equal
+- `$in` - Value in array
+- `$nin` - Value not in array
+
+```javascript
+{
+  type: "products",
+  select: ["name", "price"],
+  where: {
+    price: { $gte: 10 },
+    category: { $in: ["electronics", "books"] }
+  }
+}
+```
+
+### Logical Expressions
+
+**Available in:** SELECT, WHERE
+
+- `$and` - Logical AND
+- `$or` - Logical OR
+- `$not` - Logical NOT
+
+```javascript
+{
+  type: "users",
+  select: ["name"],
+  where: {
+    $and: [
+      { active: true },
+      { $or: [{ role: "admin" }, { verified: true }] }
+    ]
+  }
+}
+```
+
+### Pattern Matching
+
+**Available in:** SELECT, WHERE
+
+- `$matchesRegex` - Regular expression matching
+- `$matchesLike` - SQL LIKE pattern matching (store-dependent)
+- `$matchesGlob` - Glob pattern matching (store-dependent)
+
+```javascript
+{
+  type: "users",
+  select: ["name", "email"],
+  where: {
+    email: { $matchesRegex: ".*@gmail\\.com$" }
+  }
+}
+```
+
+### Aggregation Expressions
+
+**Available in:** SELECT only
+
+- `$count` - Count items
+- `$sum` - Sum numeric values
+- `$min` - Minimum value
+- `$max` - Maximum value
+- `$mean` - Average value
+
+```javascript
+{
+  type: "users",
+  select: {
+    name: "name",
+    postCount: { $count: "posts" },
+    avgRating: { $mean: "posts.$.rating" }
+  }
+}
+```
+
+### Collection Operations
+
+**Available in:** SELECT only
+
+- `$map` - Transform each item
+- `$filter` - Filter items by condition
+- `$flatMap` - Map and flatten
+- `$distinct` - Remove duplicates
+- `$concat` - Concatenate arrays/strings
+- `$join` - Join array elements into string
+
+```javascript
+{
+  type: "users",
+  select: {
+    name: "name",
+    publishedPosts: { $filter: ["posts", { status: "published" }] },
+    tagNames: { $map: ["posts.$.tags", "name"] }
+  }
+}
+```
+
+### String Operations
+
+**Available in:** SELECT only
+
+- `$uppercase` - Convert to uppercase
+- `$lowercase` - Convert to lowercase
+- `$substring` - Extract substring
+- `$concat` - Concatenate strings
+
+```javascript
+{
+  type: "users",
+  select: {
+    name: "name",
+    upperName: { $uppercase: "name" },
+    initials: { $substring: ["name", 0, 2] }
+  }
+}
+```
+
+### Conditional Logic
+
+**Available in:** SELECT, WHERE
+
+- `$if` - If-then-else logic
+- `$case` - Multi-condition switch
+
+```javascript
+{
+  type: "users",
+  select: {
+    name: "name",
+    status: {
+      $if: {
+        if: { active: true },
+        then: "Active",
+        else: "Inactive"
+      }
+    },
+    tier: {
+      $case: {
+        value: "points",
+        cases: [
+          { when: { $gte: 1000 }, then: "Premium" },
+          { when: { $gte: 100 }, then: "Standard" }
+        ],
+        default: "Basic"
+      }
+    }
+  }
+}
+```
+
+### Utility Expressions
+
+**Available in:** SELECT, WHERE
+
+- `$get` - Access nested properties
+- `$prop` - Dynamic property access
+- `$literal` - Return literal value
+- `$isDefined` - Check if value is defined
+- `$isNull` - Check if value is null
+- `$isNotNull` - Check if value is not null
+
+```javascript
+{
+  type: "users",
+  select: {
+    name: "name",
+    city: { $get: "address.city" },
+    hasPhone: { $isDefined: "phoneNumber" }
+  }
+}
+```
+
+## Usage Examples
+
+### Complex Query with Multiple Expressions
+
+```javascript
+{
+  type: "posts",
+  select: {
+    title: "title",
+    author: { $get: "author.name" },
+    commentCount: { $count: "comments" },
+    avgRating: { $mean: "ratings.$.score" },
+    status: {
+      $if: {
+        if: { published: true },
+        then: "Live",
+        else: "Draft"
+      }
+    },
+    tags: { $join: [{ $map: ["tags", "name"] }, ", "] }
+  },
+  where: {
+    $and: [
+      { published: true },
+      { $gt: [{ $count: "comments" }, 5] },
+      { author: { $matchesRegex: "^[A-Z]" } }
+    ]
+  }
+}
+```
+
+### Aggregation with Filtering
+
+```javascript
+{
+  type: "orders",
+  select: {
+    orderNumber: "orderNumber",
+    totalValue: { $sum: "items.$.price" },
+    expensiveItems: {
+      $filter: ["items", { $gt: ["price", 100] }]
+    },
+    itemCount: { $count: "items" }
+  }
+}
+```
+
+## Store-Specific Behavior
+
+### Expression Evaluation Location
+
+Different stores evaluate expressions in different contexts:
+
+**Memory Store (JavaScript)**
+
+- All expressions evaluated in JavaScript
+- Full expression support as listed above
+
+**SQL Stores (PostgreSQL/SQLite)**
+
+- Simple expressions translated to SQL for performance
+- Complex expressions may fall back to JavaScript evaluation
+- Store-specific expressions like `$matchesLike` and `$matchesGlob` available
+
+**API Stores**
+
+- Expressions evaluated after data fetching
+- Full JavaScript evaluation support
+- Performance depends on data volume fetched
+
+### Performance Considerations
+
+1. **SQL Optimization**: Simple comparisons and math operations translate to SQL
+2. **Relationship Traversal**: Deep paths (`posts.$.comments.$.rating`) can be expensive
+3. **Memory Usage**: Complex aggregations on large datasets may use significant memory
+4. **API Efficiency**: Expressions on API data require fetching full objects first
+
+### Store Capabilities
+
+**All Stores Support:**
+
+- Basic comparisons (`$eq`, `$gt`, `$in`, etc.)
+- Logical operations (`$and`, `$or`, `$not`)
+- Simple aggregations (`$count`, `$sum`, `$min`, `$max`)
+- Conditional logic (`$if`, `$case`)
+
+**SQL Stores Additional:**
+
+- `$matchesLike` for SQL LIKE patterns
+- `$matchesGlob` (SQLite only) for glob patterns
+- Optimized evaluation for many expressions
+
+**Limited in Some Stores:**
+
+- Regular expressions conform to PCRE (Perl Compatible Regular Expression) semantics
+- Complex nested aggregations may fall back to JavaScript
+- Performance characteristics vary significantly
+
+For complete query syntax including expressions, see [query.md](query.md).
+For schema definitions that support expressions, see [schema.md](schema.md).
