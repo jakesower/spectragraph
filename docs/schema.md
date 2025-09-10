@@ -1,92 +1,239 @@
-# Schemas
+# Schema Definition Guide
 
-A schema is the first consideration for an application using Data Prism. They describe the entirety of the properties and relationships of the various resources that compose the application. They are loosely based on JSON Schema and can use many of its features, but are ultimately different things with slightly different purposes. However, JSON Schema document the validation of queries and results can be generated in a relatively straightforward manner.
+Schemas define the structure of your data, including resource types, attributes, and relationships. They serve as the foundation for query validation, data normalization, and store operations. Data Prism schemas are JSON serializable, enabling powerful integration with backends and other systems.
 
-## An Example Schema
+## Table of Contents
 
-```json
+- [Basic Schema Structure](#basic-schema-structure)
+- [Resource Definitions](#resource-definitions)
+- [Attribute Types](#attribute-types)
+- [Relationships](#relationships)
+- [Advanced Schema Features](#advanced-schema-features)
+- [Schema Validation](#schema-validation)
+- [Examples](#examples)
+
+## Basic Schema Structure
+
+A Data Prism schema is a JSON object that describes all resource types in your data model:
+
+```javascript
+const schema = {
+	resources: {
+		users: {
+			attributes: {
+				name: { type: "string" },
+				email: { type: "string" },
+			},
+			relationships: {
+				posts: { type: "posts", cardinality: "hasMany" },
+			},
+		},
+		posts: {
+			attributes: {
+				title: { type: "string" },
+				content: { type: "string" },
+			},
+			relationships: {
+				author: { type: "users", cardinality: "belongsTo" },
+			},
+		},
+	},
+};
+```
+
+## Resource Definitions
+
+Each resource type in your schema defines:
+
+### Basic Resource Structure
+
+```javascript
 {
-  "$schema": "https://raw.githubusercontent.com/jakesower/data-prism/main/schemas/data-prism-schema.1.0.schema.json",
-  "resources": {
-    "bears": {
-      "idAttribute": "id",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "yearIntroduced": {
-          "type": "number"
-        },
-        "bellyBadge": {
-          "type": "string"
-        },
-        "furColor": {
-          "type": "string"
-        }
+  resources: {
+    "resourceName": {
+      idAttribute: "id",        // Optional: custom ID field (defaults to "id")
+      attributes: {
+        // Define all data fields
       },
-      "relationships": {
-        "home": {
-          "cardinality": "one",
-          "resource": "homes",
-          "inverse": "residents"
-        },
-        "powers": {
-          "cardinality": "many",
-          "resource": "powers",
-          "inverse": "wielders"
-        },
-        "bestFriend": {
-          "cardinality": "one",
-          "resource": "bears",
-          "inverse": "bestFriend"
+      relationships: {
+        // Define connections to other resources
+      }
+    }
+  }
+}
+```
+
+### Custom ID Attributes
+
+By default, resources use `"id"` as their identifier. You can customize this:
+
+```javascript
+{
+  resources: {
+    users: {
+      idAttribute: "userId",    // Use "userId" instead of "id"
+      attributes: {
+        userId: { type: 'string' },
+        name: { type: 'string' }
+      }
+    },
+    posts: {
+      idAttribute: "slug",      // Use "slug" as identifier
+      attributes: {
+        slug: { type: 'string' },
+        title: { type: 'string' }
+      }
+    }
+  }
+}
+```
+
+## Attribute Types
+
+Attribute definitions use JSON Schema format. Any valid JSON Schema document can be used for attribute definitions, providing extensive flexibility:
+
+### Basic Types
+
+```javascript
+{
+  attributes: {
+    // String fields
+    name: { type: 'string' },
+    email: { type: 'string' },
+
+    // Numeric fields
+    age: { type: 'number' },
+    score: { type: 'integer' },
+
+    // Boolean fields
+    active: { type: 'boolean' },
+    verified: { type: 'boolean' },
+
+    // Date/time fields (string with format)
+    createdAt: { type: 'string', format: 'date-time' },
+    birthDate: { type: 'string', format: 'date' },
+  }
+}
+```
+
+### Complex Types
+
+```javascript
+{
+  attributes: {
+    // JSON objects/arrays
+    metadata: { type: 'object' },
+    tags: { type: 'array' },
+
+    // Advanced JSON Schema features
+    address: {
+      type: 'object',
+      properties: {
+        street: { type: 'string' },
+        city: { type: 'string' },
+        zipCode: { type: 'string', pattern: '^[0-9]{5}$' }
+      },
+      required: ['city']
+    }
+  }
+}
+```
+
+### Type Constraints
+
+Use JSON Schema features for validation:
+
+```javascript
+{
+  attributes: {
+    // String constraints
+    email: {
+      type: 'string',
+      format: 'email'           // Email validation
+    },
+    status: {
+      type: 'string',
+      enum: ['active', 'inactive', 'pending']  // Limited values
+    },
+
+    // Number constraints
+    age: {
+      type: 'integer',
+      minimum: 0,
+      maximum: 150
+    },
+    rating: {
+      type: 'number',
+      minimum: 0,
+      maximum: 5
+    }
+  },
+  
+  // Required attributes are specified at resource level
+  requiredAttributes: ['name', 'email']  // These must be present
+}
+```
+
+## Relationships
+
+Relationships define how resources connect to each other:
+
+### Relationship Types
+
+```javascript
+{
+  relationships: {
+    // One-to-many: User has many posts
+    posts: {
+      type: 'posts',           // Target resource type
+      cardinality: 'many'      // One user -> many posts
+    },
+
+    // Many-to-one: Post belongs to user
+    author: {
+      type: 'users',
+      cardinality: 'one'       // Many posts -> one user
+    },
+
+    // One-to-one: User has one profile
+    profile: {
+      type: 'profiles',
+      cardinality: 'one'       // One user -> one profile
+    },
+
+    // Many-to-many: Post has many tags, tag has many posts
+    tags: {
+      type: 'tags',
+      cardinality: 'many'      // Implemented via junction data
+    }
+  }
+}
+```
+
+### Inverse Relationships
+
+Define both sides of relationships for automatic linking:
+
+```javascript
+{
+  resources: {
+    users: {
+      attributes: { name: { type: 'string' } },
+      relationships: {
+        posts: {
+          type: 'posts',
+          cardinality: 'many',
+          inverse: 'author'       // Points to posts.relationships.author
         }
       }
     },
-    "homes": {
-      "idAttribute": "id",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "location": {
-          "type": "string"
-        },
-        "caringMeter": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 100
-        },
-        "isInClouds": {
-          "type": "boolean",
-          "default": false
-        }
-      },
-      "relationships": {
-        "residents": {
-          "cardinality": "many",
-          "resource": "bears",
-          "inverse": "home"
-        }
-      }
-    },
-    "powers": {
-      "idAttribute": "powerId",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string"
-        }
-      },
-      "relationships": {
-        "wielders": {
-          "resource": "bears",
-          "cardinality": "many",
-          "inverse": "powers"
+    posts: {
+      attributes: { title: { type: 'string' } },
+      relationships: {
+        author: {
+          type: 'users',
+          cardinality: 'one',
+          inverse: 'posts'        // Points to users.relationships.posts
         }
       }
     }
@@ -94,21 +241,357 @@ A schema is the first consideration for an application using Data Prism. They de
 }
 ```
 
-This schema describes a database of information about Care Bears. Namely the bears, their homes, and their powers. At the top level is some boilerplate that describes which schema version is being used, then goes into defining the resources.
+### Self-Referencing Relationships
 
-Each resource is defined by its properties and its relationships. To use bears as an example, its properties are `name`. `yearIntroduced`, `bellyBadge`, and `furColor`. Its relationships are `home`, `powers`, and `bestFriend`.
+Resources can reference themselves:
 
-Properties are defined with a `type` that describes the data type. The following types are always supported, but different data stores may support more:
+```javascript
+{
+  resources: {
+    users: {
+      attributes: { name: { type: 'string' } },
+      relationships: {
+        manager: {
+          type: 'users',          // Self-reference
+          cardinality: 'one'
+        },
+        directReports: {
+          type: 'users',          // Self-reference
+          cardinality: 'many',
+          inverse: 'manager'
+        }
+      }
+    }
+  }
+}
+```
 
-- boolean
-- date-time
-- integer
-- null
-- number
-- string
+## Advanced Schema Features
 
-Properties can also include other information, for example the `caringMeter` in `homes` ranges from 0-100. These extra properties line up with what's in the JSON Schema spec. More may be added to them later.
 
-Relationships are also described in the schema. For example the `home` relationship for `bears` can be read as "bears have one home, which is of type `homes`, and `homes` contains a relationship called `residents` that represents the other direction of the relationship.
+### Store-Specific Configuration
 
-It is important to note that the main purpose of a schema is to provide a description of the data. It is not meant to include implementation details. This is because there may be different systems that share a schema. Different stores will require different implementation details and should be described at the store level.
+Add store-specific metadata without affecting core schema:
+
+```javascript
+{
+  resources: {
+    users: {
+      attributes: {
+        name: { type: 'string' },
+        email: { type: 'string' }
+      },
+      // Store-specific configuration
+      postgres: {
+        table: 'app_users',        // Custom table name
+        columns: {
+          email: {
+            unique: true,           // Database constraint
+            index: true             // Database index
+          }
+        }
+      },
+      jsonapi: {
+        type: 'people',            // Custom JSON:API type name
+        endpoint: '/api/v1/users'   // Custom endpoint
+      }
+    }
+  }
+}
+```
+
+## Schema Validation
+
+Data Prism validates schemas to catch errors early:
+
+### Common Validation Errors
+
+```javascript
+// ❌ Missing required fields
+{
+  resources: {
+    users: {
+      // Missing 'attributes' - will cause validation error
+      relationships: {
+        posts: { type: 'posts', cardinality: 'hasMany' }
+      }
+    }
+  }
+}
+
+// ✅ Correct - include required fields
+{
+  resources: {
+    users: {
+      attributes: {
+        name: { type: 'string' }
+      },
+      relationships: {
+        posts: { type: 'posts', cardinality: 'hasMany' }
+      }
+    }
+  }
+}
+
+// ❌ Invalid relationship reference
+{
+  resources: {
+    users: {
+      attributes: { name: { type: 'string' } },
+      relationships: {
+        posts: {
+          type: 'blogPosts',      // 'blogPosts' resource doesn't exist
+          cardinality: 'many'
+        }
+      }
+    }
+  }
+}
+
+// ✅ Correct - reference existing resources
+{
+  resources: {
+    users: {
+      attributes: { name: { type: 'string' } },
+      relationships: {
+        posts: {
+          type: 'posts',          // 'posts' resource exists
+          cardinality: 'many'
+        }
+      }
+    },
+    posts: {
+      attributes: { title: { type: 'string' } }
+    }
+  }
+}
+```
+
+### Schema Validation in Code
+
+```javascript
+import { validateSchema } from "@data-prism/core";
+
+const schema = {
+	resources: {
+		users: {
+			attributes: { name: { type: "string" } },
+		},
+	},
+};
+
+// Validate schema
+try {
+	validateSchema(schema);
+	console.log("Schema is valid");
+} catch (error) {
+	console.error("Schema validation failed:", error.message);
+}
+```
+
+## Examples
+
+### E-commerce Schema
+
+```javascript
+const ecommerceSchema = {
+	resources: {
+		customers: {
+			attributes: {
+				firstName: { type: "string" },
+				lastName: { type: "string" },
+				email: { type: "string", format: "email" },
+				createdAt: { type: "string", format: "date-time" },
+			},
+			requiredAttributes: ["firstName", "lastName", "email"],
+			relationships: {
+				orders: { type: "orders", cardinality: "hasMany" },
+				profile: { type: "customerProfiles", cardinality: "hasOne" },
+			},
+		},
+
+		orders: {
+			attributes: {
+				orderNumber: { type: "string" },
+				status: {
+					type: "string",
+					enum: ["pending", "processing", "shipped", "delivered"],
+				},
+				total: { type: "number", minimum: 0 },
+				createdAt: { type: "string", format: "date-time" },
+			},
+			requiredAttributes: ["orderNumber"],
+			relationships: {
+				customer: { type: "customers", cardinality: "belongsTo" },
+				items: { type: "orderItems", cardinality: "hasMany" },
+			},
+		},
+
+		products: {
+			attributes: {
+				name: { type: "string" },
+				description: { type: "string" },
+				price: { type: "number", minimum: 0 },
+				inStock: { type: "boolean", default: true },
+			},
+			requiredAttributes: ["name"],
+			relationships: {
+				category: { type: "categories", cardinality: "belongsTo" },
+				orderItems: { type: "orderItems", cardinality: "hasMany" },
+			},
+		},
+
+		orderItems: {
+			attributes: {
+				quantity: { type: "integer", minimum: 1 },
+				unitPrice: { type: "number", minimum: 0 },
+			},
+			relationships: {
+				order: { type: "orders", cardinality: "belongsTo" },
+				product: { type: "products", cardinality: "belongsTo" },
+			},
+		},
+
+		categories: {
+			attributes: {
+				name: { type: "string" },
+				slug: { type: "string" },
+			},
+			relationships: {
+				products: { type: "products", cardinality: "hasMany" },
+				parent: { type: "categories", cardinality: "belongsTo" },
+				children: {
+					type: "categories",
+					cardinality: "many",
+					inverse: "parent",
+				},
+			},
+		},
+
+		customerProfiles: {
+			attributes: {
+				phoneNumber: { type: "string" },
+				dateOfBirth: { type: "string", format: "date" },
+				preferences: { type: "object" },
+			},
+			relationships: {
+				customer: {
+					type: "customers",
+					cardinality: "one",
+					inverse: "profile",
+				},
+			},
+		},
+	},
+};
+```
+
+### Content Management Schema
+
+```javascript
+const cmsSchema = {
+	resources: {
+		articles: {
+			attributes: {
+				title: { type: "string" },
+				slug: { type: "string" },
+				content: { type: "string" },
+				status: { type: "string", enum: ["draft", "published", "archived"] },
+				publishedAt: { type: "string", format: "date-time" },
+				createdAt: { type: "string", format: "date-time" },
+				updatedAt: { type: "string", format: "date-time" },
+			},
+			requiredAttributes: ["title", "slug"],
+			relationships: {
+				author: { type: "users", cardinality: "belongsTo" },
+				category: { type: "categories", cardinality: "belongsTo" },
+				tags: { type: "tags", cardinality: "hasMany" },
+				comments: { type: "comments", cardinality: "hasMany" },
+			},
+		},
+
+		users: {
+			attributes: {
+				username: { type: "string" },
+				email: { type: "string", format: "email" },
+				role: { type: "string", enum: ["admin", "editor", "author"] },
+				active: { type: "boolean", default: true },
+			},
+			relationships: {
+				articles: {
+					type: "articles",
+					cardinality: "many",
+					inverse: "author",
+				},
+				comments: {
+					type: "comments",
+					cardinality: "many",
+					inverse: "author",
+				},
+			},
+		},
+
+		categories: {
+			attributes: {
+				name: { type: "string" },
+				description: { type: "string" },
+			},
+			relationships: {
+				articles: {
+					type: "articles",
+					cardinality: "many",
+					inverse: "category",
+				},
+			},
+		},
+
+		tags: {
+			attributes: {
+				name: { type: "string" },
+				color: { type: "string" },
+			},
+			relationships: {
+				articles: { type: "articles", cardinality: "hasMany" },
+			},
+		},
+
+		comments: {
+			attributes: {
+				content: { type: "string" },
+				approved: { type: "boolean", default: false },
+				createdAt: { type: "string", format: "date-time" },
+			},
+			relationships: {
+				article: {
+					type: "articles",
+					cardinality: "one",
+					inverse: "comments",
+				},
+				author: {
+					type: "users",
+					cardinality: "one",
+					inverse: "comments",
+				},
+				parent: { type: "comments", cardinality: "belongsTo" },
+				replies: {
+					type: "comments",
+					cardinality: "many",
+					inverse: "parent",
+				},
+			},
+		},
+	},
+};
+```
+
+### Schema Best Practices
+
+1. **Use descriptive names** - Resource and attribute names should be clear and consistent
+2. **Define relationships carefully** - Always specify inverse relationships when possible
+3. **Choose appropriate types** - Use the most specific type that fits your data
+4. **Add constraints** - Use enums, minimums, maximums to validate data
+5. **Plan for growth** - Consider how your schema might evolve over time
+6. **Document complex relationships** - Add comments for business logic
+
+For query examples using these schemas, see [query.md](query.md).
+For expression usage with schema data, see [expressions.md](expressions.md).

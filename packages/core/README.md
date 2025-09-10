@@ -115,12 +115,7 @@ Queries describe what data you want to retrieve, closely matching your desired o
 ```javascript
 const query = {
 	type: "teams",
-	select: {
-		name: "name",
-		homeMatches: {
-			select: ["field", "ageGroup"],
-		},
-	},
+	select: ["name", { homeMatches: ["field", "ageGroup"] }]
 };
 ```
 
@@ -225,6 +220,10 @@ The json-expressions library provides comprehensive operations including:
 - **Temporal**: `$nowLocal`, `$nowUTC`, `$timestamp`
 
 For complete documentation of all available operations, see the [json-expressions documentation](https://github.com/jakesower/json-expressions).
+
+#### Custom Expressions
+
+Available expressions can be extended. Most stores accept `selectEngine` and `whereEngine` parameters. See the [json-expressions documentation](https://github.com/jakesower/json-expressions) for how to create and use custom expressions.
 
 #### Using Expressions in Queries
 
