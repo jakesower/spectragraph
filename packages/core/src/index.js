@@ -24,7 +24,10 @@ export {
 	validateMergeResource,
 	validateUpdateResource,
 } from "./resource.js";
-export { ExpressionNotSupportedError } from "./errors.js";
+export {
+	ExpressionNotSupportedError,
+	StoreOperationNotSupportedError,
+} from "./errors.js";
 
 import { ensure } from "./lib/helpers.js";
 import { validateSchema } from "./schema.js";

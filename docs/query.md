@@ -1,260 +1,533 @@
-# Queries
+# Query Language Guide
 
-Queries are responsible for describing a request to fetch data. It describes the shape of the data as well as modifiers to what is needed, such as filters, sorting, number of results to return, etc. Queries are represented by JSON.
+Data Prism queries are JSON objects that describe what data to fetch and how to transform it. This guide covers all query syntax, from basic field selection to complex expressions.
 
-## Example Query
+## Table of Contents
 
-```json
+- [Basic Query Structure](#basic-query-structure)
+- [Selection Syntax](#selection-syntax)
+- [Filtering with Where Clauses](#filtering-with-where-clauses)
+- [Sorting and Ordering](#sorting-and-ordering)
+- [Pagination](#pagination)
+- [Expressions](#expressions)
+- [Relationship Traversal](#relationship-traversal)
+- [Advanced Patterns](#advanced-patterns)
+
+## Basic Query Structure
+
+Every query must specify a resource `type` and what fields to `select`:
+
+```javascript
 {
-  "type": "bears",
-  "id": "1",
-  "select": {
-    "name": "name",
-  },
+  type: "users",            // Required: resource type from schema
+  select: ["name", "email"] // Required: fields to return
 }
 ```
 
-This query means "get me the name of the bear with id '1'". `type` is required at the top level to tell the store where to start. `id` is optional and allows for the selection of a single resource. `select` is also required and determines the properties that are desired. They are keyed by the keys of the desired result and are set to the names of the properties to be returned.
+Optional query parameters:
 
-### Results
-
-Results are returned to match the select clause of the query.
-
-```json
-{ "name": "Tenderheart" }
-```
-
-### Referenced Relationship Example
-
-```json
+```javascript
 {
-  "type": "bears",
-  "select": {
-    "id": "id",
-    "bestFriend": "bestFriend",
-  },
+  type: "users",
+  id: "123",               // Optional: fetch single resource by ID
+  select: ["name"],
+  where: { active: true }, // Optional: filtering conditions
+  order: { name: "asc" },  // Optional: sorting
+  limit: 10,               // Optional: max results
+  offset: 5                // Optional: skip results (pagination)
 }
 ```
 
-This query requests all bears (no `id` was provided). It wants their `id` and their `bestFriend`. Since `bestFriend` is a relationship, it will return a reference, or ref, to that resource.
+## Selection Syntax
 
-```json
-[
-  {
-    "id": "1",
-    "bestFriend": { "type": "bears", "id": "2" }
-  },
-  {
-    "id": "2",
-    "bestFriend": { "type": "bears", "id": "1" }
-  },
-  {
-    "id": "1",
-    "bestFriend": null
+Data Prism supports multiple ways to specify which fields to select:
+
+### Array Syntax (Recommended)
+
+```javascript
+// Select specific fields
+{
+  type: "users",
+  select: ["name", "email", "createdAt"]
+}
+```
+
+### Object Syntax
+
+```javascript
+// Field aliasing
+{
+  type: "users",
+  select: {
+    userName: "name",        // Alias: key is output name, value is source field
+    userEmail: "email",
+    registered: "createdAt"
   }
-]
+}
 ```
 
-References state the `type` and `id` of the related resource.
+### Mixed Syntax (Most Flexible)
 
-### Nested Relationship Example
-
-Query:
-
-```json
+```javascript
+// Combine arrays and objects
 {
-  "type": "bears",
-  "select": {
-    "id": "id",
-    "bestFriend": {
-      "select": {
-        "name": "name"
-      }
+  type: "users",
+  select: [
+    "name",                // Direct field
+    "email",
+    {
+      fullName: { $concat: ["firstName", " ", "lastName"] }, // Expression
+      posts: ["title"]     // Relationship with sub-selection
     }
-  },
-}
-```
-
-Result:
-
-```json
-[
-  {
-    "id": "1",
-    "bestFriend": {
-      "name": "Cheer Bear"
-    }
-  },
-  {
-    "id": "2",
-    "bestFriend": {
-      "name": "Tenderheart"
-    }
-  },
-  {
-    "id": "1",
-    "bestFriend": null
-  }
-]
-```
-
-A subquery to `bestFriend` was used in this example. A `type` isn't required because the schema defines what the `bestFriend` relationship on `bears` means. Subqueries can be nested arbitrarily deep.
-
-## Specification
-
-```
-{
-  type: <resource type>,
-  id?: unique string/integer,
-  select?: property names/paths/subqueries/expressions,
-  where?: constraint clauses,
-  order?: sorting clauses,
-  limit?: integer of results to return,
-  offset?: number of results to skip,
-}
-```
-
-Subqueries match the structure of queries exactly, except they do not include a `type` key.
-
-### type
-
-This must be a valid resource type according to the schema. Results will be of this type.
-
-### id
-
-A single id of a resource. This will cause the query to return a single resource rather than an array of resources.
-
-### select
-
-These are the meat of the query in that the specify the things to return. This property is optional. If omitted the query will return a ref, such as `{ "type": "bears", "id": "abc123" }`. Otherwise, a property can be made of a resource property, a resource property path, a subquery, or an expression.
-
-```json
-{
-  "select": {
-    "name": "name",
-    "year": "yearIntroduced",
-    "homeName": "home.name",
-    "bestFriend": {
-      "properties": {
-        "name": "name"
-      }
-    },
-    "powersCount": { "$count": "powers" }
-  }
-}
-```
-
-The result of the query will have the property keys with the values associated with them. So for the above example, one might expect something like:
-
-```json
-{
-  "name": "Tenderheart Bear",
-  "year": 1982,
-  "homeName": "Care-a-Lot",
-  "bestFriend": {
-    "name": "Cheer Bear"
-  },
-  "powersCount": 1
-}
-```
-
-#### Resource Property
-
-These are most straightforward and common property returns. In the above example `{ "name": "name" }` and `{ "year": "yearIntroduced" }` used property names. In this case, `name` and `yearIntroduced` are properties of the bear resource in the schema. The keys `name` and `year` correspond to the structure of the result object. Using `{ "year": "yearIntroduced" }` effectively renames the property without changing it.
-
-#### Resource Path
-
-Property paths can be used to selected related resource properties into the current query. They can be used across to-one relationships. In the example `{ "homeName": "home.name" }` uses a property path. What this means is "follow the to-one `home` relationship and select its `name` property. These cannot be used across to-many relationships. Consider using an expression for cases where some property of a to-many relationship is needed (see below).
-
-#### Subquery
-
-Subqueries are used to directly fetch relationships. This will make the result function as a tree, with subqueries producing subtrees. The cardinality determines if the subtree is a result object (to-one) or an array of result objects (to-many). A subquery is identical to a query except that its `type` is not specified. The type will be determined based on the relationship definition in the schema. Thus, subqueries can have subqueries of their own to arbitrary depth. Recursive queries, however, are not supported. (A recursive query is query that calls itself until no results are found. An use case of a recursive query might be to traverse a tree of parent-child relationships to whatever depth.)
-
-#### Expression
-
-Expressions are used for common functional use cases where some light logic is required. They are primarily used for aggregation purposes, such as counting the number of related resources, summing numbers up, finding maxima and minima, and similar operations. Anything more elaborite than such uses cases should likely be left to application code to handle.
-
-Example Query:
-
-```json
-{
-  "type": "homes",
-  "select": {
-    "name": "name",
-    "residentCount": { "$count": "residents" },
-    "oldestIntroductionYear": { "$min": "residents.$.yearIntroduced" }
-  }
-}
-```
-
-Expressions are objects with a single key that contains the name of an expression. Expression names begin with `$` by convention. They are meant to have the same meanings as analogous functions from such contexts as Mongo DB. A full list of expressions can be found at [TODO].
-
-Aggregation expressions are what should be used for properties. In the case of `$count` specifying the relationship name will suffice. However, to find the `$min` of something requires a numeric value. This is designated as `residents.$.yearIntroduced`. The `$` operates roughly the same as a `flatMap` operation. That means that it can be nested for something more elaboarate such as `residents.$.powers.$.somePropertyOnPowers`. It's generally inadvisable to do this, though it's a useful enough feature to be supported. Note that the `$` is not required on to-one relationships. So, for example, `residents.$.bestFriend.yearIntroduced` is the appropriate form, not `residents.$.bestFriend.$.yearIntroduced`.
-
-Finally, it's worth noting that aggregation expressions are implemented in a shorthand manner for properties. It's sufficient to say that as long as a single aggregative function is being used at the top level, it will work as is typically expected. (Specifically, it applies the aggregation expression to the param rather than the arg.)
-
-### where
-
-This clause is used to filter results according to a value or logical expression.
-
-Example query:
-
-```json
-{
-  "type": "bears",
-  "where": {
-    "name": "Tenderheart Bear",
-    "yearIntroduced": { "$lt": 1985 },
-  }
-}
-```
-
-This translates to "give me bears with the `name` `"Tenderheart Bear"` (`$eq` is implied as the logical comparison) who have a `yearIntroduced` of less than `1985`. Note that the keys in the `where` clause correspond to properties on the schema, not the properties returned by the query.
-
-The `where` clause also supports dot paths. So `{ "where": "home.name": "Care-a-Lot" }` would work as expected.
-
-Similarly, logical expressions can be used, such as:
-
-```json
-{
-  "where": {
-    "$or": [
-      { "name": "Tenderheart Bear" },
-      { "yearIntroduced": { "$lt": 1985 } }
-    ]
-  }
-}
-```
-
-### order
-
-This clause sorts the results of the query. It has a few forms:
-
-```json
-{ "order": { "name": "asc" } }
-```
-
-```json
-{
-  "order": [
-    { "yearIntroduced": "desc" },
-    { "home.name": "asc" }
   ]
 }
 ```
 
-The array form will sort it by the first element, then move to the second element in case of a tie. These cannot be specified in order on a single object because the JSON specification requires object keys to be treated as unordered.
+### Wildcard Selection
 
-Note that dot form can be used and that things are ordered by the schema properties, not their result keys. The reason for this is that it allows some graph engines, such as a SQL database, to apply criteria more efficiently.
+```javascript
+// Select all attributes
+{
+  type: "users",
+  select: "*"
+}
 
-### limit
+// Select all attributes plus computed fields
+{
+  type: "users",
+  select: [
+    "*",
+    { postCount: { $count: "posts" } }
+  ]
+}
+```
 
-This reduces the results of the query to a limited number of items after `where`, `order`, and `offset` have been applied. It is nonsensical with a query containing an `id`.
+## Filtering with Where Clauses
 
-`{ "limit": 2 }` would return the first two results of a query.
+### Basic Equality
 
-Note that `where` and `order` clauses are applied before `limit`.
+```javascript
+{
+  type: "users",
+  select: ["name"],
+  where: {
+    active: true,
+    role: "admin"
+  }
+}
+```
 
-### offset
+### Comparison Operators
 
-This skips a number of results in the query after `where` and `order` have been applied. It is useful in conjunction with `limit` for things such as pagination.
+```javascript
+{
+  type: "posts",
+  select: ["title"],
+  where: {
+    viewCount: { $gt: 100 },           // Greater than
+    createdAt: { $gte: "2024-01-01" }, // Greater than or equal
+    rating: { $lt: 3 },                // Less than
+    priority: { $lte: 5 },             // Less than or equal
+    status: { $ne: "draft" }           // Not equal
+  }
+}
+```
+
+### List Operators
+
+```javascript
+{
+  type: "users",
+  select: ["name"],
+  where: {
+    role: { $in: ["admin", "editor"] },     // In list
+    status: { $nin: ["banned", "deleted"] } // Not in list
+  }
+}
+```
+
+### Logical Operators
+
+```javascript
+{
+  type: "posts",
+  select: ["title"],
+  where: {
+    $or: [
+      { published: true },
+      { author: "admin" }
+    ]
+  }
+}
+
+// Complex logic
+{
+  type: "users",
+  select: ["name"],
+  where: {
+    $and: [
+      { active: true },
+      {
+        $or: [
+          { role: "admin" },
+          { verified: true }
+        ]
+      }
+    ]
+  }
+}
+
+// Negation
+{
+  type: "posts",
+  select: ["title"],
+  where: {
+    $not: { status: "draft" }
+  }
+}
+```
+
+## Sorting and Ordering
+
+### Single Field Sort
+
+```javascript
+{
+  type: "posts",
+  select: ["title"],
+  order: { createdAt: "desc" }
+}
+```
+
+### Multiple Field Sort
+
+```javascript
+{
+  type: "users",
+  select: ["name", "email"],
+  order: [
+    { role: "asc" },      // Primary sort
+    { name: "asc" }       // Secondary sort
+  ]
+}
+```
+
+## Pagination
+
+```javascript
+{
+  type: "posts",
+  select: ["title"],
+  order: { createdAt: "desc" },
+  limit: 20,    // Max 20 results
+  offset: 40    // Skip first 40 (page 3 if 20 per page)
+}
+```
+
+## Expressions
+
+Data Prism includes a powerful expression system for computations and transformations:
+
+### Aggregations
+
+```javascript
+{
+  type: "users",
+  select: {
+    name: "name",
+    postCount: { $count: "posts" },
+    avgRating: { $avg: "posts.$.rating" },
+    totalViews: { $sum: "posts.$.viewCount" },
+    maxViews: { $max: "posts.$.viewCount" },
+    minViews: { $min: "posts.$.viewCount" }
+  }
+}
+```
+
+### Mathematical Operations
+
+```javascript
+{
+  type: "products",
+  select: {
+    name: "name",
+    price: "price",
+    discountedPrice: { $multiply: ["price", 0.9] },
+    tax: { $multiply: ["price", 0.08] },
+    total: {
+      $add: [
+        { $multiply: ["price", 0.9] },  // Discounted price
+        { $multiply: ["price", 0.08] }  // Tax
+      ]
+    }
+  }
+}
+```
+
+### String Operations
+
+```javascript
+{
+  type: "users",
+  select: {
+    fullName: { $concat: ["firstName", " ", "lastName"] },
+    initials: { $concat: [
+      { $substring: ["firstName", 0, 1] },
+      { $substring: ["lastName", 0, 1] }
+    ]},
+    emailDomain: { $split: ["email", "@", 1] }
+  }
+}
+```
+
+### Conditionals
+
+```javascript
+{
+  type: "users",
+  select: {
+    name: "name",
+    status: {
+      $if: {
+        if: { active: true },
+        then: "Active",
+        else: "Inactive"
+      }
+    },
+    tier: {
+      $case: {
+        value: "points",
+        cases: [
+          { when: { $gte: 1000 }, then: "Gold" },
+          { when: { $gte: 500 }, then: "Silver" }
+        ],
+        default: "Bronze"
+      }
+    }
+  }
+}
+```
+
+## Relationship Traversal
+
+### Basic Relationships
+
+```javascript
+{
+  type: "users",
+  select: [
+    "name",
+    {
+      posts: ["title", "createdAt"]  // One-to-many relationship
+    }
+  ]
+}
+```
+
+### Nested Relationships
+
+```javascript
+{
+  type: "users",
+  select: [
+    "name",
+    {
+      posts: [
+        "title",
+        {
+          comments: [      // Posts -> Comments (nested relationship)
+            "content",
+            {
+              author: ["name"]  // Comments -> Author (three levels deep)
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Relationship Filtering
+
+```javascript
+{
+  type: "users",
+  select: [
+    "name",
+    {
+      posts: {
+        select: ["title"],
+        where: { published: true },  // Only published posts
+        order: { createdAt: "desc" },
+        limit: 5
+      }
+    }
+  ]
+}
+```
+
+### Cross-Relationship Expressions
+
+```javascript
+{
+  type: "users",
+  select: {
+    name: "name",
+    // Aggregate across relationships using dot paths
+    avgPostRating: { $avg: "posts.$.rating" },
+    totalComments: { $count: "posts.$.comments" },
+    topCommentRating: { $max: "posts.$.comments.$.rating" }
+  }
+}
+```
+
+## Advanced Patterns
+
+### Dynamic Field Selection
+
+```javascript
+// Build queries programmatically
+const fields = ["name", "email"];
+const includeStats = true;
+
+const query = {
+	type: "users",
+	select: [
+		...fields,
+		...(includeStats
+			? [
+					{
+						postCount: { $count: "posts" },
+						avgRating: { $avg: "posts.$.rating" },
+					},
+				]
+			: []),
+	],
+};
+```
+
+### Computed Analytics
+
+```javascript
+{
+  type: "companies",
+  select: {
+    name: "name",
+    employeeCount: { $count: "employees" },
+    avgSalary: { $avg: "employees.$.salary" },
+    payrollTotal: { $sum: "employees.$.salary" },
+    topPerformers: {
+      $filter: [
+        "employees",
+        { performance: { $gte: 4.0 } }
+      ]
+    },
+    departmentStats: {
+      $groupBy: [
+        "employees",
+        "department",
+        {
+          count: { $count: {} },
+          avgSalary: { $avg: "salary" }
+        }
+      ]
+    }
+  }
+}
+```
+
+### Complex Business Logic
+
+```javascript
+{
+  type: "orders",
+  select: {
+    orderNumber: "orderNumber",
+    subtotal: { $sum: "items.$.price" },
+    discount: {
+      $if: {
+        if: { $gt: [{ $sum: "items.$.price" }, 100] },
+        then: { $multiply: [{ $sum: "items.$.price" }, 0.1] },
+        else: 0
+      }
+    },
+    shipping: {
+      $case: {
+        value: "shippingMethod",
+        cases: [
+          { when: "express", then: 15.99 },
+          { when: "standard", then: 5.99 }
+        ],
+        default: 0
+      }
+    },
+    total: {
+      $add: [
+        { $sum: "items.$.price" },           // Subtotal
+        { $multiply: [                        // Tax
+          { $sum: "items.$.price" },
+          0.08
+        ]},
+        "shippingCost"                       // Shipping
+      ]
+    }
+  }
+}
+```
+
+### Performance Optimization Tips
+
+1. **Select only needed fields** - Don't use `"*"` unless you need all attributes
+2. **Filter early** - Apply `where` clauses to reduce data before processing
+3. **Limit relationship depth** - Deep nesting can impact performance
+4. **Use pagination** - Always include `limit` for potentially large result sets
+5. **Consider store capabilities** - Some expressions are optimized per store type
+
+### Error Handling
+
+Common validation errors and how to fix them:
+
+```javascript
+// ❌ Wrong: Missing required fields
+{
+  select: ["name"]  // Missing 'type'
+}
+
+// ✅ Correct
+{
+  type: "users",
+  select: ["name"]
+}
+
+// ❌ Wrong: Invalid attribute reference
+{
+  type: "users",
+  select: ["nonexistentField"]
+}
+
+// ✅ Correct: Check your schema for valid attribute names
+{
+  type: "users",
+  select: ["name"]  // 'name' exists in schema
+}
+
+// ❌ Wrong: Invalid relationship syntax
+{
+  type: "users",
+  select: {
+    posts: "title"  // Should be array or object with select
+  }
+}
+
+// ✅ Correct
+{
+  type: "users",
+  select: {
+    posts: ["title"]  // Array syntax
+  }
+}
+```
+
+For complete expression reference, see [expressions.md](expressions.md).
+For schema definition guide, see [schema.md](schema.md).
