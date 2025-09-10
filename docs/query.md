@@ -77,7 +77,10 @@ Data Prism supports multiple ways to specify which fields to select:
     "email",
     {
       fullName: { $concat: ["firstName", " ", "lastName"] }, // Expression
-      posts: ["title"]     // Relationship with sub-selection
+      posts:  {
+        select: ["title"], // Relationship with sub-selection, requires explicit select since it also uses limit
+        limit: 10,
+      }
     }
   ]
 }
@@ -236,15 +239,15 @@ Data Prism includes a powerful expression system for computations and transforma
   select: {
     name: "name",
     postCount: { $count: "posts" },
-    avgRating: { $avg: "posts.$.rating" },
-    totalViews: { $sum: "posts.$.viewCount" },
-    maxViews: { $max: "posts.$.viewCount" },
-    minViews: { $min: "posts.$.viewCount" }
+    avgRating: { $mean: "posts" },
+    totalViews: { $sum: "posts" },
+    maxViews: { $max: "posts" },
+    minViews: { $min: "posts" }
   }
 }
 ```
 
-### Mathematical Operations
+### Computed Fields
 
 ```javascript
 {
@@ -252,13 +255,16 @@ Data Prism includes a powerful expression system for computations and transforma
   select: {
     name: "name",
     price: "price",
-    discountedPrice: { $multiply: ["price", 0.9] },
-    tax: { $multiply: ["price", 0.08] },
-    total: {
-      $add: [
-        { $multiply: ["price", 0.9] },  // Discounted price
-        { $multiply: ["price", 0.08] }  // Tax
-      ]
+    isExpensive: { $gt: ["price", 100] },
+    category: {
+      $case: {
+        value: "price",
+        cases: [
+          { when: { $gte: 100 }, then: "Premium" },
+          { when: { $gte: 50 }, then: "Standard" }
+        ],
+        default: "Budget"
+      }
     }
   }
 }
@@ -271,11 +277,9 @@ Data Prism includes a powerful expression system for computations and transforma
   type: "users",
   select: {
     fullName: { $concat: ["firstName", " ", "lastName"] },
-    initials: { $concat: [
-      { $substring: ["firstName", 0, 1] },
-      { $substring: ["lastName", 0, 1] }
-    ]},
-    emailDomain: { $split: ["email", "@", 1] }
+    upperName: { $uppercase: "name" },
+    lowerEmail: { $lowercase: "email" },
+    nameStart: { $substring: ["name", 0, 3] }
   }
 }
 ```
@@ -367,17 +371,15 @@ Data Prism includes a powerful expression system for computations and transforma
 }
 ```
 
-### Cross-Relationship Expressions
+### Relationship Aggregation
 
 ```javascript
 {
   type: "users",
   select: {
     name: "name",
-    // Aggregate across relationships using dot paths
-    avgPostRating: { $avg: "posts.$.rating" },
-    totalComments: { $count: "posts.$.comments" },
-    topCommentRating: { $max: "posts.$.comments.$.rating" }
+    postCount: { $count: "posts" },
+    hasAnyPosts: { $gt: [{ $count: "posts" }, 0] }
   }
 }
 ```
@@ -399,7 +401,7 @@ const query = {
 			? [
 					{
 						postCount: { $count: "posts" },
-						avgRating: { $avg: "posts.$.rating" },
+						avgRating: { $mean: "posts" },
 					},
 				]
 			: []),
@@ -415,63 +417,39 @@ const query = {
   select: {
     name: "name",
     employeeCount: { $count: "employees" },
-    avgSalary: { $avg: "employees.$.salary" },
-    payrollTotal: { $sum: "employees.$.salary" },
+    avgSalary: { $mean: "employees" },
+    payrollTotal: { $sum: "employees" },
     topPerformers: {
       $filter: [
         "employees",
         { performance: { $gte: 4.0 } }
-      ]
-    },
-    departmentStats: {
-      $groupBy: [
-        "employees",
-        "department",
-        {
-          count: { $count: {} },
-          avgSalary: { $avg: "salary" }
-        }
       ]
     }
   }
 }
 ```
 
-### Complex Business Logic
+### Business Logic
 
 ```javascript
 {
   type: "orders",
   select: {
     orderNumber: "orderNumber",
-    subtotal: { $sum: "items.$.price" },
-    discount: {
-      $if: {
-        if: { $gt: [{ $sum: "items.$.price" }, 100] },
-        then: { $multiply: [{ $sum: "items.$.price" }, 0.1] },
-        else: 0
-      }
-    },
-    shipping: {
+    itemCount: { $count: "items" },
+    hasExpressShipping: { $eq: ["shippingMethod", "express"] },
+    status: {
       $case: {
-        value: "shippingMethod",
+        value: "orderStatus",
         cases: [
-          { when: "express", then: 15.99 },
-          { when: "standard", then: 5.99 }
+          { when: "pending", then: "Processing" },
+          { when: "shipped", then: "On the way" },
+          { when: "delivered", then: "Complete" }
         ],
-        default: 0
+        default: "❓ Unknown"
       }
     },
-    total: {
-      $add: [
-        { $sum: "items.$.price" },           // Subtotal
-        { $multiply: [                        // Tax
-          { $sum: "items.$.price" },
-          0.08
-        ]},
-        "shippingCost"                       // Shipping
-      ]
-    }
+    isHighValue: { $gt: ["total", 500] }
   }
 }
 ```
@@ -489,30 +467,30 @@ const query = {
 Common validation errors and how to fix them:
 
 ```javascript
-// ❌ Wrong: Missing required fields
+// Wrong: Missing required fields
 {
   select: ["name"]  // Missing 'type'
 }
 
-// ✅ Correct
+// Correct
 {
   type: "users",
   select: ["name"]
 }
 
-// ❌ Wrong: Invalid attribute reference
+// Wrong: Invalid attribute reference
 {
   type: "users",
   select: ["nonexistentField"]
 }
 
-// ✅ Correct: Check your schema for valid attribute names
+// Correct: Check your schema for valid attribute names
 {
   type: "users",
   select: ["name"]  // 'name' exists in schema
 }
 
-// ❌ Wrong: Invalid relationship syntax
+// Wrong: Invalid relationship syntax
 {
   type: "users",
   select: {
@@ -520,7 +498,7 @@ Common validation errors and how to fix them:
   }
 }
 
-// ✅ Correct
+// Correct
 {
   type: "users",
   select: {

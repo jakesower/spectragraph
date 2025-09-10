@@ -18,91 +18,108 @@ Complete reference for Data Prism core functions and store interfaces.
 All Data Prism stores implement this standard interface:
 
 ### store.query(query)
+
 Execute a query and return results.
 
 **Parameters:**
+
 - `query` (`Query`) - The query object
 
 **Returns:** `Promise<any[]>` - Array of query results
 
 **Example:**
+
 ```javascript
 const users = await store.query({
-  type: 'users',
-  select: ['name', 'email'],
-  where: { active: true }
+	type: "users",
+	select: ["name", "email"],
+	where: { active: true },
 });
 ```
 
 ### store.create(resource)
+
 Create a new resource.
 
 **Parameters:**
+
 - `resource` (`NormalResourceTree`) - Resource to create
 
 **Returns:** `Promise<NormalResourceTree>` - Created resource with ID
 
 **Example:**
+
 ```javascript
 const newUser = await store.create({
-  type: 'users',
-  attributes: { name: 'Alice', email: 'alice@example.com' }
+	type: "users",
+	attributes: { name: "Alice", email: "alice@example.com" },
 });
 ```
 
 ### store.update(resource)
+
 Update an existing resource.
 
 **Parameters:**
+
 - `resource` (`NormalResourceTree`) - Resource to update (must include ID)
 
 **Returns:** `Promise<NormalResourceTree>` - Updated resource
 
 **Example:**
+
 ```javascript
 const updatedUser = await store.update({
-  type: 'users',
-  id: '1',
-  attributes: { name: 'Alice Smith' }
+	type: "users",
+	id: "1",
+	attributes: { name: "Alice Smith" },
 });
 ```
 
 ### store.upsert(resource)
+
 Create or update a resource (create if no ID, update if ID exists).
 
 **Parameters:**
+
 - `resource` (`NormalResourceTree`) - Resource to upsert
 
 **Returns:** `Promise<NormalResourceTree>` - Created or updated resource
 
 **Example:**
+
 ```javascript
 const user = await store.upsert({
-  type: 'users',
-  id: '1', // Will update if exists, create if not
-  attributes: { name: 'Alice', email: 'alice@example.com' }
+	type: "users",
+	id: "1", // Will update if exists, create if not
+	attributes: { name: "Alice", email: "alice@example.com" },
 });
 ```
 
 ### store.delete(resource)
+
 Delete a resource.
 
 **Parameters:**
+
 - `resource` (`ResourceRef`) - Resource reference to delete
 
 **Returns:** `Promise<void>`
 
 **Example:**
+
 ```javascript
-await store.delete({ type: 'users', id: '1' });
+await store.delete({ type: "users", id: "1" });
 ```
 
 ## Core Functions
 
 ### ensureValidSchema(schema, options)
+
 Validate a schema and throw error if invalid.
 
 **Parameters:**
+
 - `schema` (`Schema`) - Schema to validate
 - `options` (`Object`) - Validation options
   - `validator` (`Ajv`) - AJV validator instance
@@ -110,18 +127,21 @@ Validate a schema and throw error if invalid.
 **Throws:** `Error` if schema is invalid
 
 **Example:**
+
 ```javascript
-import { ensureValidSchema } from '@data-prism/core';
+import { ensureValidSchema } from "@data-prism/core";
 
 ensureValidSchema(schema, { validator });
 ```
 
 ### normalizeQuery(schema, query, options)
+
 Normalize a query to standard form.
 
 **Parameters:**
+
 - `schema` (`Schema`) - Schema for validation
-- `query` (`Query`) - Query to normalize  
+- `query` (`Query`) - Query to normalize
 - `options` (`Object`) - Options
   - `selectEngine` (`SelectExpressionEngine`) - Expression engine for select
   - `whereEngine` (`WhereExpressionEngine`) - Expression engine for where
@@ -129,14 +149,20 @@ Normalize a query to standard form.
 **Returns:** `NormalizedQuery` - Normalized query object
 
 **Example:**
+
 ```javascript
-const normalQuery = normalizeQuery(schema, query, { selectEngine, whereEngine });
+const normalQuery = normalizeQuery(schema, query, {
+	selectEngine,
+	whereEngine,
+});
 ```
 
 ### ensureValidQuery(schema, query, options)
+
 Validate a query and throw error if invalid.
 
 **Parameters:**
+
 - `schema` (`Schema`) - Schema for validation
 - `query` (`NormalizedQuery`) - Query to validate
 - `options` (`Object`) - Validation options
@@ -144,9 +170,11 @@ Validate a query and throw error if invalid.
 **Throws:** `Error` if query is invalid
 
 ### queryGraph(schema, query, graph, options)
+
 Execute a query against an in-memory graph.
 
 **Parameters:**
+
 - `schema` (`Schema`) - Schema definition
 - `query` (`NormalizedQuery`) - Normalized query
 - `graph` (`Graph`) - Graph data structure
@@ -155,35 +183,44 @@ Execute a query against an in-memory graph.
 **Returns:** `any[]` - Query results
 
 **Example:**
+
 ```javascript
-const results = queryGraph(schema, normalizedQuery, graph, { selectEngine, whereEngine });
+const results = queryGraph(schema, normalizedQuery, graph, {
+	selectEngine,
+	whereEngine,
+});
 ```
 
 ## Schema Validation
 
 ### validateSchema(schema, options)
+
 Validate a schema object.
 
 **Parameters:**
+
 - `schema` (`Schema`) - Schema to validate
 - `options` (`Object`) - Validation options
 
 **Returns:** `ValidationResult` - Validation result with errors if any
 
 **Example:**
+
 ```javascript
 const result = validateSchema(schema, { validator });
 if (!result.valid) {
-  console.error('Schema errors:', result.errors);
+	console.error("Schema errors:", result.errors);
 }
 ```
 
 ## Query Operations
 
 ### validateQuery(schema, query, options)
+
 Validate a query against a schema.
 
 **Parameters:**
+
 - `schema` (`Schema`) - Schema for validation
 - `query` (`NormalizedQuery`) - Query to validate
 - `options` (`Object`) - Validation options
@@ -193,9 +230,11 @@ Validate a query against a schema.
 ## Resource Operations
 
 ### ensureValidCreateResource(schema, resource, validator)
+
 Validate resource for creation.
 
 **Parameters:**
+
 - `schema` (`Schema`) - Schema definition
 - `resource` (`NormalResourceTree`) - Resource to validate
 - `validator` (`Ajv`) - Validator instance
@@ -203,19 +242,23 @@ Validate resource for creation.
 **Throws:** `Error` if resource is invalid for creation
 
 ### ensureValidUpdateResource(schema, resource, validator)
+
 Validate resource for updating.
 
 **Parameters:**
-- `schema` (`Schema`) - Schema definition  
+
+- `schema` (`Schema`) - Schema definition
 - `resource` (`NormalResourceTree`) - Resource to validate
 - `validator` (`Ajv`) - Validator instance
 
 **Throws:** `Error` if resource is invalid for updating
 
 ### ensureValidDeleteResource(schema, resource, validator)
+
 Validate resource reference for deletion.
 
 **Parameters:**
+
 - `schema` (`Schema`) - Schema definition
 - `resource` (`ResourceRef`) - Resource reference to validate
 - `validator` (`Ajv`) - Validator instance
@@ -223,26 +266,32 @@ Validate resource reference for deletion.
 **Throws:** `Error` if resource reference is invalid
 
 ### normalizeResource(schema, resource)
+
 Normalize a resource to standard form.
 
 **Parameters:**
+
 - `schema` (`Schema`) - Schema definition
 - `resource` (`ResourceTree`) - Resource to normalize
 
 **Returns:** `NormalResourceTree` - Normalized resource
 
 ### createResource(resourceData)
+
 Create a resource object with generated ID if needed.
 
 **Parameters:**
+
 - `resourceData` (`Object`) - Resource data
 
 **Returns:** `NormalResourceTree` - Created resource with ID
 
 ### mergeResources(target, source)
+
 Merge two resources, with source taking precedence.
 
 **Parameters:**
+
 - `target` (`NormalResourceTree`) - Target resource
 - `source` (`NormalResourceTree`) - Source resource
 
@@ -251,60 +300,73 @@ Merge two resources, with source taking precedence.
 ## Graph Utilities
 
 ### createEmptyGraph(schema)
+
 Create an empty graph structure from schema.
 
 **Parameters:**
+
 - `schema` (`Schema`) - Schema definition
 
 **Returns:** `Graph` - Empty graph with resource type containers
 
 **Example:**
+
 ```javascript
 const emptyGraph = createEmptyGraph(schema);
 // Returns: { users: {}, posts: {}, ... }
 ```
 
 ### linkInverses(schema, graph)
+
 Link inverse relationships in a graph.
 
 **Parameters:**
+
 - `schema` (`Schema`) - Schema with relationship definitions
 - `graph` (`Graph`) - Graph to process
 
 **Returns:** `Graph` - Graph with inverse relationships linked
 
 **Example:**
+
 ```javascript
 const linkedGraph = linkInverses(schema, graph);
 ```
 
 ### mergeGraphs(target, source)
+
 Shallow merge two graphs.
 
 **Parameters:**
+
 - `target` (`Graph`) - Target graph
 - `source` (`Graph`) - Source graph
 
 **Returns:** `Graph` - Merged graph
 
 ### mergeGraphsDeep(target, source)
+
 Deep merge two graphs, merging resources by ID.
 
 **Parameters:**
+
 - `target` (`Graph`) - Target graph
-- `source` (`Graph`) - Source graph  
+- `source` (`Graph`) - Source graph
 
 **Returns:** `Graph` - Deep merged graph
 
 **Example:**
+
 ```javascript
 const mergedGraph = mergeGraphsDeep(existingGraph, newData);
 ```
 
 ### createGraphFromResources(resources)
+
 Create a graph from an array of resources.
 
 **Parameters:**
+
 - `resources` (`NormalResourceTree[]`) - Array of resources
 
 **Returns:** `Graph` - Graph containing the resources
@@ -312,44 +374,269 @@ Create a graph from an array of resources.
 ## Expression Engines
 
 ### defaultSelectEngine
+
 Default expression engine for SELECT clauses.
 
 **Type:** `SelectExpressionEngine`
 
 **Usage:**
-```javascript
-import { defaultSelectEngine } from '@data-prism/core';
 
-const result = queryGraph(schema, query, graph, { 
-  selectEngine: defaultSelectEngine 
+```javascript
+import { defaultSelectEngine } from "@data-prism/core";
+
+const result = queryGraph(schema, query, graph, {
+	selectEngine: defaultSelectEngine,
 });
 ```
 
-### defaultWhereEngine  
+### defaultWhereEngine
+
 Default expression engine for WHERE clauses.
 
 **Type:** `WhereExpressionEngine`
 
 **Usage:**
-```javascript
-import { defaultWhereEngine } from '@data-prism/core';
 
-const result = queryGraph(schema, query, graph, { 
-  whereEngine: defaultWhereEngine 
+```javascript
+import { defaultWhereEngine } from "@data-prism/core";
+
+const result = queryGraph(schema, query, graph, {
+	whereEngine: defaultWhereEngine,
 });
 ```
 
 ### createValidator(schema)
+
 Create an AJV validator for a schema.
 
 **Parameters:**
+
 - `schema` (`Schema`) - Schema to create validator for
 
 **Returns:** `Ajv` - Configured AJV validator instance
 
+## Error Handling
+
+### ExpressionNotSupportedError
+
+Error thrown when a store doesn't support a specific expression.
+
+**Constructor:**
+
+```javascript
+new ExpressionNotSupportedError(expression, storeName, reason?)
+```
+
+**Parameters:**
+
+- `expression` (`string`) - The unsupported expression (e.g., "$matchesRegex")
+- `storeName` (`string`) - Name of the store that doesn't support it
+- `reason` (`string`, optional) - Why the expression isn't supported
+
+**Usage in stores:**
+
+```javascript
+import { ExpressionNotSupportedError } from "@data-prism/core";
+
+// In a custom expression engine
+const customWhereEngine = {
+	expressions: {
+		$matchesRegex: (field, pattern) => {
+			throw new ExpressionNotSupportedError(
+				"$matchesRegex",
+				"MyCustomStore",
+				"Regular expressions not supported by backend API",
+			);
+		},
+	},
+};
+```
+
+**Interface tests:** The interface tests automatically skip tests that throw this error, allowing stores to declare unsupported expressions gracefully.
+
+### StoreOperationNotSupportedError
+
+Error thrown when a store doesn't support a specific operation (create, update, delete, etc.).
+
+**Constructor:**
+
+```javascript
+new StoreOperationNotSupportedError(operation, storeName, reason?)
+```
+
+**Parameters:**
+
+- `operation` (`string`) - The unsupported operation (e.g., "create", "update", "delete")
+- `storeName` (`string`) - Name of the store that doesn't support it
+- `reason` (`string`, optional) - Why the operation isn't supported
+
+**Usage in stores:**
+
+```javascript
+import { StoreOperationNotSupportedError } from "@data-prism/core";
+
+export function createReadOnlyStore(schema, apiClient) {
+	return {
+		// Query is supported
+		async query(query) {
+			// Implementation here
+		},
+
+		// Write operations are not supported
+		async create(resource) {
+			throw new StoreOperationNotSupportedError(
+				"create",
+				"ReadOnlyStore",
+				"This store provides read-only access to the API",
+			);
+		},
+
+		async update(resource) {
+			throw new StoreOperationNotSupportedError(
+				"update",
+				"ReadOnlyStore",
+				"This store provides read-only access to the API",
+			);
+		},
+
+		async delete(resource) {
+			throw new StoreOperationNotSupportedError(
+				"delete",
+				"ReadOnlyStore",
+				"This store provides read-only access to the API",
+			);
+		},
+	};
+}
+```
+
+**Interface tests:** The interface tests automatically skip operation tests when stores throw this error, allowing read-only stores and stores with partial operation support to pass interface compliance tests.
+
+**Common use cases:**
+
+- **Read-only stores**: Analytics databases, cached views, or API endpoints without write access
+- **Selective operation support**: Stores that support some operations but not others
+- **Gradual implementation**: Stores that implement operations incrementally during development
+
+### Read-Only Store Example
+
+Here's a complete example of a read-only store that connects to an analytics API:
+
+```javascript
+import {
+  StoreOperationNotSupportedError,
+  ensureValidSchema,
+  ensureValidQuery,
+  normalizeQuery,
+  defaultSelectEngine,
+  defaultWhereEngine
+} from "@data-prism/core";
+
+export function createAnalyticsStore(schema, apiClient, config = {}) {
+  const {
+    selectEngine = defaultSelectEngine,
+    whereEngine = defaultWhereEngine,
+  } = config;
+
+  ensureValidSchema(schema);
+
+  return {
+    async query(query) {
+      const normalizedQuery = normalizeQuery(schema, query, {
+        selectEngine,
+        whereEngine,
+      });
+      ensureValidQuery(schema, normalizedQuery, { selectEngine, whereEngine });
+
+      // Convert Data Prism query to analytics API format
+      const apiParams = convertToAnalyticsQuery(normalizedQuery);
+
+      // Fetch from read-only analytics API
+      const response = await apiClient.get('/analytics/query', { params: apiParams });
+
+      // Convert back to Data Prism format
+      return convertFromAnalyticsFormat(response.data);
+    },
+
+    // All write operations throw StoreOperationNotSupportedError
+    async create(resource) {
+      throw new StoreOperationNotSupportedError(
+        "create",
+        "AnalyticsStore",
+        "Analytics data is read-only and computed from source systems"
+      );
+    },
+
+    async update(resource) {
+      throw new StoreOperationNotSupportedError(
+        "update",
+        "AnalyticsStore",
+        "Analytics data is read-only and computed from source systems"
+      );
+    },
+
+    async upsert(resource) {
+      throw new StoreOperationNotSupportedError(
+        "upsert",
+        "AnalyticsStore",
+        "Analytics data is read-only and computed from source systems"
+      );
+    },
+
+    async delete(resource) {
+      throw new StoreOperationNotSupportedError(
+        "delete",
+        "AnalyticsStore",
+        "Analytics data is read-only and computed from source systems"
+      );
+    }
+  };
+}
+
+// Usage
+const analyticsStore = createAnalyticsStore(schema, apiClient);
+
+// This works - querying read-only data
+const metrics = await analyticsStore.query({
+  type: "dailyMetrics",
+  select: ["date", "revenue", "users"],
+  where: { date: { $gte: "2024-01-01" } }
+});
+
+// These will throw StoreOperationNotSupportedError
+try {
+  await analyticsStore.create({ type: "dailyMetrics", attributes: {...} });
+} catch (error) {
+  if (error instanceof StoreOperationNotSupportedError) {
+    console.log("Expected: Analytics store is read-only");
+  }
+}
+```
+
+**Interface test compatibility:** When running interface tests on this store:
+
+```javascript
+import { runInterfaceTests } from "@data-prism/interface-tests";
+import { createAnalyticsStore } from "./analytics-store.js";
+
+// Interface tests will automatically skip CUD operation tests
+// and only run query tests
+runInterfaceTests(() => createAnalyticsStore(schema, mockApiClient));
+```
+
+The interface tests will show output like:
+
+```
+Skipping Create Operations: Store does not support create operations
+Skipping Update Operations: Store does not support update operations
+Skipping Delete Operations: Store does not support delete operations
+Skipping Upsert Operations: Store does not support upsert operations
+```
+
 ## Type Definitions
 
 ### Schema
+
 ```javascript
 /**
  * @typedef {Object} Schema
@@ -358,6 +645,7 @@ Create an AJV validator for a schema.
 ```
 
 ### ResourceDefinition
+
 ```javascript
 /**
  * @typedef {Object} ResourceDefinition
@@ -369,6 +657,7 @@ Create an AJV validator for a schema.
 ```
 
 ### AttributeDefinition
+
 ```javascript
 /**
  * @typedef {Object} AttributeDefinition
@@ -379,6 +668,7 @@ Create an AJV validator for a schema.
 ```
 
 ### RelationshipDefinition
+
 ```javascript
 /**
  * @typedef {Object} RelationshipDefinition
@@ -389,6 +679,7 @@ Create an AJV validator for a schema.
 ```
 
 ### Query
+
 ```javascript
 /**
  * @typedef {Object} Query
@@ -403,6 +694,7 @@ Create an AJV validator for a schema.
 ```
 
 ### SelectClause
+
 ```javascript
 /**
  * @typedef {string|string[]|Object} SelectClause
@@ -413,6 +705,7 @@ Create an AJV validator for a schema.
 ```
 
 ### WhereClause
+
 ```javascript
 /**
  * @typedef {Object} WhereClause
@@ -424,6 +717,7 @@ Create an AJV validator for a schema.
 ```
 
 ### OrderClause
+
 ```javascript
 /**
  * @typedef {Object|Object[]} OrderClause
@@ -433,6 +727,7 @@ Create an AJV validator for a schema.
 ```
 
 ### NormalResourceTree
+
 ```javascript
 /**
  * @typedef {Object} NormalResourceTree
@@ -444,6 +739,7 @@ Create an AJV validator for a schema.
 ```
 
 ### ResourceRef
+
 ```javascript
 /**
  * @typedef {Object} ResourceRef
@@ -453,6 +749,7 @@ Create an AJV validator for a schema.
 ```
 
 ### Graph
+
 ```javascript
 /**
  * @typedef {Object<string, Object<string, NormalResourceTree>>} Graph
@@ -461,6 +758,7 @@ Create an AJV validator for a schema.
 ```
 
 ### ValidationResult
+
 ```javascript
 /**
  * @typedef {Object} ValidationResult
@@ -470,6 +768,7 @@ Create an AJV validator for a schema.
 ```
 
 ### ExpressionEngine
+
 ```javascript
 /**
  * @typedef {Object} ExpressionEngine
@@ -478,6 +777,7 @@ Create an AJV validator for a schema.
 ```
 
 For practical usage examples, see:
+
 - [Query Guide](query.md) - Complete query language reference
 - [Schema Guide](schema.md) - Schema definition examples
 - [Expression Guide](expressions.md) - Expression usage patterns
