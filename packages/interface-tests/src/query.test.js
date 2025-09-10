@@ -1,25 +1,7 @@
 import { expect, it, describe } from "vitest";
 import { careBearData, careBearSchema } from "./fixtures/index.js";
-import { normalizeQuery, ExpressionNotSupportedError } from "@data-prism/core";
-
-/**
- * Helper function to test expressions that may not be supported by all stores.
- * If the store throws an ExpressionNotSupportedError, the test is skipped.
- * Otherwise, the test runs normally.
- */
-async function testExpressionOrSkip(testFn) {
-	try {
-		await testFn();
-	} catch (error) {
-		if (error instanceof ExpressionNotSupportedError) {
-			// Skip this test - the store doesn't support this expression
-			console.log(`Skipping test: ${error.message}`);
-			return;
-		}
-		// Re-throw any other errors
-		throw error;
-	}
-}
+import { normalizeQuery } from "@data-prism/core";
+import { testExpressionOrSkip } from "./test-helpers.js";
 
 export function runQueryTests(createStore) {
 	describe("core query operations", () => {

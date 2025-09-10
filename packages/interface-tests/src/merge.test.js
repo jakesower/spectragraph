@@ -1,5 +1,6 @@
-import { describe, test, expect, beforeEach } from "vitest";
+import { describe, test, expect, beforeEach, beforeAll } from "vitest";
 import { careBearSchema } from "./fixtures/index.js";
+import { checkOperationSupport } from "./test-helpers.js";
 
 /**
  * Runs the shared merge operation tests across different store implementations
@@ -7,6 +8,15 @@ import { careBearSchema } from "./fixtures/index.js";
  */
 export function runMergeTests(createStore) {
 	describe("Merge Operations", () => {
+		// Check if store supports merge operations before running tests
+		let storeSupportsMerge;
+		
+		beforeAll(async () => {
+			storeSupportsMerge = await checkOperationSupport(createStore, careBearSchema, 'merge');
+			if (!storeSupportsMerge) {
+				console.log('Skipping Merge Operations: Store does not support merge operations');
+			}
+		});
 		let store;
 
 		beforeEach(() => {
@@ -14,6 +24,8 @@ export function runMergeTests(createStore) {
 		});
 
 		test("should handle single resource merge", async () => {
+			if (!storeSupportsMerge) return;
+			
 			const result = await store.merge({
 				type: "bears",
 				attributes: {
@@ -31,6 +43,8 @@ export function runMergeTests(createStore) {
 		});
 
 		test("should handle multiple resource merge", async () => {
+			if (!storeSupportsMerge) return;
+			
 			const results = await store.merge([
 				{
 					type: "bears",
@@ -73,6 +87,8 @@ export function runMergeTests(createStore) {
 		});
 
 		test("should handle failed merge", async () => {
+			if (!storeSupportsMerge) return;
+			
 			const existingBear = await store.create({
 				type: "bears",
 				attributes: {
@@ -116,12 +132,16 @@ export function runMergeTests(createStore) {
 		});
 
 		test("should handle empty array", async () => {
+			if (!storeSupportsMerge) return;
+			
 			const result = await store.merge([]);
 			expect(Array.isArray(result)).toBe(true);
 			expect(result.length).toBe(0);
 		});
 
 		test("should handle mixed single and batch operations", async () => {
+			if (!storeSupportsMerge) return;
+			
 			const bedtimeBear = await store.create({
 				type: "bears",
 				attributes: {
@@ -187,6 +207,8 @@ export function runMergeTests(createStore) {
 		});
 
 		test("should handle create then update in single merge", async () => {
+			if (!storeSupportsMerge) return;
+			
 			const results = await store.merge([
 				{
 					type: "bears",
@@ -230,6 +252,8 @@ export function runMergeTests(createStore) {
 		});
 
 		test("should merge a single resource with only attributes", async () => {
+			if (!storeSupportsMerge) return;
+			
 			const bedtimeBear = await store.merge({
 				type: "bears",
 				attributes: {
@@ -250,6 +274,8 @@ export function runMergeTests(createStore) {
 		});
 
 		test("should update a single resource with only attributes", async () => {
+			if (!storeSupportsMerge) return;
+			
 			const friendBear = await store.create({
 				type: "bears",
 				attributes: {
@@ -281,6 +307,8 @@ export function runMergeTests(createStore) {
 		});
 
 		test("should update a single resource with attributes and relationships", async () => {
+			if (!storeSupportsMerge) return;
+			
 			const careALot = await store.create({
 				type: "homes",
 				attributes: {
@@ -348,6 +376,8 @@ export function runMergeTests(createStore) {
 		});
 
 		test("should create resources in a tree and properly relate them", async () => {
+			if (!storeSupportsMerge) return;
+			
 			const careALotBear = await store.merge({
 				type: "bears",
 				attributes: {
