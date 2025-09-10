@@ -1,164 +1,243 @@
 # Data Prism
 
-Data Prism is a library for dealing with structured graphs. These can be databases, APIs, caches, or anything else that fits these criteria:
+A unified, expressive query language for multiple data sources. Query databases, APIs, and in-memory data with the same syntax, automatic relationship linking, and powerful expressions.
 
-- The data can be described by a schema of resources
-- Resources have properties as well as relationships to other resources
+## Quick Example
 
-Data Prism is highly aligned with its data structures. Data flow from queries, which in turn depend on schemas. Having an understanding of these concepts is critical to using the libraries well.
+```javascript
+// Same query works across different data sources
+const result = await store.query({
+	type: "users",
+	select: [
+		"name",
+		"email",
+		{
+			posts: [
+				"title",
+				"createdAt",
+				{
+					comments: [
+						"content",
+						{
+							author: ["name"],
+						},
+					],
+				},
+			],
+		},
+	],
+	where: { active: true },
+	limit: 10,
+});
 
-## Components
+// Works with: PostgreSQL, SQLite, in-memory data, REST APIs
+// Handles relationships automatically with request optimization
+```
 
-### Store
+## Installation
 
-A store is a repository of data that follows a schema that is provided to it. Stores include SQL databases, graph databases, APIs, among other data structuring systems.
+```bash
+npm install @data-prism/memory-store
+# or choose your store: postgres-store, sqlite-store, etc.
+```
 
-### Schema
+## Basic Usage
 
-A schema describes the data within a store. It lists resources as with their properties and relationships. It is written in or is serializable to JSON. An example of a couple properties:
+```javascript
+import { createMemoryStore } from "@data-prism/memory-store";
 
-```json
+// Define your data schema
+const schema = {
+	resources: {
+		users: {
+			attributes: {
+				name: { type: "string" },
+				email: { type: "string" },
+			},
+			relationships: {
+				posts: { type: "posts", cardinality: "hasMany" },
+			},
+		},
+		posts: {
+			attributes: {
+				title: { type: "string" },
+				content: { type: "string" },
+			},
+			relationships: {
+				author: { type: "users", cardinality: "belongsTo" },
+			},
+		},
+	},
+};
+
+// Create store with initial data
+const store = createMemoryStore(schema, {
+	initialData: {
+		users: {
+			1: {
+				id: "1",
+				type: "users",
+				attributes: { name: "Alice", email: "alice@example.com" },
+				relationships: { posts: [{ type: "posts", id: "1" }] },
+			},
+		},
+		posts: {
+			1: {
+				id: "1",
+				type: "posts",
+				attributes: { title: "Hello World", content: "My first post" },
+				relationships: { author: { type: "users", id: "1" } },
+			},
+		},
+	},
+});
+
+// Query with expressions
+const analytics = await store.query({
+	type: "users",
+	select: {
+		name: "name",
+		postCount: { $count: "posts" },
+		avgPostLength: { $avg: "posts.$.content.length" },
+	},
+});
+
+console.log(analytics);
+// [{ name: 'Alice', postCount: 1, avgPostLength: 13 }]
+```
+
+## Use Cases
+
+**Backend Development**
+
+- **Database Abstraction** - Switch between PostgreSQL, SQLite, or in-memory stores without changing queries
+- **API Integration** - Combine data from multiple services with unified query syntax
+- **Microservice Data** - Query across service boundaries with automatic relationship resolution
+
+**Frontend Development**
+
+- **Multi-API Coordination** - Fetch related data from multiple endpoints in one query
+- **Request Optimization** - Minimize API calls with intelligent batching and caching
+- **Data Transformation** - Apply computations and aggregations client-side
+
+**Data Analysis**
+
+- **Expression-Powered Queries** - Built-in aggregations, computations, and transformations
+- **Cross-Store Analytics** - Same analytical queries work on any data source
+- **Dynamic Querying** - Build queries programmatically for dashboards and reports
+
+**Custom Store Development**
+
+- **Store Builder Toolkit** - Create stores for any data source using `@data-prism/core`
+- **Unified Interface** - Implement once, compatible with entire Data Prism ecosystem
+- **Query Processing** - Built-in validation, normalization, and relationship handling
+
+## Available Stores
+
+| Store                                                     | Use Case                             | Status    |
+| --------------------------------------------------------- | ------------------------------------ | --------- |
+| **[@data-prism/memory-store](packages/memory-store)**     | In-memory data, testing, prototyping | ✅ Stable |
+| **[@data-prism/postgres-store](packages/postgres-store)** | PostgreSQL databases                 | ✅ Stable |
+| **[@data-prism/sqlite-store](packages/sqlite-store)**     | SQLite databases                     | ✅ Stable |
+
+## Advanced Query Examples
+
+### Filtering and Sorting
+
+```javascript
 {
-  "properties": {
-    "arrival_time": {
-      "type": "date-time"
-    },
-    "class": {
-      "type": "string",
-      "enum": ["first", "coach"]
-    },
-    "ticket_price": {
-      "type": "number"
-    }
-  }
+  type: "posts",
+  select: ["title", "createdAt"],
+  where: {
+    published: true,
+    createdAt: { $gte: "2024-01-01" }
+  },
+  order: [{ createdAt: "desc" }],
+  limit: 5
 }
 ```
 
-Types are extensible, but stores should all support the following basic types:
+### Complex Expressions
 
-- boolean
-- date-time
-- integer
-- null
-- number
-- string
-
-These types can be used by stores to automatically set up such things as sorting, casting, and filtering. Types beyond these are valid, but will have to have more features implemented by hand.
-
-Schema relationships are used to connect various resources. An example:
-
-```json
+```javascript
 {
-  "relationships": {
-    "train": {
-      "resource": "trains",
-      "cardinality": "one",
-      "inverse": "trips"
-    }
-  }
-}
-```
-
-Relationships are powerful tools that can be highly leveraged by stores to run nested or projected queries, among other uses.
-
-A schema of schemas can be found in [./schemas](./schemas) and examples can be found in [./examples](./examples).
-
-### Query
-
-Queries are the most written type within a typical Data Prism application. Stores accept queries and produce results based on the contents of the store. The various store types handle queries differently (they may walk a memory tree, produce SQL, hit an API, or other such things). However, the structure of a query and its results are uniform across the different store types. Custom stores need to abide by the same rules.
-
-Example queries:
-
-```json
-{
-  "type": "trips",
-  "properties" {
-    "arrives_at": "arrival_time",
-    "trains": {
-      "properties": {
-        "name": "name"
+  type: "companies",
+  select: {
+    name: "name",
+    avgEmployeeSalary: { $avg: "departments.$.employees.$.salary" },
+    topDepartment: {
+      $first: {
+        $orderBy: ["departments", { $desc: { $avg: "employees.$.performance" } }]
       }
     }
   }
 }
 ```
 
-This might produce a result like:
+### Cross-Store Data Composition
 
-```json
-[
-  {
-    "arrives_at": "1899-10-01T22:00:00",
-    "trains": {
-      "name": "Orient Express"
-    }
-  }
-]
-```
-
-Queries must match the schema of the store. The result and query structure correspond, but queries can take in other parameters like filters, sorting, and pagination.
-
-For example:
-
-```json
+```javascript
+// Same query pattern works across different store types
 {
-  "type": "trips",
-  "properties" {
-    "arrives_at": "arrival_time",
-    "trains": {
-      "properties": {
-        "name": "name"
+  type: "users",
+  select: ["name", {
+    posts: ["title", "createdAt", {
+      comments: {
+        select: ["content"],
+        limit: 3
       }
-    }
-  },
-  "where": {
-    "class": "first"
-  },
-  "order": [
-    { "property": "arrival_time", "direction": "asc" }
-  ]
-  "limit": 1,
-  "offset": 5
+    }]
+  }],
+  where: { active: true }
 }
 ```
 
-## Upcoming Features
+## Documentation
 
-Many arguments can make use of expressions from the [json-expressions](https://github.com/jakesower/json-expressions) library.
+- **[Query Guide](docs/query.md)** - Complete query language reference
+- **[Schema Guide](docs/schema.md)** - Defining data structures and relationships
+- **[Expression Reference](docs/expressions.md)** - Built-in functions and operators
+- **[Store Creation Guide](docs/store-creation.md)** - Building custom stores
+- **[API Reference](docs/api.md)** - Full API documentation
 
-Queries also have the ability project and do limited aggregation.
+## Why Data Prism?
 
-```json
-{
-  "type": "trains",
-  "properties": {
-    "name": "name",
-    "trip_count": { "$count": "trips" },
-    "mean_cost": { "$mean": "trips.$.cost" },
-    "owner": "company.name",
-    "company": "company"
-  }
-}
+**Instead of store-specific query languages:**
+
+```sql
+-- PostgreSQL
+SELECT u.name, p.title, c.content
+FROM users u
+LEFT JOIN posts p ON u.id = p.user_id
+LEFT JOIN comments c ON p.id = c.post_id
+WHERE u.active = true;
 ```
 
-Produces:
+**Write once, run anywhere:**
 
-```json
-[
-  {
-    "name": "Orient Express",
-    "trip_count": 50,
-    "mean_cost": 193.33,
-    "owner": "Compagnie Internationale des Wagons-Lits",
-    "company": { "type": "companies", "id": "123" }
-  }
-]
+```javascript
+// Same query works on PostgreSQL, SQLite, in-memory, or API stores
+const result = await store.query({
+	type: "users",
+	select: [
+		"name",
+		{
+			posts: [
+				"title",
+				{
+					comments: ["content"],
+				},
+			],
+		},
+	],
+	where: { active: true },
+});
 ```
 
-This example shows the use of a couple of aggregating expressions (`$count` and `$mean`) as well as the use of dot notation for nested fields (`trips.$.cost` and `company.name`). These expressions are provided by the json-expressions library which offers comprehensive operators for data transformation and filtering. More complex manipulations should be done programatically.
+## Contributing
 
-Note that queries are implemented as JSON objects, rather than strings. This makes them easier to compose, pick apart, and otherwise manipulate than string-based query languages such as SQL and GraphQL.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## Current Project Status
+## License
 
-As of July 2023, a `Memory Store` is fully implemented with a `SQL Store` and `API Store` in progress.
+MIT © [Jake Sower](https://github.com/jakesower)

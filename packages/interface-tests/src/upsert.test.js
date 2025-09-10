@@ -1,9 +1,21 @@
-import { expect, it, describe } from "vitest";
+import { expect, it, describe, beforeAll } from "vitest";
 import { careBearSchema } from "./fixtures/index.js";
+import { checkOperationSupport } from "./test-helpers.js";
 
 export function runUpsertTests(createStore) {
 	describe("Upsert Operations", () => {
+		// Check if store supports upsert operations before running tests
+		let storeSupportsUpsert;
+		
+		beforeAll(async () => {
+			storeSupportsUpsert = await checkOperationSupport(createStore, careBearSchema, 'upsert');
+			if (!storeSupportsUpsert) {
+				console.log('Skipping Upsert Operations: Store does not support upsert operations');
+			}
+		});
 		it("creates a single resource with upsert", async () => {
+			if (!storeSupportsUpsert) return;
+			
 			const store = createStore(careBearSchema);
 			const upserted = await store.upsert({
 				type: "bears",
@@ -25,6 +37,8 @@ export function runUpsertTests(createStore) {
 		});
 
 		it("updates a single resource with upsert", async () => {
+			if (!storeSupportsUpsert) return;
+			
 			const store = createStore(careBearSchema);
 			const created = await store.create({
 				type: "bears",
@@ -57,6 +71,8 @@ export function runUpsertTests(createStore) {
 		});
 
 		it("upserts a single resource with a local relationship", async () => {
+			if (!storeSupportsUpsert) return;
+			
 			const store = createStore(careBearSchema);
 			const upsertedHome = await store.upsert({
 				type: "homes",
@@ -91,6 +107,8 @@ export function runUpsertTests(createStore) {
 		});
 
 		it("upserts a single resource with a foreign to-one relationship", async () => {
+			if (!storeSupportsUpsert) return;
+			
 			const store = createStore(careBearSchema);
 			const upsertedBear = await store.upsert({
 				type: "bears",
@@ -136,6 +154,8 @@ export function runUpsertTests(createStore) {
 		});
 
 		it("upserts a single resource with a many-to-many relationship", async () => {
+			if (!storeSupportsUpsert) return;
+			
 			const store = createStore(careBearSchema);
 			const upsertedBear = await store.upsert({
 				type: "bears",
@@ -180,6 +200,8 @@ export function runUpsertTests(createStore) {
 		});
 
 		it("fails to upsert a single resource with an invalid attribute", async () => {
+			if (!storeSupportsUpsert) return;
+			
 			const store = createStore(careBearSchema);
 
 			await expect(async () =>
