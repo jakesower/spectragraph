@@ -291,35 +291,6 @@ For detailed documentation on individual expressions, see the [json-expressions 
 
 ## Usage Examples
 
-### Complex Query with Multiple Expressions
-
-```javascript
-{
-  type: "posts",
-  select: {
-    title: "title",
-    author: { $get: "author.name" },
-    commentCount: { $count: "comments" },
-    avgRating: { $mean: "ratings.$.score" },
-    status: {
-      $if: {
-        if: { published: true },
-        then: "Live",
-        else: "Draft"
-      }
-    },
-    tags: { $join: [{ $map: ["tags", "name"] }, ", "] }
-  },
-  where: {
-    $and: [
-      { published: true },
-      { $gt: [{ $count: "comments" }, 5] },
-      { author: { $matchesRegex: "^[A-Z]" } }
-    ]
-  }
-}
-```
-
 ### Aggregation with Filtering
 
 ```javascript
@@ -327,11 +298,9 @@ For detailed documentation on individual expressions, see the [json-expressions 
   type: "orders",
   select: {
     orderNumber: "orderNumber",
-    totalValue: { $sum: "items.$.price" },
     expensiveItems: {
       $filter: ["items", { $gt: ["price", 100] }]
     },
-    itemCount: { $count: "items" }
   }
 }
 ```
@@ -340,46 +309,9 @@ For detailed documentation on individual expressions, see the [json-expressions 
 
 ### Expression Evaluation Location
 
-Different stores evaluate expressions in different contexts:
-
-**Memory Store (JavaScript)**
-
-- All expressions evaluated in JavaScript
-- Full expression support as listed above
-
-**SQL Stores (PostgreSQL/SQLite)**
-
-- Simple expressions translated to SQL for performance
-- Complex expressions may fall back to JavaScript evaluation
-- Store-specific expressions like `$matchesLike` and `$matchesGlob` available
-
-**API Stores**
-
-- Expressions evaluated after data fetching
-- Full JavaScript evaluation support
-- Performance depends on data volume fetched
-
-### Performance Considerations
-
-1. **SQL Optimization**: Simple comparisons and math operations translate to SQL
-2. **Relationship Traversal**: Deep paths (`posts.$.comments.$.rating`) can be expensive
-3. **Memory Usage**: Complex aggregations on large datasets may use significant memory
-4. **API Efficiency**: Expressions on API data require fetching full objects first
+Different stores evaluate expressions differently in actual execution, but the result remains the same. This may result in poor performance depending on the store and how expressions are executed with in it.
 
 ### Store Capabilities
-
-**All Stores Support:**
-
-- Basic comparisons (`$eq`, `$gt`, `$in`, etc.)
-- Logical operations (`$and`, `$or`, `$not`)
-- Simple aggregations (`$count`, `$sum`, `$min`, `$max`)
-- Conditional logic (`$if`, `$case`)
-
-**SQL Stores Additional:**
-
-- `$matchesLike` for SQL LIKE patterns
-- `$matchesGlob` (SQLite only) for glob patterns
-- Optimized evaluation for many expressions
 
 **Limited in Some Stores:**
 

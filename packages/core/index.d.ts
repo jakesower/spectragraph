@@ -150,23 +150,22 @@ export interface Expression {
 	[key: string]: unknown;
 }
 
-
-
-
-
+export type SelectClause =
+	| readonly (string | { [k: string]: string | Query | Expression })[]
+	| { [k: string]: string | Query | Expression | SelectClause }
+	| "*";
 
 export interface Query {
 	id?: string;
 	limit?: number;
 	offset?: number;
 	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
-	select:
-		| readonly (string | { [k: string]: string | Query | Expression })[]
-		| { [k: string]: string | Query | Expression }
-		| "*";
+	select: SelectClause;
 	type?: string;
 	where?: { [k: string]: unknown };
 }
+
+export type QueryOrSelect = Query | SelectClause;
 
 export interface RootQuery extends Query {
 	type: string;
@@ -224,12 +223,12 @@ export interface Graph {
 }
 
 export interface QueryGraph {
-	query(query: RootQuery): unknown;
+	query(query: RootQuery): QueryResult;
 }
 
 // === RESULT TYPES ===
 
-export type QueryResult = { [k: string]: unknown };
+export type QueryResult = { [k: string]: unknown } | { [k: string]: unknown }[];
 
 // === STORE TYPES ===
 
@@ -241,22 +240,22 @@ export interface Store {
 	 * Creates a new resource
 	 */
 	create(resource: CreateResource): Promise<NormalResource>;
-	
+
 	/**
 	 * Updates an existing resource
 	 */
 	update(resource: UpdateResource): Promise<NormalResource>;
-	
+
 	/**
 	 * Deletes a resource
 	 */
 	delete(resource: DeleteResource): Promise<DeleteResource>;
-	
+
 	/**
 	 * Creates or updates a resource
 	 */
 	upsert(resource: CreateResource | UpdateResource): Promise<NormalResource>;
-	
+
 	/**
 	 * Queries the store
 	 */
@@ -303,7 +302,7 @@ export function ensureValidSchema(
 export function validateQuery(
 	schema: Schema,
 	query: RootQuery,
-	options?: { 
+	options?: {
 		selectEngine?: SelectExpressionEngine;
 		whereEngine?: WhereExpressionEngine;
 	},
@@ -321,7 +320,7 @@ export function validateQuery(
 export function ensureValidQuery(
 	schema: Schema,
 	query: RootQuery,
-	options?: { 
+	options?: {
 		selectEngine?: SelectExpressionEngine;
 		whereEngine?: WhereExpressionEngine;
 	},
@@ -339,7 +338,7 @@ export function ensureValidQuery(
 export function normalizeQuery(
 	schema: Schema,
 	rootQuery: RootQuery,
-	options?: { 
+	options?: {
 		selectEngine?: SelectExpressionEngine;
 		whereEngine?: WhereExpressionEngine;
 	},
@@ -413,7 +412,7 @@ export function queryGraph(
 	schema: Schema,
 	query: RootQuery,
 	graph: Graph,
-	options?: { 
+	options?: {
 		selectEngine?: SelectExpressionEngine;
 		whereEngine?: WhereExpressionEngine;
 	},
@@ -423,7 +422,7 @@ export function queryGraph(
 
 /**
  * Converts a resource object to normal form
- * @param schema - The schema defining the resource structure  
+ * @param schema - The schema defining the resource structure
  * @param resourceType - The type of resource being normalized
  * @param resource - The flat resource data
  * @returns Normalized resource with separated attributes and relationships
@@ -530,7 +529,7 @@ export function validateQueryResult(
 	schema: Schema,
 	rootQuery: RootQuery,
 	result: unknown,
-	options?: { 
+	options?: {
 		selectEngine?: SelectExpressionEngine;
 		validator?: Ajv;
 	},
@@ -605,12 +604,11 @@ export function ensureValidQueryResult(
 	schema: Schema,
 	rootQuery: RootQuery,
 	result: unknown,
-	options?: { 
+	options?: {
 		selectEngine?: SelectExpressionEngine;
 		validator?: Ajv;
 	},
 ): void;
-
 
 // === EXPORTED CONSTANTS ===
 
@@ -654,3 +652,34 @@ export const defaultSelectEngine: SelectExpressionEngine;
  * Default expression engine for WHERE clauses
  */
 export const defaultWhereEngine: WhereExpressionEngine;
+
+// === ERROR CLASSES ===
+
+/**
+ * Error thrown when a store does not support a particular expression.
+ * This allows stores to explicitly declare unsupported functionality
+ * and enables tests to handle these cases gracefully.
+ */
+export class ExpressionNotSupportedError extends Error {
+	name: "ExpressionNotSupportedError";
+	expression: string;
+	storeName: string;
+	reason?: string;
+
+	constructor(expression: string, storeName: string, reason?: string);
+}
+
+/**
+ * Error thrown when a store does not support a particular operation.
+ * This allows stores to explicitly declare unsupported functionality
+ * and enables tests to handle these cases gracefully. This is useful
+ * for stores that are readonly for instance.
+ */
+export class StoreOperationNotSupportedError extends Error {
+	name: "StoreOperationNotSupportedError";
+	operation: string;
+	storeName: string;
+	reason?: string;
+
+	constructor(operation: string, storeName: string, reason?: string);
+}

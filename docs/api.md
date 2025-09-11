@@ -25,7 +25,7 @@ Execute a query and return results.
 
 - `query` (`Query`) - The query object
 
-**Returns:** `Promise<any[]>` - Array of query results
+**Returns:** `Promise<any>` - Array of query results
 
 **Example:**
 
@@ -43,9 +43,9 @@ Create a new resource.
 
 **Parameters:**
 
-- `resource` (`NormalResourceTree`) - Resource to create
+- `resource` (`CreateResource`) - Resource to create
 
-**Returns:** `Promise<NormalResourceTree>` - Created resource with ID
+**Returns:** `Promise<NormalResource>` - Created resource with ID
 
 **Example:**
 
@@ -62,9 +62,9 @@ Update an existing resource.
 
 **Parameters:**
 
-- `resource` (`NormalResourceTree`) - Resource to update (must include ID)
+- `resource` (`UpdateResource`) - Resource to update (must include ID)
 
-**Returns:** `Promise<NormalResourceTree>` - Updated resource
+**Returns:** `Promise<NormalResource>` - Updated resource
 
 **Example:**
 
@@ -82,7 +82,7 @@ Create or update a resource (create if no ID, update if ID exists).
 
 **Parameters:**
 
-- `resource` (`NormalResourceTree`) - Resource to upsert
+- `resource` (`CreateResource | UpdateResource`) - Resource to upsert
 
 **Returns:** `Promise<NormalResourceTree>` - Created or updated resource
 
@@ -166,6 +166,8 @@ Validate a query and throw error if invalid.
 - `schema` (`Schema`) - Schema for validation
 - `query` (`NormalizedQuery`) - Query to validate
 - `options` (`Object`) - Validation options
+  - `selectEngine` (`SelectExpressionEngine`) - Expression engine for select
+  - `whereEngine` (`WhereExpressionEngine`) - Expression engine for where
 
 **Throws:** `Error` if query is invalid
 
@@ -276,24 +278,25 @@ Normalize a resource to standard form.
 
 **Returns:** `NormalResourceTree` - Normalized resource
 
-### createResource(resourceData)
+### createResource(schema, resourceData)
 
-Create a resource object with generated ID if needed.
+Create a resource object from flat data. This also adds in defaults defined in the schema, so calling it without a second param can still be useful.
 
 **Parameters:**
 
+- `schema` (`Schema`) - Schema definition
 - `resourceData` (`Object`) - Resource data
 
 **Returns:** `NormalResourceTree` - Created resource with ID
 
-### mergeResources(target, source)
+### mergeResources(left, right)
 
-Merge two resources, with source taking precedence.
+Merge two resources, with right taking precedence.
 
 **Parameters:**
 
-- `target` (`NormalResourceTree`) - Target resource
-- `source` (`NormalResourceTree`) - Source resource
+- `left` (`NormalResourceTree`) - One resource
+- `right` (`NormalResourceTree`) - The other resource
 
 **Returns:** `NormalResourceTree` - Merged resource
 
@@ -333,25 +336,25 @@ Link inverse relationships in a graph.
 const linkedGraph = linkInverses(schema, graph);
 ```
 
-### mergeGraphs(target, source)
+### mergeGraphs(left, right)
 
 Shallow merge two graphs.
 
 **Parameters:**
 
-- `target` (`Graph`) - Target graph
-- `source` (`Graph`) - Source graph
+- `left` (`Graph`) - One graph
+- `right` (`Graph`) - The other graph
 
 **Returns:** `Graph` - Merged graph
 
-### mergeGraphsDeep(target, source)
+### mergeGraphsDeep(left, right)
 
 Deep merge two graphs, merging resources by ID.
 
 **Parameters:**
 
-- `target` (`Graph`) - Target graph
-- `source` (`Graph`) - Source graph
+- `left` (`Graph`) - One graph
+- `right` (`Graph`) - The other graph
 
 **Returns:** `Graph` - Deep merged graph
 
@@ -361,15 +364,17 @@ Deep merge two graphs, merging resources by ID.
 const mergedGraph = mergeGraphsDeep(existingGraph, newData);
 ```
 
-### createGraphFromResources(resources)
+### createGraphFromResources(schema, rootResourceType, resources)
 
-Create a graph from an array of resources.
+Create a graph from an array of flat resources.
 
 **Parameters:**
 
-- `resources` (`NormalResourceTree[]`) - Array of resources
+- `schema` (`Schema`) - Schema with relationship definitions
+- `rootResourceType` (`string`) - The type of resource at the top level
+- `resources` (`NormalResourceTree[]`) - Array of resources; these may contain nested resources
 
-**Returns:** `Graph` - Graph containing the resources
+**Returns:** `Graph` - Graph containing the resources and their nested resources
 
 ## Expression Engines
 
@@ -405,13 +410,32 @@ const result = queryGraph(schema, query, graph, {
 });
 ```
 
-### createValidator(schema)
+## Validators
+
+### defaultValidator
+
+Default expression engine for WHERE clauses.
+
+**Type:** `Ajv`
+
+**Usage:**
+
+```javascript
+import { defaultValidator } from "@data-prism/core";
+
+const result = validateCreateResource(schema, resource, {
+	validator: defaultValidator,
+});
+```
+
+### createValidator(options)
 
 Create an AJV validator for a schema.
 
 **Parameters:**
 
-- `schema` (`Schema`) - Schema to create validator for
+- `options` (`Object`)
+  - `ajvSchemas` (`Array`) - An array of schemas to use in validation (uses AJV's `addSchema`) - https://ajv.js.org/guide/managing-schemas.html
 
 **Returns:** `Ajv` - Configured AJV validator instance
 
@@ -651,8 +675,9 @@ Skipping Upsert Operations: Store does not support upsert operations
  * @typedef {Object} ResourceDefinition
  * @property {string} [idAttribute='id'] - Custom ID attribute name
  * @property {Object<string, AttributeDefinition>} attributes - Attribute definitions
- * @property {Object<string, RelationshipDefinition>} [relationships] - Relationship definitions
+ * @property {Object<string, RelationshipDefinition>} relationships - Relationship definitions
  * @property {string[]} [requiredAttributes] - Required attribute names
+ * @property {string[]} [requiredRelationships] - Required relationship names
  */
 ```
 
@@ -661,8 +686,7 @@ Skipping Upsert Operations: Store does not support upsert operations
 ```javascript
 /**
  * @typedef {Object} AttributeDefinition
- * @property {string} type - JSON Schema type (string, number, boolean, etc.)
- * @property {*} [default] - Default value
+ * @property {string} type - JSON Schema definition (often just a type, e.g. { "type": "string" }). Data Prism honors defaults set here.
  * Additional JSON Schema properties allowed
  */
 ```
@@ -673,7 +697,7 @@ Skipping Upsert Operations: Store does not support upsert operations
 /**
  * @typedef {Object} RelationshipDefinition
  * @property {string} type - Target resource type
- * @property {string} cardinality - Relationship cardinality ('hasOne', 'hasMany', 'belongsTo')
+ * @property {string} cardinality - Relationship cardinality ('one', 'many')
  * @property {string} [inverse] - Name of inverse relationship
  */
 ```
@@ -697,10 +721,10 @@ Skipping Upsert Operations: Store does not support upsert operations
 
 ```javascript
 /**
- * @typedef {string|string[]|Object} SelectClause
- * - string: Single field or "*" for all
- * - string[]: Array of field names
- * - Object: Field mappings and expressions
+ * @typedef {string|Query|SelectClause} SelectClause
+ * - string: "*" for all
+ * - string[]: Array field names, "*", or SelectClause objects
+ * - Object: Field mappings, expressions, and relationships
  */
 ```
 
@@ -738,6 +762,18 @@ Skipping Upsert Operations: Store does not support upsert operations
  */
 ```
 
+### NormalResourceTree
+
+```javascript
+/**
+ * @typedef {Object} NormalResourceTree
+ * @property {string} type - Resource type
+ * @property {string} id - Resource ID
+ * @property {Object<string, *>} [attributes] - Resource attributes
+ * @property {Object<string, ResourceRef|ResourceRef[]|NormalResourceTree|NormalResourceTree[]>} [relationships] - Related resources
+ */
+```
+
 ### ResourceRef
 
 ```javascript
@@ -752,7 +788,7 @@ Skipping Upsert Operations: Store does not support upsert operations
 
 ```javascript
 /**
- * @typedef {Object<string, Object<string, NormalResourceTree>>} Graph
+ * @typedef {Object<string, Object<string, NormalResource>>} Graph
  * Map of resource types to maps of resource IDs to resources
  */
 ```
@@ -762,7 +798,6 @@ Skipping Upsert Operations: Store does not support upsert operations
 ```javascript
 /**
  * @typedef {Object} ValidationResult
- * @property {boolean} valid - Whether validation passed
  * @property {Error[]} [errors] - Validation errors if any
  */
 ```
@@ -781,5 +816,4 @@ For practical usage examples, see:
 - [Query Guide](query.md) - Complete query language reference
 - [Schema Guide](schema.md) - Schema definition examples
 - [Expression Guide](expressions.md) - Expression usage patterns
-- [Store Integration](stores.md) - Working with different stores
 - [Store Creation](store-creation.md) - Building custom stores

@@ -25,13 +25,14 @@ const schema = {
 				email: { type: "string" },
 			},
 			relationships: {
-				posts: { type: "posts", cardinality: "hasMany" },
+				posts: { type: "posts", cardinality: "many" },
 			},
 		},
 		posts: {
 			attributes: {
 				title: { type: "string" },
 				content: { type: "string" },
+				words: { type: "integer", minimum: 1 },
 			},
 			relationships: {
 				author: { type: "users", cardinality: "belongsTo" },
@@ -103,7 +104,7 @@ Attribute definitions use JSON Schema format. Any valid JSON Schema document can
 
     // Numeric fields
     age: { type: 'number' },
-    score: { type: 'integer' },
+    score: { type: 'integer', title: 'Score', description: 'The number of points scored.' },
 
     // Boolean fields
     active: { type: 'boolean' },
@@ -168,7 +169,7 @@ Use JSON Schema features for validation:
       maximum: 5
     }
   },
-  
+
   // Required attributes are specified at resource level
   requiredAttributes: ['name', 'email']  // These must be present
 }
@@ -266,40 +267,6 @@ Resources can reference themselves:
 }
 ```
 
-## Advanced Schema Features
-
-
-### Store-Specific Configuration
-
-Add store-specific metadata without affecting core schema:
-
-```javascript
-{
-  resources: {
-    users: {
-      attributes: {
-        name: { type: 'string' },
-        email: { type: 'string' }
-      },
-      // Store-specific configuration
-      postgres: {
-        table: 'app_users',        // Custom table name
-        columns: {
-          email: {
-            unique: true,           // Database constraint
-            index: true             // Database index
-          }
-        }
-      },
-      jsonapi: {
-        type: 'people',            // Custom JSON:API type name
-        endpoint: '/api/v1/users'   // Custom endpoint
-      }
-    }
-  }
-}
-```
-
 ## Schema Validation
 
 Data Prism validates schemas to catch errors early:
@@ -307,19 +274,19 @@ Data Prism validates schemas to catch errors early:
 ### Common Validation Errors
 
 ```javascript
-// ❌ Missing required fields
+// Missing required fields
 {
   resources: {
     users: {
       // Missing 'attributes' - will cause validation error
       relationships: {
-        posts: { type: 'posts', cardinality: 'hasMany' }
+        posts: { type: 'posts', cardinality: 'many' }
       }
     }
   }
 }
 
-// ✅ Correct - include required fields
+// Correct - include required fields
 {
   resources: {
     users: {
@@ -327,13 +294,13 @@ Data Prism validates schemas to catch errors early:
         name: { type: 'string' }
       },
       relationships: {
-        posts: { type: 'posts', cardinality: 'hasMany' }
+        posts: { type: 'posts', cardinality: 'many' }
       }
     }
   }
 }
 
-// ❌ Invalid relationship reference
+// Invalid relationship reference
 {
   resources: {
     users: {
@@ -348,7 +315,7 @@ Data Prism validates schemas to catch errors early:
   }
 }
 
-// ✅ Correct - reference existing resources
+// Correct - reference existing resources
 {
   resources: {
     users: {
@@ -405,8 +372,8 @@ const ecommerceSchema = {
 			},
 			requiredAttributes: ["firstName", "lastName", "email"],
 			relationships: {
-				orders: { type: "orders", cardinality: "hasMany" },
-				profile: { type: "customerProfiles", cardinality: "hasOne" },
+				orders: { type: "orders", cardinality: "many" },
+				profile: { type: "customerProfiles", cardinality: "one" },
 			},
 		},
 
@@ -423,7 +390,7 @@ const ecommerceSchema = {
 			requiredAttributes: ["orderNumber"],
 			relationships: {
 				customer: { type: "customers", cardinality: "belongsTo" },
-				items: { type: "orderItems", cardinality: "hasMany" },
+				items: { type: "orderItems", cardinality: "many" },
 			},
 		},
 
@@ -437,7 +404,7 @@ const ecommerceSchema = {
 			requiredAttributes: ["name"],
 			relationships: {
 				category: { type: "categories", cardinality: "belongsTo" },
-				orderItems: { type: "orderItems", cardinality: "hasMany" },
+				orderItems: { type: "orderItems", cardinality: "many" },
 			},
 		},
 
@@ -458,7 +425,7 @@ const ecommerceSchema = {
 				slug: { type: "string" },
 			},
 			relationships: {
-				products: { type: "products", cardinality: "hasMany" },
+				products: { type: "products", cardinality: "many" },
 				parent: { type: "categories", cardinality: "belongsTo" },
 				children: {
 					type: "categories",
@@ -505,8 +472,8 @@ const cmsSchema = {
 			relationships: {
 				author: { type: "users", cardinality: "belongsTo" },
 				category: { type: "categories", cardinality: "belongsTo" },
-				tags: { type: "tags", cardinality: "hasMany" },
-				comments: { type: "comments", cardinality: "hasMany" },
+				tags: { type: "tags", cardinality: "many" },
+				comments: { type: "comments", cardinality: "many" },
 			},
 		},
 
@@ -551,7 +518,7 @@ const cmsSchema = {
 				color: { type: "string" },
 			},
 			relationships: {
-				articles: { type: "articles", cardinality: "hasMany" },
+				articles: { type: "articles", cardinality: "many" },
 			},
 		},
 
@@ -587,11 +554,12 @@ const cmsSchema = {
 ### Schema Best Practices
 
 1. **Use descriptive names** - Resource and attribute names should be clear and consistent
-2. **Define relationships carefully** - Always specify inverse relationships when possible
-3. **Choose appropriate types** - Use the most specific type that fits your data
-4. **Add constraints** - Use enums, minimums, maximums to validate data
-5. **Plan for growth** - Consider how your schema might evolve over time
-6. **Document complex relationships** - Add comments for business logic
+2. **Use title and description on attributes** - Titles and descriptions makes the schema more self documenting
+3. **Define relationships carefully** - Always specify inverse relationships when possible
+4. **Choose appropriate types** - Use the most specific type that fits your data
+5. **Add constraints** - Use enums, minimums, maximums to validate data
+6. **Plan for growth** - Consider how your schema might evolve over time
+7. **Document complex relationships** - Add comments for business logic via "$comment" keys anywhere you like
 
 For query examples using these schemas, see [query.md](query.md).
 For expression usage with schema data, see [expressions.md](expressions.md).

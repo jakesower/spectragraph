@@ -52,3 +52,8 @@ export function compileResourceMappers(schema, type, mappers) {
 			return val === undefined ? acc : { ...acc, [key]: val };
 		}, {});
 }
+
+export function buildAsyncMiddlewarePipe(middleware) {
+	const init = (val) => val;
+	return middleware.reduceRight((onion, mw) => (val) => mw(val, onion), init);
+}
