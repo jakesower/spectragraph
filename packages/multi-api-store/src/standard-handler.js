@@ -37,7 +37,7 @@ export const standardHandler = {
 		const url = `${config.baseURL}/${resource.type}/${resource.id}`;
 
 		const response = await fetch(url, {
-			method: "PUT",
+			method: "PATCH",
 			headers: {
 				"Content-Type": "application/json",
 			},

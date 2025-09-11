@@ -1,6 +1,5 @@
 import {
 	ensureValidSchema,
-	ensureValidQuery,
 	normalizeQuery,
 	createEmptyGraph,
 	linkInverses,
@@ -75,7 +74,7 @@ export function createMemoryStore(schema, config = {}) {
 			selectEngine,
 			whereEngine,
 		});
-		ensureValidQuery(schema, normalQuery, { selectEngine, whereEngine });
+
 		return queryGraph(schema, normalQuery, storeGraph, {
 			selectEngine,
 			whereEngine,

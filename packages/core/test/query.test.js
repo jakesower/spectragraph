@@ -1,5 +1,11 @@
 import { expect, it, describe } from "vitest";
-import { normalizeQuery, validateQuery } from "../src/index.js";
+import {
+	defaultSelectEngine,
+	defaultWhereEngine,
+	ensureValidQuery,
+	normalizeQuery,
+	validateQuery,
+} from "../src/index.js";
 import { careBearSchema } from "../interface-tests/src/index.js";
 
 describe("validateQuery", () => {
@@ -321,6 +327,25 @@ describe("validateQuery", () => {
 			expect(result.length).toBeGreaterThan(0);
 		});
 	});
+
+	describe("real world issues", () => {
+		it("moo", () => {
+			const selectEngine = defaultSelectEngine;
+			const whereEngine = defaultWhereEngine;
+
+			const query = {
+				type: "homes",
+				id: undefined,
+				select: ["*", { residents: "*" }],
+			};
+
+			const normalQuery = normalizeQuery(careBearSchema, query, {
+				selectEngine,
+				whereEngine,
+			});
+			ensureValidQuery(careBearSchema, normalQuery, { selectEngine, whereEngine });
+		});
+	});
 });
 
 describe("normalizeQuery", () => {
@@ -355,6 +380,24 @@ describe("normalizeQuery", () => {
 		const normal = normalizeQuery(careBearSchema, {
 			type: "bears",
 			select: { home: "*" },
+		});
+
+		expect(normal.select.home).toEqual({
+			type: "homes",
+			select: {
+				id: "id",
+				name: "name",
+				location: "location",
+				caringMeter: "caringMeter",
+				isInClouds: "isInClouds",
+			},
+		});
+	});
+
+	it("normalizes select object * and with * as subquery", () => {
+		const normal = normalizeQuery(careBearSchema, {
+			type: "bears",
+			select: ["*", { home: "*" }],
 		});
 
 		expect(normal.select.home).toEqual({

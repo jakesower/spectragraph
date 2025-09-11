@@ -32,12 +32,12 @@ describe("createMultiApiStore", () => {
 
 		expect(mockGet).toHaveBeenCalledWith(
 			expect.objectContaining({
-				schema: skepticismSchema,
-				config,
 				query: {
 					type: "skeptics",
 					select: { name: "name", specialty: "specialty" },
 				},
+				config,
+				schema: skepticismSchema,
 			}),
 		);
 
@@ -82,12 +82,12 @@ describe("createMultiApiStore", () => {
 
 		expect(mockGet).toHaveBeenCalledWith(
 			expect.objectContaining({
-				schema: skepticismSchema,
-				config,
 				query: {
 					type: "skeptics",
 					select: { name: "name", specialty: "specialty" },
 				},
+				config,
+				schema: skepticismSchema,
 			}),
 		);
 
@@ -771,7 +771,7 @@ describe("handler tests", () => {
 	});
 
 	it("updates resource with standard handler", async () => {
-		// Mock fetch for PUT request
+		// Mock fetch for PATCH request
 		global.fetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => ({
@@ -805,7 +805,7 @@ describe("handler tests", () => {
 		expect(global.fetch).toHaveBeenCalledWith(
 			"https://api.skepticism.example.org/skeptics/randi",
 			{
-				method: "PUT",
+				method: "PATCH",
 				headers: {
 					"Content-Type": "application/json",
 				},

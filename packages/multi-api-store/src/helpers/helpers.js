@@ -6,19 +6,7 @@ export function compileFormatter(templates, pivot, keys) {
 		(template) => (vars) =>
 			keys.reduce((acc, k) => acc.replaceAll(`$\{${k}}`, vars[k]), template),
 	);
-	return (vars) => {
-		console.log({
-			templates,
-			pivot,
-			keys,
-			vars,
-			p: vars[pivot],
-			f: fns[vars[pivot]],
-			// x: fns[vars[pivot]](vars),
-		});
-
-		return fns[vars[pivot]](vars);
-	};
+	return (vars) => fns[vars[pivot]](vars);
 }
 
 export function compileWhereFormatter(templates) {

@@ -19,6 +19,7 @@ export function runCreateTests(createStore) {
 				);
 			}
 		});
+
 		it("creates a single resource with only attributes", async () => {
 			if (!storeSupportsCreate) return;
 
@@ -69,7 +70,7 @@ export function runCreateTests(createStore) {
 			const result = await store.query({
 				type: "bears",
 				id: created.id,
-				select: ["name", { home: { select: ["name"] } }],
+				select: ["name", { home: ["name"] }],
 			});
 
 			expect(result).toEqual({
