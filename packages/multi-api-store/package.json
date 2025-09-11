@@ -27,6 +27,7 @@
 	"author": "Jake Sower",
 	"devDependencies": {
 		"@data-prism/interface-tests": "*",
+		"@data-prism/memory-store": "*",
 		"@rollup/plugin-commonjs": "^28.0.1",
 		"@rollup/plugin-json": "^6.1.0",
 		"@rollup/plugin-node-resolve": "^16.0.0",
