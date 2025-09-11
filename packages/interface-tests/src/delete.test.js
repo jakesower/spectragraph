@@ -6,16 +6,22 @@ export function runDeleteTests(createStore) {
 	describe("Delete Operations", () => {
 		// Check if store supports delete operations before running tests
 		let storeSupportsDelete;
-		
+
 		beforeAll(async () => {
-			storeSupportsDelete = await checkOperationSupport(createStore, careBearSchema, 'delete');
+			storeSupportsDelete = await checkOperationSupport(
+				createStore,
+				careBearSchema,
+				"delete",
+			);
 			if (!storeSupportsDelete) {
-				console.log('Skipping Delete Operations: Store does not support delete operations');
+				console.log(
+					"Skipping Delete Operations: Store does not support delete operations",
+				);
 			}
 		});
 		it("deletes a single resource", async () => {
 			if (!storeSupportsDelete) return;
-			
+
 			const store = createStore(careBearSchema);
 			const created = await store.create({
 				type: "bears",
@@ -43,7 +49,7 @@ export function runDeleteTests(createStore) {
 
 		it("deletes a single resource with a local relationship", async () => {
 			if (!storeSupportsDelete) return;
-			
+
 			const store = createStore(careBearSchema);
 			const createdHome = await store.create({
 				type: "homes",
@@ -84,7 +90,7 @@ export function runDeleteTests(createStore) {
 
 		it("deletes a single resource with a to-one relationship created on the foreign resource", async () => {
 			if (!storeSupportsDelete) return;
-			
+
 			const store = createStore(careBearSchema);
 			const createdBear = await store.create({
 				type: "bears",
@@ -133,7 +139,7 @@ export function runDeleteTests(createStore) {
 
 		it("deletes a single resource with a foreign to-one relationship", async () => {
 			if (!storeSupportsDelete) return;
-			
+
 			const store = createStore(careBearSchema);
 			const createdBear = await store.create({
 				type: "bears",
@@ -179,7 +185,7 @@ export function runDeleteTests(createStore) {
 
 		it("deletes all many-to-many foreign relationships that belong to a deleted resource", async () => {
 			if (!storeSupportsDelete) return;
-			
+
 			const store = createStore(careBearSchema);
 			const createdPower = await store.create({
 				type: "powers",

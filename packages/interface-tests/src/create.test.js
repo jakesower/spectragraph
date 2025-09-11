@@ -6,16 +6,22 @@ export function runCreateTests(createStore) {
 	describe("Create Operations", () => {
 		// Check if store supports create operations before running tests
 		let storeSupportsCreate;
-		
+
 		beforeAll(async () => {
-			storeSupportsCreate = await checkOperationSupport(createStore, careBearSchema, 'create');
+			storeSupportsCreate = await checkOperationSupport(
+				createStore,
+				careBearSchema,
+				"create",
+			);
 			if (!storeSupportsCreate) {
-				console.log('Skipping Create Operations: Store does not support create operations');
+				console.log(
+					"Skipping Create Operations: Store does not support create operations",
+				);
 			}
 		});
 		it("creates a single resource with only attributes", async () => {
 			if (!storeSupportsCreate) return;
-			
+
 			const store = createStore(careBearSchema);
 			const created = await store.create({
 				type: "bears",
@@ -38,7 +44,7 @@ export function runCreateTests(createStore) {
 
 		it("creates a single resource with a local relationship", async () => {
 			if (!storeSupportsCreate) return;
-			
+
 			const store = createStore(careBearSchema);
 			const createdHome = await store.create({
 				type: "homes",
@@ -74,7 +80,7 @@ export function runCreateTests(createStore) {
 
 		it("creates a single resource with a foreign to-one relationship", async () => {
 			if (!storeSupportsCreate) return;
-			
+
 			const store = createStore(careBearSchema);
 			const createdBear = await store.create({
 				type: "bears",
@@ -121,7 +127,7 @@ export function runCreateTests(createStore) {
 
 		it("creates a single resource with a many-to-many relationship", async () => {
 			if (!storeSupportsCreate) return;
-			
+
 			const store = createStore(careBearSchema);
 			const createdBear = await store.create({
 				type: "bears",
@@ -167,7 +173,7 @@ export function runCreateTests(createStore) {
 
 		it("removes foreign relationships that are no longer present in the base resource", async () => {
 			if (!storeSupportsCreate) return;
-			
+
 			const store = createStore(careBearSchema);
 			const createdHome = await store.create({
 				type: "homes",
@@ -244,7 +250,7 @@ export function runCreateTests(createStore) {
 
 		it("keeps many-to-many foreign relationships that belong to a second resource", async () => {
 			if (!storeSupportsCreate) return;
-			
+
 			const store = createStore(careBearSchema);
 			const createdPower = await store.create({
 				type: "powers",

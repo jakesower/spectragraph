@@ -548,6 +548,94 @@ const graph = createGraphFromResources(schema, "teams", [flatTeam]);
 
 ### Error Classes
 
+Data Prism Core provides specialized error classes to help stores and applications handle unsupported functionality gracefully.
+
+#### `ExpressionNotSupportedError`
+
+Error thrown when a store does not support a particular expression. This allows stores to explicitly declare unsupported functionality and enables tests to handle these cases gracefully.
+
+**Constructor Parameters:**
+- `expression` (string) - The expression that is not supported (e.g., "$matchesRegex")  
+- `storeName` (string) - The name of the store that doesn't support the expression
+- `reason` (string, optional) - Optional reason why the expression is not supported
+
+**Properties:**
+- `name` - "ExpressionNotSupportedError"
+- `expression` - The unsupported expression name
+- `storeName` - The store name
+- `reason` - Optional reason (if provided)
+
+```javascript
+import { ExpressionNotSupportedError } from "@data-prism/core";
+
+// In a store implementation
+if (!this.supportsRegex) {
+    throw new ExpressionNotSupportedError(
+        "$matchesRegex", 
+        "simple-store", 
+        "Regex operations require additional dependencies"
+    );
+}
+
+// In application code
+try {
+    const results = await store.query(queryWithRegex);
+} catch (error) {
+    if (error instanceof ExpressionNotSupportedError) {
+        console.log(`Expression ${error.expression} not supported by ${error.storeName}`);
+        // Handle gracefully, perhaps with a fallback query
+    }
+}
+```
+
+#### `StoreOperationNotSupportedError`
+
+Error thrown when a store does not support a particular operation. This allows stores to explicitly declare unsupported functionality and enables tests to handle these cases gracefully. This is particularly useful for readonly stores or stores with limited write capabilities.
+
+**Constructor Parameters:**
+- `operation` (string) - The store operation that is not supported (e.g., "create", "update", "delete")
+- `storeName` (string) - The name of the store that doesn't support the operation
+- `reason` (string, optional) - Optional reason why the operation is not supported
+
+**Properties:**
+- `name` - "StoreOperationNotSupportedError"
+- `operation` - The unsupported operation name
+- `storeName` - The store name  
+- `reason` - Optional reason (if provided)
+
+```javascript
+import { StoreOperationNotSupportedError } from "@data-prism/core";
+
+// In a readonly store implementation
+class ReadOnlyStore {
+    create(resource) {
+        throw new StoreOperationNotSupportedError(
+            "create", 
+            "readonly-store", 
+            "This store only supports read operations"
+        );
+    }
+    
+    update(resource) {
+        throw new StoreOperationNotSupportedError("update", "readonly-store");
+    }
+    
+    delete(resource) {
+        throw new StoreOperationNotSupportedError("delete", "readonly-store");
+    }
+}
+
+// In application code
+try {
+    await store.create(newResource);
+} catch (error) {
+    if (error instanceof StoreOperationNotSupportedError) {
+        console.log(`Operation ${error.operation} not supported by ${error.storeName}`);
+        // Handle gracefully, perhaps by using a different store or informing the user
+    }
+}
+```
+
 ### Validation Functions
 
 #### `validateSchema(schema, options?)`

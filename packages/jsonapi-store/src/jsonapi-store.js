@@ -1,5 +1,6 @@
 import { formatRequest } from "./format-request.js";
 import { parseResponse } from "./parse-response.js";
+import { StoreOperationNotSupportedError } from "@data-prism/core";
 
 /**
  * Creates a JSON:API store that proxies requests to a remote JSON:API server
@@ -37,19 +38,23 @@ export function createJSONAPIStore(schema, config) {
 		},
 
 		async create() {
-			throw new Error("create method not implemented for JSON:API store");
+			throw new StoreOperationNotSupportedError("create", "jsonapi-store");
 		},
 
 		async update() {
-			throw new Error("update method not implemented for JSON:API store");
+			throw new StoreOperationNotSupportedError("update", "jsonapi-store");
 		},
 
 		async delete() {
-			throw new Error("delete method not implemented for JSON:API store");
+			throw new StoreOperationNotSupportedError("delete", "jsonapi-store");
 		},
 
 		async upsert() {
-			throw new Error("upsert method not implemented for JSON:API store");
+			throw new StoreOperationNotSupportedError("upsert", "jsonapi-store");
+		},
+
+		async merge() {
+			throw new StoreOperationNotSupportedError("merge", "jsonapi-store");
 		},
 	};
 }

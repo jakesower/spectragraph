@@ -6,16 +6,22 @@ export function runUpdateTests(createStore) {
 	describe("Update Operations", () => {
 		// Check if store supports update operations before running tests
 		let storeSupportsUpdate;
-		
+
 		beforeAll(async () => {
-			storeSupportsUpdate = await checkOperationSupport(createStore, careBearSchema, 'update');
+			storeSupportsUpdate = await checkOperationSupport(
+				createStore,
+				careBearSchema,
+				"update",
+			);
 			if (!storeSupportsUpdate) {
-				console.log('Skipping Update Operations: Store does not support update operations');
+				console.log(
+					"Skipping Update Operations: Store does not support update operations",
+				);
 			}
 		});
 		it("updates a single resource with only attributes", async () => {
 			if (!storeSupportsUpdate) return;
-			
+
 			const store = createStore(careBearSchema);
 			const created = await store.create({
 				type: "bears",
@@ -49,7 +55,7 @@ export function runUpdateTests(createStore) {
 
 		it("updates a single resource with multiple attributes", async () => {
 			if (!storeSupportsUpdate) return;
-			
+
 			const store = createStore(careBearSchema);
 			const created = await store.create({
 				type: "bears",
@@ -85,7 +91,7 @@ export function runUpdateTests(createStore) {
 
 		it("updates a single resource with a local relationship", async () => {
 			if (!storeSupportsUpdate) return;
-			
+
 			const store = createStore(careBearSchema);
 			const createdHome = await store.create({
 				type: "homes",
@@ -126,7 +132,7 @@ export function runUpdateTests(createStore) {
 
 		it("updates a single resource with a local relationship redundantly", async () => {
 			if (!storeSupportsUpdate) return;
-			
+
 			const store = createStore(careBearSchema);
 			const createdHome = await store.create({
 				type: "homes",
@@ -177,7 +183,7 @@ export function runUpdateTests(createStore) {
 
 		it("updates a single resource with a foreign to-one relationship", async () => {
 			if (!storeSupportsUpdate) return;
-			
+
 			const store = createStore(careBearSchema);
 			const createdBear = await store.create({
 				type: "bears",
@@ -229,7 +235,7 @@ export function runUpdateTests(createStore) {
 
 		it("updates a single resource with a many-to-many relationship", async () => {
 			if (!storeSupportsUpdate) return;
-			
+
 			const store = createStore(careBearSchema);
 			const createdBear = await store.create({
 				type: "bears",
@@ -280,7 +286,7 @@ export function runUpdateTests(createStore) {
 
 		it("updates a single resource with a many-to-many relationship with redundant updates", async () => {
 			if (!storeSupportsUpdate) return;
-			
+
 			const store = createStore(careBearSchema);
 			const createdBear = await store.create({
 				type: "bears",
@@ -341,7 +347,7 @@ export function runUpdateTests(createStore) {
 
 		it("fails to update a single resource with a nonexistent ID", async () => {
 			if (!storeSupportsUpdate) return;
-			
+
 			const store = createStore(careBearSchema);
 
 			await expect(async () => {
@@ -360,7 +366,7 @@ export function runUpdateTests(createStore) {
 
 		it("fails to update a single resource with an invalid attribute", async () => {
 			if (!storeSupportsUpdate) return;
-			
+
 			const store = createStore(careBearSchema);
 			const created = await store.create({
 				type: "bears",
@@ -385,7 +391,7 @@ export function runUpdateTests(createStore) {
 
 		it("removes foreign relationships that are no longer present in the base resource", async () => {
 			if (!storeSupportsUpdate) return;
-			
+
 			const store = createStore(careBearSchema);
 			const createdHome = await store.create({
 				type: "homes",
@@ -467,7 +473,7 @@ export function runUpdateTests(createStore) {
 
 		it("keeps many-to-many foreign relationships that belong to a second resource", async () => {
 			if (!storeSupportsUpdate) return;
-			
+
 			const store = createStore(careBearSchema);
 			const createdPower = await store.create({
 				type: "powers",

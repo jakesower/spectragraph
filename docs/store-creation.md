@@ -19,9 +19,9 @@ All Data Prism stores must implement the following async methods:
 /**
  * @typedef {Object} Store
  * @property {function(Query): Promise<any[]>} query - Execute a query and return results
- * @property {function(NormalResourceTree): Promise<NormalResourceTree>} create - Create a new resource
- * @property {function(NormalResourceTree): Promise<NormalResourceTree>} update - Update an existing resource
- * @property {function(NormalResourceTree): Promise<NormalResourceTree>} upsert - Create or update a resource
+ * @property {function(NormalResourceTree): Promise<NormalResource>} create - Create a new resource
+ * @property {function(NormalResourceTree): Promise<NormalResource>} update - Update an existing resource
+ * @property {function(NormalResourceTree): Promise<NormalResource>} upsert - Create or update a resource
  * @property {function(ResourceRef): Promise<void>} delete - Delete a resource
  */
 ```
@@ -102,11 +102,11 @@ import {
 /**
  * Creates a custom store for [YOUR_DATA_SOURCE]
  * @param {import('@data-prism/core').Schema} schema - The data schema
- * @param {any} connection - Connection to your data source
  * @param {Object} config - Store configuration options
  */
-export function createCustomStore(schema, connection, config = {}) {
+export function createCustomStore(schema, config = {}) {
 	const {
+		connection, // unique to this store
 		validator = defaultValidator,
 		selectEngine = defaultSelectEngine,
 		whereEngine = defaultWhereEngine,
@@ -202,7 +202,7 @@ export function createMemoryStore(schema, config = {}) {
 }
 ```
 
-_Note: This example omits configuration handling for brevity. See [stores.md](stores.md) for complete configuration options._
+_Note: This example omits configuration handling for brevity._
 
 ### HTTP API Store Pattern
 
@@ -251,7 +251,7 @@ export function createAPIStore(schema, config) {
 }
 ```
 
-_Note: This example shows core functionality. See [stores.md](stores.md) for configuration options like headers, timeout, and error handling._
+_Note: This example shows core functionality. Configuration options like headers, timeout, and error handling is not included._
 
 ### Database Store Pattern
 
@@ -318,27 +318,66 @@ const result = queryGraph(schema, query, graph, {
 });
 ```
 
-### Custom Expression Translation
+### Custom Expression Translation (ADVANCED!)
 
-For SQL stores, translate expressions to database-specific syntax:
+For SQL stores, expressions are implemented with separate engines for generating SQL and extracting variables. Each expression definition has two functions:
+- `where`: generates the SQL fragment
+- `vars`: extracts the parameters for the SQL query
 
 ```javascript
-// Custom where engine for PostgreSQL
-const postgresWhereEngine = {
-	// Translate simple comparisons to SQL
-	$eq: (field, value) => `${field} = $${paramIndex++}`,
-	$gt: (field, value) => `${field} > $${paramIndex++}`,
-	$like: (field, value) => `${field} ILIKE $${paramIndex++}`,
-
-	// Pattern matching
-	$matchesRegex: (field, pattern) => `${field} ~* $${paramIndex++}`,
-
-	// Complex expressions fall back to JavaScript
-	$custom: (field, expression) => {
-		// Return null to indicate JavaScript evaluation needed
-		return null;
+// Example from the postgres-store implementation
+const sqlExpressions = {
+	$eq: {
+		where: () => " = ?",
+		vars: (operand) => operand,
+	},
+	$matchesRegex: {
+		where: (operand) => {
+			// Handle inline flags like (?i) for case-insensitive
+			const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
+			if (flagMatch && flagMatch[1].includes("i")) {
+				return " ~* ?"; // Case-insensitive regex in PostgreSQL
+			}
+			return " ~ ?"; // Case-sensitive regex
+		},
+		vars: (operand) => {
+			// Extract and process the regex pattern
+			const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
+			if (flagMatch) {
+				const [, flags, pattern] = flagMatch;
+				let processedPattern = pattern;
+				
+				// Handle multiline and dotall flags
+				if (flags.includes("m")) {
+					processedPattern = processedPattern.replace(/\^/g, "(^|(?<=\\n))");
+					processedPattern = processedPattern.replace(/\$/g, "(?=\\n|$)");
+				}
+				if (flags.includes("s")) {
+					processedPattern = processedPattern.replace(/\./g, "[\\s\\S]");
+				}
+				
+				return [processedPattern];
+			}
+			return [operand];
+		},
+	},
+	$matchesGlob: {
+		where: () => " SIMILAR TO ?", 
+		vars: (operand) => {
+			// Convert GLOB pattern to PostgreSQL SIMILAR TO pattern
+			return [operand.replace(/\*/g, "%").replace(/\?/g, "_")];
+		},
 	},
 };
+
+// Create the expression engines
+export const whereExpressionEngine = createExpressionEngine(
+	mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.where })),
+);
+
+export const varsExpressionEngine = createExpressionEngine(
+	mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.vars })),
+);
 ```
 
 ### Expression Engine Interface
@@ -357,7 +396,8 @@ const customEngine = {
 		$avg: (operand) => `AVG(${operand})`,
 
 		// Custom expressions
-		$myCustom: (field, params) => {
+		$myCustom: (operand) => {
+			const { field, params } = operand;
 			return `CUSTOM_FUNCTION(${field}, ${params})`;
 		},
 	},
@@ -442,22 +482,6 @@ describe("Custom Store Features", () => {
 
 ## Publishing and Distribution
 
-### Package Structure
-
-```
-my-custom-store/
-├── src/
-│   ├── index.js          # Main store implementation
-│   ├── query-builder.js  # Query translation logic
-│   └── connection.js     # Connection management
-├── test/
-│   ├── interface.test.js # Interface compliance tests
-│   └── custom.test.js    # Store-specific tests
-├── dist/                 # Built files
-├── package.json
-└── README.md
-```
-
 ### Package.json Configuration
 
 ```json
@@ -510,45 +534,13 @@ const store = createCustomStore(schema, connection, {
 // Configuration options
 });
 
-## Configuration Options
-
-- `timeout`: Query timeout in milliseconds (default: 5000)
-- `retries`: Number of retry attempts (default: 3)
-- `caching`: Enable result caching (default: false)
-
 ## Examples
 
-[Include practical examples]
-
-## Limitations
-
-- Does not support [specific features]
-- Requires [specific versions or setup]
-```
-
-### Store Registry
-
-Consider registering your store in the Data Prism ecosystem:
-
-1. Tag your package with `data-prism-store`
-2. Submit to the community store registry
-3. Include in Data Prism documentation
-4. Participate in compatibility testing
-
-### Best Practices
-
-1. **Follow semantic versioning** for API changes
-2. **Maintain backward compatibility** when possible
-3. **Document performance characteristics** clearly
-4. **Provide migration guides** for breaking changes
-5. **Include comprehensive examples** in documentation
-6. **Run interface tests** in CI/CD pipeline
-7. **Monitor real-world usage** and gather feedback
-
-For more examples, see the existing store implementations:
+For examples, see the existing store implementations:
 
 - [Memory Store](../packages/memory-store/src/memory-store.js)
 - [PostgreSQL Store](../packages/postgres-store/src/postgres-store.js)
 - [SQLite Store](../packages/sqlite-store/src/sqlite-store.js)
 
 For the complete API reference, see [api.md](api.md).
+```

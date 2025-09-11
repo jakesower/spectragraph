@@ -265,7 +265,7 @@ export function normalizeResource(schema, resourceType, resource) {
  * @param {CreateResource} [partialResource] - The partial resource to create from
  * @returns {NormalResource} A complete normalized resource with defaults applied
  */
-export function createResource(schema, partialResource) {
+export function createResource(schema, partialResource = {}) {
 	const { type, attributes = {}, relationships = {} } = partialResource;
 	const resSchema = schema.resources[type];
 

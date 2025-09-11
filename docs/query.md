@@ -73,7 +73,7 @@ Data Prism supports multiple ways to specify which fields to select:
 {
   type: "users",
   select: [
-    "name",                // Direct field
+    "name",                // Direct fields
     "email",
     {
       fullName: { $concat: ["firstName", " ", "lastName"] }, // Expression
@@ -90,10 +90,7 @@ Data Prism supports multiple ways to specify which fields to select:
 
 ```javascript
 // Select all attributes
-{
-  type: "users",
-  select: "*"
-}
+{ type: "users", select: "*" }
 
 // Select all attributes plus computed fields
 {
@@ -114,7 +111,7 @@ Data Prism supports multiple ways to specify which fields to select:
   type: "users",
   select: ["name"],
   where: {
-    active: true,
+    active: true, // default to equality
     role: "admin"
   }
 }
@@ -231,22 +228,6 @@ Data Prism supports multiple ways to specify which fields to select:
 
 Data Prism includes a powerful expression system for computations and transformations:
 
-### Aggregations
-
-```javascript
-{
-  type: "users",
-  select: {
-    name: "name",
-    postCount: { $count: "posts" },
-    avgRating: { $mean: "posts" },
-    totalViews: { $sum: "posts" },
-    maxViews: { $max: "posts" },
-    minViews: { $min: "posts" }
-  }
-}
-```
-
 ### Computed Fields
 
 ```javascript
@@ -279,7 +260,6 @@ Data Prism includes a powerful expression system for computations and transforma
     fullName: { $concat: ["firstName", " ", "lastName"] },
     upperName: { $uppercase: "name" },
     lowerEmail: { $lowercase: "email" },
-    nameStart: { $substring: ["name", 0, 3] }
   }
 }
 ```
@@ -319,12 +299,9 @@ Data Prism includes a powerful expression system for computations and transforma
 ```javascript
 {
   type: "users",
-  select: [
-    "name",
-    {
-      posts: ["title", "createdAt"]  // One-to-many relationship
-    }
-  ]
+  select: ["name", {
+    posts: ["title", "createdAt"]  // One-to-many relationship
+  }]
 }
 ```
 
@@ -333,22 +310,16 @@ Data Prism includes a powerful expression system for computations and transforma
 ```javascript
 {
   type: "users",
-  select: [
-    "name",
-    {
-      posts: [
-        "title",
+  select: ["name", {
+    posts: ["title", {
+      comments: [      // Posts -> Comments (nested relationship)
+        "content",
         {
-          comments: [      // Posts -> Comments (nested relationship)
-            "content",
-            {
-              author: ["name"]  // Comments -> Author (three levels deep)
-            }
-          ]
+          author: ["name"]  // Comments -> Author (three levels deep)
         }
       ]
-    }
-  ]
+    }]
+  }]
 }
 ```
 
@@ -357,30 +328,14 @@ Data Prism includes a powerful expression system for computations and transforma
 ```javascript
 {
   type: "users",
-  select: [
-    "name",
-    {
-      posts: {
-        select: ["title"],
-        where: { published: true },  // Only published posts
-        order: { createdAt: "desc" },
-        limit: 5
-      }
+  select: ["name", {
+    posts: {
+      select: ["title"],
+      where: { published: true },  // Only published posts
+      order: { createdAt: "desc" },
+      limit: 5
     }
-  ]
-}
-```
-
-### Relationship Aggregation
-
-```javascript
-{
-  type: "users",
-  select: {
-    name: "name",
-    postCount: { $count: "posts" },
-    hasAnyPosts: { $gt: [{ $count: "posts" }, 0] }
-  }
+  }]
 }
 ```
 
@@ -409,26 +364,6 @@ const query = {
 };
 ```
 
-### Computed Analytics
-
-```javascript
-{
-  type: "companies",
-  select: {
-    name: "name",
-    employeeCount: { $count: "employees" },
-    avgSalary: { $mean: "employees" },
-    payrollTotal: { $sum: "employees" },
-    topPerformers: {
-      $filter: [
-        "employees",
-        { performance: { $gte: 4.0 } }
-      ]
-    }
-  }
-}
-```
-
 ### Business Logic
 
 ```javascript
@@ -436,7 +371,6 @@ const query = {
   type: "orders",
   select: {
     orderNumber: "orderNumber",
-    itemCount: { $count: "items" },
     hasExpressShipping: { $eq: ["shippingMethod", "express"] },
     status: {
       $case: {
@@ -446,7 +380,7 @@ const query = {
           { when: "shipped", then: "On the way" },
           { when: "delivered", then: "Complete" }
         ],
-        default: "❓ Unknown"
+        default: "Unknown"
       }
     },
     isHighValue: { $gt: ["total", 500] }
