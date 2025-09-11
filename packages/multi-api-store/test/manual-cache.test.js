@@ -47,8 +47,8 @@ describe("Manual Cache Mode", () => {
 			resources: {
 				exposures: {
 					cache: { manual: true }, // Enable manual caching for exposures
-					get: async (query, context) => {
-						const { organizationIds, withCache } = context;
+					get: async (ctx) => {
+						const { organizationIds, withCache, query } = ctx;
 
 						// Replicate the redzone-store exposures pattern
 						const exposuresByOrg = await Promise.all(
@@ -123,8 +123,8 @@ describe("Manual Cache Mode", () => {
 				},
 				assets: {
 					cache: { manual: true }, // Manual caching
-					get: async (query, context) => {
-						const { withCache } = context;
+					get: async (ctx) => {
+						const { withCache, query } = ctx;
 
 						// Manual cache control
 						return withCache(`asset-${query.id}`, manualHandler);
@@ -167,8 +167,8 @@ describe("Manual Cache Mode", () => {
 					test: (query, context) =>
 						query.type === "assets" && context.organizationIds?.length > 1,
 					cache: { manual: true }, // Manual mode for special handler
-					handler: async (query, context) => {
-						const { withCache, organizationIds } = context;
+					handler: async (ctx) => {
+						const { withCache, organizationIds, query } = ctx;
 
 						// Try each org until we find the asset
 						for (const orgId of organizationIds) {
@@ -214,8 +214,8 @@ describe("Manual Cache Mode", () => {
 			cache: { enabled: true },
 			resources: {
 				organizations: {
-					get: async (query, context) => {
-						receivedContext = context;
+					get: async (ctx) => {
+						receivedContext = ctx;
 						return [{ id: "org1", name: "Org 1" }];
 					},
 				},

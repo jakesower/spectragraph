@@ -45,6 +45,12 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 		const fetchWithCache = async (ctx) => {
 			const fetcher = async () => {
 				const fetched = await handler(ctx);
+
+				// Handle null or undefined results
+				if (fetched === null || fetched === undefined) {
+					return createGraphFromResources(schema, query.type, []);
+				}
+
 				const asArray = Array.isArray(fetched) ? fetched : [fetched];
 				const mapped = asArray.map(mapFn);
 				return createGraphFromResources(schema, query.type, mapped);

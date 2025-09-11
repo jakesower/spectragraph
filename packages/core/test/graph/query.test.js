@@ -52,6 +52,24 @@ describe("queryTree core", () => {
 		});
 	});
 
+	it("normalizes select object * and with * as subquery", () => {
+		const query = {
+			type: "bears",
+			id: "1",
+			select: ["*", { home: "*" }],
+		};
+
+		const result = queryGraph(careBearSchema, query, careBearData);
+
+		expect(result.home).toEqual({
+			id: "1",
+			name: "Care-a-Lot",
+			isInClouds: true,
+			location: "Kingdom of Caring",
+			caringMeter: 1,
+		});
+	});
+
 	it("fetches a single resource with its id", async () => {
 		const query = {
 			type: "bears",

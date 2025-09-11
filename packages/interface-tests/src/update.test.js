@@ -19,6 +19,7 @@ export function runUpdateTests(createStore) {
 				);
 			}
 		});
+		
 		it("updates a single resource with only attributes", async () => {
 			if (!storeSupportsUpdate) return;
 
