@@ -106,7 +106,10 @@ describe("retry.exponential middleware", () => {
 	describe("in examples", () => {
 		it("retries failed skeptics query and eventually succeeds", async () => {
 			const gatewayTimeout = new Error("Gateway Timeout");
-			gatewayTimeout.response = { status: 504, data: { message: "Upstream timeout" } };
+			gatewayTimeout.response = {
+				status: 504,
+				data: { message: "Upstream timeout" },
+			};
 
 			const mockGet = vi
 				.fn()
