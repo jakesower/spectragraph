@@ -181,7 +181,7 @@ describe("compileResourceMappers", () => {
 describe("buildAsyncMiddlewarePipe", () => {
 	it("builds middleware pipeline in reverse order", async () => {
 		const calls = [];
-		
+
 		const middleware1 = async (val, next) => {
 			calls.push("mw1-before");
 			const result = await next(val + "-mw1");
