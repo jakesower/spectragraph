@@ -9,6 +9,15 @@ import {
 } from "./helpers/helpers.js";
 import { standardHandler } from "./standard-handler.js";
 
+const queryParamsToStr = (queryParams) =>
+	queryParams && queryParams.length > 0
+		? `?${queryParams.map((obj) =>
+				Object.entries(obj)
+					.map(([k, v]) => `${k}=${v}`)
+					.join("&"),
+			)}`
+		: "";
+
 /**
  * Loads all the data needed for a query to run, including its subqueries.
  * @param {import('@data-prism/core').NormalRootQuery} rootQuery - The query to execute.
@@ -17,7 +26,7 @@ import { standardHandler } from "./standard-handler.js";
  */
 export async function loadQueryGraph(rootQuery, storeContext) {
 	const {
-		middleware = [],
+		config: { middleware = [] },
 		schema,
 		specialHandlers = [],
 		withCache,
@@ -43,8 +52,16 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 			(resourceConfig.cache?.manual ?? storeContext.manualCaching);
 
 		const fetchWithCache = async (ctx) => {
+			const finishedCtx = {
+				...ctx,
+				request: {
+					...ctx.request,
+					queryParamsStr: queryParamsToStr(ctx.request.queryParams),
+				},
+			};
+
 			const fetcher = async () => {
-				const fetched = await handler(ctx);
+				const fetched = await handler(finishedCtx);
 
 				// Handle null or undefined results
 				if (fetched === null || fetched === undefined) {
@@ -63,8 +80,10 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 
 		const initRequest = {
 			baseURL: resourceConfig.baseURL ?? storeContext.baseURL ?? "",
-			headers: {},
-			queryParams: [],
+			request: {
+				headers: { Accept: "application/json" },
+				queryParams: [],
+			},
 			...context,
 			query,
 		};
@@ -73,7 +92,7 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 
 		let queryPromise;
 		try {
-			queryPromise = pipe({ ...context, query, request: initRequest });
+			queryPromise = pipe(initRequest);
 		} catch (err) {
 			const resourceType = query.type;
 
