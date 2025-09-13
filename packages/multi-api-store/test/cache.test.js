@@ -178,4 +178,42 @@ describe("createCache", () => {
 
 		expect(cache.config.manual).toBe(true);
 	});
+
+	it("clears specific cache entry with clearKey", () => {
+		const cache = createCache({ enabled: true });
+		const fetcher1 = vi.fn().mockReturnValue("result1");
+		const fetcher2 = vi.fn().mockReturnValue("result2");
+
+		// Cache some results
+		cache.withCache("key1", fetcher1);
+		cache.withCache("key2", fetcher2);
+
+		// Verify both are cached
+		cache.withCache("key1", fetcher1);
+		cache.withCache("key2", fetcher2);
+		expect(fetcher1).toHaveBeenCalledTimes(1);
+		expect(fetcher2).toHaveBeenCalledTimes(1);
+
+		// Clear only key1
+		cache.clearKey("key1");
+
+		// key1 should require fresh fetch, key2 should still be cached
+		cache.withCache("key1", fetcher1);
+		cache.withCache("key2", fetcher2);
+		expect(fetcher1).toHaveBeenCalledTimes(2); // Called again after clear
+		expect(fetcher2).toHaveBeenCalledTimes(1); // Still cached
+	});
+
+	it("clearKey does nothing when cache is disabled", () => {
+		const cache = createCache({ enabled: false });
+		const fetcher = vi.fn().mockReturnValue("result");
+
+		// clearKey should not throw when cache is disabled
+		expect(() => cache.clearKey("key1")).not.toThrow();
+
+		// Verify cache is still disabled
+		cache.withCache("key1", fetcher);
+		cache.withCache("key1", fetcher);
+		expect(fetcher).toHaveBeenCalledTimes(2); // No caching
+	});
 });

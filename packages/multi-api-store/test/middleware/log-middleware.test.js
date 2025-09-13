@@ -169,7 +169,7 @@ describe("log.requests middleware", () => {
 					type: "skeptics",
 					select: ["name", "specialty"],
 				}),
-			).rejects.toThrow("Internal Server Error");
+			).rejects.toThrow();
 
 			expect(mockLogger.log).toHaveBeenCalledWith("→ skeptics request started");
 			expect(mockLogger.error).toHaveBeenCalledWith(

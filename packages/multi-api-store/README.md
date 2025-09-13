@@ -129,6 +129,72 @@ const store = createMultiApiStore(schema, {
 - Expired cache entries are automatically removed on access
 - Cache keys include parent query context to handle relationship-specific caching
 
+### Middleware
+
+The multi-API store supports middleware to enhance request processing with cross-cutting concerns like authentication, logging, and retry logic. Middleware functions are executed in order before resource handlers are called.
+
+```javascript
+import { auth, retry, log } from "@data-prism/multi-api-store";
+
+const store = createMultiApiStore(schema, {
+	middleware: [
+		// Add authentication headers
+		auth.bearerToken(() => getAuthToken()),
+		
+		// Retry on server errors with exponential backoff
+		retry.exponential({
+			maxRetries: 3,
+			timeout: 30000,
+		}),
+		
+		// Log all requests and responses
+		log.requests({
+			logger: console,
+			includeTiming: true,
+		}),
+	],
+	resources: {
+		// Resource configuration...
+	},
+});
+```
+
+**Built-in Middleware:**
+
+**Authentication (`auth`)**
+- `auth.bearerToken(getToken)` - Adds Bearer token to Authorization header
+- `auth.queryParam(getToken, paramName)` - Adds token as query parameter
+
+**Retry (`retry`)**  
+- `retry.exponential(config)` - Retries failed requests with exponential backoff
+  - Only retries 5xx server errors (not 4xx client errors)
+  - Configurable `maxRetries`, `timeout`, and `backoffFn`
+
+**Logging (`log`)**
+- `log.requests(config)` - Logs request/response details
+  - Configurable `logger`, `includeTiming` options
+
+**Custom Middleware:**
+
+Middleware functions receive `(context, next)` parameters:
+- `context` - Request context including query, config, and request metadata
+- `next` - Function to call the next middleware or handler
+
+```javascript
+const customAuth = (context, next) => {
+	return next({
+		...context,
+		request: {
+			...context.request,
+			headers: {
+				...context.request.headers,
+				'X-API-Key': process.env.API_KEY,
+			},
+		},
+	});
+};
+```
+
 ### Expression Engines
 
 The multi-API store uses focused expression engines from Data Prism Core to provide different capabilities for different query contexts:

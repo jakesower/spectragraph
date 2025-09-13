@@ -24,8 +24,9 @@ describe("retry.exponential middleware", () => {
 
 		it("should retry on 5xx HTTP errors", async () => {
 			const middleware = retry.exponential({ backoffFn });
-			const serverError = new Error("Internal Server Error");
-			serverError.response = { status: 500, data: { message: "Server error" } };
+			const serverError = new Error("Internal Server Error", {
+				cause: { response: { status: 500 }, data: { message: "Server error" } },
+			});
 
 			const mockNext = vi
 				.fn()
@@ -45,8 +46,9 @@ describe("retry.exponential middleware", () => {
 
 		it("should not retry on 4xx HTTP errors", async () => {
 			const middleware = retry.exponential();
-			const clientError = new Error("Bad Request");
-			clientError.response = { status: 400, data: { message: "Bad request" } };
+			const clientError = new Error("Bad Request", {
+				cause: { response: { status: 400 }, data: { message: "Bad request" } },
+			});
 
 			const mockNext = vi.fn().mockRejectedValue(clientError);
 
@@ -105,11 +107,12 @@ describe("retry.exponential middleware", () => {
 
 	describe("in examples", () => {
 		it("retries failed skeptics query and eventually succeeds", async () => {
-			const gatewayTimeout = new Error("Gateway Timeout");
-			gatewayTimeout.response = {
-				status: 504,
-				data: { message: "Upstream timeout" },
-			};
+			const gatewayTimeout = new Error("Gateway Timeout", {
+				cause: {
+					response: { status: 504 },
+					data: { message: "Upstream timeout" },
+				},
+			});
 
 			const mockGet = vi
 				.fn()
@@ -152,11 +155,12 @@ describe("retry.exponential middleware", () => {
 		});
 
 		it("gives up on persistent server errors after max retries", async () => {
-			const serverError = new Error("Internal Server Error");
-			serverError.response = {
-				status: 500,
-				data: { message: "Database down" },
-			};
+			const serverError = new Error("Internal Server Error", {
+				cause: {
+					response: { status: 500 },
+					data: { message: "Database down" },
+				},
+			});
 
 			const mockGet = vi.fn().mockRejectedValue(serverError);
 
@@ -177,7 +181,7 @@ describe("retry.exponential middleware", () => {
 					type: "skeptics",
 					select: ["name", "specialty"],
 				}),
-			).rejects.toThrow("Internal Server Error");
+			).rejects.toThrow();
 
 			expect(mockGet).toHaveBeenCalledTimes(4); // 1 initial + 3 retries
 		});

@@ -3,6 +3,43 @@ import { createMultiApiStore } from "../src/multi-api-store.js";
 import skepticismSchema from "./fixtures/skepticism.schema.json";
 
 describe("createMultiApiStore", () => {
+	it("supports forceRefresh to clear cache and fetch fresh data", async () => {
+		const mockGet = vi
+			.fn()
+			.mockResolvedValueOnce([{ id: "1", name: "First Call" }])
+			.mockResolvedValueOnce([{ id: "1", name: "Second Call" }]);
+
+		const config = {
+			cache: { enabled: true, defaultTTL: 60000 },
+			resources: {
+				skeptics: { get: mockGet },
+			},
+		};
+
+		const store = createMultiApiStore(skepticismSchema, config);
+
+		// Call 1: Normal caching
+		const result1 = await store.query({ type: "skeptics", select: ["name"] });
+
+		// Call 2: Should use cache (normal behavior)
+		const result2 = await store.query({ type: "skeptics", select: ["name"] });
+
+		// Call 3: With forceRefresh, should clear cache and fetch fresh
+		const result3 = await store.query(
+			{ type: "skeptics", select: ["name"] },
+			{ forceRefresh: true },
+		);
+
+		// Call 4: Should now use the refreshed cache
+		const result4 = await store.query({ type: "skeptics", select: ["name"] });
+
+		expect(mockGet).toHaveBeenCalledTimes(2); // Call 1 + call 3 (force refresh)
+		expect(result1[0].name).toBe("First Call");
+		expect(result2[0].name).toBe("First Call"); // Cached from call 1
+		expect(result3[0].name).toBe("Second Call"); // Fresh fetch due to force refresh
+		expect(result4[0].name).toBe("Second Call"); // Uses refreshed cache
+	});
+
 	it("queries skeptics with mocked get handler", async () => {
 		const mockGet = vi.fn().mockResolvedValue([
 			{
@@ -696,6 +733,9 @@ describe("handler tests", () => {
 			ok: false,
 			status: 404,
 			statusText: "Not Found",
+			url: "https://api.skepticism.example.org/skeptics/nonexistent",
+			headers: new Map([["content-type", "application/json"]]),
+			json: () => Promise.resolve({ message: "Skeptic not found" }),
 		});
 
 		const config = {
@@ -713,7 +753,7 @@ describe("handler tests", () => {
 				id: "nonexistent",
 				select: ["name"],
 			}),
-		).rejects.toThrow("HTTP 404: Not Found");
+		).rejects.toThrow("Skeptic not found");
 
 		expect(global.fetch).toHaveBeenCalledWith(
 			"https://api.skepticism.example.org/skeptics/nonexistent",
@@ -896,6 +936,230 @@ describe("handler tests", () => {
 			id: "new-skeptic",
 			name: "New Skeptic",
 			specialty: "Critical Thinking",
+		});
+	});
+
+	describe("error handling during query execution", () => {
+		it("handles async errors from middleware", async () => {
+			const badMiddleware = async () => {
+				throw new Error("Middleware async error");
+			};
+
+			const config = {
+				middleware: [badMiddleware],
+				resources: {
+					skeptics: {
+						get: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
+					},
+				},
+			};
+
+			const store = createMultiApiStore(skepticismSchema, config);
+
+			await expect(
+				store.query({ type: "skeptics", select: ["name"] }),
+			).rejects.toThrow("Middleware async error");
+		});
+
+		it("handles HTTP error responses with status and data", async () => {
+			const httpError = new Error("HTTP Error");
+			httpError.response = {
+				status: 404,
+				data: { message: "Resource not found" },
+			};
+
+			const badMiddleware = async () => {
+				throw httpError;
+			};
+
+			const config = {
+				middleware: [badMiddleware],
+				resources: {
+					skeptics: {
+						get: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
+					},
+				},
+			};
+
+			const store = createMultiApiStore(skepticismSchema, config);
+
+			await expect(
+				store.query({ type: "skeptics", select: ["name"] }),
+			).rejects.toThrow("HTTP Error");
+		});
+
+		it("handles HTTP error responses without custom message", async () => {
+			const httpError = new Error("HTTP Error");
+			httpError.response = {
+				status: 500,
+				data: {},
+			};
+
+			const badMiddleware = async () => {
+				throw httpError;
+			};
+
+			const config = {
+				middleware: [badMiddleware],
+				resources: {
+					skeptics: {
+						get: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
+					},
+				},
+			};
+
+			const store = createMultiApiStore(skepticismSchema, config);
+
+			await expect(
+				store.query({ type: "skeptics", select: ["name"] }),
+			).rejects.toThrow("HTTP Error");
+		});
+
+		it("handles network errors (no response received)", async () => {
+			const networkError = new Error("Network timeout");
+			networkError.request = { url: "https://api.example.com/skeptics" };
+
+			const badMiddleware = async () => {
+				throw networkError;
+			};
+
+			const config = {
+				middleware: [badMiddleware],
+				resources: {
+					skeptics: {
+						get: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
+					},
+				},
+			};
+
+			const store = createMultiApiStore(skepticismSchema, config);
+
+			await expect(
+				store.query({ type: "skeptics", select: ["name"] }),
+			).rejects.toThrow("Network timeout");
+		});
+
+		it("handles errors from resource handlers", async () => {
+			const resourceError = new Error("Resource handler error");
+
+			const config = {
+				resources: {
+					skeptics: {
+						get: vi.fn().mockRejectedValue(resourceError),
+					},
+				},
+			};
+
+			const store = createMultiApiStore(skepticismSchema, config);
+
+			await expect(
+				store.query({ type: "skeptics", select: ["name"] }),
+			).rejects.toThrow("Resource handler error");
+		});
+
+		it("handles fetch network errors from standard handler", async () => {
+			// Mock fetch to throw a network error
+			global.fetch = vi.fn().mockImplementation(() => {
+				const networkError = new Error("fetch failed");
+				networkError.request = { url: "https://api.example.com/skeptics" };
+				return Promise.reject(networkError);
+			});
+
+			const config = {
+				baseURL: "https://api.example.com",
+				resources: {
+					skeptics: {
+						// No get handler - should use standard handler
+					},
+				},
+			};
+
+			const store = createMultiApiStore(skepticismSchema, config);
+
+			await expect(
+				store.query({ type: "skeptics", select: ["name"] }),
+			).rejects.toThrow("fetch failed");
+		});
+
+		it("handles HTTP 404 errors from standard handler", async () => {
+			// Mock fetch to return a 404 response
+			global.fetch = vi.fn().mockResolvedValue({
+				ok: false,
+				status: 404,
+				statusText: "Not Found",
+				url: "https://api.example.com/skeptics",
+				headers: new Map([["content-type", "application/json"]]),
+				json: () => Promise.resolve({ message: "Resource not found" }),
+			});
+
+			const config = {
+				baseURL: "https://api.example.com",
+				resources: {
+					skeptics: {
+						// No get handler - should use standard handler
+					},
+				},
+			};
+
+			const store = createMultiApiStore(skepticismSchema, config);
+
+			await expect(
+				store.query({ type: "skeptics", select: ["name"] }),
+			).rejects.toThrow("Resource not found");
+		});
+
+		it("handles HTTP 500 errors from standard handler", async () => {
+			// Mock fetch to return a 500 response
+			global.fetch = vi.fn().mockResolvedValue({
+				ok: false,
+				status: 500,
+				statusText: "Internal Server Error",
+				url: "https://api.example.com/skeptics",
+				headers: new Map([["content-type", "application/json"]]),
+				json: () => Promise.resolve({ message: "Database connection failed" }),
+			});
+
+			const config = {
+				baseURL: "https://api.example.com",
+				resources: {
+					skeptics: {
+						// No get handler - should use standard handler
+					},
+				},
+			};
+
+			const store = createMultiApiStore(skepticismSchema, config);
+
+			await expect(
+				store.query({ type: "skeptics", select: ["name"] }),
+			).rejects.toThrow("Database connection failed");
+		});
+
+		it("handles HTTP errors from standard handler with fallback to statusText", async () => {
+			// Mock fetch to return a 500 response with invalid JSON
+			global.fetch = vi.fn().mockResolvedValue({
+				ok: false,
+				status: 403,
+				statusText: "Forbidden",
+				url: "https://api.example.com/skeptics",
+				headers: new Map([["content-type", "text/html"]]),
+				json: () => Promise.reject(new Error("Not JSON")),
+			});
+
+			const config = {
+				baseURL: "https://api.example.com",
+				resources: {
+					skeptics: {
+						// No get handler - should use standard handler
+					},
+				},
+			};
+
+			const store = createMultiApiStore(skepticismSchema, config);
+
+			await expect(
+				store.query({ type: "skeptics", select: ["name"] }),
+			).rejects.toThrow("Forbidden");
 		});
 	});
 });

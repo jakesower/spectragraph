@@ -46,7 +46,7 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 		const specialHandler = specialHandlers.find((h) => h.test(query, context));
 		const handler = specialHandler?.handler ?? get ?? standardHandler.get;
 
-		// Determine if this resource uses manual caching
+		// Determine if this resource uses manual caching or should force refresh
 		const isManuallyCaching =
 			specialHandler?.cache?.manual ||
 			(resourceConfig.cache?.manual ?? storeContext.manualCaching);
@@ -61,21 +61,40 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 			};
 
 			const fetcher = async () => {
-				const fetched = await handler(finishedCtx);
+				const response = await handler(finishedCtx);
 
-				// Handle null or undefined results
-				if (fetched === null || fetched === undefined) {
+				// Handle Response objects (from standard handler)
+				if (response && typeof response.ok === "boolean") {
+					if (!response.ok) {
+						const errorData = await response.json().catch(() => ({
+							message: response.statusText,
+						}));
+						throw new Error(errorData.message || `HTTP ${response.status}`, {
+							cause: { data: errorData, response },
+						});
+					}
+					const data = await response.json();
+					if (data === null || data === undefined) {
+						return createGraphFromResources(schema, query.type, []);
+					}
+					const asArray = Array.isArray(data) ? data : [data];
+					const mapped = asArray.map(mapFn);
+					return createGraphFromResources(schema, query.type, mapped);
+				}
+
+				// Handle direct data (from custom handlers)
+				if (response === null || response === undefined) {
 					return createGraphFromResources(schema, query.type, []);
 				}
 
-				const asArray = Array.isArray(fetched) ? fetched : [fetched];
+				const asArray = Array.isArray(response) ? response : [response];
 				const mapped = asArray.map(mapFn);
 				return createGraphFromResources(schema, query.type, mapped);
 			};
 
-			return isManuallyCaching
-				? fetcher()
-				: withCache(query, fetcher, { context });
+			if (isManuallyCaching) return fetcher();
+
+			return withCache(query, fetcher, { context });
 		};
 
 		const initRequest = {
@@ -90,30 +109,7 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 
 		const pipe = buildAsyncMiddlewarePipe([...middleware, fetchWithCache]);
 
-		let queryPromise;
-		try {
-			queryPromise = pipe(initRequest);
-		} catch (err) {
-			const resourceType = query.type;
-
-			if (err.response) {
-				// HTTP error response (4xx, 5xx)
-				const { status, data } = err.response;
-				throw new Error(
-					`Failed to load ${resourceType}: ${status} ${
-						data?.message ?? err.message
-					}`,
-				);
-			} else if (err.request) {
-				// Network error (no response received)
-				throw new Error(
-					`Network error loading ${resourceType}: ${err.message}`,
-				);
-			} else {
-				// Other error (request setup, etc.)
-				throw new Error(`Error loading ${resourceType}: ${err.message}`);
-			}
-		}
+		const queryPromise = pipe(initRequest);
 
 		const subqueryContext = { ...context, parentQuery: query };
 		const relatedGraphPromises = Object.keys(
@@ -122,6 +118,7 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 			.filter((relName) => query.select[relName])
 			.map((relName) => step(query.select[relName], subqueryContext));
 
+		// intentionally do not catch -- errors from inside here are already high quality
 		const graphs = await Promise.all([queryPromise, ...relatedGraphPromises]);
 		return graphs.reduce(mergeGraphsDeep);
 	};

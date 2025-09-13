@@ -30,7 +30,7 @@ export const retry = {
 						const result = await next(ctx);
 						if (!timedOut) resolve(result);
 					} catch (err) {
-						const { status } = err?.response ?? {};
+						const { status } = err?.cause?.response ?? {};
 						if (attempt > maxRetries || !status || status < 500) {
 							reject(err);
 							return;
