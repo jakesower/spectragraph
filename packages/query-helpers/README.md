@@ -1,13 +1,12 @@
 # SpectraGraph Query Helpers
 
-Utility functions for working with SpectraGraph queries. This package provides helper functions for query traversal, multi-API execution, and query analysis across different store implementations.
+Utility functions for working with SpectraGraph queries. This package provides helper functions for query traversal and analysis, making it easier to work with complex nested query structures.
 
 ## Overview
 
 SpectraGraph Query Helpers provides tools for:
 
 - **Query Traversal**: Flatten and iterate over nested query structures
-- **Multi-API Execution**: Coordinate multiple APIs to fulfill complex queries
 - **Query Analysis**: Inspect and manipulate query structures programmatically
 
 ## Installation
@@ -20,11 +19,7 @@ npm install @spectragraph/query-helpers
 
 ### Query Flattening
 
-Query helpers can flatten nested queries into linear arrays of query breakdown items, making it easier to process complex relationships and analyze query structures.
-
-### Multi-API Coordination
-
-The package provides utilities for executing queries that span multiple APIs or data sources, handling the coordination and graph merging automatically.
+Query helpers can flatten nested queries into linear arrays of query breakdown items, making it easier to process complex relationships and analyze query structures programmatically.
 
 ## API Reference
 
@@ -123,80 +118,6 @@ const hasComplexWhere = someQuery(
 );
 ```
 
-### Multi-API Functions
-
-#### `collectQueryResults(schema, rootQuery, executor, initialContext?)`
-
-Core query traversal engine with callback pattern - reusable across store types.
-
-**Parameters:**
-
-- `schema` (Schema) - The schema defining relationships
-- `rootQuery` (NormalQuery) - The normalized query to execute
-- `executor` (Function) - Async function `(query, context) => Promise<any>`
-- `initialContext` (Object, optional) - Initial context passed to executor
-
-**Returns:** Promise resolving to nested result structure
-
-```javascript
-import { collectQueryResults } from "@spectragraph/query-helpers";
-
-const results = await collectQueryResults(
-	schema,
-	normalizedQuery,
-	async (query, context) => {
-		// Your custom query execution logic
-		return await myAPI.fetch(query, context);
-	},
-	{ userId: "123", permissions: ["read"] },
-);
-```
-
-#### `executeQueryWithAPIs(schema, rootQuery, apiRegistry, options?)`
-
-Replaces the entire loadQueryData pattern - handles traversal, API coordination, and graph building.
-
-**Parameters:**
-
-- `schema` (Schema) - The schema defining relationships
-- `rootQuery` (NormalQuery) - The normalized query to execute
-- `apiRegistry` (APIRegistry) - Maps resource types to API handlers
-- `options` (QueryExecutionOptions, optional) - Context, caching, and special handlers
-
-**Returns:** Promise<Graph> - Complete graph with all query results merged
-
-```javascript
-import { executeQueryWithAPIs } from "@spectragraph/query-helpers";
-
-const apiRegistry = {
-	teams: {
-		get: async (query, context) => {
-			// Fetch teams data
-			return await teamsAPI.query(query);
-		},
-	},
-	matches: {
-		get: async (query, context) => {
-			// Fetch matches data
-			return await matchesAPI.query(query);
-		},
-	},
-};
-
-const graph = await executeQueryWithAPIs(schema, normalizedQuery, apiRegistry, {
-	context: { apiKey: "your-key" },
-	specialHandlers: [
-		{
-			test: (query, context) => query.type === "teams" && query.where?.archived,
-			handler: async (query, context) => {
-				// Special handling for archived teams
-				return await archivedTeamsAPI.query(query);
-			},
-		},
-	],
-});
-```
-
 ## Type Definitions
 
 ### QueryBreakdownItem
@@ -211,48 +132,6 @@ interface QueryBreakdownItem {
 	parent: QueryBreakdownItem | null; // Parent breakdown item if any
 	parentQuery: Query | null; // Parent query if any
 	parentRelationship: string | null; // Parent relationship name if any
-}
-```
-
-### APIHandler
-
-```typescript
-interface APIHandler {
-	get: (query: Query, context: Object) => Promise<any>;
-	create?: (resource: Object, context: Object) => Promise<any>;
-	update?: (resource: Object, context: Object) => Promise<any>;
-	delete?: (resource: Object, context: Object) => Promise<any>;
-}
-```
-
-### APIRegistry
-
-```typescript
-type APIRegistry = {
-	[resourceType: string]: APIHandler;
-};
-```
-
-### SpecialHandler
-
-```typescript
-interface SpecialHandler {
-	test: (query: Query, context: Object) => boolean;
-	handler: (query: Query, context: Object) => Promise<any>;
-}
-```
-
-### QueryExecutionOptions
-
-```typescript
-interface QueryExecutionOptions {
-	context?: Object; // Context passed to API handlers
-	specialHandlers?: SpecialHandler[]; // Array of special case handlers
-	withCache?: (
-		key: string,
-		fetcher: () => Promise<any>,
-		options?: { ttl?: number },
-	) => Promise<any>; // Caching function
 }
 ```
 
@@ -319,64 +198,6 @@ forEachQuery(schema, query, (subquery, info) => {
 });
 ```
 
-### Multi-API Query Execution
-
-```javascript
-import { executeQueryWithAPIs } from "@spectragraph/query-helpers";
-
-// Define API handlers for different resource types
-const apiRegistry = {
-	teams: {
-		get: async (query, context) => {
-			const response = await fetch(`/api/teams?${buildQueryString(query)}`, {
-				headers: { Authorization: `Bearer ${context.apiKey}` },
-			});
-			return response.json();
-		},
-	},
-	matches: {
-		get: async (query, context) => {
-			const response = await fetch(`/api/matches?${buildQueryString(query)}`, {
-				headers: { Authorization: `Bearer ${context.apiKey}` },
-			});
-			return response.json();
-		},
-	},
-};
-
-// Execute complex query spanning multiple APIs
-const graph = await executeQueryWithAPIs(
-	schema,
-	{
-		type: "teams",
-		select: {
-			name: "name",
-			homeMatches: {
-				select: ["field", "awayTeam"],
-				where: { status: "completed" },
-			},
-		},
-		where: { active: true },
-	},
-	apiRegistry,
-	{
-		context: { apiKey: "your-api-key" },
-		specialHandlers: [
-			{
-				test: (query) => query.where?.archived === true,
-				handler: async (query, context) => {
-					// Use different endpoint for archived resources
-					return await fetchArchivedData(query, context);
-				},
-			},
-		],
-	},
-);
-
-// Use the resulting graph with any SpectraGraph store
-console.log(graph);
-```
-
 ### Query Analysis
 
 ```javascript
@@ -416,22 +237,12 @@ SpectraGraph Query Helpers includes comprehensive TypeScript definitions:
 import type {
 	QueryBreakdown,
 	QueryBreakdownItem,
-	APIHandler,
-	APIRegistry,
-	SpecialHandler,
-	QueryExecutionOptions,
 } from "@spectragraph/query-helpers";
 
-import type { Schema, RootQuery, Graph } from "@spectragraph/core";
+import type { Schema, RootQuery } from "@spectragraph/core";
 
-const apiRegistry: APIRegistry = {
-	teams: {
-		get: async (query, context) => {
-			// Type-safe API handler implementation
-			return await myTeamsAPI.query(query);
-		},
-	},
-};
+// Type-safe usage
+const breakdown: QueryBreakdown = flattenQuery(schema, rootQuery);
 ```
 
 ## Related Packages
