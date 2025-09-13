@@ -48,7 +48,7 @@ describe("Manual Cache Mode", () => {
 				exposures: {
 					cache: { manual: true }, // Enable manual caching for exposures
 					get: async (ctx) => {
-						const { organizationIds, withCache, query } = ctx;
+						const { organizationIds, withCache } = ctx;
 
 						// Replicate the redzone-store exposures pattern
 						const exposuresByOrg = await Promise.all(

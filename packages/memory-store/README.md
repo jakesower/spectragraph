@@ -1,6 +1,19 @@
 # Data Prism Memory Store
 
-An in-memory store implementation for Data Prism that provides CRUD operations, querying, and relationship management for graph data. Perfect for prototyping, testing, or applications that need fast data access without external dependencies.
+A reference implementation and development utility for Data Prism that provides CRUD operations, querying, and relationship management for graph data stored entirely in memory.
+
+## Primary Use Cases
+
+**1. Reference Implementation**
+Memory Store serves as the canonical example of how to implement the Data Prism Store interface correctly. If you're building your own store (database adapter, API client, etc.), use this implementation as your guide for proper schema validation, relationship management, and query handling.
+
+**2. Development Stepping Stone**
+Memory Store provides a seamless transition path from development to production. Mock out your data model with JSON fixtures, develop and test your application logic, then swap to a production store when your real backend is ready - with zero code changes to your application layer.
+
+**Additional Benefits:**
+- **Testing**: Fast, deterministic test fixtures that reset cleanly between tests
+- **Prototyping**: Quick demos and MVPs without external dependencies
+- **Local Development**: Work offline with realistic relational data
 
 ## Overview
 
@@ -438,11 +451,16 @@ const newTeam: CreateResource = {
 };
 ```
 
-## Performance Considerations
+## Production Considerations
 
-- **Memory usage**: All data is kept in memory - monitor usage for large datasets
-- **Relationship updates**: Complex relationship graphs may slow mutation operations
-- **Query optimization**: Simple queries are very fast, complex nested queries may need optimization
+**Memory Store is designed for development, not production use.** Key limitations:
+
+- **Memory growth**: No cleanup mechanisms - data accumulates indefinitely
+- **Single-process only**: All data is lost when the process restarts
+- **No persistence**: Changes are not saved to disk
+- **Performance**: O(n) queries without indexing, suitable for small development datasets
+
+For production applications, transition to a persistent store like `@data-prism/postgres-store` or implement your own store using this as a reference.
 
 ## Related Packages
 

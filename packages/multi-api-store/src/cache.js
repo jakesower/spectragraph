@@ -29,12 +29,14 @@ export function createCache(config = {}) {
 	 * @param {Object} options - Options for this cache operation
 	 * @param {number} options.ttl - TTL override for this operation
 	 * @param {Object} options.context - Context for key generation (when keyOrQuery is a query)
+	 * @param {boolean} options.forceRefresh - Whether to ensure the cache misses
 	 * @returns {*} Cached or fetched value
 	 */
 	const withCache = (keyOrQuery, fetcher, options = {}) => {
 		if (!cacheConfig.enabled) return fetcher();
 
 		const { context = {} } = options;
+		const { forceRefresh } = context;
 		const keyGen =
 			cacheConfig.resourceKeyGenerators[keyOrQuery.type] ??
 			cacheConfig.keyGenerator;
@@ -46,8 +48,8 @@ export function createCache(config = {}) {
 		const now = Date.now();
 		const cached = cache.get(key);
 
-		// If cached and not expired, return it
-		if (cached && (!cached.expiry || cached.expiry > now)) {
+		// If cached and not expired and we're not forcing a refresh, return it
+		if (!forceRefresh && cached && (!cached.expiry || cached.expiry > now)) {
 			return cached.value;
 		}
 
@@ -84,10 +86,22 @@ export function createCache(config = {}) {
 		cache.clear();
 	};
 
+	/**
+	 * Clear a specific cache entry by key
+	 * @param {string} key - Cache key to clear
+	 */
+	const clearKey = (key) => {
+		if (!cacheConfig.enabled) {
+			return;
+		}
+		cache.delete(key);
+	};
+
 	return {
 		withCache,
 		clearByType,
 		clear,
+		clearKey,
 		config: cacheConfig,
 	};
 }

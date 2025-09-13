@@ -3,9 +3,9 @@ import {
 	normalizeQuery,
 	queryGraph,
 	StoreOperationNotSupportedError,
-	validateCreateResource,
-	validateUpdateResource,
-	validateDeleteResource,
+	ensureValidCreateResource,
+	ensureValidUpdateResource,
+	ensureValidDeleteResource,
 	defaultValidator,
 	defaultSelectEngine,
 	defaultWhereEngine,
@@ -13,6 +13,37 @@ import {
 import { loadQueryGraph } from "./load-query-graph.js";
 import { createCache } from "./cache.js";
 import { standardHandler } from "./standard-handler.js";
+
+/**
+ * Helper to handle Response objects from standard handler or return direct data
+ * @param {*} result - The result from a handler (Response object or direct data)
+ * @param {*} fallbackValue - Value to return for empty responses (used by delete)
+ * @returns {Promise<*>} Parsed response data
+ */
+async function handleHandlerResult(result, fallbackValue = null) {
+	// Handle Response objects (from standard handler)
+	if (result && typeof result.ok === "boolean") {
+		if (!result.ok) {
+			const errorData = await result.json().catch(() => ({
+				message: result.statusText,
+			}));
+			throw new Error(errorData.message || `HTTP ${result.status}`, {
+				cause: { data: errorData, response: result },
+			});
+		}
+
+		// For DELETE operations, some APIs return empty response
+		if (fallbackValue !== null) {
+			const text = await result.text();
+			return text ? JSON.parse(text) : fallbackValue;
+		}
+
+		return result.json();
+	}
+
+	// Handle direct data (from custom handlers)
+	return result;
+}
 
 export function createMultiApiStore(schema, config) {
 	ensureValidSchema(schema);
@@ -65,13 +96,10 @@ export function createMultiApiStore(schema, config) {
 		return queryGraph(schema, rootQuery, graph, { selectEngine, whereEngine });
 	};
 
-	const create = (resource) => {
+	const create = async (resource) => {
 		const { type } = resource;
 
-		const errors = validateCreateResource(schema, resource, { validator });
-		if (errors.length > 0) {
-			throw new Error(`invalid ${resource?.type} resource`, { cause: errors });
-		}
+		ensureValidCreateResource(schema, resource, validator);
 
 		const createHandler =
 			config.resources[type]?.create ?? standardHandler.create;
@@ -79,16 +107,14 @@ export function createMultiApiStore(schema, config) {
 		// Clear cache for this resource type when creating
 		cache.clearByType(type);
 
-		return createHandler(resource, { schema, config });
+		const result = await createHandler(resource, { schema, config });
+		return handleHandlerResult(result);
 	};
 
-	const update = (resource) => {
+	const update = async (resource) => {
 		const { type } = resource;
 
-		const errors = validateUpdateResource(schema, resource, { validator });
-		if (errors.length > 0) {
-			throw new Error(`invalid ${resource?.type} resource`, { cause: errors });
-		}
+		ensureValidUpdateResource(schema, resource, validator);
 
 		const updateHandler =
 			config.resources[type]?.update ?? standardHandler.update;
@@ -96,16 +122,14 @@ export function createMultiApiStore(schema, config) {
 		// Clear cache for this resource type when updating
 		cache.clearByType(type);
 
-		return updateHandler(resource, { schema, config });
+		const result = await updateHandler(resource, { schema, config });
+		return handleHandlerResult(result);
 	};
 
-	const deleteResource = (resource) => {
+	const deleteResource = async (resource) => {
 		const { type } = resource;
 
-		const errors = validateDeleteResource(schema, resource);
-		if (errors.length > 0) {
-			throw new Error("invalid resource", { cause: errors });
-		}
+		ensureValidDeleteResource(schema, resource, validator);
 
 		const deleteHandler =
 			config.resources[type]?.delete ?? standardHandler.delete;
@@ -113,14 +137,15 @@ export function createMultiApiStore(schema, config) {
 		// Clear cache for this resource type when deleting
 		cache.clearByType(type);
 
-		return deleteHandler(resource, { schema, config });
+		const result = await deleteHandler(resource, { schema, config });
+		return handleHandlerResult(result, resource);
 	};
 
 	return {
 		query: runQuery,
 		create,
 		update,
-		upsert(resource) {
+		async upsert(resource) {
 			return resource.id ? this.update(resource) : this.create(resource);
 		},
 		delete: deleteResource,
