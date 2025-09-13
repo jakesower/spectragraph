@@ -1,20 +1,20 @@
 import { snakeCase, uniq } from "es-toolkit";
-import { forEachQuery, someQuery } from "@data-prism/query-helpers";
+import { forEachQuery, someQuery } from "@spectragraph/query-helpers";
 import { preQueryRelationships } from "./relationship-builders.js";
 
 /**
  * @typedef {Object} StoreContext
- * @property {import('data-prism').Schema} schema - The schema
+ * @property {import('spectragraph').Schema} schema - The schema
  * @property {Object} [columnTypeModifiers] - Optional column type modifiers for query processing
  */
 
 /**
  * @typedef {Object} QueryClauseContext
  * @property {any} queryInfo - Query information
- * @property {import('data-prism').Schema} schema - Schema
+ * @property {import('spectragraph').Schema} schema - Schema
  * @property {string} table - Table name
- * @property {import('data-prism').Query} query - Current query
- * @property {import('data-prism').RootQuery} rootQuery - Root query
+ * @property {import('spectragraph').Query} query - Current query
+ * @property {import('spectragraph').RootQuery} rootQuery - Root query
  * @property {Object} [columnTypeModifiers] - Optional column type modifiers
  */
 
@@ -31,8 +31,8 @@ import { preQueryRelationships } from "./relationship-builders.js";
 
 /**
  * Checks if a query has any to-many relationships
- * @param {import('data-prism').Schema} schema - The schema
- * @param {import('data-prism').RootQuery} query - The query to check
+ * @param {import('spectragraph').Schema} schema - The schema
+ * @param {import('spectragraph').RootQuery} query - The query to check
  * @returns {boolean} Whether the query has to-many relationships
  */
 const hasToManyRelationship = (schema, query) => {
@@ -124,7 +124,7 @@ const QUERY_CLAUSE_EXTRACTORS = {
 
 /**
  * Parses a query into SQL clauses
- * @param {import('data-prism').RootQuery} query - The query to parse
+ * @param {import('spectragraph').RootQuery} query - The query to parse
  * @param {StoreContext} context - Store context
  * @returns {ParsedClause[]} Array of parsed query clauses
  */

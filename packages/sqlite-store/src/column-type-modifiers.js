@@ -1,5 +1,5 @@
 // Now using shared sql-helpers package
-import { createColumnTypeModifiers } from "@data-prism/sql-helpers";
+import { createColumnTypeModifiers } from "@spectragraph/sql-helpers";
 
 // SQLite-specific boolean handling
 const sqliteBooleanModifier = {

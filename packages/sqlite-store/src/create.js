@@ -1,6 +1,6 @@
 import { camelCase, pick, pickBy, snakeCase } from "es-toolkit";
 import { randomUUID } from "crypto";
-import { transformValuesForStorage } from "@data-prism/sql-helpers";
+import { transformValuesForStorage } from "@spectragraph/sql-helpers";
 import { columnTypeModifiers } from "./column-type-modifiers.js";
 import { setInverseRelationships } from "./lib/store-helpers.js";
 

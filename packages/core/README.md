@@ -1,10 +1,10 @@
-# Data Prism Core
+# SpectraGraph Core
 
-A JavaScript library for working with schema-driven graph data. Data Prism provides powerful tools for querying, validating, and manipulating relational data structures with a focus on type safety and developer experience. It is intended to be a toolkit for building Data Prism stores.
+A JavaScript library for working with schema-driven graph data. SpectraGraph provides powerful tools for querying, validating, and manipulating relational data structures with a focus on type safety and developer experience. It is intended to be a toolkit for building SpectraGraph stores.
 
 ## Overview
 
-Data Prism Core is built around several key principles:
+SpectraGraph Core is built around several key principles:
 
 - **Schema-driven**: Everything flows from user-defined schemas that describe your data structure
 - **Query-focused**: Powerful query language for retrieving exactly the data you need
@@ -13,14 +13,14 @@ Data Prism Core is built around several key principles:
 ## Installation
 
 ```bash
-npm install @data-prism/core
+npm install @spectragraph/core
 ```
 
 ## Core Concepts
 
 ### Schemas
 
-Schemas define the structure of your data, including resource types, attributes, and relationships. They serve as the foundation for all Data Prism operations.
+Schemas define the structure of your data, including resource types, attributes, and relationships. They serve as the foundation for all SpectraGraph operations.
 
 ```javascript
 const schema = {
@@ -121,11 +121,11 @@ const query = {
 
 ### Expressions
 
-Data Prism queries support expressions for computed fields and conditional logic. These expressions are provided by the [json-expressions](https://github.com/jakesower/json-expressions) library, which offers a comprehensive set of operators for data transformation and filtering.
+SpectraGraph queries support expressions for computed fields and conditional logic. These expressions are provided by the [json-expressions](https://github.com/jakesower/json-expressions) library, which offers a comprehensive set of operators for data transformation and filtering.
 
 #### Expression Engines
 
-Data Prism uses focused expression engines to provide different capabilities for different query contexts:
+SpectraGraph uses focused expression engines to provide different capabilities for different query contexts:
 
 - **SELECT Engine** (`defaultSelectEngine`): Full expression capabilities including filtering, aggregations, transformations, and computed fields
 - **WHERE Engine** (`defaultWhereEngine`): Filtering-only operations for performance and security - excludes expensive aggregation operations
@@ -281,7 +281,7 @@ const matchQuery = {
 
 #### `ensureValidSchema(schema, options?)`
 
-Validates that a schema conforms to the Data Prism schema specification.
+Validates that a schema conforms to the SpectraGraph schema specification.
 
 **Parameters:**
 
@@ -291,7 +291,7 @@ Validates that a schema conforms to the Data Prism schema specification.
 **Throws:** Error if schema is invalid
 
 ```javascript
-import { ensureValidSchema } from "@data-prism/core";
+import { ensureValidSchema } from "@spectragraph/core";
 
 ensureValidSchema(mySchema); // Throws if invalid
 ```
@@ -310,7 +310,7 @@ Creates an empty graph structure based on a schema.
 **Returns:** Empty graph with resource type placeholders
 
 ```javascript
-import { createEmptyGraph } from "@data-prism/core";
+import { createEmptyGraph } from "@spectragraph/core";
 
 const emptyGraph = createEmptyGraph(schema);
 // Returns: { teams: {}, matches: {} }
@@ -331,7 +331,7 @@ Links inverse relationships in a graph, filling in missing relationship data whe
 **Returns:** New graph with inverse relationships linked
 
 ```javascript
-import { linkInverses } from "@data-prism/core";
+import { linkInverses } from "@spectragraph/core";
 
 const linkedGraph = linkInverses(schema, graph);
 ```
@@ -348,7 +348,7 @@ Merges two graphs together by combining resource collections. Right graph takes 
 **Returns:** Merged graph with combined resource collections
 
 ```javascript
-import { mergeGraphs } from "@data-prism/core";
+import { mergeGraphs } from "@spectragraph/core";
 
 const combined = mergeGraphs(graph1, graph2);
 ```
@@ -365,7 +365,7 @@ Merges two graphs together, merging individual resources with matching IDs using
 **Returns:** Merged graph with resources intelligently merged
 
 ```javascript
-import { mergeGraphsDeep } from "@data-prism/core";
+import { mergeGraphsDeep } from "@spectragraph/core";
 
 const combined = mergeGraphsDeep(graph1, graph2);
 ```
@@ -386,7 +386,7 @@ Validates that a query is valid against a schema.
 **Throws:** Error if query is invalid
 
 ```javascript
-import { ensureValidQuery } from "@data-prism/core";
+import { ensureValidQuery } from "@spectragraph/core";
 
 ensureValidQuery(schema, query); // Uses default engines
 ```
@@ -405,7 +405,7 @@ Normalizes a query by expanding shorthand syntax and ensuring consistent structu
 **Returns:** Normalized query with expanded selections and consistent structure
 
 ```javascript
-import { normalizeQuery } from "@data-prism/core";
+import { normalizeQuery } from "@spectragraph/core";
 
 const normalized = normalizeQuery(schema, {
 	type: "users",
@@ -428,7 +428,7 @@ Executes a query against a graph directly (convenience function).
 **Returns:** Query results matching the query structure
 
 ```javascript
-import { queryGraph } from "@data-prism/core";
+import { queryGraph } from "@spectragraph/core";
 
 const results = queryGraph(
 	schema,
@@ -448,7 +448,7 @@ const results = queryGraph(
 
 #### `normalizeResource(schema, resourceType, resource)`
 
-Converts a flat resource object into Data Prism's normalized format.
+Converts a flat resource object into SpectraGraph's normalized format.
 
 **Parameters:**
 
@@ -459,7 +459,7 @@ Converts a flat resource object into Data Prism's normalized format.
 **Returns:** Normalized resource with separated attributes and relationships
 
 ```javascript
-import { normalizeResource } from "@data-prism/core";
+import { normalizeResource } from "@spectragraph/core";
 
 const flatTeam = {
 	id: "team-1",
@@ -487,7 +487,7 @@ Merges two partial resources of the same type, combining their attributes and re
 **Throws:** Error if resources are of different types or have conflicting IDs
 
 ```javascript
-import { mergeResources } from "@data-prism/core";
+import { mergeResources } from "@spectragraph/core";
 
 const existing = {
 	type: "teams",
@@ -525,7 +525,7 @@ Creates a complete graph from an array of resource objects, recursively processi
 **Returns:** Complete graph with all discoverable resources from the input data
 
 ```javascript
-import { createGraphFromResources } from "@data-prism/core";
+import { createGraphFromResources } from "@spectragraph/core";
 
 const flatTeam = {
 	id: "team-1",
@@ -548,7 +548,7 @@ const graph = createGraphFromResources(schema, "teams", [flatTeam]);
 
 ### Error Classes
 
-Data Prism Core provides specialized error classes to help stores and applications handle unsupported functionality gracefully.
+SpectraGraph Core provides specialized error classes to help stores and applications handle unsupported functionality gracefully.
 
 #### `ExpressionNotSupportedError`
 
@@ -566,7 +566,7 @@ Error thrown when a store does not support a particular expression. This allows 
 - `reason` - Optional reason (if provided)
 
 ```javascript
-import { ExpressionNotSupportedError } from "@data-prism/core";
+import { ExpressionNotSupportedError } from "@spectragraph/core";
 
 // In a store implementation
 if (!this.supportsRegex) {
@@ -604,7 +604,7 @@ Error thrown when a store does not support a particular operation. This allows s
 - `reason` - Optional reason (if provided)
 
 ```javascript
-import { StoreOperationNotSupportedError } from "@data-prism/core";
+import { StoreOperationNotSupportedError } from "@spectragraph/core";
 
 // In a readonly store implementation
 class ReadOnlyStore {
@@ -640,7 +640,7 @@ try {
 
 #### `validateSchema(schema, options?)`
 
-Validates that a schema conforms to the Data Prism schema specification.
+Validates that a schema conforms to the SpectraGraph schema specification.
 
 **Parameters:**
 
@@ -650,7 +650,7 @@ Validates that a schema conforms to the Data Prism schema specification.
 **Returns:** Array of validation errors (empty if valid)
 
 ```javascript
-import { validateSchema } from "@data-prism/core";
+import { validateSchema } from "@spectragraph/core";
 
 const errors = validateSchema(mySchema);
 if (errors.length > 0) {
@@ -672,7 +672,7 @@ Validates that a query is valid against a schema.
 **Returns:** Array of validation errors (empty if valid)
 
 ```javascript
-import { validateQuery } from "@data-prism/core";
+import { validateQuery } from "@spectragraph/core";
 
 const errors = validateQuery(schema, query);
 if (errors.length > 0) {
@@ -682,7 +682,7 @@ if (errors.length > 0) {
 
 #### `createValidator(options?)`
 
-Creates a new AJV validator instance configured for Data Prism.
+Creates a new AJV validator instance configured for SpectraGraph.
 
 **Parameters:**
 
@@ -691,7 +691,7 @@ Creates a new AJV validator instance configured for Data Prism.
 **Returns:** Configured AJV validator
 
 ```javascript
-import { createValidator } from "@data-prism/core";
+import { createValidator } from "@spectragraph/core";
 
 const validator = createValidator({
 	ajvSchemas: [myCustomSchema],
@@ -700,10 +700,10 @@ const validator = createValidator({
 
 #### `defaultValidator`
 
-The default AJV validator instance used by Data Prism.
+The default AJV validator instance used by SpectraGraph.
 
 ```javascript
-import { defaultValidator } from "@data-prism/core";
+import { defaultValidator } from "@spectragraph/core";
 
 // Use the default validator directly
 const isValid = defaultValidator.validate(schema, data);
@@ -714,7 +714,7 @@ const isValid = defaultValidator.validate(schema, data);
 The default expression engine for SELECT clauses, providing full expression capabilities including filtering, aggregations, transformations, and computed fields.
 
 ```javascript
-import { defaultSelectEngine } from "@data-prism/core";
+import { defaultSelectEngine } from "@spectragraph/core";
 
 // Use in custom query normalization
 const normalizedQuery = normalizeQuery(schema, query, { 
@@ -727,7 +727,7 @@ const normalizedQuery = normalizeQuery(schema, query, {
 The default expression engine for WHERE clauses, providing filtering-only operations for performance and security. Excludes expensive aggregation operations.
 
 ```javascript
-import { defaultWhereEngine } from "@data-prism/core";
+import { defaultWhereEngine } from "@spectragraph/core";
 
 // Use in custom query validation
 const errors = validateQuery(schema, query, { 
@@ -748,7 +748,7 @@ Validates a resource for creation operations.
 **Returns:** Array of validation errors (empty if valid)
 
 ```javascript
-import { validateCreateResource } from "@data-prism/core";
+import { validateCreateResource } from "@spectragraph/core";
 
 const errors = validateCreateResource(schema, {
 	type: "teams",
@@ -806,7 +806,7 @@ Validates that query results match the expected structure.
 **Returns:** Array of validation errors (empty if valid)
 
 ```javascript
-import { validateQueryResult } from "@data-prism/core";
+import { validateQueryResult } from "@spectragraph/core";
 
 const errors = validateQueryResult(schema, query, results);
 if (errors.length > 0) {
@@ -831,7 +831,7 @@ Validates a resource for creation operations. Throws on validation failure.
 **Throws:** Error if resource is invalid
 
 ```javascript
-import { ensureValidCreateResource } from "@data-prism/core";
+import { ensureValidCreateResource } from "@spectragraph/core";
 
 ensureValidCreateResource(schema, newResource); // Throws if invalid
 ```
@@ -895,7 +895,7 @@ import {
 	createEmptyGraph,
 	queryGraph,
 	normalizeResource,
-} from "@data-prism/core";
+} from "@spectragraph/core";
 
 // 1. Define your schema
 const schema = {
@@ -1002,7 +1002,7 @@ const results = queryGraph(
 import {
 	validateCreateResource,
 	ensureValidCreateResource,
-} from "@data-prism/core";
+} from "@spectragraph/core";
 
 const newTeam = {
 	type: "teams",
@@ -1029,7 +1029,7 @@ try {
 
 ## TypeScript Support
 
-Data Prism Core includes comprehensive TypeScript definitions. Import types as needed:
+SpectraGraph Core includes comprehensive TypeScript definitions. Import types as needed:
 
 ```typescript
 import type {
@@ -1038,7 +1038,7 @@ import type {
 	Query,
 	RootQuery,
 	NormalResource,
-} from "@data-prism/core";
+} from "@spectragraph/core";
 
 const schema: Schema = {
 	resources: {
@@ -1073,7 +1073,7 @@ import {
 	createValidator,
 	validateSchema,
 	ensureValidSchema,
-} from "@data-prism/core";
+} from "@spectragraph/core";
 
 const customValidator = createValidator({
 	ajvSchemas: [myCustomSchema],
@@ -1098,6 +1098,6 @@ For better performance with large datasets:
 
 ## Related Packages
 
-- `@data-prism/memory-store` - In-memory data store implementation
-- `@data-prism/postgres-store` - PostgreSQL backend
-- `@data-prism/jsonapi-store` - JSON:API client store
+- `@spectragraph/memory-store` - In-memory data store implementation
+- `@spectragraph/postgres-store` - PostgreSQL backend
+- `@spectragraph/jsonapi-store` - JSON:API client store

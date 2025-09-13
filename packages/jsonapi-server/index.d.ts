@@ -1,7 +1,7 @@
-// TypeScript definitions for @data-prism/jsonapi-server
+// TypeScript definitions for @spectragraph/jsonapi-server
 // Generated from JSDoc annotations
 
-import type { Schema, RootQuery } from "@data-prism/core";
+import type { Schema, RootQuery } from "@spectragraph/core";
 import type { Application, Request, Response } from "express";
 
 // === REQUEST/RESPONSE TYPES ===
@@ -56,11 +56,11 @@ export function createServer(schema: Schema, store: any, options?: Options): voi
 // === REQUEST/RESPONSE UTILITIES ===
 
 /**
- * Parses JSON:API request parameters into Data Prism query format
+ * Parses JSON:API request parameters into SpectraGraph query format
  */
 export function parseRequest(schema: Schema, params: any): RootQuery;
 
 /**
- * Formats Data Prism query results into JSON:API response format
+ * Formats SpectraGraph query results into JSON:API response format
  */
 export function formatResponse(schema: Schema, query: RootQuery, result: any): any;

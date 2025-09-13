@@ -1,7 +1,7 @@
-// TypeScript definitions for @data-prism/sql-helpers
+// TypeScript definitions for @spectragraph/sql-helpers
 // Generated from JSDoc annotations
 
-import type { Schema, RootQuery, Query, NormalResource, CreateResource, UpdateResource, Graph } from "@data-prism/core";
+import type { Schema, RootQuery, Query, NormalResource, CreateResource, UpdateResource, Graph } from "@spectragraph/core";
 
 // === SQL QUERY TYPES ===
 

@@ -24,10 +24,10 @@ const castFilterValue = (type, val) => {
 };
 
 /**
- * Parses JSON:API request parameters into a Data Prism query
- * @param {import("@data-prism/core").Schema} schema - The schema defining resources
+ * Parses JSON:API request parameters into a SpectraGraph query
+ * @param {import("@spectragraph/core").Schema} schema - The schema defining resources
  * @param {*} params - Request parameters from Express
- * @returns {import("@data-prism/core").RootQuery} Parsed query object
+ * @returns {import("@spectragraph/core").RootQuery} Parsed query object
  */
 export function parseRequest(schema, params) {
 	const parsedInclude = params.include?.split(",") ?? [];

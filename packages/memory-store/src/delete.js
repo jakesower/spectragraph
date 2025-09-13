@@ -8,9 +8,9 @@ import { setInversesOnRelationship } from "./lib/store-helpers.js";
  *
  * WARNING: MUTATES storeGraph
  *
- * @param {import('@data-prism/core').DeleteResource} resource - The resource to delete
+ * @param {import('@spectragraph/core').DeleteResource} resource - The resource to delete
  * @param {import('./memory-store.js').MemoryStoreContext} context - Context object containing schema and storeGraph
- * @returns {import('@data-prism/core').DeleteResource} The deleted resource
+ * @returns {import('@spectragraph/core').DeleteResource} The deleted resource
  */
 export function deleteAction(resource, context) {
 	const { schema, storeGraph } = context;

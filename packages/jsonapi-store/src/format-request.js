@@ -1,5 +1,5 @@
-import { normalizeQuery } from "@data-prism/core";
-import { forEachQuery } from "@data-prism/query-helpers";
+import { normalizeQuery } from "@spectragraph/core";
+import { forEachQuery } from "@spectragraph/query-helpers";
 import { uniq } from "es-toolkit";
 import { processFilter } from "./lib/where-expressions.js";
 
@@ -19,10 +19,10 @@ const objectToParamStr = (obj, rootKey) => {
 };
 
 /**
- * Formats a Data Prism query into a JSON:API request URL
- * @param {import("@data-prism/core").Schema} schema - Data Prism schema
+ * Formats a SpectraGraph query into a JSON:API request URL
+ * @param {import("@spectragraph/core").Schema} schema - SpectraGraph schema
  * @param {Object} config - Store configuration with baseURL
- * @param {import("@data-prism/core").RootQuery} query - Query to format
+ * @param {import("@spectragraph/core").RootQuery} query - Query to format
  * @returns {string} Complete request URL with query parameters
  */
 export function formatRequest(schema, config, query) {

@@ -2,7 +2,7 @@ import { pickBy, snakeCase } from "es-toolkit";
 
 /**
  * @typedef {Object} RelationshipContext
- * @property {import('data-prism').Schema} schema - The schema
+ * @property {import('spectragraph').Schema} schema - The schema
  * @property {Object} config - Store configuration
  * @property {string} resourceType - The resource type
  * @property {string} resourceId - The resource ID

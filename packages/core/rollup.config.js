@@ -10,7 +10,7 @@ export default [
 		plugins: [nodeResolve(), commonjs(), json()],
 		external: [
 			"es-toolkit",
-			"@data-prism/utils",
+			"@spectragraph/utils",
 			"ajv",
 			"ajv-formats",
 			"uuid",
@@ -23,7 +23,7 @@ export default [
 		plugins: [nodeResolve(), commonjs(), json()],
 		external: [
 			"es-toolkit",
-			"@data-prism/utils",
+			"@spectragraph/utils",
 			"ajv",
 			"ajv-formats",
 			"uuid",

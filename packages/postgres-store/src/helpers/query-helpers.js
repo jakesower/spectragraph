@@ -4,7 +4,7 @@ export {
 	flatMapQuery,
 	forEachQuery,
 	someQuery,
-} from "@data-prism/query-helpers";
+} from "@spectragraph/query-helpers";
 
 /**
  * Replaces ? placeholders with PostgreSQL $n placeholders

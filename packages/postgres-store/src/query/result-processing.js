@@ -1,12 +1,12 @@
 import { omit } from "es-toolkit";
-import { normalizeQuery, queryGraph } from "@data-prism/core";
+import { normalizeQuery, queryGraph } from "@spectragraph/core";
 import { extractGraph } from "../extract-graph.js";
 
 /**
  * Processes raw SQL results into final query response
  * @param {any[][]} rawResults - Raw SQL query results
  * @param {Object} composedClauses - Composed SQL clauses
- * @param {import('data-prism').RootQuery} query - Original query
+ * @param {import('spectragraph').RootQuery} query - Original query
  * @param {Object} context - Query context with schema and config
  * @returns {any} Final query results
  */

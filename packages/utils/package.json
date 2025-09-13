@@ -1,5 +1,5 @@
 {
-	"name": "@data-prism/utils",
+	"name": "@spectragraph/utils",
 	"version": "0.0.7",
 	"type": "module",
 	"main": "./dist/index.cjs.js",

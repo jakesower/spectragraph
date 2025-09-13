@@ -1,7 +1,7 @@
-// TypeScript definitions for @data-prism/sqlite-store
+// TypeScript definitions for @spectragraph/sqlite-store
 // Generated from JSDoc annotations
 
-import type { Schema, RootQuery } from "@data-prism/core";
+import type { Schema, RootQuery } from "@spectragraph/core";
 
 /**
  * Store configuration for SQLite

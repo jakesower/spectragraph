@@ -1,4 +1,4 @@
-import { applyOrMap, promiseObjectAll } from "@data-prism/utils";
+import { applyOrMap, promiseObjectAll } from "@spectragraph/utils";
 import { create } from "./create.js";
 import { update } from "./update.js";
 import { mapValues } from "es-toolkit";

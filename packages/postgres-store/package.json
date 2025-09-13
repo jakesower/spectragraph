@@ -1,5 +1,5 @@
 {
-	"name": "@data-prism/postgres-store",
+	"name": "@spectragraph/postgres-store",
 	"version": "0.0.24",
 	"type": "module",
 	"main": "./dist/postgres-store.cjs.js",
@@ -26,7 +26,7 @@
 	"keywords": [],
 	"author": "Jake Sower",
 	"devDependencies": {
-		"@data-prism/interface-tests": "*",
+		"@spectragraph/interface-tests": "*",
 		"@rollup/plugin-commonjs": "^28.0.1",
 		"@rollup/plugin-json": "^6.1.0",
 		"@rollup/plugin-node-resolve": "^16.0.0",
@@ -39,10 +39,10 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@data-prism/core": "*",
-		"@data-prism/query-helpers": "*",
-		"@data-prism/sql-helpers": "*",
-		"@data-prism/utils": "*",
+		"@spectragraph/core": "*",
+		"@spectragraph/query-helpers": "*",
+		"@spectragraph/sql-helpers": "*",
+		"@spectragraph/utils": "*",
 		"ajv": "^8.17.1",
 		"es-toolkit": "^1.26.0",
 		"json-expressions": "^0.2.1",

@@ -26,7 +26,7 @@ import { last, snakeCase } from "es-toolkit";
 
 /**
  * Creates relationship builders for different cardinality combinations
- * @param {import('@data-prism/core').Schema} schema - The schema
+ * @param {import('@spectragraph/core').Schema} schema - The schema
  * @returns {RelBuilders} The relationship builders
  */
 export function makeRelationshipBuilders(schema) {
@@ -142,8 +142,8 @@ export function makeRelationshipBuilders(schema) {
  * @typedef {Object} QueryContext
  * @property {any} config - Database configuration
  * @property {any} queryInfo - Query information
- * @property {import('@data-prism/core').RootQuery} rootQuery - Root query
- * @property {import('@data-prism/core').Schema} schema - Schema
+ * @property {import('@spectragraph/core').RootQuery} rootQuery - Root query
+ * @property {import('@spectragraph/core').Schema} schema - Schema
  */
 
 /**

@@ -9,7 +9,7 @@ import {
 	defaultValidator,
 	defaultSelectEngine,
 	defaultWhereEngine,
-} from "@data-prism/core";
+} from "@spectragraph/core";
 import { loadQueryGraph } from "./load-query-graph.js";
 import { createCache } from "./cache.js";
 import { standardHandler } from "./standard-handler.js";

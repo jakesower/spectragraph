@@ -1,7 +1,7 @@
-// TypeScript definitions for @data-prism/query-helpers
+// TypeScript definitions for @spectragraph/query-helpers
 // Generated from JSDoc annotations
 
-import type { Schema, RootQuery, Query, NormalQuery, Graph } from "@data-prism/core";
+import type { Schema, RootQuery, Query, NormalQuery, Graph } from "@spectragraph/core";
 
 // === QUERY BREAKDOWN TYPES ===
 
@@ -128,7 +128,7 @@ export function someQuery(
 // === QUERY FORMATTER TYPES ===
 
 /**
- * Structured query parameters extracted from a Data Prism query
+ * Structured query parameters extracted from a SpectraGraph query
  */
 export interface QueryParameters {
 	/** Fields to select by resource type */
@@ -169,7 +169,7 @@ export interface ParameterFormatter {
 // === QUERY FORMATTER FUNCTIONS ===
 
 /**
- * Extracts structured parameters from a Data Prism query
+ * Extracts structured parameters from a SpectraGraph query
  * @param schema - The schema defining relationships
  * @param query - The query to analyze
  * @returns Structured query parameters

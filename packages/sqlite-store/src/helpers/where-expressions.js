@@ -1,7 +1,7 @@
 import { createExpressionEngine } from "json-expressions";
-import { ExpressionNotSupportedError } from "@data-prism/core";
+import { ExpressionNotSupportedError } from "@spectragraph/core";
 import { mapValues } from "es-toolkit";
-import { DEFAULT_WHERE_EXPRESSIONS } from "@data-prism/sql-helpers";
+import { DEFAULT_WHERE_EXPRESSIONS } from "@spectragraph/sql-helpers";
 
 // Per-database cache for regex support detection
 const regexSupportCache = new WeakMap();

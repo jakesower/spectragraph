@@ -206,10 +206,10 @@ export function validateQuery(schema, rootQuery, options = {}) {
 		];
 	}
 	if (selectEngine && typeof selectEngine !== "object") {
-		return [{ message: "[data-prism] selectEngine must be an object" }];
+		return [{ message: "[spectragraph] selectEngine must be an object" }];
 	}
 	if (whereEngine && typeof whereEngine !== "object") {
-		return [{ message: "[data-prism] whereEngine must be an object" }];
+		return [{ message: "[spectragraph] whereEngine must be an object" }];
 	}
 	if (!rootQuery.type) {
 		return [{ message: "Missing query type: required for validation" }];

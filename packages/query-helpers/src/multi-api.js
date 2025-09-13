@@ -1,11 +1,11 @@
-import { createGraphFromResources, mergeGraphsDeep } from "@data-prism/core";
+import { createGraphFromResources, mergeGraphsDeep } from "@spectragraph/core";
 
 /**
  * Core query traversal engine with callback pattern - reusable across store types
  *
- * @param {import('@data-prism/core').Schema} schema
- * @param {import('@data-prism/core').NormalQuery} rootQuery
- * @param {(query: import('@data-prism/core').Query, context: Object) => Promise<any>} executor
+ * @param {import('@spectragraph/core').Schema} schema
+ * @param {import('@spectragraph/core').NormalQuery} rootQuery
+ * @param {(query: import('@spectragraph/core').Query, context: Object) => Promise<any>} executor
  * @param {Object} [initialContext={}] - Initial context passed to executor
  * @returns {Promise<any>} Result from executing the query tree
  */
@@ -41,7 +41,7 @@ export async function collectQueryResults(
 
 /**
  * @typedef {Object} APIHandler
- * @property {(query: import('@data-prism/core').Query, context: Object) => Promise<any>} get
+ * @property {(query: import('@spectragraph/core').Query, context: Object) => Promise<any>} get
  * @property {(resource: Object, context: Object) => Promise<any>} [create]
  * @property {(resource: Object, context: Object) => Promise<any>} [update]
  * @property {(resource: Object, context: Object) => Promise<any>} [delete]
@@ -53,8 +53,8 @@ export async function collectQueryResults(
 
 /**
  * @typedef {Object} SpecialHandler
- * @property {(query: import('@data-prism/core').Query, context: Object) => boolean} test
- * @property {(query: import('@data-prism/core').Query, context: Object) => Promise<any>} handler
+ * @property {(query: import('@spectragraph/core').Query, context: Object) => boolean} test
+ * @property {(query: import('@spectragraph/core').Query, context: Object) => Promise<any>} handler
  */
 
 /**
@@ -66,11 +66,11 @@ export async function collectQueryResults(
 
 /**
  * Replaces the entire loadQueryData pattern - handles traversal, API coordination, and graph building
- * @param {import('@data-prism/core').Schema} schema
- * @param {import('@data-prism/core').NormalQuery} normalizedQuery
+ * @param {import('@spectragraph/core').Schema} schema
+ * @param {import('@spectragraph/core').NormalQuery} normalizedQuery
  * @param {APIRegistry} apiRegistry - Maps resource types to API handlers
  * @param {QueryExecutionOptions} options - Context, caching, special handlers
- * @returns {Promise<import('@data-prism/core').Graph>}
+ * @returns {Promise<import('@spectragraph/core').Graph>}
  */
 export async function executeQueryWithAPIs(
 	schema,

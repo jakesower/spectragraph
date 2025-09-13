@@ -1,4 +1,4 @@
-// TypeScript definitions for @data-prism/memory-store
+// TypeScript definitions for @spectragraph/memory-store
 // Generated from JSDoc annotations
 
 import type { 
@@ -12,7 +12,7 @@ import type {
   QueryResult,
   SelectExpressionEngine,
   WhereExpressionEngine
-} from "@data-prism/core";
+} from "@spectragraph/core";
 
 export interface NormalResourceTree {
   type: string;
@@ -23,7 +23,7 @@ export interface NormalResourceTree {
   };
 }
 
-import type { Graph } from "@data-prism/core";
+import type { Graph } from "@spectragraph/core";
 import type { Ajv } from "ajv";
 
 export interface MemoryStoreConfig {

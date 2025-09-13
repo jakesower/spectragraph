@@ -1,4 +1,4 @@
-// TypeScript definitions for @data-prism/multi-api-store
+// TypeScript definitions for @spectragraph/multi-api-store
 // Generated from JSDoc annotations
 
 import type { 
@@ -7,7 +7,7 @@ import type {
   QueryResult,
   SelectExpressionEngine,
   WhereExpressionEngine
-} from "@data-prism/core";
+} from "@spectragraph/core";
 
 export interface ApiResourceConfig {
   get(query?: { [key: string]: unknown }, context?: { [key: string]: unknown }): Promise<{ [key: string]: unknown }[]>;
@@ -37,7 +37,7 @@ export interface MultiApiStoreConfig {
 }
 
 /**
- * Multi-API store that aggregates data from multiple API endpoints into a unified Data Prism interface.
+ * Multi-API store that aggregates data from multiple API endpoints into a unified SpectraGraph interface.
  * Supports both read and write operations when configured with appropriate API handlers.
  */
 export interface MultiApiStore {

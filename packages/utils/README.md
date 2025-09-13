@@ -1,10 +1,10 @@
-# Data Prism Utils
+# SpectraGraph Utils
 
-Common utility functions used across the Data Prism ecosystem. This package provides lightweight helper functions for functional programming patterns, data transformation, and common operations that are shared between Data Prism packages.
+Common utility functions used across the SpectraGraph ecosystem. This package provides lightweight helper functions for functional programming patterns, data transformation, and common operations that are shared between SpectraGraph packages.
 
 ## Overview
 
-Data Prism Utils is built around several key principles:
+SpectraGraph Utils is built around several key principles:
 
 - **Functional**: Pure functions with predictable behavior and no side effects
 - **Type-safe**: Comprehensive TypeScript support with generic type definitions
@@ -14,7 +14,7 @@ Data Prism Utils is built around several key principles:
 ## Installation
 
 ```bash
-npm install @data-prism/utils
+npm install @spectragraph/utils
 ```
 
 ## Core Concepts
@@ -41,7 +41,7 @@ Applies a function to an item or maps it over an array of items. Handles null an
 **Returns:** Result of applying fn to the item(s), or null/undefined if input was null/undefined
 
 ```javascript
-import { applyOrMap } from "@data-prism/utils";
+import { applyOrMap } from "@spectragraph/utils";
 
 // Single item
 applyOrMap(5, x => x * 2);           // Returns: 10
@@ -66,7 +66,7 @@ Applies an async function to an item or maps it over an array of items. Handles 
 **Returns:** Promise resolving to the result of applying asyncFn to the item(s), or null/undefined if input was null/undefined
 
 ```javascript
-import { applyOrMapAsync } from "@data-prism/utils";
+import { applyOrMapAsync } from "@spectragraph/utils";
 
 // Single item
 await applyOrMapAsync(5, async x => x * 2);           // Returns: 10
@@ -91,7 +91,7 @@ Pipes a value through a series of functions in sequence. Each function receives 
 **Returns:** The result after applying all functions in sequence
 
 ```javascript
-import { pipeThru } from "@data-prism/utils";
+import { pipeThru } from "@spectragraph/utils";
 
 const add5 = x => x + 5;
 const multiply2 = x => x * 2;
@@ -105,7 +105,7 @@ pipeThru(10, [add5, multiply2, toString]); // Returns: "30"
 ### Data Transformation
 
 ```javascript
-import { applyOrMap, pipeThru } from "@data-prism/utils";
+import { applyOrMap, pipeThru } from "@spectragraph/utils";
 
 // Transform data that might be a single item or array
 const data = [{ name: "John" }, { name: "Jane" }];
@@ -127,7 +127,7 @@ console.log(result);
 ### Async Data Processing
 
 ```javascript
-import { applyOrMapAsync } from "@data-prism/utils";
+import { applyOrMapAsync } from "@spectragraph/utils";
 
 async function fetchUserDetails(userId) {
   const response = await fetch(`/api/users/${userId}`);
@@ -145,7 +145,7 @@ const singleUser = await applyOrMapAsync("user-1", fetchUserDetails);
 ### Pipeline Processing
 
 ```javascript
-import { pipeThru } from "@data-prism/utils";
+import { pipeThru } from "@spectragraph/utils";
 
 // Define transformation steps
 const parseJson = str => JSON.parse(str);
@@ -169,7 +169,7 @@ console.log(result); // [{ name: "Bob", active: true }]
 ### Null-Safe Operations
 
 ```javascript
-import { applyOrMap } from "@data-prism/utils";
+import { applyOrMap } from "@spectragraph/utils";
 
 // Safely handle potentially null/undefined data
 function processUserData(userData) {
@@ -185,12 +185,12 @@ processUserData(user);        // Returns: processed user
 processUserData([user1, user2]); // Returns: [processed user1, processed user2]
 ```
 
-### Resource Processing in Data Prism
+### Resource Processing in SpectraGraph
 
 ```javascript
-import { applyOrMap, pipeThru } from "@data-prism/utils";
+import { applyOrMap, pipeThru } from "@spectragraph/utils";
 
-// Common pattern in Data Prism packages
+// Common pattern in SpectraGraph packages
 function normalizeResources(resources) {
   const addType = resource => ({ ...resource, type: resource.type || "unknown" });
   const addId = resource => ({ ...resource, id: resource.id || generateId() });
@@ -217,10 +217,10 @@ const normalizedMultiple = normalizeResources(multipleResources);
 
 ## TypeScript Support
 
-Data Prism Utils includes comprehensive TypeScript definitions:
+SpectraGraph Utils includes comprehensive TypeScript definitions:
 
 ```typescript
-import { applyOrMap, applyOrMapAsync, pipeThru } from "@data-prism/utils";
+import { applyOrMap, applyOrMapAsync, pipeThru } from "@spectragraph/utils";
 
 // Type-safe transformations
 const numbers: number[] = [1, 2, 3];
@@ -272,6 +272,6 @@ const step3 = transform3(step2);
 
 ## Related Packages
 
-- `@data-prism/core` - Uses utils for resource and query processing
-- `@data-prism/memory-store` - Uses utils for data transformations
-- `@data-prism/postgres-store` - Uses utils for SQL query building
+- `@spectragraph/core` - Uses utils for resource and query processing
+- `@spectragraph/memory-store` - Uses utils for data transformations
+- `@spectragraph/postgres-store` - Uses utils for SQL query building

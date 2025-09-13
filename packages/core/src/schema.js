@@ -1,7 +1,7 @@
 import { mapValues, merge } from "es-toolkit";
 import { defaultValidator } from "./lib/defaults.js";
 import { createDeepCache, translateAjvErrors } from "./lib/helpers.js";
-import metaschema from "./fixtures/data-prism-schema.schema.json" with { type: "json" };
+import metaschema from "./fixtures/spectragraph-schema.schema.json" with { type: "json" };
 
 /**
  * @typedef {"object"|"array"|"boolean"|"string"|"number"|"integer"|"null"} JSONSchemaType

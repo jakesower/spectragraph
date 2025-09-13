@@ -1,6 +1,6 @@
 # Expression Reference Guide
 
-Data Prism expressions provide powerful data transformation, computation, and aggregation capabilities within queries. Expressions are JSON objects that start with `$` and can be used in `select` fields, `where` clauses, and `order` specifications.
+SpectraGraph expressions provide powerful data transformation, computation, and aggregation capabilities within queries. Expressions are JSON objects that start with `$` and can be used in `select` fields, `where` clauses, and `order` specifications.
 
 ## Table of Contents
 
@@ -38,7 +38,7 @@ Expressions evaluate within the context of the current resource:
 
 ## Expression Engines
 
-Data Prism uses expression engines to evaluate expressions in different contexts. Each engine supports a specific set of expressions optimized for their use case.
+SpectraGraph uses expression engines to evaluate expressions in different contexts. Each engine supports a specific set of expressions optimized for their use case.
 
 ### defaultSelectEngine
 
@@ -81,7 +81,7 @@ const store = createMemoryStore(schema, {
 
 ## JSON Expressions Library
 
-Data Prism expressions are powered by the [json-expressions](https://github.com/jakesower/json-expressions) library. This library provides a comprehensive set of expressions organized into packs:
+SpectraGraph expressions are powered by the [json-expressions](https://github.com/jakesower/json-expressions) library. This library provides a comprehensive set of expressions organized into packs:
 
 ### Expression Packs Used
 
@@ -102,7 +102,7 @@ const customSelectEngine = createExpressionEngine({
 });
 ```
 
-Data Prism provides widely applicable expressions by default. Exploring the various packs can bring powerful functionality geared toward your particular application.
+SpectraGraph provides widely applicable expressions by default. Exploring the various packs can bring powerful functionality geared toward your particular application.
 
 For detailed documentation on individual expressions, see the [json-expressions documentation](https://github.com/jakesower/json-expressions).
 

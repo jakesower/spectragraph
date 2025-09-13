@@ -1,19 +1,19 @@
-# Data Prism JSON:API Server
+# SpectraGraph JSON:API Server
 
-A JSON:API compliant server implementation for Data Prism schemas. Provides Express.js middleware and handlers for creating RESTful APIs that follow the JSON:API specification.
+A JSON:API compliant server implementation for SpectraGraph schemas. Provides Express.js middleware and handlers for creating RESTful APIs that follow the JSON:API specification.
 
 ## Installation
 
 ```bash
-npm install @data-prism/jsonapi-server
+npm install @spectragraph/jsonapi-server
 ```
 
 ## Quick Start
 
 ```javascript
 import express from "express";
-import { createServer } from "@data-prism/jsonapi-server";
-import { MemoryStore } from "@data-prism/memory-store";
+import { createServer } from "@spectragraph/jsonapi-server";
+import { MemoryStore } from "@spectragraph/memory-store";
 
 const schema = {
 	resources: {
@@ -61,7 +61,7 @@ app.listen(3000);
 Creates a complete Express server with JSON:API endpoints for all resources in the schema.
 
 **Parameters:**
-- `schema` (Schema) - Data Prism schema defining your resources
+- `schema` (Schema) - SpectraGraph schema defining your resources
 - `store` (*) - Data store instance (e.g., MemoryStore, PostgresStore)
 - `options` (Options, optional) - Server configuration
   - `options.port` (number, optional) - Port number (defaults to 3000)
@@ -74,7 +74,7 @@ Creates a complete Express server with JSON:API endpoints for all resources in t
 - `DELETE /:type/:id` - Delete resource
 
 ```javascript
-import { createServer } from "@data-prism/jsonapi-server";
+import { createServer } from "@spectragraph/jsonapi-server";
 
 createServer(schema, store, { port: 8080 });
 ```
@@ -84,13 +84,13 @@ createServer(schema, store, { port: 8080 });
 Applies JSON:API routes to an existing Express application.
 
 **Parameters:**
-- `schema` (Schema) - Data Prism schema defining your resources
+- `schema` (Schema) - SpectraGraph schema defining your resources
 - `store` (*) - Data store instance
 - `app` (*) - Express application instance
 
 ```javascript
 import express from "express";
-import { applySchemaRoutes } from "@data-prism/jsonapi-server";
+import { applySchemaRoutes } from "@spectragraph/jsonapi-server";
 
 const app = express();
 app.use(express.json());
@@ -109,7 +109,7 @@ app.listen(3000);
 Creates individual request handlers that can be attached to custom routes.
 
 **Parameters:**
-- `schema` (Schema) - Data Prism schema defining your resources
+- `schema` (Schema) - SpectraGraph schema defining your resources
 - `store` (*) - Data store instance
 
 **Returns:** Object with handler functions:
@@ -120,7 +120,7 @@ Creates individual request handlers that can be attached to custom routes.
 - `deleteHandler(type)` - Returns handler for deleting resources
 
 ```javascript
-import { createJSONAPIHandlers } from "@data-prism/jsonapi-server";
+import { createJSONAPIHandlers } from "@spectragraph/jsonapi-server";
 
 const handlers = createJSONAPIHandlers(schema, store);
 
@@ -135,16 +135,16 @@ app.delete("/posts/:id", handlers.deleteHandler("posts"));
 
 #### `parseRequest(schema, params)`
 
-Parses JSON:API request parameters into Data Prism query format.
+Parses JSON:API request parameters into SpectraGraph query format.
 
 **Parameters:**
-- `schema` (Schema) - Data Prism schema
+- `schema` (Schema) - SpectraGraph schema
 - `params` (*) - Express request parameters (query, params, etc.)
 
-**Returns:** Data Prism query object
+**Returns:** SpectraGraph query object
 
 ```javascript
-import { parseRequest } from "@data-prism/jsonapi-server";
+import { parseRequest } from "@spectragraph/jsonapi-server";
 
 const query = parseRequest(schema, {
 	type: "posts",
@@ -159,17 +159,17 @@ const query = parseRequest(schema, {
 
 #### `formatResponse(schema, query, result)`
 
-Formats Data Prism query results into JSON:API response format.
+Formats SpectraGraph query results into JSON:API response format.
 
 **Parameters:**
-- `schema` (Schema) - Data Prism schema
+- `schema` (Schema) - SpectraGraph schema
 - `query` (RootQuery) - The original query
 - `result` (*) - Query results from store
 
 **Returns:** JSON:API formatted response object
 
 ```javascript
-import { formatResponse } from "@data-prism/jsonapi-server";
+import { formatResponse } from "@spectragraph/jsonapi-server";
 
 const results = await store.query(query);
 const response = formatResponse(schema, query, results);
@@ -273,23 +273,23 @@ GET /posts?include=author&fields[posts]=title&fields[users]=name
 }
 ```
 
-## Integration with Data Prism Stores
+## Integration with SpectraGraph Stores
 
-This server works with any Data Prism store implementation:
+This server works with any SpectraGraph store implementation:
 
 ```javascript
 // With Memory Store
-import { MemoryStore } from "@data-prism/memory-store";
+import { MemoryStore } from "@spectragraph/memory-store";
 const memoryStore = new MemoryStore(schema);
 createServer(schema, memoryStore);
 
 // With PostgreSQL Store  
-import { PostgresStore } from "@data-prism/postgres-store";
+import { PostgresStore } from "@spectragraph/postgres-store";
 const pgStore = new PostgresStore(schema, { connectionString: "..." });
 createServer(schema, pgStore);
 
 // With JSON:API Store (proxy to another JSON:API server)
-import { JSONAPIStore } from "@data-prism/jsonapi-store";
+import { JSONAPIStore } from "@spectragraph/jsonapi-store";
 const jsonApiStore = new JSONAPIStore(schema, { baseURL: "https://api.example.com" });
 createServer(schema, jsonApiStore);
 ```
@@ -323,7 +323,7 @@ Errors are returned in JSON:API error format:
 
 ```javascript
 import express from "express";
-import { applySchemaRoutes } from "@data-prism/jsonapi-server";
+import { applySchemaRoutes } from "@spectragraph/jsonapi-server";
 
 const app = express();
 app.use(express.json());
@@ -342,7 +342,7 @@ app.listen(3000);
 ### Custom Error Handling
 
 ```javascript
-import { createJSONAPIHandlers } from "@data-prism/jsonapi-server";
+import { createJSONAPIHandlers } from "@spectragraph/jsonapi-server";
 
 const handlers = createJSONAPIHandlers(schema, store);
 
@@ -367,7 +367,7 @@ app.get("/posts", wrappedHandler(handlers.getAllHandler("posts")));
 
 ## Related Packages
 
-- `@data-prism/core` - Core Data Prism functionality
-- `@data-prism/memory-store` - In-memory store implementation
-- `@data-prism/postgres-store` - PostgreSQL store implementation
-- `@data-prism/jsonapi-store` - JSON:API client store
+- `@spectragraph/core` - Core SpectraGraph functionality
+- `@spectragraph/memory-store` - In-memory store implementation
+- `@spectragraph/postgres-store` - PostgreSQL store implementation
+- `@spectragraph/jsonapi-store` - JSON:API client store

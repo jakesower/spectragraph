@@ -1,12 +1,12 @@
-import { queryGraph } from "@data-prism/core";
+import { queryGraph } from "@spectragraph/core";
 import { mapValues } from "es-toolkit";
 
 /**
- * Parses a JSON:API response into Data Prism query results
- * @param {import("@data-prism/core").Schema} schema - Data Prism schema
- * @param {import("@data-prism/core").RootQuery} query - Original query
+ * Parses a JSON:API response into SpectraGraph query results
+ * @param {import("@spectragraph/core").Schema} schema - SpectraGraph schema
+ * @param {import("@spectragraph/core").RootQuery} query - Original query
  * @param {Object} response - JSON:API response object
- * @returns {*} Query results in Data Prism format
+ * @returns {*} Query results in SpectraGraph format
  */
 export function parseResponse(schema, query, response) {
 	if (response.data === null) return null;

@@ -1,5 +1,5 @@
 {
-	"name": "@data-prism/query-helpers",
+	"name": "@spectragraph/query-helpers",
 	"version": "0.1.0",
 	"type": "module",
 	"main": "./dist/index.cjs.js",
@@ -45,7 +45,7 @@
 	],
 	"sideEffects": false,
 	"dependencies": {
-		"@data-prism/utils": "*",
+		"@spectragraph/utils": "*",
 		"es-toolkit": "^1.26.0",
 		"json-expressions": "^0.2.1"
 	}

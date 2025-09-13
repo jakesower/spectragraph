@@ -1,4 +1,4 @@
-import { ExpressionNotSupportedError } from "@data-prism/core";
+import { ExpressionNotSupportedError } from "@spectragraph/core";
 import { snakeCase } from "es-toolkit";
 
 export const DEFAULT_WHERE_EXPRESSIONS = {

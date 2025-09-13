@@ -6,9 +6,9 @@ import { partition, pick } from "es-toolkit";
  * @property {any} attributes - Selected attributes
  * @property {any} relationships - Selected relationships
  * @property {string} type - Resource type
- * @property {import('@data-prism/core').Query} query - The query object
+ * @property {import('@spectragraph/core').Query} query - The query object
  * @property {QueryBreakdownItem|null} parent - Parent breakdown item if any
- * @property {import('@data-prism/core').Query|null} parentQuery - Parent query if any
+ * @property {import('@spectragraph/core').Query|null} parentQuery - Parent query if any
  * @property {string|null} parentRelationship - Parent relationship name if any
  */
 
@@ -18,8 +18,8 @@ import { partition, pick } from "es-toolkit";
 
 /**
  * Flattens a nested query into a linear array of query breakdown items
- * @param {import('@data-prism/core').Schema} schema - The schema
- * @param {import('@data-prism/core').RootQuery} rootQuery - The root query to flatten
+ * @param {import('@spectragraph/core').Schema} schema - The schema
+ * @param {import('@spectragraph/core').RootQuery} rootQuery - The root query to flatten
  * @returns {QueryBreakdown} Flattened query breakdown
  */
 export function flattenQuery(schema, rootQuery) {
@@ -63,9 +63,9 @@ export function flattenQuery(schema, rootQuery) {
 
 /**
  * Maps over each query in a flattened query structure
- * @param {import('@data-prism/core').Schema} schema - The schema
- * @param {import('@data-prism/core').RootQuery} query - The root query
- * @param {(query: import('@data-prism/core').Query, info: QueryBreakdownItem) => any} fn - Mapping function
+ * @param {import('@spectragraph/core').Schema} schema - The schema
+ * @param {import('@spectragraph/core').RootQuery} query - The root query
+ * @param {(query: import('@spectragraph/core').Query, info: QueryBreakdownItem) => any} fn - Mapping function
  * @returns {any[]} Mapped results
  */
 export function flatMapQuery(schema, query, fn) {
@@ -74,9 +74,9 @@ export function flatMapQuery(schema, query, fn) {
 
 /**
  * Iterates over each query in a flattened query structure
- * @param {import('@data-prism/core').Schema} schema - The schema
- * @param {import('@data-prism/core').RootQuery} query - The root query
- * @param {(query: import('@data-prism/core').Query, info: QueryBreakdownItem) => void} fn - Iteration function
+ * @param {import('@spectragraph/core').Schema} schema - The schema
+ * @param {import('@spectragraph/core').RootQuery} query - The root query
+ * @param {(query: import('@spectragraph/core').Query, info: QueryBreakdownItem) => void} fn - Iteration function
  */
 export function forEachQuery(schema, query, fn) {
 	return flattenQuery(schema, query).forEach((info) => fn(info.query, info));
@@ -84,9 +84,9 @@ export function forEachQuery(schema, query, fn) {
 
 /**
  * Tests whether some query in a flattened query structure matches a condition
- * @param {import('@data-prism/core').Schema} schema - The schema
- * @param {import('@data-prism/core').RootQuery} query - The root query
- * @param {(query: import('@data-prism/core').Query, info: QueryBreakdownItem) => boolean} fn - Test function
+ * @param {import('@spectragraph/core').Schema} schema - The schema
+ * @param {import('@spectragraph/core').RootQuery} query - The root query
+ * @param {(query: import('@spectragraph/core').Query, info: QueryBreakdownItem) => boolean} fn - Test function
  * @returns {boolean} Whether any query matches the condition
  */
 export function someQuery(schema, query, fn) {

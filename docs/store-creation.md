@@ -1,6 +1,6 @@
 # Store Creation Guide
 
-This guide walks you through creating custom Data Prism stores. By implementing the store interface, you can make any data source queryable with Data Prism's unified query language.
+This guide walks you through creating custom SpectraGraph stores. By implementing the store interface, you can make any data source queryable with SpectraGraph's unified query language.
 
 ## Table of Contents
 
@@ -13,7 +13,7 @@ This guide walks you through creating custom Data Prism stores. By implementing 
 
 ## Store Interface
 
-All Data Prism stores must implement the following async methods:
+All SpectraGraph stores must implement the following async methods:
 
 ```javascript
 /**
@@ -28,7 +28,7 @@ All Data Prism stores must implement the following async methods:
 
 ## Core Toolkit
 
-Data Prism core provides essential utilities for store implementation:
+SpectraGraph core provides essential utilities for store implementation:
 
 ### Schema and Query Validation
 
@@ -40,7 +40,7 @@ import {
 	ensureValidCreateResource,
 	ensureValidUpdateResource,
 	ensureValidDeleteResource,
-} from "@data-prism/core";
+} from "@spectragraph/core";
 
 // Validate schema on store creation
 ensureValidSchema(schema, { validator });
@@ -70,7 +70,7 @@ import {
 	linkInverses,
 	mergeGraphsDeep,
 	queryGraph,
-} from "@data-prism/core";
+} from "@spectragraph/core";
 
 // Create empty graph structure from schema
 const emptyGraph = createEmptyGraph(schema);
@@ -97,11 +97,11 @@ import {
 	defaultValidator,
 	defaultSelectEngine,
 	defaultWhereEngine,
-} from "@data-prism/core";
+} from "@spectragraph/core";
 
 /**
  * Creates a custom store for [YOUR_DATA_SOURCE]
- * @param {import('@data-prism/core').Schema} schema - The data schema
+ * @param {import('@spectragraph/core').Schema} schema - The data schema
  * @param {Object} config - Store configuration options
  */
 export function createCustomStore(schema, config = {}) {
@@ -215,7 +215,7 @@ export function createAPIStore(schema, config) {
 			const normalizedQuery = normalizeQuery(schema, query);
 			ensureValidQuery(schema, normalizedQuery);
 
-			// Convert Data Prism query to API parameters
+			// Convert SpectraGraph query to API parameters
 			const apiParams = convertToAPIParams(normalizedQuery);
 
 			const response = await fetch(`${baseURL}/${query.type}`, {
@@ -270,7 +270,7 @@ export function createSQLStore(schema, connection, config) {
 			// Execute query
 			const rows = await connection.query(sql, params);
 
-			// Convert back to Data Prism format
+			// Convert back to SpectraGraph format
 			return convertRowsToResources(rows, schema, normalizedQuery);
 		},
 
@@ -309,7 +309,7 @@ export function createSQLStore(schema, connection, config) {
 Most stores can use the default expression engines:
 
 ```javascript
-import { defaultSelectEngine, defaultWhereEngine } from "@data-prism/core";
+import { defaultSelectEngine, defaultWhereEngine } from "@spectragraph/core";
 
 // Default engines handle most expressions in JavaScript
 const result = queryGraph(schema, query, graph, {
@@ -404,16 +404,16 @@ const customEngine = {
 };
 ```
 
-Note: `@data-prism/core` supports a `ExpressionNotSupportedError` error that should be used for expressions your store doesn't implement. This will be recognized and honored by the interface tests (described below).
+Note: `@spectragraph/core` supports a `ExpressionNotSupportedError` error that should be used for expressions your store doesn't implement. This will be recognized and honored by the interface tests (described below).
 
 ## Testing Your Store
 
 ### Use Interface Tests
 
-Data Prism provides standard interface tests for all stores:
+SpectraGraph provides standard interface tests for all stores:
 
 ```javascript
-import { runInterfaceTests } from "@data-prism/interface-tests";
+import { runInterfaceTests } from "@spectragraph/interface-tests";
 import { createMyStore } from "./my-store.js";
 
 describe("My Custom Store", () => {
@@ -438,7 +438,7 @@ describe("My Custom Store", () => {
 Use the standard test schema for consistency:
 
 ```javascript
-import { careBearSchema, careBearData } from "@data-prism/interface-tests";
+import { careBearSchema, careBearData } from "@spectragraph/interface-tests";
 
 // Test with standard data
 const store = createMyStore(careBearSchema);
@@ -486,7 +486,7 @@ describe("Custom Store Features", () => {
 
 ```json
 {
-	"name": "@my-org/data-prism-custom-store",
+	"name": "@my-org/spectragraph-custom-store",
 	"version": "1.0.0",
 	"type": "module",
 	"main": "./dist/index.cjs.js",
@@ -500,16 +500,16 @@ describe("Custom Store Features", () => {
 		}
 	},
 	"peerDependencies": {
-		"@data-prism/core": ">=0.1.0"
+		"@spectragraph/core": ">=0.1.0"
 	},
 	"dependencies": {
 		"my-data-source-client": "^2.0.0"
 	},
 	"devDependencies": {
-		"@data-prism/interface-tests": "*",
+		"@spectragraph/interface-tests": "*",
 		"vitest": "^3.0.0"
 	},
-	"keywords": ["data-prism", "data-store", "query-engine"]
+	"keywords": ["spectragraph", "data-store", "query-engine"]
 }
 ```
 
@@ -518,17 +518,17 @@ describe("Custom Store Features", () => {
 Include comprehensive documentation:
 
 ```markdown
-# @my-org/data-prism-custom-store
+# @my-org/spectragraph-custom-store
 
-Data Prism store for [YOUR_DATA_SOURCE].
+SpectraGraph store for [YOUR_DATA_SOURCE].
 
 ## Installation
 
-npm install @my-org/data-prism-custom-store
+npm install @my-org/spectragraph-custom-store
 
 ## Usage
 
-import { createCustomStore } from '@my-org/data-prism-custom-store';
+import { createCustomStore } from '@my-org/spectragraph-custom-store';
 
 const store = createCustomStore(schema, connection, {
 // Configuration options

@@ -1,6 +1,6 @@
 # Schema Definition Guide
 
-Schemas define the structure of your data, including resource types, attributes, and relationships. They serve as the foundation for query validation, data normalization, and store operations. Data Prism schemas are JSON serializable, enabling powerful integration with backends and other systems.
+Schemas define the structure of your data, including resource types, attributes, and relationships. They serve as the foundation for query validation, data normalization, and store operations. SpectraGraph schemas are JSON serializable, enabling powerful integration with backends and other systems.
 
 ## Table of Contents
 
@@ -14,7 +14,7 @@ Schemas define the structure of your data, including resource types, attributes,
 
 ## Basic Schema Structure
 
-A Data Prism schema is a JSON object that describes all resource types in your data model:
+A SpectraGraph schema is a JSON object that describes all resource types in your data model:
 
 ```javascript
 const schema = {
@@ -269,7 +269,7 @@ Resources can reference themselves:
 
 ## Schema Validation
 
-Data Prism validates schemas to catch errors early:
+SpectraGraph validates schemas to catch errors early:
 
 ### Common Validation Errors
 
@@ -337,7 +337,7 @@ Data Prism validates schemas to catch errors early:
 ### Schema Validation in Code
 
 ```javascript
-import { validateSchema } from "@data-prism/core";
+import { validateSchema } from "@spectragraph/core";
 
 const schema = {
 	resources: {

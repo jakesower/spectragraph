@@ -1,7 +1,7 @@
 import { createExpressionEngine } from "json-expressions";
 import { mapValues } from "es-toolkit";
-import { DEFAULT_WHERE_EXPRESSIONS } from "@data-prism/sql-helpers";
-import { ExpressionNotSupportedError } from "@data-prism/core";
+import { DEFAULT_WHERE_EXPRESSIONS } from "@spectragraph/sql-helpers";
+import { ExpressionNotSupportedError } from "@spectragraph/core";
 
 /**
  * @typedef {Object} JsonApiExpression

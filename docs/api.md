@@ -1,6 +1,6 @@
 # API Reference
 
-Complete reference for Data Prism core functions and store interfaces.
+Complete reference for SpectraGraph core functions and store interfaces.
 
 ## Table of Contents
 
@@ -15,7 +15,7 @@ Complete reference for Data Prism core functions and store interfaces.
 
 ## Store Interface
 
-All Data Prism stores implement this standard interface:
+All SpectraGraph stores implement this standard interface:
 
 ### store.query(query)
 
@@ -129,7 +129,7 @@ Validate a schema and throw error if invalid.
 **Example:**
 
 ```javascript
-import { ensureValidSchema } from "@data-prism/core";
+import { ensureValidSchema } from "@spectragraph/core";
 
 ensureValidSchema(schema, { validator });
 ```
@@ -387,7 +387,7 @@ Default expression engine for SELECT clauses.
 **Usage:**
 
 ```javascript
-import { defaultSelectEngine } from "@data-prism/core";
+import { defaultSelectEngine } from "@spectragraph/core";
 
 const result = queryGraph(schema, query, graph, {
 	selectEngine: defaultSelectEngine,
@@ -403,7 +403,7 @@ Default expression engine for WHERE clauses.
 **Usage:**
 
 ```javascript
-import { defaultWhereEngine } from "@data-prism/core";
+import { defaultWhereEngine } from "@spectragraph/core";
 
 const result = queryGraph(schema, query, graph, {
 	whereEngine: defaultWhereEngine,
@@ -421,7 +421,7 @@ Default expression engine for WHERE clauses.
 **Usage:**
 
 ```javascript
-import { defaultValidator } from "@data-prism/core";
+import { defaultValidator } from "@spectragraph/core";
 
 const result = validateCreateResource(schema, resource, {
 	validator: defaultValidator,
@@ -460,7 +460,7 @@ new ExpressionNotSupportedError(expression, storeName, reason?)
 **Usage in stores:**
 
 ```javascript
-import { ExpressionNotSupportedError } from "@data-prism/core";
+import { ExpressionNotSupportedError } from "@spectragraph/core";
 
 // In a custom expression engine
 const customWhereEngine = {
@@ -497,7 +497,7 @@ new StoreOperationNotSupportedError(operation, storeName, reason?)
 **Usage in stores:**
 
 ```javascript
-import { StoreOperationNotSupportedError } from "@data-prism/core";
+import { StoreOperationNotSupportedError } from "@spectragraph/core";
 
 export function createReadOnlyStore(schema, apiClient) {
 	return {
@@ -554,7 +554,7 @@ import {
   normalizeQuery,
   defaultSelectEngine,
   defaultWhereEngine
-} from "@data-prism/core";
+} from "@spectragraph/core";
 
 export function createAnalyticsStore(schema, apiClient, config = {}) {
   const {
@@ -572,13 +572,13 @@ export function createAnalyticsStore(schema, apiClient, config = {}) {
       });
       ensureValidQuery(schema, normalizedQuery, { selectEngine, whereEngine });
 
-      // Convert Data Prism query to analytics API format
+      // Convert SpectraGraph query to analytics API format
       const apiParams = convertToAnalyticsQuery(normalizedQuery);
 
       // Fetch from read-only analytics API
       const response = await apiClient.get('/analytics/query', { params: apiParams });
 
-      // Convert back to Data Prism format
+      // Convert back to SpectraGraph format
       return convertFromAnalyticsFormat(response.data);
     },
 
@@ -640,7 +640,7 @@ try {
 **Interface test compatibility:** When running interface tests on this store:
 
 ```javascript
-import { runInterfaceTests } from "@data-prism/interface-tests";
+import { runInterfaceTests } from "@spectragraph/interface-tests";
 import { createAnalyticsStore } from "./analytics-store.js";
 
 // Interface tests will automatically skip CUD operation tests
@@ -686,7 +686,7 @@ Skipping Upsert Operations: Store does not support upsert operations
 ```javascript
 /**
  * @typedef {Object} AttributeDefinition
- * @property {string} type - JSON Schema definition (often just a type, e.g. { "type": "string" }). Data Prism honors defaults set here.
+ * @property {string} type - JSON Schema definition (often just a type, e.g. { "type": "string" }). SpectraGraph honors defaults set here.
  * Additional JSON Schema properties allowed
  */
 ```

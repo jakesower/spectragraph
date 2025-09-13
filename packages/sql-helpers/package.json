@@ -1,5 +1,5 @@
 {
-	"name": "@data-prism/sql-helpers",
+	"name": "@spectragraph/sql-helpers",
 	"version": "0.0.1",
 	"type": "module",
 	"main": "./dist/index.cjs.js",
@@ -22,7 +22,7 @@
 		"test": "NODE_ENV=test vitest run --coverage",
 		"test:watch": "vitest"
 	},
-	"keywords": ["sql", "query", "helpers", "data-prism"],
+	"keywords": ["sql", "query", "helpers", "spectragraph"],
 	"author": "Jake Sower",
 	"devDependencies": {
 		"@rollup/plugin-commonjs": "^28.0.6",
@@ -43,9 +43,9 @@
 	],
 	"sideEffects": false,
 	"dependencies": {
-		"@data-prism/core": "*",
-		"@data-prism/query-helpers": "*",
-		"@data-prism/utils": "*",
+		"@spectragraph/core": "*",
+		"@spectragraph/query-helpers": "*",
+		"@spectragraph/utils": "*",
 		"es-toolkit": "^1.26.0",
 		"json-expressions": "^0.2.1"
 	}

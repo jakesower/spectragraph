@@ -1,20 +1,20 @@
-# Data Prism SQLite Store
+# SpectraGraph SQLite Store
 
-A SQLite backend store implementation for Data Prism that provides full CRUD operations backed by a SQLite database. Designed for applications that need fast, embedded database storage without external dependencies.
+A SQLite backend store implementation for SpectraGraph that provides full CRUD operations backed by a SQLite database. Designed for applications that need fast, embedded database storage without external dependencies.
 
 ## Overview
 
-Data Prism SQLite Store is built around several key principles:
+SpectraGraph SQLite Store is built around several key principles:
 
-- **Schema-driven**: Maps Data Prism schemas to SQLite table structures
-- **Performance-optimized**: Translates Data Prism operations to efficient SQLite SQL
+- **Schema-driven**: Maps SpectraGraph schemas to SQLite table structures
+- **Performance-optimized**: Translates SpectraGraph operations to efficient SQLite SQL
 - **Embedded-friendly**: Works with SQLite's serverless, zero-configuration architecture
 - **Lightweight**: Minimal dependencies with focus on performance and reliability
 
 ## Installation
 
 ```bash
-npm install @data-prism/sqlite-store
+npm install @spectragraph/sqlite-store
 ```
 
 You'll also need to install the SQLite driver:
@@ -27,10 +27,10 @@ npm install better-sqlite3
 
 ### SQLite Store
 
-The SQLite store provides full CRUD access to SQLite databases through the Data Prism interface. It's ideal for applications that need embedded database storage with automatic schema management.
+The SQLite store provides full CRUD access to SQLite databases through the SpectraGraph interface. It's ideal for applications that need embedded database storage with automatic schema management.
 
 ```javascript
-import { createSQLiteStore } from "@data-prism/sqlite-store";
+import { createSQLiteStore } from "@spectragraph/sqlite-store";
 import Database from "better-sqlite3";
 
 const db = new Database("path/to/database.sqlite");
@@ -41,7 +41,7 @@ const store = createSQLiteStore(schema, db, {
 
 ### Database Mapping
 
-The store maps Data Prism resource types to existing SQLite tables. You can provide custom table mappings if your database schema doesn't match Data Prism conventions.
+The store maps SpectraGraph resource types to existing SQLite tables. You can provide custom table mappings if your database schema doesn't match SpectraGraph conventions.
 
 ## API Reference
 
@@ -51,14 +51,14 @@ Creates a new SQLite store instance with full CRUD operations.
 
 **Parameters:**
 
-- `schema` (Schema) - The Data Prism schema defining resource types and relationships
+- `schema` (Schema) - The SpectraGraph schema defining resource types and relationships
 - `db` (Database) - SQLite database instance from better-sqlite3
 - `config.tableMapping` (object, optional) - Custom mapping of resource types to table names
 
 **Returns:** SQLite store instance with query operations
 
 ```javascript
-import { createSQLiteStore } from "@data-prism/sqlite-store";
+import { createSQLiteStore } from "@spectragraph/sqlite-store";
 import Database from "better-sqlite3";
 
 const db = new Database("./data/sports.sqlite");
@@ -75,7 +75,7 @@ const store = createSQLiteStore(schema, db, {
 
 #### `store.query(query)` ✅
 
-Executes a Data Prism query against the SQLite database, generating efficient SQL.
+Executes a SpectraGraph query against the SQLite database, generating efficient SQL.
 
 **Parameters:**
 
@@ -213,7 +213,7 @@ CREATE TABLE matches (
 
 ### Custom Table Mapping
 
-If your database doesn't follow Data Prism conventions:
+If your database doesn't follow SpectraGraph conventions:
 
 ```javascript
 const store = createSQLiteStore(schema, db, {
@@ -230,12 +230,12 @@ const store = createSQLiteStore(schema, db, {
 
 ## Query Translation
 
-Data Prism queries are translated to optimized SQLite SQL:
+SpectraGraph queries are translated to optimized SQLite SQL:
 
 ### Basic Query
 
 ```javascript
-// Data Prism query
+// SpectraGraph query
 const query = {
   type: "teams",
   select: ["name", "city"],
@@ -250,7 +250,7 @@ const query = {
 ### Query with Relationships
 
 ```javascript
-// Data Prism query
+// SpectraGraph query
 const query = {
   type: "teams", 
   select: {
@@ -270,7 +270,7 @@ const query = {
 ### Basic Setup
 
 ```javascript
-import { createSQLiteStore } from "@data-prism/sqlite-store";
+import { createSQLiteStore } from "@spectragraph/sqlite-store";
 import Database from "better-sqlite3";
 
 const schema = {
@@ -505,14 +505,14 @@ db.pragma("cache_size = 10000");
 
 ### Future Enhancements
 
-- Automatic table creation and migration from Data Prism schemas
+- Automatic table creation and migration from SpectraGraph schemas
 - Advanced SQLite-specific optimizations
 - Support for SQLite extensions and custom functions
 - Built-in database seeding utilities
 
 ## Related Packages
 
-- `@data-prism/core` - Core Data Prism functionality and schema definitions
-- `@data-prism/interface-tests` - Test suite for validating store implementations
-- `@data-prism/postgres-store` - Full-featured PostgreSQL store implementation
-- `@data-prism/memory-store` - In-memory store for development and testing
+- `@spectragraph/core` - Core SpectraGraph functionality and schema definitions
+- `@spectragraph/interface-tests` - Test suite for validating store implementations
+- `@spectragraph/postgres-store` - Full-featured PostgreSQL store implementation
+- `@spectragraph/memory-store` - In-memory store for development and testing

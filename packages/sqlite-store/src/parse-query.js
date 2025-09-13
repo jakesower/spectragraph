@@ -1,5 +1,5 @@
 // Now using shared sql-helpers package
-import { extractQueryClauses as extractQueryClausesShared } from "@data-prism/sql-helpers";
+import { extractQueryClauses as extractQueryClausesShared } from "@spectragraph/sql-helpers";
 import { columnTypeModifiers } from "./column-type-modifiers.js";
 
 /**

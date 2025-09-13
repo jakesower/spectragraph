@@ -1,20 +1,20 @@
-# Data Prism PostgreSQL Store
+# SpectraGraph PostgreSQL Store
 
-A PostgreSQL backend store implementation for Data Prism that provides CRUD operations, advanced querying, and relationship management backed by a PostgreSQL database. Designed for production applications requiring persistent data storage, concurrent access, and complex queries.
+A PostgreSQL backend store implementation for SpectraGraph that provides CRUD operations, advanced querying, and relationship management backed by a PostgreSQL database. Designed for production applications requiring persistent data storage, concurrent access, and complex queries.
 
 ## Overview
 
-Data Prism PostgreSQL Store is built around several key principles:
+SpectraGraph PostgreSQL Store is built around several key principles:
 
-- **Schema-driven**: Automatically generates and manages PostgreSQL tables from Data Prism schemas
+- **Schema-driven**: Automatically generates and manages PostgreSQL tables from SpectraGraph schemas
 - **Relationship-aware**: Maintains referential integrity and bidirectional relationships
-- **Query-optimized**: Translates Data Prism queries to efficient PostgreSQL SQL
+- **Query-optimized**: Translates SpectraGraph queries to efficient PostgreSQL SQL
 - **Production-ready**: Supports transactions, connection pooling, and concurrent operations
 
 ## Installation
 
 ```bash
-npm install @data-prism/postgres-store
+npm install @spectragraph/postgres-store
 ```
 
 You'll also need to install the PostgreSQL client driver:
@@ -27,10 +27,10 @@ npm install pg
 
 ### PostgreSQL Store
 
-The PostgreSQL store manages your data in properly normalized PostgreSQL tables, with automatic schema generation and relationship management. Tables are created based on your Data Prism schema, with foreign keys maintaining referential integrity.
+The PostgreSQL store manages your data in properly normalized PostgreSQL tables, with automatic schema generation and relationship management. Tables are created based on your SpectraGraph schema, with foreign keys maintaining referential integrity.
 
 ```javascript
-import { createPostgresStore } from "@data-prism/postgres-store";
+import { createPostgresStore } from "@spectragraph/postgres-store";
 import { Client } from "pg";
 
 const client = new Client({
@@ -46,7 +46,7 @@ const store = createPostgresStore(schema, client, {
 
 ### Database Schema Generation
 
-The store automatically creates PostgreSQL tables that match your Data Prism schema:
+The store automatically creates PostgreSQL tables that match your SpectraGraph schema:
 
 - Resource attributes become table columns with appropriate PostgreSQL types
 - Relationships are implemented as foreign keys or junction tables
@@ -61,7 +61,7 @@ Creates a new PostgreSQL store instance.
 
 **Parameters:**
 
-- `schema` (Schema) - The Data Prism schema defining resource types and relationships
+- `schema` (Schema) - The SpectraGraph schema defining resource types and relationships
 - `client` (pg.Client) - Connected PostgreSQL client instance
 - `config.tablePrefix` (string, optional) - Prefix for generated table names
 - `config.validator` (Ajv, optional) - Custom AJV validator instance
@@ -69,7 +69,7 @@ Creates a new PostgreSQL store instance.
 **Returns:** PostgreSQL store instance with CRUD and query operations
 
 ```javascript
-import { createPostgresStore } from "@data-prism/postgres-store";
+import { createPostgresStore } from "@spectragraph/postgres-store";
 import { Client } from "pg";
 
 const client = new Client({
@@ -163,7 +163,7 @@ await store.delete({
 
 #### `store.query(query)`
 
-Executes a Data Prism query against the PostgreSQL database, generating efficient SQL.
+Executes a SpectraGraph query against the PostgreSQL database, generating efficient SQL.
 
 **Parameters:**
 
@@ -192,7 +192,7 @@ const results = await store.query({
 
 ### Attribute Types
 
-Data Prism attribute types are mapped to PostgreSQL types:
+SpectraGraph attribute types are mapped to PostgreSQL types:
 
 - `string` → `VARCHAR` or `TEXT`
 - `integer` → `INTEGER`
@@ -246,12 +246,12 @@ const store = createPostgresStore(schema, client, {
 
 ## Query Translation
 
-Data Prism queries are translated to optimized PostgreSQL SQL:
+SpectraGraph queries are translated to optimized PostgreSQL SQL:
 
 ### Basic Query
 
 ```javascript
-// Data Prism query
+// SpectraGraph query
 const query = {
   type: "teams",
   select: ["name", "city"],
@@ -265,7 +265,7 @@ const query = {
 ### Complex Query with Relationships
 
 ```javascript
-// Data Prism query
+// SpectraGraph query
 const query = {
   type: "teams",
   select: {
@@ -285,7 +285,7 @@ const query = {
 ### Basic Setup
 
 ```javascript
-import { createPostgresStore } from "@data-prism/postgres-store";
+import { createPostgresStore } from "@spectragraph/postgres-store";
 import { Client } from "pg";
 
 const schema = {
@@ -458,6 +458,6 @@ Tests require Docker to be running for PostgreSQL test database containers.
 
 ## Related Packages
 
-- `@data-prism/core` - Core Data Prism functionality and schema definitions
-- `@data-prism/interface-tests` - Test suite for validating store implementations
-- `@data-prism/memory-store` - In-memory store for development and testing
+- `@spectragraph/core` - Core SpectraGraph functionality and schema definitions
+- `@spectragraph/interface-tests` - Test suite for validating store implementations
+- `@spectragraph/memory-store` - In-memory store for development and testing

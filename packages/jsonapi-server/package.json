@@ -1,5 +1,5 @@
 {
-	"name": "@data-prism/jsonapi-server",
+	"name": "@spectragraph/jsonapi-server",
 	"version": "0.0.12",
 	"type": "module",
 	"main": "./dist/index.cjs.js",
@@ -27,7 +27,7 @@
 	"keywords": [],
 	"author": "Jake Sower",
 	"devDependencies": {
-		"@data-prism/memory-store": "*",
+		"@spectragraph/memory-store": "*",
 		"@rollup/plugin-commonjs": "^28.0.1",
 		"@rollup/plugin-json": "^6.1.0",
 		"@rollup/plugin-node-resolve": "^16.0.0",
@@ -52,8 +52,8 @@
 	],
 	"sideEffects": false,
 	"dependencies": {
-		"@data-prism/core": "*",
-		"@data-prism/utils": "*",
+		"@spectragraph/core": "*",
+		"@spectragraph/utils": "*",
 		"ajv": "^8.16.0",
 		"body-parser": "^1.20.2",
 		"es-toolkit": "^1.26.0",

@@ -1,4 +1,4 @@
-import { runQueryTests } from "@data-prism/interface-tests";
+import { runQueryTests } from "@spectragraph/interface-tests";
 import { createJSONAPIStore } from "../src/jsonapi-store.js";
 import { makeRequest } from "./helpers.js";
 

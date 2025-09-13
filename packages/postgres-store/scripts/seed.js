@@ -1,4 +1,4 @@
-import { applyOrMap } from "@data-prism/utils";
+import { applyOrMap } from "@spectragraph/utils";
 import { groupBy, snakeCase, uniqBy } from "es-toolkit";
 
 const defaultColumnTypes = {

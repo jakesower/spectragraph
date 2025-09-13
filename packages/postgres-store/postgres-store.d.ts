@@ -1,9 +1,9 @@
-// TypeScript definitions for @data-prism/postgres-store
+// TypeScript definitions for @spectragraph/postgres-store
 // Generated from JSDoc annotations
 
 import type { Client } from "pg";
 import type { Ajv } from "ajv";
-import type { Schema, RootQuery } from "@data-prism/core"
+import type { Schema, RootQuery } from "@spectragraph/core"
 
 // === RESOURCE TYPES ===
 

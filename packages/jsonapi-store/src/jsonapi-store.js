@@ -1,14 +1,14 @@
 import { formatRequest } from "./format-request.js";
 import { parseResponse } from "./parse-response.js";
-import { StoreOperationNotSupportedError } from "@data-prism/core";
+import { StoreOperationNotSupportedError } from "@spectragraph/core";
 
 /**
  * Creates a JSON:API store that proxies requests to a remote JSON:API server
- * @param {import("@data-prism/core").Schema} schema - Data Prism schema
+ * @param {import("@spectragraph/core").Schema} schema - SpectraGraph schema
  * @param {Object} config - Store configuration
  * @param {Object} config.transport - HTTP transport implementation
  * @param {string} config.baseURL - Base URL for the JSON:API server
- * @returns {import("@data-prism/core").Store} Store instance implementing the core Store interface
+ * @returns {import("@spectragraph/core").Store} Store instance implementing the core Store interface
  */
 export function createJSONAPIStore(schema, config) {
 	const { transport } = config;

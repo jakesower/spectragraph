@@ -1,9 +1,9 @@
-import { createServer } from "@data-prism/jsonapi-server";
-import { createMemoryStore } from "@data-prism/memory-store";
+import { createServer } from "@spectragraph/jsonapi-server";
+import { createMemoryStore } from "@spectragraph/memory-store";
 import {
 	careBearSchema,
 	careBearData,
-} from "@data-prism/interface-tests/fixtures";
+} from "@spectragraph/interface-tests/fixtures";
 
 createServer(
 	careBearSchema,

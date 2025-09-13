@@ -20,7 +20,7 @@ import { get } from "./get.js";
 
 /**
  * Creates JSON:API request handlers for a schema and store
- * @param {import("@data-prism/core").Schema} schema - The schema defining resources
+ * @param {import("@spectragraph/core").Schema} schema - The schema defining resources
  * @param {*} store - The data store instance
  * @returns {Server} Object with handler functions for each HTTP method
  */
@@ -36,7 +36,7 @@ export function createJSONAPIHandlers(schema, store) {
 
 /**
  * Applies JSON:API routes to an Express app based on schema resources
- * @param {import("@data-prism/core").Schema} schema - The schema defining resources
+ * @param {import("@spectragraph/core").Schema} schema - The schema defining resources
  * @param {*} store - The data store instance
  * @param {*} app - Express app instance
  */
@@ -54,7 +54,7 @@ export function applySchemaRoutes(schema, store, app) {
 
 /**
  * Creates a complete Express server with JSON:API endpoints
- * @param {import("@data-prism/core").Schema} schema - The schema defining resources
+ * @param {import("@spectragraph/core").Schema} schema - The schema defining resources
  * @param {*} store - The data store instance
  * @param {Options} [options={}] - Server configuration options
  */

@@ -1,7 +1,7 @@
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
 import addErrors from "ajv-errors";
-import { applyOrMap } from "@data-prism/utils";
+import { applyOrMap } from "@spectragraph/utils";
 import { mapValues, omit, pickBy } from "es-toolkit";
 import { normalizeQuery } from "./query.js";
 import { createDeepCache, ensure, translateAjvErrors } from "./lib/helpers.js";

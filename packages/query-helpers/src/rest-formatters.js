@@ -1,5 +1,5 @@
 import { createExpressionEngine, $literal, $pipe } from "json-expressions";
-import { normalizeQuery } from "@data-prism/core";
+import { normalizeQuery } from "@spectragraph/core";
 import { flattenQuery } from "./traversal.js";
 import { mapValues, pick, uniq } from "es-toolkit";
 
@@ -341,9 +341,9 @@ export function extractOrder(order) {
 // }
 
 // /**
-//  * Extracts structured parameters from a Data Prism query
-//  * @param {import('@data-prism/core').Schema} schema - The schema
-//  * @param {import('@data-prism/core').RootQuery} query - The query to analyze
+//  * Extracts structured parameters from a SpectraGraph query
+//  * @param {import('@spectragraph/core').Schema} schema - The schema
+//  * @param {import('@spectragraph/core').RootQuery} query - The query to analyze
 //  * @returns {QueryParameters} Structured query parameters
 //  */
 // export function extractQueryParameters(schema, query) {
@@ -402,8 +402,8 @@ export function extractOrder(order) {
 
 // /**
 //  * Builds a complete query URL using a parameter formatter
-//  * @param {import('@data-prism/core').Schema} schema - The schema
-//  * @param {import('@data-prism/core').RootQuery} query - The query
+//  * @param {import('@spectragraph/core').Schema} schema - The schema
+//  * @param {import('@spectragraph/core').RootQuery} query - The query
 //  * @param {string} baseURL - Base URL for the API
 //  * @param {ParameterFormatter} formatter - Parameter formatting strategy
 //  * @returns {string} Complete formatted URL
@@ -587,7 +587,7 @@ export function extractOrder(order) {
 // 			if (typeof value === "object" && value !== null) {
 // 				return Object.entries(value)
 // 					.map(([op, val]) => {
-// 						// Convert Data Prism operators to OData operators
+// 						// Convert SpectraGraph operators to OData operators
 // 						const odataOp =
 // 							{
 // 								$eq: "eq",
