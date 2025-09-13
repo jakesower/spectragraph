@@ -1,5 +1,5 @@
 {
-	"name": "@data-prism/memory-store",
+	"name": "@spectragraph/memory-store",
 	"version": "0.2.0",
 	"type": "module",
 	"main": "./dist/index.cjs.js",
@@ -26,7 +26,7 @@
 	"keywords": [],
 	"author": "Jake Sower",
 	"devDependencies": {
-		"@data-prism/interface-tests": "*",
+		"@spectragraph/interface-tests": "*",
 		"@rollup/plugin-commonjs": "^28.0.1",
 		"@rollup/plugin-node-resolve": "^16.0.0",
 		"@vitest/coverage-istanbul": "^3.0.4",
@@ -45,7 +45,7 @@
 	],
 	"sideEffects": false,
 	"dependencies": {
-		"@data-prism/core": "*",
+		"@spectragraph/core": "*",
 		"es-toolkit": "^1.26.0",
 		"json-expressions": "^0.2.1",
 		"uuid": "^10.0.0"

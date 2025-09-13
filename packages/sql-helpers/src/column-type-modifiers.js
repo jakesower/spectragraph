@@ -32,7 +32,7 @@ export function createColumnTypeModifiers(customModifiers = {}) {
  * Transforms values for storage using column type modifiers
  * @param {any[]} values - Array of values to transform
  * @param {string[]} attributeNames - Array of attribute names corresponding to values
- * @param {import('data-prism').ResourceSchema} resourceSchema - Resource schema
+ * @param {import('spectragraph').ResourceSchema} resourceSchema - Resource schema
  * @param {Object<string, ColumnModifier>} columnTypeModifiers - Column type modifiers
  * @returns {any[]} Transformed values ready for storage
  */

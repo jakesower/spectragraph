@@ -1,14 +1,14 @@
-# Data Prism Interface Tests
+# SpectraGraph Interface Tests
 
-A comprehensive test suite for validating Data Prism store implementations. This package provides standardized tests that ensure store implementations properly support CRUD operations, querying, and relationship management according to the Data Prism specification.
+A comprehensive test suite for validating SpectraGraph store implementations. This package provides standardized tests that ensure store implementations properly support CRUD operations, querying, and relationship management according to the SpectraGraph specification.
 
 ## Overview
 
-Data Prism Interface Tests is built around several key principles:
+SpectraGraph Interface Tests is built around several key principles:
 
-- **Implementation-agnostic**: Tests work with any store implementation that follows the Data Prism interface
+- **Implementation-agnostic**: Tests work with any store implementation that follows the SpectraGraph interface
 - **Comprehensive coverage**: Validates all core operations and edge cases
-- **Reusable fixtures**: Provides shared test data and schemas used across the Data Prism ecosystem
+- **Reusable fixtures**: Provides shared test data and schemas used across the SpectraGraph ecosystem
 - **Modular design**: Run all tests or individual test suites as needed
 
 ## Installation
@@ -16,7 +16,7 @@ Data Prism Interface Tests is built around several key principles:
 This package is typically used as a development dependency:
 
 ```bash
-npm install --save-dev @data-prism/interface-tests
+npm install --save-dev @spectragraph/interface-tests
 ```
 
 ## Usage
@@ -24,7 +24,7 @@ npm install --save-dev @data-prism/interface-tests
 ### Running All Interface Tests
 
 ```javascript
-import { runInterfaceTests } from "@data-prism/interface-tests";
+import { runInterfaceTests } from "@spectragraph/interface-tests";
 import { createMyStore } from "my-store-implementation";
 
 // Your store factory function
@@ -45,7 +45,7 @@ import {
   runUpdateTests,
   runDeleteTests,
   runUpsertTests
-} from "@data-prism/interface-tests";
+} from "@spectragraph/interface-tests";
 
 describe("My Store Implementation", () => {
   runQueryTests(createStore);
@@ -69,7 +69,7 @@ import {
   jsonSchemaTestingSchema,
   careBearData,
   careBearDataFlat
-} from "@data-prism/interface-tests";
+} from "@spectragraph/interface-tests";
 
 // Use schemas in your own tests
 const store = createStore(careBearSchema);
@@ -132,7 +132,7 @@ Tests upsert operations (create-or-update) with conflict resolution.
 
 ## Writing Store Implementations
 
-When implementing a Data Prism store, your store should provide these methods:
+When implementing a SpectraGraph store, your store should provide these methods:
 
 ```javascript
 const store = {
@@ -200,7 +200,7 @@ const store = {
 ### Basic Store Testing
 
 ```javascript
-import { runInterfaceTests, careBearSchema } from "@data-prism/interface-tests";
+import { runInterfaceTests, careBearSchema } from "@spectragraph/interface-tests";
 import { createMyCustomStore } from "./my-store";
 
 function createStore() {
@@ -214,7 +214,7 @@ runInterfaceTests(createStore);
 ### Custom Test Integration
 
 ```javascript
-import { careBearSchema, careBearData } from "@data-prism/interface-tests";
+import { careBearSchema, careBearData } from "@spectragraph/interface-tests";
 import { describe, it, expect } from "vitest";
 
 describe("My Custom Store Features", () => {
@@ -235,7 +235,7 @@ describe("My Custom Store Features", () => {
 
 ## Related Packages
 
-- `@data-prism/core` - Core Data Prism functionality and types
-- `@data-prism/memory-store` - Reference implementation passing all interface tests
-- `@data-prism/postgres-store` - PostgreSQL store implementation
-- `@data-prism/sqlite-store` - SQLite store implementation
+- `@spectragraph/core` - Core SpectraGraph functionality and types
+- `@spectragraph/memory-store` - Reference implementation passing all interface tests
+- `@spectragraph/postgres-store` - PostgreSQL store implementation
+- `@spectragraph/sqlite-store` - SQLite store implementation

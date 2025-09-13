@@ -5,13 +5,13 @@ import {
 	ensureValidMergeResource,
 	ensureValidUpdateResource,
 	normalizeQuery,
-} from "@data-prism/core";
+} from "@spectragraph/core";
 import { query as getQuery } from "./query/index.js";
 import { create } from "./create.js";
 import { deleteResource } from "./delete.js";
 import { update } from "./update.js";
 import { merge } from "./merge.js";
-import { applyOrMap } from "@data-prism/utils";
+import { applyOrMap } from "@spectragraph/utils";
 import { withTransaction } from "./lib/store-helpers.js";
 
 /**
@@ -89,7 +89,7 @@ import { withTransaction } from "./lib/store-helpers.js";
  * @typedef {Object} Context
  * @property {Config} config
  * @property {import('better-sqlite3').Database} db
- * @property {import('data-prism').Schema} schema
+ * @property {import('spectragraph').Schema} schema
  * @property {Ajv} validator
  */
 
@@ -107,14 +107,14 @@ import { withTransaction } from "./lib/store-helpers.js";
  * @property {(resource: UpdateResource) => Promise<Resource>} update
  * @property {(resource: CreateResource|UpdateResource) => Promise<Resource>} upsert
  * @property {(resource: DeleteResource) => Promise<DeleteResource>} delete
- * @property {(query: import('data-prism').RootQuery) => Promise<any>} query
+ * @property {(query: import('spectragraph').RootQuery) => Promise<any>} query
  * @property {(resource: CreateResource|UpdateResource) => Promise<Resource>} merge
  * @property {(resources: (CreateResource|UpdateResource)[]) => Promise<Resource[]>} merge
  */
 
 /**
  * Creates a SQLite store instance
- * @param {import('data-prism').Schema} schema - The schema object
+ * @param {import('spectragraph').Schema} schema - The schema object
  * @param {Config} config - Store configuration
  * @returns {SqliteStore} The SQLite store instance
  */

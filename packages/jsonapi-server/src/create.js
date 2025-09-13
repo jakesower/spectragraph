@@ -18,7 +18,7 @@ import { validateRequest } from "./validate-request.js";
 
 /**
  * Creates a JSON:API create handler
- * @param {import("@data-prism/core").Schema} schema - The schema defining resources
+ * @param {import("@spectragraph/core").Schema} schema - The schema defining resources
  * @param {*} store - The data store instance
  * @returns {(req: any, res: any) => Promise<void>} Express request handler
  */

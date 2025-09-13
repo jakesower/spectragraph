@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { createValidator } from "@data-prism/core";
+import { createValidator } from "@spectragraph/core";
 import { getClient } from "./get-client.js";
 import { createPostgresStore } from "../src/postgres-store.js";
 import { careBearSchema } from "../../interface-tests/src/index.js";

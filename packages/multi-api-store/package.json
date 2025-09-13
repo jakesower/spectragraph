@@ -1,5 +1,5 @@
 {
-	"name": "@data-prism/multi-api-store",
+	"name": "@spectragraph/multi-api-store",
 	"version": "0.1.0",
 	"type": "module",
 	"main": "./dist/index.cjs.js",
@@ -26,8 +26,8 @@
 	"keywords": [],
 	"author": "Jake Sower",
 	"devDependencies": {
-		"@data-prism/interface-tests": "*",
-		"@data-prism/memory-store": "*",
+		"@spectragraph/interface-tests": "*",
+		"@spectragraph/memory-store": "*",
 		"@rollup/plugin-commonjs": "^28.0.1",
 		"@rollup/plugin-json": "^6.1.0",
 		"@rollup/plugin-node-resolve": "^16.0.0",
@@ -47,8 +47,8 @@
 	],
 	"sideEffects": false,
 	"dependencies": {
-		"@data-prism/core": "*",
-		"@data-prism/utils": "*",
+		"@spectragraph/core": "*",
+		"@spectragraph/utils": "*",
 		"es-toolkit": "^1.26.0",
 		"json-expressions": "^0.2.1"
 	}

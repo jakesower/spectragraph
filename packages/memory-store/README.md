@@ -1,11 +1,11 @@
-# Data Prism Memory Store
+# SpectraGraph Memory Store
 
-A reference implementation and development utility for Data Prism that provides CRUD operations, querying, and relationship management for graph data stored entirely in memory.
+A reference implementation and development utility for SpectraGraph that provides CRUD operations, querying, and relationship management for graph data stored entirely in memory.
 
 ## Primary Use Cases
 
 **1. Reference Implementation**
-Memory Store serves as the canonical example of how to implement the Data Prism Store interface correctly. If you're building your own store (database adapter, API client, etc.), use this implementation as your guide for proper schema validation, relationship management, and query handling.
+Memory Store serves as the canonical example of how to implement the SpectraGraph Store interface correctly. If you're building your own store (database adapter, API client, etc.), use this implementation as your guide for proper schema validation, relationship management, and query handling.
 
 **2. Development Stepping Stone**
 Memory Store provides a seamless transition path from development to production. Mock out your data model with JSON fixtures, develop and test your application logic, then swap to a production store when your real backend is ready - with zero code changes to your application layer.
@@ -17,17 +17,17 @@ Memory Store provides a seamless transition path from development to production.
 
 ## Overview
 
-Data Prism Memory Store is built around several key principles:
+SpectraGraph Memory Store is built around several key principles:
 
-- **Schema-driven**: Validates all operations against your Data Prism schema
+- **Schema-driven**: Validates all operations against your SpectraGraph schema
 - **Relationship-aware**: Automatically maintains bidirectional relationships
-- **Query-compatible**: Full support for Data Prism's query language
+- **Query-compatible**: Full support for SpectraGraph's query language
 - **Memory-efficient**: Normalized storage with reference-based relationships
 
 ## Installation
 
 ```bash
-npm install @data-prism/memory-store
+npm install @spectragraph/memory-store
 ```
 
 ## Core Concepts
@@ -37,8 +37,8 @@ npm install @data-prism/memory-store
 The memory store maintains your data in normalized form in memory, with automatic relationship management and validation. All data is stored in a graph structure organized by resource type and ID.
 
 ```javascript
-import { createMemoryStore } from "@data-prism/memory-store";
-import { defaultSelectEngine, defaultWhereEngine } from "@data-prism/core";
+import { createMemoryStore } from "@spectragraph/memory-store";
+import { defaultSelectEngine, defaultWhereEngine } from "@spectragraph/core";
 
 const store = createMemoryStore(schema, {
 	initialData: existingGraph, // optional
@@ -56,17 +56,17 @@ The memory store provides standard CRUD operations plus advanced features:
 - **update** - Modify existing resources with attribute merging
 - **upsert** - Create or update based on resource existence
 - **delete** - Remove resources with relationship cleanup
-- **query** - Execute Data Prism queries against the store
+- **query** - Execute SpectraGraph queries against the store
 - **merge** - Insert complex resource trees with nested relationships
 
 ### Expression Engines
 
-The memory store uses focused expression engines from Data Prism Core to provide different capabilities for different query contexts:
+The memory store uses focused expression engines from SpectraGraph Core to provide different capabilities for different query contexts:
 
 - **SELECT Engine**: Full expression capabilities including filtering, aggregations, transformations, and computed fields for SELECT clauses
 - **WHERE Engine**: Filtering-only operations for WHERE clauses, excluding expensive aggregation operations for performance and security
 
-By default, the memory store uses `defaultSelectEngine` and `defaultWhereEngine` from `@data-prism/core`. You can provide custom engines in the configuration if needed for specialized use cases.
+By default, the memory store uses `defaultSelectEngine` and `defaultWhereEngine` from `@spectragraph/core`. You can provide custom engines in the configuration if needed for specialized use cases.
 
 ## API Reference
 
@@ -76,7 +76,7 @@ Creates a new in-memory store instance.
 
 **Parameters:**
 
-- `schema` (Schema) - The Data Prism schema defining resource types and relationships
+- `schema` (Schema) - The SpectraGraph schema defining resource types and relationships
 - `config.initialData` (Graph, optional) - Initial graph data to populate the store
 - `config.validator` (Ajv, optional) - Custom AJV validator instance
 - `config.selectEngine` (SelectExpressionEngine, optional) - Expression engine for SELECT clauses
@@ -85,7 +85,7 @@ Creates a new in-memory store instance.
 **Returns:** Memory store instance with CRUD and query operations
 
 ```javascript
-import { createMemoryStore } from "@data-prism/memory-store";
+import { createMemoryStore } from "@spectragraph/memory-store";
 
 const store = createMemoryStore(schema, {
 	initialData: {
@@ -185,7 +185,7 @@ store.delete({ type: "teams", id: "team-1" });
 
 #### `store.query(query)`
 
-Executes a Data Prism query against the store.
+Executes a SpectraGraph query against the store.
 
 **Parameters:**
 
@@ -268,7 +268,7 @@ store.linkInverses();
 ### Basic Usage
 
 ```javascript
-import { createMemoryStore } from "@data-prism/memory-store";
+import { createMemoryStore } from "@spectragraph/memory-store";
 
 // 1. Define your schema (or import from elsewhere)
 const schema = {
@@ -392,7 +392,7 @@ try {
 }
 
 // Custom validator for additional constraints
-import { createValidator } from "@data-prism/core";
+import { createValidator } from "@spectragraph/core";
 
 const customValidator = createValidator({
 	ajvSchemas: [myCustomSchema],
@@ -425,11 +425,11 @@ const phoenixMatches = store.query({
 
 ## TypeScript Support
 
-Data Prism Memory Store includes comprehensive TypeScript definitions:
+SpectraGraph Memory Store includes comprehensive TypeScript definitions:
 
 ```typescript
-import type { MemoryStore, MemoryStoreConfig } from "@data-prism/memory-store";
-import type { Schema, CreateResource } from "@data-prism/core";
+import type { MemoryStore, MemoryStoreConfig } from "@spectragraph/memory-store";
+import type { Schema, CreateResource } from "@spectragraph/core";
 
 const schema: Schema = {
 	resources: {
@@ -460,10 +460,10 @@ const newTeam: CreateResource = {
 - **No persistence**: Changes are not saved to disk
 - **Performance**: O(n) queries without indexing, suitable for small development datasets
 
-For production applications, transition to a persistent store like `@data-prism/postgres-store` or implement your own store using this as a reference.
+For production applications, transition to a persistent store like `@spectragraph/postgres-store` or implement your own store using this as a reference.
 
 ## Related Packages
 
-- `@data-prism/core` - Core Data Prism functionality and validation
-- `@data-prism/postgres-store` - PostgreSQL backend store
-- `@data-prism/jsonapi-store` - JSON:API client store
+- `@spectragraph/core` - Core SpectraGraph functionality and validation
+- `@spectragraph/postgres-store` - PostgreSQL backend store
+- `@spectragraph/jsonapi-store` - JSON:API client store

@@ -69,7 +69,7 @@ export function transformRowKeys(row) {
  * @param {string} resourceId - Resource ID
  * @param {Object} attributes - Resource attributes (already camelCase)
  * @param {Object} relationships - Resource relationships
- * @param {import('data-prism').ResourceSchema} resourceSchema - Resource schema
+ * @param {import('spectragraph').ResourceSchema} resourceSchema - Resource schema
  * @returns {Object} Complete resource object
  */
 export function buildResourceObject(

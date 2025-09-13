@@ -3,7 +3,7 @@ export {
 	flatMapQuery,
 	forEachQuery,
 	someQuery,
-} from "@data-prism/query-helpers";
+} from "@spectragraph/query-helpers";
 
 export {
 	makeRelationshipBuilders,

@@ -10,7 +10,7 @@ export default [
 		plugins: [nodeResolve(), commonjs(), json()],
 		external: [
 			"es-toolkit",
-			"@data-prism/utils",
+			"@spectragraph/utils",
 		],
 	},
 	// CommonJS build
@@ -20,7 +20,7 @@ export default [
 		plugins: [nodeResolve(), commonjs(), json()],
 		external: [
 			"es-toolkit",
-			"@data-prism/utils",
+			"@spectragraph/utils",
 		],
 	},
 ];

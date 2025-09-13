@@ -1,10 +1,10 @@
-# Data Prism Query Helpers
+# SpectraGraph Query Helpers
 
-Utility functions for working with Data Prism queries. This package provides helper functions for query traversal, multi-API execution, and query analysis across different store implementations.
+Utility functions for working with SpectraGraph queries. This package provides helper functions for query traversal, multi-API execution, and query analysis across different store implementations.
 
 ## Overview
 
-Data Prism Query Helpers provides tools for:
+SpectraGraph Query Helpers provides tools for:
 
 - **Query Traversal**: Flatten and iterate over nested query structures
 - **Multi-API Execution**: Coordinate multiple APIs to fulfill complex queries
@@ -13,7 +13,7 @@ Data Prism Query Helpers provides tools for:
 ## Installation
 
 ```bash
-npm install @data-prism/query-helpers
+npm install @spectragraph/query-helpers
 ```
 
 ## Core Concepts
@@ -42,7 +42,7 @@ Flattens a nested query into a linear array of query breakdown items.
 **Returns:** QueryBreakdown - Array of flattened query breakdown items
 
 ```javascript
-import { flattenQuery } from "@data-prism/query-helpers";
+import { flattenQuery } from "@spectragraph/query-helpers";
 
 const breakdown = flattenQuery(schema, {
 	type: "teams",
@@ -74,7 +74,7 @@ Maps over each query in a flattened query structure.
 **Returns:** Array of mapped results
 
 ```javascript
-import { flatMapQuery } from "@data-prism/query-helpers";
+import { flatMapQuery } from "@spectragraph/query-helpers";
 
 const resourceTypes = flatMapQuery(schema, query, (subquery, info) => ({
 	type: info.type,
@@ -94,7 +94,7 @@ Iterates over each query in a flattened query structure.
 - `fn` (Function) - Iteration function `(query, info) => void`
 
 ```javascript
-import { forEachQuery } from "@data-prism/query-helpers";
+import { forEachQuery } from "@spectragraph/query-helpers";
 
 forEachQuery(schema, query, (subquery, info) => {
 	console.log(`Processing ${info.type} at path: ${info.path.join(".")}`);
@@ -114,7 +114,7 @@ Tests whether some query in a flattened query structure matches a condition.
 **Returns:** Boolean indicating if any query matches the condition
 
 ```javascript
-import { someQuery } from "@data-prism/query-helpers";
+import { someQuery } from "@spectragraph/query-helpers";
 
 const hasComplexWhere = someQuery(
 	schema,
@@ -139,7 +139,7 @@ Core query traversal engine with callback pattern - reusable across store types.
 **Returns:** Promise resolving to nested result structure
 
 ```javascript
-import { collectQueryResults } from "@data-prism/query-helpers";
+import { collectQueryResults } from "@spectragraph/query-helpers";
 
 const results = await collectQueryResults(
 	schema,
@@ -166,7 +166,7 @@ Replaces the entire loadQueryData pattern - handles traversal, API coordination,
 **Returns:** Promise<Graph> - Complete graph with all query results merged
 
 ```javascript
-import { executeQueryWithAPIs } from "@data-prism/query-helpers";
+import { executeQueryWithAPIs } from "@spectragraph/query-helpers";
 
 const apiRegistry = {
 	teams: {
@@ -261,7 +261,7 @@ interface QueryExecutionOptions {
 ### Basic Query Traversal
 
 ```javascript
-import { flattenQuery, forEachQuery } from "@data-prism/query-helpers";
+import { flattenQuery, forEachQuery } from "@spectragraph/query-helpers";
 
 const schema = {
 	resources: {
@@ -322,7 +322,7 @@ forEachQuery(schema, query, (subquery, info) => {
 ### Multi-API Query Execution
 
 ```javascript
-import { executeQueryWithAPIs } from "@data-prism/query-helpers";
+import { executeQueryWithAPIs } from "@spectragraph/query-helpers";
 
 // Define API handlers for different resource types
 const apiRegistry = {
@@ -373,14 +373,14 @@ const graph = await executeQueryWithAPIs(
 	},
 );
 
-// Use the resulting graph with any Data Prism store
+// Use the resulting graph with any SpectraGraph store
 console.log(graph);
 ```
 
 ### Query Analysis
 
 ```javascript
-import { someQuery, flatMapQuery } from "@data-prism/query-helpers";
+import { someQuery, flatMapQuery } from "@spectragraph/query-helpers";
 
 // Check if any subquery has complex filtering
 const hasComplexFilters = someQuery(schema, query, (subquery) => {
@@ -410,7 +410,7 @@ const restrictedQueries = flatMapQuery(schema, query, (subquery, info) => {
 
 ## TypeScript Support
 
-Data Prism Query Helpers includes comprehensive TypeScript definitions:
+SpectraGraph Query Helpers includes comprehensive TypeScript definitions:
 
 ```typescript
 import type {
@@ -420,9 +420,9 @@ import type {
 	APIRegistry,
 	SpecialHandler,
 	QueryExecutionOptions,
-} from "@data-prism/query-helpers";
+} from "@spectragraph/query-helpers";
 
-import type { Schema, RootQuery, Graph } from "@data-prism/core";
+import type { Schema, RootQuery, Graph } from "@spectragraph/core";
 
 const apiRegistry: APIRegistry = {
 	teams: {
@@ -436,7 +436,7 @@ const apiRegistry: APIRegistry = {
 
 ## Related Packages
 
-- `@data-prism/core` - Core data structures and query execution
-- `@data-prism/memory-store` - In-memory data store implementation
-- `@data-prism/postgres-store` - PostgreSQL backend
-- `@data-prism/jsonapi-store` - JSON:API client store
+- `@spectragraph/core` - Core data structures and query execution
+- `@spectragraph/memory-store` - In-memory data store implementation
+- `@spectragraph/postgres-store` - PostgreSQL backend
+- `@spectragraph/jsonapi-store` - JSON:API client store

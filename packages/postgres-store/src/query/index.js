@@ -10,8 +10,8 @@ import { processQueryResults } from "./result-processing.js";
 
 /**
  * @typedef {Object} StoreContext
- * @property {import('data-prism').Schema} schema - The schema
- * @property {import('data-prism').RootQuery} query - The root query
+ * @property {import('spectragraph').Schema} schema - The schema
+ * @property {import('spectragraph').RootQuery} query - The root query
  * @property {any} config - Database configuration
  */
 
@@ -23,7 +23,7 @@ import { processQueryResults } from "./result-processing.js";
  * 4. Execute against database
  * 5. Transform results into resource graph
  *
- * @param {import('data-prism').RootQuery} query - The query to execute
+ * @param {import('spectragraph').RootQuery} query - The query to execute
  * @param {StoreContext} context - Store context with config and schema
  * @returns {Promise<any>} Query results
  */

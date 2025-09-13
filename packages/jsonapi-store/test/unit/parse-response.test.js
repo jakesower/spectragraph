@@ -1,9 +1,9 @@
 import { expect, it } from "vitest";
-import { createMemoryStore } from "@data-prism/memory-store";
+import { createMemoryStore } from "@spectragraph/memory-store";
 import {
 	careBearSchema,
 	careBearData,
-} from "@data-prism/interface-tests/fixtures";
+} from "@spectragraph/interface-tests/fixtures";
 import { parseResponse } from "../../src/parse-response";
 import {
 	allBearsResult,

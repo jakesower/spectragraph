@@ -1,7 +1,7 @@
 import {
 	ExpressionNotSupportedError,
 	StoreOperationNotSupportedError,
-} from "@data-prism/core";
+} from "@spectragraph/core";
 
 /**
  * Helper function to test expressions that may not be supported by all stores.
@@ -45,7 +45,7 @@ export async function testOperationOrSkip(testFn) {
  * Check if a store supports a specific operation by attempting to perform it.
  * Returns true if the operation is supported, false if StoreOperationNotSupportedError is thrown.
  * @param {function} createStore - Function to create store instances
- * @param {import('@data-prism/core').Schema} schema - Schema to use for test
+ * @param {import('@spectragraph/core').Schema} schema - Schema to use for test
  * @param {string} operation - Operation to test ('create', 'update', 'delete')
  * @returns {Promise<boolean>} Whether the operation is supported
  */

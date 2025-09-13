@@ -1,4 +1,4 @@
-import { applyOrMap } from "@data-prism/utils";
+import { applyOrMap } from "@spectragraph/utils";
 import { groupBy, mapValues, uniqBy, snakeCase } from "es-toolkit";
 
 const boolToNum = (val) => (val === true ? 1 : val === false ? 0 : val) ?? null;

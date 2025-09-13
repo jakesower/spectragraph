@@ -1,4 +1,4 @@
-# Data Prism
+# SpectraGraph
 
 A unified, expressive query language for multiple data sources. Query databases, APIs, and in-memory data with the same syntax, automatic relationship linking, and powerful expressions.
 
@@ -37,14 +37,14 @@ const result = await store.query({
 ## Installation
 
 ```bash
-npm install @data-prism/memory-store
+npm install @spectragraph/memory-store
 # or choose your store: postgres-store, sqlite-store, etc.
 ```
 
 ## Basic Usage
 
 ```javascript
-import { createMemoryStore } from "@data-prism/memory-store";
+import { createMemoryStore } from "@spectragraph/memory-store";
 
 // Define your data schema
 const schema = {
@@ -128,17 +128,17 @@ console.log(analytics);
 
 **Custom Store Development**
 
-- **Store Builder Toolkit** - Create stores for any data source using `@data-prism/core`
-- **Unified Interface** - Implement once, compatible with entire Data Prism ecosystem
+- **Store Builder Toolkit** - Create stores for any data source using `@spectragraph/core`
+- **Unified Interface** - Implement once, compatible with entire SpectraGraph ecosystem
 - **Query Processing** - Built-in validation, normalization, and relationship handling
 
 ## Available Stores
 
 | Store                                                     | Use Case                             | Status    |
 | --------------------------------------------------------- | ------------------------------------ | --------- |
-| **[@data-prism/memory-store](packages/memory-store)**     | In-memory data, testing, prototyping | ✅ Stable |
-| **[@data-prism/postgres-store](packages/postgres-store)** | PostgreSQL databases                 | ✅ Stable |
-| **[@data-prism/sqlite-store](packages/sqlite-store)**     | SQLite databases                     | ✅ Stable |
+| **[@spectragraph/memory-store](packages/memory-store)**     | In-memory data, testing, prototyping | ✅ Stable |
+| **[@spectragraph/postgres-store](packages/postgres-store)** | PostgreSQL databases                 | ✅ Stable |
+| **[@spectragraph/sqlite-store](packages/sqlite-store)**     | SQLite databases                     | ✅ Stable |
 
 ## Advanced Query Examples
 
@@ -200,7 +200,7 @@ console.log(analytics);
 - **[Store Creation Guide](docs/store-creation.md)** - Building custom stores
 - **[API Reference](docs/api.md)** - Full API documentation
 
-## Why Data Prism?
+## Why SpectraGraph?
 
 **Instead of store-specific query languages:**
 

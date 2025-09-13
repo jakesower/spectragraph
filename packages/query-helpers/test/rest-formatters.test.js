@@ -1,7 +1,7 @@
 import { expect, it, describe } from "vitest";
 import skepticismSchema from "./fixtures/skepticism.schema.json";
 import { extractWhere } from "../src/rest-formatters.js";
-import { normalizeQuery } from "@data-prism/core";
+import { normalizeQuery } from "@spectragraph/core";
 import { compileWhereFormatter } from "../src/helpers.js";
 
 describe("where", () => {

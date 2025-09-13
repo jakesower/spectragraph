@@ -6,9 +6,9 @@ import { setInverseRelationships } from "./lib/store-helpers.js";
  *
  * WARNING: MUTATES storeGraph
  *
- * @param {import('@data-prism/core').UpdateResource} resource - The resource to update
+ * @param {import('@spectragraph/core').UpdateResource} resource - The resource to update
  * @param {import('./memory-store.js').MemoryStoreContext} context - Context object containing schema and storeGraph
- * @returns {import('@data-prism/core').NormalResource} The updated resource
+ * @returns {import('@spectragraph/core').NormalResource} The updated resource
  */
 export function update(resource, context) {
 	const { storeGraph } = context;

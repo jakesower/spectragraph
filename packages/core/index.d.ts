@@ -1,4 +1,4 @@
-// TypeScript definitions for @data-prism/core
+// TypeScript definitions for @spectragraph/core
 // Generated from JSDoc annotations
 
 import type { Ajv, DefinedError } from "ajv";
@@ -613,7 +613,7 @@ export function ensureValidQueryResult(
 // === EXPORTED CONSTANTS ===
 
 /**
- * The default AJV validator instance used by Data Prism
+ * The default AJV validator instance used by SpectraGraph
  */
 export const defaultValidator: Ajv;
 

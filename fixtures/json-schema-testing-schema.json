@@ -1,5 +1,5 @@
 {
-	"$comment": "This schema is meant to test the nooks and crannies of JSON schema support in Data Prism.",
+	"$comment": "This schema is meant to test the nooks and crannies of JSON schema support in SpectraGraph.",
 	"resources": {
 		"fields": {
 			"attributes": {

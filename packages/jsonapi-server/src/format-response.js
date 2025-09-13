@@ -1,15 +1,15 @@
-import { applyOrMap } from "@data-prism/utils";
+import { applyOrMap } from "@spectragraph/utils";
 import {
 	createGraphFromResources,
 	normalizeQuery,
 	normalizeResource,
-} from "@data-prism/core";
+} from "@spectragraph/core";
 import { mapValues, omit } from "es-toolkit";
 
 /**
  * Formats query results into JSON:API response format
- * @param {import("@data-prism/core").Schema} schema - The schema defining resources
- * @param {import("@data-prism/core").RootQuery} query - The query that was executed
+ * @param {import("@spectragraph/core").Schema} schema - The schema defining resources
+ * @param {import("@spectragraph/core").RootQuery} query - The query that was executed
  * @param {*} result - The query results to format
  * @returns {Object} JSON:API formatted response object
  */

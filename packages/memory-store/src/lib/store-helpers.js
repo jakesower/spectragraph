@@ -1,10 +1,10 @@
 /**
- * @typedef {import('@data-prism/core').Schema} Schema
- * @typedef {import('@data-prism/core').Graph} Graph
- * @typedef {import('@data-prism/core').NormalResource} NormalResource
- * @typedef {import('@data-prism/core').CreateResource} CreateResource
- * @typedef {import('@data-prism/core').UpdateResource} UpdateResource
- * @typedef {import('@data-prism/core').Ref} Ref
+ * @typedef {import('@spectragraph/core').Schema} Schema
+ * @typedef {import('@spectragraph/core').Graph} Graph
+ * @typedef {import('@spectragraph/core').NormalResource} NormalResource
+ * @typedef {import('@spectragraph/core').CreateResource} CreateResource
+ * @typedef {import('@spectragraph/core').UpdateResource} UpdateResource
+ * @typedef {import('@spectragraph/core').Ref} Ref
  */
 
 import { mapValues } from "es-toolkit";

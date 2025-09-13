@@ -1,17 +1,17 @@
-# Data Prism JSON:API Store
+# SpectraGraph JSON:API Store
 
-A client-side store implementation that connects Data Prism to remote JSON:API servers. Acts as a proxy, translating Data Prism queries into JSON:API requests and parsing responses back into Data Prism format.
+A client-side store implementation that connects SpectraGraph to remote JSON:API servers. Acts as a proxy, translating SpectraGraph queries into JSON:API requests and parsing responses back into SpectraGraph format.
 
 ## Installation
 
 ```bash
-npm install @data-prism/jsonapi-store
+npm install @spectragraph/jsonapi-store
 ```
 
 ## Quick Start
 
 ```javascript
-import { createJSONAPIStore } from "@data-prism/jsonapi-store";
+import { createJSONAPIStore } from "@spectragraph/jsonapi-store";
 
 const schema = {
 	resources: {
@@ -51,7 +51,7 @@ const store = createJSONAPIStore(schema, {
 	baseURL: "https://api.example.com",
 });
 
-// Use with Data Prism queries
+// Use with SpectraGraph queries
 const results = await store.query({
 	type: "posts",
 	select: ["title", "author"],
@@ -66,10 +66,10 @@ const results = await store.query({
 
 #### `createJSONAPIStore(schema, config)`
 
-Creates a JSON:API store instance that proxies Data Prism queries to a remote server.
+Creates a JSON:API store instance that proxies SpectraGraph queries to a remote server.
 
 **Parameters:**
-- `schema` (Schema) - Data Prism schema defining your resources
+- `schema` (Schema) - SpectraGraph schema defining your resources
 - `config` (Object) - Store configuration
   - `config.transport` (Object) - HTTP transport implementation
   - `config.baseURL` (string) - Base URL for the JSON:API server
@@ -77,7 +77,7 @@ Creates a JSON:API store instance that proxies Data Prism queries to a remote se
 **Returns:** Store instance with `query()` and `create()` methods
 
 ```javascript
-import { createJSONAPIStore } from "@data-prism/jsonapi-store";
+import { createJSONAPIStore } from "@spectragraph/jsonapi-store";
 
 const store = createJSONAPIStore(schema, {
 	transport: {
@@ -97,10 +97,10 @@ const store = createJSONAPIStore(schema, {
 
 #### `store.query(query)`
 
-Executes a Data Prism query against the remote JSON:API server.
+Executes a SpectraGraph query against the remote JSON:API server.
 
 **Parameters:**
-- `query` (RootQuery) - Data Prism query object
+- `query` (RootQuery) - SpectraGraph query object
 
 **Returns:** Promise resolving to query results
 
@@ -145,17 +145,17 @@ const recentPosts = await store.query({
 
 #### `formatRequest(schema, config, query)`
 
-Converts a Data Prism query into a JSON:API request URL.
+Converts a SpectraGraph query into a JSON:API request URL.
 
 **Parameters:**
-- `schema` (Schema) - Data Prism schema
+- `schema` (Schema) - SpectraGraph schema
 - `config` (Object) - Store configuration with baseURL
 - `query` (RootQuery) - Query to format
 
 **Returns:** Complete request URL with query parameters
 
 ```javascript
-import { formatRequest } from "@data-prism/jsonapi-store";
+import { formatRequest } from "@spectragraph/jsonapi-store";
 
 const url = formatRequest(schema, { baseURL: "https://api.example.com" }, {
 	type: "posts",
@@ -168,17 +168,17 @@ const url = formatRequest(schema, { baseURL: "https://api.example.com" }, {
 
 #### `parseResponse(schema, query, response)`
 
-Parses a JSON:API response into Data Prism query results.
+Parses a JSON:API response into SpectraGraph query results.
 
 **Parameters:**
-- `schema` (Schema) - Data Prism schema
+- `schema` (Schema) - SpectraGraph schema
 - `query` (RootQuery) - Original query that generated this response
 - `response` (Object) - JSON:API response object
 
-**Returns:** Query results in Data Prism format
+**Returns:** Query results in SpectraGraph format
 
 ```javascript
-import { parseResponse } from "@data-prism/jsonapi-store";
+import { parseResponse } from "@spectragraph/jsonapi-store";
 
 const jsonApiResponse = {
 	data: [
@@ -201,17 +201,17 @@ const jsonApiResponse = {
 };
 
 const results = parseResponse(schema, query, jsonApiResponse);
-// Returns Data Prism formatted results
+// Returns SpectraGraph formatted results
 ```
 
 ## Query Translation
 
-The store automatically translates Data Prism queries into JSON:API requests:
+The store automatically translates SpectraGraph queries into JSON:API requests:
 
 ### Attribute Selection
 
 ```javascript
-// Data Prism query
+// SpectraGraph query
 {
 	type: "posts",
 	select: ["title", "content"]
@@ -224,7 +224,7 @@ The store automatically translates Data Prism queries into JSON:API requests:
 ### Relationship Inclusion
 
 ```javascript
-// Data Prism query  
+// SpectraGraph query  
 {
 	type: "posts",
 	select: {
@@ -242,7 +242,7 @@ The store automatically translates Data Prism queries into JSON:API requests:
 ### Filtering
 
 ```javascript
-// Data Prism query
+// SpectraGraph query
 {
 	type: "posts",
 	where: {
@@ -258,7 +258,7 @@ The store automatically translates Data Prism queries into JSON:API requests:
 ### Sorting
 
 ```javascript
-// Data Prism query
+// SpectraGraph query
 {
 	type: "posts",
 	order: [
@@ -274,7 +274,7 @@ The store automatically translates Data Prism queries into JSON:API requests:
 ### Pagination
 
 ```javascript
-// Data Prism query
+// SpectraGraph query
 {
 	type: "posts",
 	limit: 10,
@@ -389,7 +389,7 @@ try {
 
 ```javascript
 import { useState, useEffect } from 'react';
-import { createJSONAPIStore } from '@data-prism/jsonapi-store';
+import { createJSONAPIStore } from '@spectragraph/jsonapi-store';
 
 function PostsList() {
 	const [posts, setPosts] = useState([]);
@@ -437,7 +437,7 @@ function PostsList() {
 
 ```javascript
 import express from 'express';
-import { createJSONAPIStore } from '@data-prism/jsonapi-store';
+import { createJSONAPIStore } from '@spectragraph/jsonapi-store';
 
 const app = express();
 
@@ -476,7 +476,7 @@ app.get('/api/posts', async (req, res) => {
 
 ## Related Packages
 
-- `@data-prism/core` - Core Data Prism functionality
-- `@data-prism/jsonapi-server` - Server-side JSON:API implementation
-- `@data-prism/memory-store` - In-memory store for development
-- `@data-prism/postgres-store` - PostgreSQL store for server applications
+- `@spectragraph/core` - Core SpectraGraph functionality
+- `@spectragraph/jsonapi-server` - Server-side JSON:API implementation
+- `@spectragraph/memory-store` - In-memory store for development
+- `@spectragraph/postgres-store` - PostgreSQL store for server applications

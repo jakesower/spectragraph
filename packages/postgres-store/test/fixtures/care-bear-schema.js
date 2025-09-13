@@ -1,6 +1,6 @@
 export const careBearSchema = {
 	$schema:
-		"https://raw.githubusercontent.com/jakesower/data-prism/main/schemas/data-prism-schema.1.0.schema.json",
+		"https://raw.githubusercontent.com/jakesower/spectragraph/main/schemas/spectragraph-schema.1.0.schema.json",
 	resources: {
 		bears: {
 			idAttribute: "id",

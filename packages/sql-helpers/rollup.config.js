@@ -4,7 +4,7 @@ import json from "@rollup/plugin-json";
 
 export default {
 	input: "src/index.js",
-	external: ["@data-prism/core", "@data-prism/utils", "es-toolkit"],
+	external: ["@spectragraph/core", "@spectragraph/utils", "es-toolkit"],
 	output: [
 		{
 			file: "dist/index.cjs.js",

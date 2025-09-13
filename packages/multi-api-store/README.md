@@ -1,22 +1,22 @@
-# Data Prism Multi-API Store
+# SpectraGraph Multi-API Store
 
-A Data Prism store implementation that aggregates data from multiple API endpoints into a unified interface. Supports both read and write operations (when configured with appropriate API handlers), making it perfect for querying and managing data across REST APIs, microservices, or third-party data sources.
+A SpectraGraph store implementation that aggregates data from multiple API endpoints into a unified interface. Supports both read and write operations (when configured with appropriate API handlers), making it perfect for querying and managing data across REST APIs, microservices, or third-party data sources.
 
 ## Overview
 
-Data Prism Multi-API Store is built around several key principles:
+SpectraGraph Multi-API Store is built around several key principles:
 
-- **Schema-driven**: Validates all operations against your Data Prism schema
+- **Schema-driven**: Validates all operations against your SpectraGraph schema
 - **API-agnostic**: Works with any API that returns JSON data
 - **Full CRUD support**: Supports create, read, update, and delete operations when configured
-- **Query-compatible**: Full support for Data Prism's query language
+- **Query-compatible**: Full support for SpectraGraph's query language
 - **Special handlers**: Supports custom logic for complex data loading scenarios
 - **Built-in caching**: Optional caching with TTL support for improved performance
 
 ## Installation
 
 ```bash
-npm install @data-prism/multi-api-store
+npm install @spectragraph/multi-api-store
 ```
 
 ## Core Concepts
@@ -26,8 +26,8 @@ npm install @data-prism/multi-api-store
 The multi-API store acts as a read-only aggregation layer over multiple API endpoints. Each resource type in your schema can be configured with a getter function that fetches data from the appropriate API endpoint.
 
 ```javascript
-import { createMultiApiStore } from "@data-prism/multi-api-store";
-import { defaultSelectEngine, defaultWhereEngine } from "@data-prism/core";
+import { createMultiApiStore } from "@spectragraph/multi-api-store";
+import { defaultSelectEngine, defaultWhereEngine } from "@spectragraph/core";
 
 const store = createMultiApiStore(schema, {
 	resources: {
@@ -53,7 +53,7 @@ const store = createMultiApiStore(schema, {
 
 The multi-API store provides comprehensive data operations:
 
-- **query** - Execute Data Prism queries against the aggregated APIs
+- **query** - Execute SpectraGraph queries against the aggregated APIs
 - **create** - Create new resources using configured API handlers
 - **update** - Update existing resources using configured API handlers  
 - **delete** - Delete resources using configured API handlers
@@ -134,7 +134,7 @@ const store = createMultiApiStore(schema, {
 The multi-API store supports middleware to enhance request processing with cross-cutting concerns like authentication, logging, and retry logic. Middleware functions are executed in order before resource handlers are called.
 
 ```javascript
-import { auth, retry, log } from "@data-prism/multi-api-store";
+import { auth, retry, log } from "@spectragraph/multi-api-store";
 
 const store = createMultiApiStore(schema, {
 	middleware: [
@@ -197,12 +197,12 @@ const customAuth = (context, next) => {
 
 ### Expression Engines
 
-The multi-API store uses focused expression engines from Data Prism Core to provide different capabilities for different query contexts:
+The multi-API store uses focused expression engines from SpectraGraph Core to provide different capabilities for different query contexts:
 
 - **SELECT Engine**: Full expression capabilities including filtering, aggregations, transformations, and computed fields for SELECT clauses
 - **WHERE Engine**: Filtering-only operations for WHERE clauses, excluding expensive aggregation operations for performance and security
 
-By default, the multi-API store uses `defaultSelectEngine` and `defaultWhereEngine` from `@data-prism/core`. You can provide custom engines in the configuration if needed for specialized use cases.
+By default, the multi-API store uses `defaultSelectEngine` and `defaultWhereEngine` from `@spectragraph/core`. You can provide custom engines in the configuration if needed for specialized use cases.
 
 ## API Reference
 
@@ -212,7 +212,7 @@ Creates a new multi-API store instance.
 
 **Parameters:**
 
-- `schema` (Schema) - The Data Prism schema defining resource types and relationships
+- `schema` (Schema) - The SpectraGraph schema defining resource types and relationships
 - `config.resources` (object) - Configuration object mapping resource types to API handlers
 - `config.specialHandlers` (array, optional) - Array of special handler objects for custom loading logic
 - `config.cache` (object, optional) - Caching configuration options
@@ -222,7 +222,7 @@ Creates a new multi-API store instance.
 **Returns:** Multi-API store instance with query operations
 
 ```javascript
-import { createMultiApiStore } from "@data-prism/multi-api-store";
+import { createMultiApiStore } from "@spectragraph/multi-api-store";
 
 const store = createMultiApiStore(schema, {
 	resources: {
@@ -265,11 +265,11 @@ const store = createMultiApiStore(schema, {
 
 #### `store.query(query, options?, queryContext?)`
 
-Executes a Data Prism query against the configured API endpoints.
+Executes a SpectraGraph query against the configured API endpoints.
 
 **Parameters:**
 
-- `query` (RootQuery) - The Data Prism query to execute
+- `query` (RootQuery) - The SpectraGraph query to execute
 - `options` (object, optional) - Additional options passed to API getter functions
 - `queryContext` (object, optional) - Query context for advanced scenarios
 
@@ -334,7 +334,7 @@ The following operations throw `StoreOperationNotSupportedError` when called:
 Write operations (create, update, delete) will also throw `StoreOperationNotSupportedError` if the corresponding handler is not configured for the resource type.
 
 ```javascript
-import { StoreOperationNotSupportedError } from "@data-prism/core";
+import { StoreOperationNotSupportedError } from "@spectragraph/core";
 
 try {
 	await store.create({ type: "teams", attributes: { name: "New Team" } });
@@ -351,7 +351,7 @@ try {
 ### Basic Usage
 
 ```javascript
-import { createMultiApiStore } from "@data-prism/multi-api-store";
+import { createMultiApiStore } from "@spectragraph/multi-api-store";
 
 // 1. Define your schema
 const schema = {
@@ -544,11 +544,11 @@ console.log(results);
 ### Error Handling
 
 ```javascript
-import { createMultiApiStore } from "@data-prism/multi-api-store";
+import { createMultiApiStore } from "@spectragraph/multi-api-store";
 import {
 	StoreOperationNotSupportedError,
 	ExpressionNotSupportedError,
-} from "@data-prism/core";
+} from "@spectragraph/core";
 
 const store = createMultiApiStore(schema, {
 	resources: {
@@ -594,15 +594,15 @@ try {
 
 ## TypeScript Support
 
-Data Prism Multi-API Store includes comprehensive TypeScript definitions:
+SpectraGraph Multi-API Store includes comprehensive TypeScript definitions:
 
 ```typescript
-import type { Schema, RootQuery, QueryResult } from "@data-prism/core";
+import type { Schema, RootQuery, QueryResult } from "@spectragraph/core";
 import type {
 	MultiApiStore,
 	MultiApiStoreConfig,
 	ApiResourceConfig,
-} from "@data-prism/multi-api-store";
+} from "@spectragraph/multi-api-store";
 
 const schema: Schema = {
 	resources: {
@@ -706,7 +706,7 @@ const store = createMultiApiStore(schema, {
 
 ## Related Packages
 
-- `@data-prism/core` - Core Data Prism functionality and types
-- `@data-prism/memory-store` - In-memory data store implementation
-- `@data-prism/postgres-store` - PostgreSQL backend
-- `@data-prism/jsonapi-store` - JSON:API client store
+- `@spectragraph/core` - Core SpectraGraph functionality and types
+- `@spectragraph/memory-store` - In-memory data store implementation
+- `@spectragraph/postgres-store` - PostgreSQL backend
+- `@spectragraph/jsonapi-store` - JSON:API client store

@@ -1,6 +1,6 @@
 # Query Language Guide
 
-Data Prism queries are JSON objects that describe what data to fetch and how to transform it. This guide covers all query syntax, from basic field selection to complex expressions.
+SpectraGraph queries are JSON objects that describe what data to fetch and how to transform it. This guide covers all query syntax, from basic field selection to complex expressions.
 
 ## Table of Contents
 
@@ -40,7 +40,7 @@ Optional query parameters:
 
 ## Selection Syntax
 
-Data Prism supports multiple ways to specify which fields to select:
+SpectraGraph supports multiple ways to specify which fields to select:
 
 ### Array Syntax (Recommended)
 
@@ -226,7 +226,7 @@ Data Prism supports multiple ways to specify which fields to select:
 
 ## Expressions
 
-Data Prism includes a powerful expression system for computations and transformations:
+SpectraGraph includes a powerful expression system for computations and transformations:
 
 ### Computed Fields
 

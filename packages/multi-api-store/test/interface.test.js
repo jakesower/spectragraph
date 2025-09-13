@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { createMemoryStore } from "@data-prism/memory-store";
+import { createMemoryStore } from "@spectragraph/memory-store";
 import {
 	careBearData,
 	careBearSchema,

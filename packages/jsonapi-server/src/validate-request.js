@@ -8,7 +8,7 @@ const validateRequestSchema = ajv.compile(jsonApiRequestSchema);
 
 /**
  * Validates a JSON:API request against schema and format requirements
- * @param {import("@data-prism/core").Schema} schema - The schema defining resources
+ * @param {import("@spectragraph/core").Schema} schema - The schema defining resources
  * @param {*} body - The request body to validate
  * @returns {Array|undefined} Array of validation errors, or undefined if valid
  */

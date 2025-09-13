@@ -1,7 +1,7 @@
-// TypeScript definitions for @data-prism/jsonapi-store
+// TypeScript definitions for @spectragraph/jsonapi-store
 // Generated from JSDoc annotations
 
-import type { Schema, RootQuery, Store } from "@data-prism/core";
+import type { Schema, RootQuery, Store } from "@spectragraph/core";
 
 // === TRANSPORT TYPES ===
 
@@ -24,11 +24,11 @@ export function createJSONAPIStore(schema: Schema, config: StoreConfig): Store;
 // === REQUEST/RESPONSE UTILITIES ===
 
 /**
- * Formats a Data Prism query into a JSON:API request URL
+ * Formats a SpectraGraph query into a JSON:API request URL
  */
 export function formatRequest(schema: Schema, config: { baseURL: string }, query: RootQuery): string;
 
 /**
- * Parses a JSON:API response into Data Prism query results
+ * Parses a JSON:API response into SpectraGraph query results
  */
 export function parseResponse(schema: Schema, query: RootQuery, response: any): any;

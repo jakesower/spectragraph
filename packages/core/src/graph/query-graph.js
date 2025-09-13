@@ -1,5 +1,5 @@
 import { mapValues, orderBy } from "es-toolkit";
-import { applyOrMap } from "@data-prism/utils";
+import { applyOrMap } from "@spectragraph/utils";
 import { normalizeQuery } from "../query.js";
 import { defaultSelectEngine, defaultWhereEngine } from "../lib/defaults.js";
 import { createExpressionProjector } from "./select-helpers.js";

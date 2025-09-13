@@ -2,7 +2,7 @@ import {
 	createGraphFromResources,
 	linkInverses,
 	mergeGraphsDeep,
-} from "@data-prism/core";
+} from "@spectragraph/core";
 import {
 	buildAsyncMiddlewarePipe,
 	compileResourceMappers,
@@ -20,9 +20,9 @@ const queryParamsToStr = (queryParams) =>
 
 /**
  * Loads all the data needed for a query to run, including its subqueries.
- * @param {import('@data-prism/core').NormalRootQuery} rootQuery - The query to execute.
+ * @param {import('@spectragraph/core').NormalRootQuery} rootQuery - The query to execute.
  * @param {Object} storeContext - Context related to the state of the application, managed by StoreContext
- * @returns {import('@data-prism/core').Graph} - A graph with all the data necessary for the query to be executed loaded.
+ * @returns {import('@spectragraph/core').Graph} - A graph with all the data necessary for the query to be executed loaded.
  */
 export async function loadQueryGraph(rootQuery, storeContext) {
 	const {

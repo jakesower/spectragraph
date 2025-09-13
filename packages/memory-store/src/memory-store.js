@@ -11,7 +11,7 @@ import {
 	defaultValidator,
 	defaultSelectEngine,
 	defaultWhereEngine,
-} from "@data-prism/core";
+} from "@spectragraph/core";
 import { create as createAction } from "./create.js";
 import { deleteAction } from "./delete.js";
 import { update as updateAction } from "./update.js";
@@ -27,22 +27,22 @@ import { merge } from "./merge.js";
 
 /**
  * @typedef {Object} MemoryStoreConfig
- * @property {import('@data-prism/core').Graph} [initialData] - Initial graph data to populate the store
+ * @property {import('@spectragraph/core').Graph} [initialData] - Initial graph data to populate the store
  * @property {Ajv} [validator] - Custom AJV validator instance (defaults to defaultValidator)
- * @property {import('@data-prism/core').SelectExpressionEngine} [selectEngine] - Expression engine for SELECT clauses (defaults to defaultSelectEngine)
- * @property {import('@data-prism/core').WhereExpressionEngine} [whereEngine] - Expression engine for WHERE clauses (defaults to defaultWhereEngine)
+ * @property {import('@spectragraph/core').SelectExpressionEngine} [selectEngine] - Expression engine for SELECT clauses (defaults to defaultSelectEngine)
+ * @property {import('@spectragraph/core').WhereExpressionEngine} [whereEngine] - Expression engine for WHERE clauses (defaults to defaultWhereEngine)
  */
 
 /**
  * @typedef {Object} MemoryStoreContext
- * @property {import('@data-prism/core').Schema} schema - The schema defining resource types and relationships
+ * @property {import('@spectragraph/core').Schema} schema - The schema defining resource types and relationships
  * @property {Ajv} [validator] - AJV validator instance for resource validation
  * @property {MemoryStore} [store] - The memory store instance
- * @property {import('@data-prism/core').Graph} storeGraph - The graph data structure containing all resources
+ * @property {import('@spectragraph/core').Graph} storeGraph - The graph data structure containing all resources
  */
 
 /**
- * @typedef {import('@data-prism/core').Store & {
+ * @typedef {import('@spectragraph/core').Store & {
  *   linkInverses: function(): void,
  *   merge: function(NormalResourceTree): Promise<NormalResourceTree>,
  *   merge: function(NormalResourceTree[]): Promise<NormalResourceTree[]>
@@ -50,10 +50,10 @@ import { merge } from "./merge.js";
  */
 
 /**
- * Creates a new in-memory store instance that implements the data-prism store interface.
+ * Creates a new in-memory store instance that implements the spectragraph store interface.
  * Provides CRUD operations, querying, and relationship management for graph data.
  *
- * @param {import('@data-prism/core').Schema} schema - The schema defining resource types and relationships
+ * @param {import('@spectragraph/core').Schema} schema - The schema defining resource types and relationships
  * @param {MemoryStoreConfig} [config={}] - Configuration options for the store
  * @returns {MemoryStore} A new memory store instance
  */

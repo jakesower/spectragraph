@@ -1,5 +1,5 @@
 import { mapValues, snakeCase } from "es-toolkit";
-import { flatMapQuery } from "@data-prism/query-helpers";
+import { flatMapQuery } from "@spectragraph/query-helpers";
 
 /**
  * @typedef {Object} SelectClauseItem
@@ -8,8 +8,8 @@ import { flatMapQuery } from "@data-prism/query-helpers";
 
 /**
  * @typedef {Object} GraphExtractContext
- * @property {import('data-prism').Schema} schema - The schema
- * @property {import('data-prism').RootQuery} query - The root query
+ * @property {import('spectragraph').Schema} schema - The schema
+ * @property {import('spectragraph').RootQuery} query - The root query
  * @property {Object} [columnTypeModifiers] - Optional column type modifiers for data extraction
  */
 

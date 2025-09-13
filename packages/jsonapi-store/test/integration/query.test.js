@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { careBearSchema } from "@data-prism/interface-tests/fixtures";
+import { careBearSchema } from "@spectragraph/interface-tests/fixtures";
 import { createJSONAPIStore } from "../../src/jsonapi-store.js";
 import { makeRequest } from "../helpers.js";
 

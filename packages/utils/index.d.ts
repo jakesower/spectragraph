@@ -1,4 +1,4 @@
-// TypeScript definitions for @data-prism/utils
+// TypeScript definitions for @spectragraph/utils
 // Generated from JSDoc annotations
 
 /**

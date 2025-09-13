@@ -1,4 +1,4 @@
-import { createResource, mergeResources } from "@data-prism/core";
+import { createResource, mergeResources } from "@spectragraph/core";
 import { setInverseRelationships } from "./lib/store-helpers.js";
 import { v4 as v4UUID } from "uuid";
 
@@ -8,9 +8,9 @@ import { v4 as v4UUID } from "uuid";
  *
  * WARNING: MUTATES storeGraph
  *
- * @param {import('@data-prism/core').CreateResource} resource - The resource to create
+ * @param {import('@spectragraph/core').CreateResource} resource - The resource to create
  * @param {import('./memory-store.js').MemoryStoreContext} context - Context object containing schema and storeGraph
- * @returns {import('@data-prism/core').NormalResource} The created resource
+ * @returns {import('@spectragraph/core').NormalResource} The created resource
  */
 export function create(resource, context) {
 	const { schema, storeGraph } = context;
