@@ -89,15 +89,15 @@ const results = await store.query({
   where: {
     city: { eq: "Phoenix" },
   },
-  select: {
-    name: "name",
-    city: "city",
-    homeMatches: {
-      select: ["date", "venue"],
-      order: { date: "desc" },
-      limit: 5,
-    },
+select: {
+  name: "name",
+  city: "city",
+  homeMatches: {
+    select: ["date", "venue"],
+    order: { date: "desc" },
+    limit: 5,
   },
+},
 });
 ```
 
@@ -221,10 +221,10 @@ const store = createSQLiteStore(schema, db, {
     teams: "team_master",
     matches: "game_results",
   },
-  columnMapping: {
-    "teams.founded": "founding_year",
-    "matches.venue": "stadium_name",
-  },
+columnMapping: {
+  "teams.founded": "founding_year",
+  "matches.venue": "stadium_name",
+},
 });
 ```
 
@@ -252,14 +252,14 @@ const query = {
 ```javascript
 // SpectraGraph query
 const query = {
-  type: "teams", 
+  type: "teams",
   select: {
     name: "name",
     homeMatches: {
       select: ["date", "venue"],
       where: { date: { gte: "2024-01-01" } }
     }
-  }
+}
 };
 
 // Generated SQL uses JOINs for efficient relationship traversal
@@ -282,29 +282,29 @@ const schema = {
         city: { type: "string" },
         founded: { type: "integer" },
       },
-      relationships: {
-        homeMatches: {
-          type: "matches",
-          cardinality: "many",
-          inverse: "homeTeam",
-        },
+    relationships: {
+      homeMatches: {
+        type: "matches",
+        cardinality: "many",
+        inverse: "homeTeam",
       },
-    },
-    matches: {
-      attributes: {
-        id: { type: "string" },
-        date: { type: "string" },
-        venue: { type: "string" },
-      },
-      relationships: {
-        homeTeam: {
-          type: "teams",
-          cardinality: "one", 
-          inverse: "homeMatches",
-        },
-      },
-    },
   },
+},
+matches: {
+  attributes: {
+    id: { type: "string" },
+    date: { type: "string" },
+    venue: { type: "string" },
+  },
+relationships: {
+  homeTeam: {
+    type: "teams",
+    cardinality: "one",
+    inverse: "homeMatches",
+  },
+},
+},
+},
 };
 
 // Open SQLite database
@@ -352,7 +352,7 @@ const teamsWithMatches = await store.query({
       order: { date: "desc" },
       limit: 5,
     },
-  },
+},
 });
 
 // Matches with team information
@@ -360,16 +360,16 @@ const matchesWithTeams = await store.query({
   type: "matches",
   select: {
     date: "date",
-    venue: "venue", 
+    venue: "venue",
     homeTeam: {
       select: ["name", "city"],
     },
-    awayTeam: {
-      select: ["name", "city"],
-    },
+  awayTeam: {
+    select: ["name", "city"],
   },
-  order: { date: "desc" },
-  limit: 10,
+},
+order: { date: "desc" },
+limit: 10,
 });
 ```
 
@@ -384,9 +384,9 @@ const modernTeams = await store.query({
       { founded: { gte: 2000 } },
       { city: { in: ["Phoenix", "Scottsdale", "Tempe"] } },
     ],
-  },
-  select: ["name", "city", "founded"],
-  order: { founded: "asc" },
+},
+select: ["name", "city", "founded"],
+order: { founded: "asc" },
 });
 
 // Recent home matches for active teams
@@ -397,16 +397,16 @@ const recentHomeMatches = await store.query({
       { date: { gte: "2024-01-01" } },
       { homeTeam: { exists: true } },
     ],
+},
+select: {
+  date: "date",
+  venue: "venue",
+  homeTeam: {
+    select: ["name"],
   },
-  select: {
-    date: "date",
-    venue: "venue",
-    homeTeam: {
-      select: ["name"],
-    },
-  },
-  order: { date: "desc" },
-  limit: 20,
+},
+order: { date: "desc" },
+limit: 20,
 });
 ```
 
@@ -418,7 +418,7 @@ const newTeam = await store.create({
   type: "teams",
   attributes: {
     name: "Phoenix Suns",
-    city: "Phoenix", 
+    city: "Phoenix",
     founded: 1968,
   },
 });
@@ -430,14 +430,14 @@ const newMatch = await store.create({
     date: "2024-03-15",
     venue: "Footprint Center",
   },
-  relationships: {
-    homeTeam: { type: "teams", id: newTeam.id },
-  },
+relationships: {
+  homeTeam: { type: "teams", id: newTeam.id },
+},
 });
 
 // Update team information
 const updatedTeam = await store.update({
-  type: "teams", 
+  type: "teams",
   id: newTeam.id,
   attributes: {
     city: "Tempe", // Team moved cities

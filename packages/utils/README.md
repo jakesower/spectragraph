@@ -46,7 +46,7 @@ import { applyOrMap } from "@spectragraph/utils";
 // Single item
 applyOrMap(5, x => x * 2);           // Returns: 10
 
-// Array of items  
+// Array of items
 applyOrMap([1, 2, 3], x => x * 2);   // Returns: [2, 4, 6]
 
 // Null/undefined handling
@@ -113,15 +113,15 @@ const data = [{ name: "John" }, { name: "Jane" }];
 const addGreeting = person => ({ ...person, greeting: `Hello, ${person.name}` });
 const toUpperCase = person => ({ ...person, name: person.name.toUpperCase() });
 
-const result = applyOrMap(data, person => 
-  pipeThru(person, [addGreeting, toUpperCase])
+const result = applyOrMap(data, person =>
+pipeThru(person, [addGreeting, toUpperCase])
 );
 
 console.log(result);
 // [
-//   { name: "JOHN", greeting: "Hello, John" },
-//   { name: "JANE", greeting: "Hello, Jane" }
-// ]
+  //   { name: "JOHN", greeting: "Hello, John" },
+  //   { name: "JANE", greeting: "Hello, Jane" }
+  // ]
 ```
 
 ### Async Data Processing
@@ -199,9 +199,9 @@ function normalizeResources(resources) {
     return resource;
   };
 
-  return applyOrMap(resources, resource =>
-    pipeThru(resource, [addType, addId, validateRequired])
-  );
+return applyOrMap(resources, resource =>
+pipeThru(resource, [addType, addId, validateRequired])
+);
 }
 
 // Works with single resources or arrays
@@ -228,18 +228,18 @@ const doubled: number[] = applyOrMap(numbers, x => x * 2);
 
 // Async operations
 const asyncResult: Promise<string[]> = applyOrMapAsync(
-  ["a", "b", "c"], 
-  async (str: string): Promise<string> => str.toUpperCase()
+["a", "b", "c"],
+async (str: string): Promise<string> => str.toUpperCase()
 );
 
 // Pipeline with type inference
 const result: string = pipeThru(
-  42,
-  [
-    (x: number) => x * 2,      // number -> number
-    (x: number) => x.toString(), // number -> string
-    (x: string) => x.padStart(4, '0') // string -> string
-  ]
+42,
+[
+  (x: number) => x * 2,      // number -> number
+  (x: number) => x.toString(), // number -> string
+  (x: string) => x.padStart(4, '0') // string -> string
+]
 );
 ```
 

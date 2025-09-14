@@ -14,7 +14,10 @@ export interface ApiResourceConfig {
   create?(resource: { [key: string]: unknown }, context?: { [key: string]: unknown }): Promise<{ [key: string]: unknown }>;
   update?(resource: { [key: string]: unknown }, context?: { [key: string]: unknown }): Promise<{ [key: string]: unknown }>;
   delete?(resource: { [key: string]: unknown }, context?: { [key: string]: unknown }): Promise<{ [key: string]: unknown }>;
-  mappers?: { [field: string]: string | ((resource: any) => any) };
+  mappers?: {
+    fromApi?: { [field: string]: string | ((resource: any) => any) };
+    toApi?: { [field: string]: string | ((resource: any) => any) };
+  };
 }
 
 export interface SpecialHandler {

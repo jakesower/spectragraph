@@ -103,8 +103,11 @@ describe("createMultiApiStore", () => {
 				skeptics: {
 					get: mockGet,
 					mappers: {
-						name: "moniker",
-						yearsActive: (res) => Math.round(res.decadesActive / 10),
+						fromApi: {
+							name: "moniker",
+							yearsActive: (res) => Math.round(res.decadesActive / 10),
+						},
+						toApi: {},
 					},
 				},
 			},
@@ -245,7 +248,10 @@ describe("createMultiApiStore", () => {
 				},
 				investigations: {
 					mappers: {
-						investigator: "investigator_id",
+						fromApi: {
+							investigator: "investigator_id",
+						},
+						toApi: {},
 					},
 					get: mockInvestigationsGet,
 				},
