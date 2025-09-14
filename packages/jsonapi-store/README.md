@@ -14,49 +14,49 @@ npm install @spectragraph/jsonapi-store
 import { createJSONAPIStore } from "@spectragraph/jsonapi-store";
 
 const schema = {
-	resources: {
-		posts: {
-			attributes: {
-				id: { type: "string" },
-				title: { type: "string" },
-				content: { type: "string" },
-			},
-			relationships: {
-				author: { type: "users", cardinality: "one", inverse: "posts" },
-			},
-		},
-		users: {
-			attributes: {
-				id: { type: "string" },
-				name: { type: "string" },
-				email: { type: "string" },
-			},
-			relationships: {
-				posts: { type: "posts", cardinality: "many", inverse: "author" },
-			},
-		},
-	},
+  resources: {
+    posts: {
+      attributes: {
+        id: { type: "string" },
+        title: { type: "string" },
+        content: { type: "string" },
+      },
+      relationships: {
+        author: { type: "users", cardinality: "one", inverse: "posts" },
+      },
+    },
+    users: {
+      attributes: {
+        id: { type: "string" },
+        name: { type: "string" },
+        email: { type: "string" },
+      },
+      relationships: {
+        posts: { type: "posts", cardinality: "many", inverse: "author" },
+      },
+    },
+  },
 };
 
 // Create a transport implementation
 const transport = {
-	async get(url) {
-		const response = await fetch(url);
-		return response.json();
-	},
+  async get(url) {
+    const response = await fetch(url);
+    return response.json();
+  },
 };
 
 const store = createJSONAPIStore(schema, {
-	transport,
-	baseURL: "https://api.example.com",
+  transport,
+  baseURL: "https://api.example.com",
 });
 
 // Use with SpectraGraph queries
 const results = await store.query({
-	type: "posts",
-	select: ["title", "author"],
-	where: { published: true },
-	limit: 10,
+  type: "posts",
+  select: ["title", "author"],
+  where: { published: true },
+  limit: 10,
 });
 ```
 
@@ -81,16 +81,16 @@ Creates a JSON:API store instance that proxies SpectraGraph queries to a remote 
 import { createJSONAPIStore } from "@spectragraph/jsonapi-store";
 
 const store = createJSONAPIStore(schema, {
-	transport: {
-		async get(url) {
-			const response = await fetch(url);
-			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-			}
-			return response.json();
-		},
-	},
-	baseURL: "https://api.example.com",
+  transport: {
+    async get(url) {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    },
+  },
+  baseURL: "https://api.example.com",
 });
 ```
 
@@ -109,33 +109,33 @@ Executes a SpectraGraph query against the remote JSON:API server.
 ```javascript
 // Simple query
 const posts = await store.query({
-	type: "posts",
-	select: ["title", "content"],
+  type: "posts",
+  select: ["title", "content"],
 });
 
 // Query with relationships
 const postsWithAuthors = await store.query({
-	type: "posts",
-	select: {
-		title: "title",
-		content: "content",
-		author: {
-			select: ["name", "email"],
-		},
-	},
+  type: "posts",
+  select: {
+    title: "title",
+    content: "content",
+    author: {
+      select: ["name", "email"],
+    },
+  },
 });
 
 // Query with filtering and pagination
 const recentPosts = await store.query({
-	type: "posts",
-	select: ["title", "publishedAt"],
-	where: {
-		publishedAt: { $gte: "2024-01-01" },
-		status: "published",
-	},
-	order: [{ publishedAt: "desc" }],
-	limit: 20,
-	offset: 0,
+  type: "posts",
+  select: ["title", "publishedAt"],
+  where: {
+    publishedAt: { $gte: "2024-01-01" },
+    status: "published",
+  },
+  order: [{ publishedAt: "desc" }],
+  limit: 20,
+  offset: 0,
 });
 ```
 
@@ -161,14 +161,14 @@ Converts a SpectraGraph query into a JSON:API request URL.
 import { formatRequest } from "@spectragraph/jsonapi-store";
 
 const url = formatRequest(
-	schema,
-	{ baseURL: "https://api.example.com" },
-	{
-		type: "posts",
-		select: ["title", "author"],
-		where: { published: true },
-		limit: 10,
-	},
+  schema,
+  { baseURL: "https://api.example.com" },
+  {
+    type: "posts",
+    select: ["title", "author"],
+    where: { published: true },
+    limit: 10,
+  },
 );
 // Returns: "https://api.example.com/posts?fields[posts]=title,author&filter[published]=true&page[size]=10&page[number]=1"
 ```
@@ -189,23 +189,23 @@ Parses a JSON:API response into SpectraGraph query results.
 import { parseResponse } from "@spectragraph/jsonapi-store";
 
 const jsonApiResponse = {
-	data: [
-		{
-			type: "posts",
-			id: "1",
-			attributes: { title: "My Post" },
-			relationships: {
-				author: { data: { type: "users", id: "123" } },
-			},
-		},
-	],
-	included: [
-		{
-			type: "users",
-			id: "123",
-			attributes: { name: "John Doe" },
-		},
-	],
+  data: [
+    {
+      type: "posts",
+      id: "1",
+      attributes: { title: "My Post" },
+      relationships: {
+        author: { data: { type: "users", id: "123" } },
+      },
+    },
+  ],
+  included: [
+    {
+      type: "users",
+      id: "123",
+      attributes: { name: "John Doe" },
+    },
+  ],
 };
 
 const results = parseResponse(schema, query, jsonApiResponse);
@@ -301,20 +301,20 @@ The store requires a transport implementation for making HTTP requests. Here are
 
 ```javascript
 const transport = {
-	async get(url) {
-		const response = await fetch(url, {
-			headers: {
-				Accept: "application/vnd.api+json",
-				Authorization: `Bearer ${authToken}`,
-			},
-		});
+  async get(url) {
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/vnd.api+json",
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
 
-		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-		}
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 };
 ```
 
@@ -324,24 +324,24 @@ const transport = {
 import axios from "axios";
 
 const transport = {
-	async get(url) {
-		try {
-			const response = await axios.get(url, {
-				headers: {
-					Accept: "application/vnd.api+json",
-				},
-			});
-			return response.data;
-		} catch (error) {
-			if (error.response) {
-				// Server responded with error status
-				const err = new Error(`HTTP ${error.response.status}`);
-				err.response = error.response;
-				throw err;
-			}
-			throw error;
-		}
-	},
+  async get(url) {
+    try {
+      const response = await axios.get(url, {
+        headers: {
+          Accept: "application/vnd.api+json",
+        },
+      });
+      return response.data;
+    } catch (error) {
+      if (error.response) {
+        // Server responded with error status
+        const err = new Error(`HTTP ${error.response.status}`);
+        err.response = error.response;
+        throw err;
+      }
+      throw error;
+    }
+  },
 };
 ```
 
@@ -349,27 +349,27 @@ const transport = {
 
 ```javascript
 const transport = {
-	async get(url) {
-		const response = await fetch(url, {
-			headers: {
-				Accept: "application/vnd.api+json",
-				"Content-Type": "application/vnd.api+json",
-				Authorization: `Bearer ${getAccessToken()}`,
-			},
-		});
+  async get(url) {
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/vnd.api+json",
+        "Content-Type": "application/vnd.api+json",
+        Authorization: `Bearer ${getAccessToken()}`,
+      },
+    });
 
-		if (response.status === 401) {
-			// Handle token refresh
-			await refreshAccessToken();
-			return this.get(url); // Retry
-		}
+    if (response.status === 401) {
+      // Handle token refresh
+      await refreshAccessToken();
+      return this.get(url); // Retry
+    }
 
-		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-		}
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
 
-		return response.json();
-	},
+    return response.json();
+  },
 };
 ```
 
@@ -379,15 +379,15 @@ The store handles common error scenarios:
 
 ```javascript
 try {
-	const results = await store.query(query);
+  const results = await store.query(query);
 } catch (error) {
-	if (error.transportError && error.response?.statusCode === 404) {
-		// Resource not found - store returns null for 404s
-		console.log("Resource not found");
-	} else {
-		// Other errors are re-thrown
-		console.error("Query failed:", error.message);
-	}
+  if (error.transportError && error.response?.statusCode === 404) {
+    // Resource not found - store returns null for 404s
+    console.log("Resource not found");
+  } else {
+    // Other errors are re-thrown
+    console.error("Query failed:", error.message);
+  }
 }
 ```
 
@@ -400,44 +400,44 @@ import { useState, useEffect } from "react";
 import { createJSONAPIStore } from "@spectragraph/jsonapi-store";
 
 function PostsList() {
-	const [posts, setPosts] = useState([]);
-	const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-	const store = createJSONAPIStore(schema, {
-		transport: { get: (url) => fetch(url).then((r) => r.json()) },
-		baseURL: "https://api.example.com",
-	});
+  const store = createJSONAPIStore(schema, {
+    transport: { get: (url) => fetch(url).then((r) => r.json()) },
+    baseURL: "https://api.example.com",
+  });
 
-	useEffect(() => {
-		async function loadPosts() {
-			try {
-				const results = await store.query({
-					type: "posts",
-					select: ["title", "author"],
-					limit: 10,
-				});
-				setPosts(results);
-			} catch (error) {
-				console.error("Failed to load posts:", error);
-			} finally {
-				setLoading(false);
-			}
-		}
+  useEffect(() => {
+    async function loadPosts() {
+      try {
+        const results = await store.query({
+          type: "posts",
+          select: ["title", "author"],
+          limit: 10,
+        });
+        setPosts(results);
+      } catch (error) {
+        console.error("Failed to load posts:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-		loadPosts();
-	}, []);
+    loadPosts();
+  }, []);
 
-	if (loading) return <div>Loading...</div>;
+  if (loading) return <div>Loading...</div>;
 
-	return (
-		<ul>
-			{posts.map((post) => (
-				<li key={post.id}>
-					{post.title} by {post.author.name}
-				</li>
-			))}
-		</ul>
-	);
+  return (
+    <ul>
+      {posts.map((post) => (
+        <li key={post.id}>
+          {post.title} by {post.author.name}
+        </li>
+      ))}
+    </ul>
+  );
 }
 ```
 
@@ -451,27 +451,27 @@ const app = express();
 
 // Create store instance
 const backendStore = createJSONAPIStore(schema, {
-	transport: { get: (url) => fetch(url).then((r) => r.json()) },
-	baseURL: "https://backend-api.example.com",
+  transport: { get: (url) => fetch(url).then((r) => r.json()) },
+  baseURL: "https://backend-api.example.com",
 });
 
 // Middleware to add store to requests
 app.use((req, res, next) => {
-	req.store = backendStore;
-	next();
+  req.store = backendStore;
+  next();
 });
 
 app.get("/api/posts", async (req, res) => {
-	try {
-		const posts = await req.store.query({
-			type: "posts",
-			select: ["title", "content"],
-			where: req.query.filter ? JSON.parse(req.query.filter) : undefined,
-		});
-		res.json(posts);
-	} catch (error) {
-		res.status(500).json({ error: error.message });
-	}
+  try {
+    const posts = await req.store.query({
+      type: "posts",
+      select: ["title", "content"],
+      where: req.query.filter ? JSON.parse(req.query.filter) : undefined,
+    });
+    res.json(posts);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 ```
 

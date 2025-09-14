@@ -42,10 +42,10 @@ import { createMemoryStore } from "@spectragraph/memory-store";
 import { defaultSelectEngine, defaultWhereEngine } from "@spectragraph/core";
 
 const store = createMemoryStore(schema, {
-	initialData: existingGraph, // optional
-	validator: customValidator, // optional
-	selectEngine: defaultSelectEngine, // optional - expression engine for SELECT clauses
-	whereEngine: defaultWhereEngine, // optional - expression engine for WHERE clauses
+  initialData: existingGraph, // optional
+  validator: customValidator, // optional
+  selectEngine: defaultSelectEngine, // optional - expression engine for SELECT clauses
+  whereEngine: defaultWhereEngine, // optional - expression engine for WHERE clauses
 });
 ```
 
@@ -89,16 +89,16 @@ Creates a new in-memory store instance.
 import { createMemoryStore } from "@spectragraph/memory-store";
 
 const store = createMemoryStore(schema, {
-	initialData: {
-		teams: {
-			"team-1": {
-				type: "teams",
-				id: "team-1",
-				attributes: { name: "Arizona Bay FC" },
-				relationships: { homeMatches: [] },
-			},
-		},
-	},
+  initialData: {
+    teams: {
+      "team-1": {
+        type: "teams",
+        id: "team-1",
+        attributes: { name: "Arizona Bay FC" },
+        relationships: { homeMatches: [] },
+      },
+    },
+  },
 });
 ```
 
@@ -116,14 +116,14 @@ Creates a new resource in the store with automatic relationship linking.
 
 ```javascript
 const newTeam = store.create({
-	type: "teams",
-	attributes: {
-		name: "Scottsdale Surf",
-		city: "Scottsdale",
-	},
-	relationships: {
-		homeField: { type: "fields", id: "field-1" },
-	},
+  type: "teams",
+  attributes: {
+    name: "Scottsdale Surf",
+    city: "Scottsdale",
+  },
+  relationships: {
+    homeField: { type: "fields", id: "field-1" },
+  },
 });
 ```
 
@@ -139,14 +139,14 @@ Updates an existing resource, merging attributes and relationships.
 
 ```javascript
 const updatedTeam = store.update({
-	type: "teams",
-	id: "team-1",
-	attributes: {
-		city: "Phoenix", // New attribute
-	},
-	relationships: {
-		homeMatches: [{ type: "matches", id: "match-1" }], // Replace relationship
-	},
+  type: "teams",
+  id: "team-1",
+  attributes: {
+    city: "Phoenix", // New attribute
+  },
+  relationships: {
+    homeMatches: [{ type: "matches", id: "match-1" }], // Replace relationship
+  },
 });
 ```
 
@@ -163,9 +163,9 @@ Creates a resource if it doesn't exist, otherwise updates it.
 ```javascript
 // Creates if team-2 doesn't exist, updates if it does
 const team = store.upsert({
-	type: "teams",
-	id: "team-2",
-	attributes: { name: "Mesa Mariners" },
+  type: "teams",
+  id: "team-2",
+  attributes: { name: "Mesa Mariners" },
 });
 ```
 
@@ -196,15 +196,15 @@ Executes a SpectraGraph query against the store.
 
 ```javascript
 const results = store.query({
-	type: "teams",
-	select: {
-		name: "name",
-		homeMatches: {
-			select: ["field", "ageGroup"],
-			where: { ageGroup: { $gt: 10 } },
-		},
-	},
-	where: { city: "Phoenix" },
+  type: "teams",
+  select: {
+    name: "name",
+    homeMatches: {
+      select: ["field", "ageGroup"],
+      where: { ageGroup: { $gt: 10 } },
+    },
+  },
+  where: { city: "Phoenix" },
 });
 ```
 
@@ -236,20 +236,20 @@ Inserts a complex resource tree with nested relationships into the store.
 
 ```javascript
 const result = store.merge({
-	type: "teams",
-	attributes: { name: "Tempe Tidal Wave" },
-	relationships: {
-		homeMatches: [
-			{
-				// Nested resource - will be created automatically
-				type: "matches",
-				attributes: { field: "Tempe Community Center", ageGroup: 12 },
-				relationships: {
-					awayTeam: { type: "teams", id: "team-2" }, // Reference to existing
-				},
-			},
-		],
-	},
+  type: "teams",
+  attributes: { name: "Tempe Tidal Wave" },
+  relationships: {
+    homeMatches: [
+      {
+        // Nested resource - will be created automatically
+        type: "matches",
+        attributes: { field: "Tempe Community Center", ageGroup: 12 },
+        relationships: {
+          awayTeam: { type: "teams", id: "team-2" }, // Reference to existing
+        },
+      },
+    ],
+  },
 });
 ```
 
@@ -273,32 +273,32 @@ import { createMemoryStore } from "@spectragraph/memory-store";
 
 // 1. Define your schema (or import from elsewhere)
 const schema = {
-	resources: {
-		teams: {
-			attributes: {
-				id: { type: "string" },
-				name: { type: "string" },
-				city: { type: "string" },
-			},
-			relationships: {
-				homeMatches: {
-					type: "matches",
-					cardinality: "many",
-					inverse: "homeTeam",
-				},
-			},
-		},
-		matches: {
-			attributes: {
-				id: { type: "string" },
-				field: { type: "string" },
-				ageGroup: { type: "integer" },
-			},
-			relationships: {
-				homeTeam: { type: "teams", cardinality: "one", inverse: "homeMatches" },
-			},
-		},
-	},
+  resources: {
+    teams: {
+      attributes: {
+        id: { type: "string" },
+        name: { type: "string" },
+        city: { type: "string" },
+      },
+      relationships: {
+        homeMatches: {
+          type: "matches",
+          cardinality: "many",
+          inverse: "homeTeam",
+        },
+      },
+    },
+    matches: {
+      attributes: {
+        id: { type: "string" },
+        field: { type: "string" },
+        ageGroup: { type: "integer" },
+      },
+      relationships: {
+        homeTeam: { type: "teams", cardinality: "one", inverse: "homeMatches" },
+      },
+    },
+  },
 };
 
 // 2. Create the store
@@ -306,33 +306,33 @@ const store = createMemoryStore(schema);
 
 // 3. Create resources
 const team = store.create({
-	type: "teams",
-	attributes: {
-		name: "Arizona Bay FC",
-		city: "Phoenix",
-	},
+  type: "teams",
+  attributes: {
+    name: "Arizona Bay FC",
+    city: "Phoenix",
+  },
 });
 
 const match = store.create({
-	type: "matches",
-	attributes: {
-		field: "Phoenix Park 1",
-		ageGroup: 11,
-	},
-	relationships: {
-		homeTeam: { type: "teams", id: team.id },
-	},
+  type: "matches",
+  attributes: {
+    field: "Phoenix Park 1",
+    ageGroup: 11,
+  },
+  relationships: {
+    homeTeam: { type: "teams", id: team.id },
+  },
 });
 
 // 4. Query the data
 const results = store.query({
-	type: "teams",
-	select: {
-		name: "name",
-		homeMatches: {
-			select: ["field", "ageGroup"],
-		},
-	},
+  type: "teams",
+  select: {
+    name: "name",
+    homeMatches: {
+      select: ["field", "ageGroup"],
+    },
+  },
 });
 
 console.log(results);
@@ -344,32 +344,32 @@ console.log(results);
 ```javascript
 // Create a team with nested matches and relationships
 const teamWithMatches = store.merge({
-	type: "teams",
-	attributes: {
-		name: "Scottsdale Surf",
-		city: "Scottsdale",
-	},
-	relationships: {
-		homeMatches: [
-			{
-				type: "matches",
-				attributes: {
-					field: "Scottsdale Community Center",
-					ageGroup: 12,
-				},
-				relationships: {
-					awayTeam: { type: "teams", id: team.id }, // Reference to existing team
-				},
-			},
-			{
-				type: "matches",
-				attributes: {
-					field: "Desert Breeze Park",
-					ageGroup: 14,
-				},
-			},
-		],
-	},
+  type: "teams",
+  attributes: {
+    name: "Scottsdale Surf",
+    city: "Scottsdale",
+  },
+  relationships: {
+    homeMatches: [
+      {
+        type: "matches",
+        attributes: {
+          field: "Scottsdale Community Center",
+          ageGroup: 12,
+        },
+        relationships: {
+          awayTeam: { type: "teams", id: team.id }, // Reference to existing team
+        },
+      },
+      {
+        type: "matches",
+        attributes: {
+          field: "Desert Breeze Park",
+          ageGroup: 14,
+        },
+      },
+    ],
+  },
 });
 
 // All relationships are automatically linked bidirectionally
@@ -382,25 +382,25 @@ console.log(phoenixTeam.relationships.awayMatches.length); // 1
 ```javascript
 // Validation happens automatically on all operations
 try {
-	store.create({
-		type: "teams",
-		attributes: {
-			name: 123, // Invalid: should be string
-		},
-	});
+  store.create({
+    type: "teams",
+    attributes: {
+      name: 123, // Invalid: should be string
+    },
+  });
 } catch (error) {
-	console.error("Validation failed:", error.message);
+  console.error("Validation failed:", error.message);
 }
 
 // Custom validator for additional constraints
 import { createValidator } from "@spectragraph/core";
 
 const customValidator = createValidator({
-	ajvSchemas: [myCustomSchema],
+  ajvSchemas: [myCustomSchema],
 });
 
 const strictStore = createMemoryStore(schema, {
-	validator: customValidator,
+  validator: customValidator,
 });
 ```
 
@@ -409,18 +409,18 @@ const strictStore = createMemoryStore(schema, {
 ```javascript
 // Find all matches for teams from Phoenix
 const phoenixMatches = store.query({
-	type: "matches",
-	select: {
-		field: "field",
-		ageGroup: "ageGroup",
-		homeTeamName: "homeTeam.name",
-	},
-	where: {
-		"homeTeam.city": "Phoenix",
-		ageGroup: { $gte: 11 },
-	},
-	order: [{ ageGroup: "asc" }, { field: "asc" }],
-	limit: 10,
+  type: "matches",
+  select: {
+    field: "field",
+    ageGroup: "ageGroup",
+    homeTeamName: "homeTeam.name",
+  },
+  where: {
+    "homeTeam.city": "Phoenix",
+    ageGroup: { $gte: 11 },
+  },
+  order: [{ ageGroup: "asc" }, { field: "asc" }],
+  limit: 10,
 });
 ```
 
@@ -430,28 +430,28 @@ SpectraGraph Memory Store includes comprehensive TypeScript definitions:
 
 ```typescript
 import type {
-	MemoryStore,
-	MemoryStoreConfig,
+  MemoryStore,
+  MemoryStoreConfig,
 } from "@spectragraph/memory-store";
 import type { Schema, CreateResource } from "@spectragraph/core";
 
 const schema: Schema = {
-	resources: {
-		teams: {
-			attributes: {
-				id: { type: "string" },
-				name: { type: "string" },
-			},
-			relationships: {},
-		},
-	},
+  resources: {
+    teams: {
+      attributes: {
+        id: { type: "string" },
+        name: { type: "string" },
+      },
+      relationships: {},
+    },
+  },
 };
 
 const store: MemoryStore = createMemoryStore(schema);
 
 const newTeam: CreateResource = {
-	type: "teams",
-	attributes: { name: "Mesa Mariners" },
+  type: "teams",
+  attributes: { name: "Mesa Mariners" },
 };
 ```
 
