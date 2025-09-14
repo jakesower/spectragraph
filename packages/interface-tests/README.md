@@ -139,18 +139,18 @@ const store = {
   async create(resource) {
     // Create new resource, return normalized resource
   },
-  async update(resource) {
-    // Update existing resource, return updated normalized resource
-  },
-  async upsert(resource) {
-    // Create or update resource, return normalized resource
-  },
-  async delete(resource) {
-    // Delete resource by type and id
-  },
-  async query(query) {
-    // Execute query, return results matching query structure
-  }
+async update(resource) {
+  // Update existing resource, return updated normalized resource
+},
+async upsert(resource) {
+  // Create or update resource, return normalized resource
+},
+async delete(resource) {
+  // Delete resource by type and id
+},
+async query(query) {
+  // Execute query, return results matching query structure
+}
 };
 ```
 
@@ -219,17 +219,17 @@ import { describe, it, expect } from "vitest";
 
 describe("My Custom Store Features", () => {
   it("should handle my special case", async () => {
-    const store = createMyCustomStore(careBearSchema, { 
-      initialData: careBearData 
+    const store = createMyCustomStore(careBearSchema, {
+      initialData: careBearData
     });
-    
-    const result = await store.query({
-      type: "characters",
-      select: ["name", "favoriteColor"]
-    });
-    
-    expect(result).toBeDefined();
+
+  const result = await store.query({
+    type: "characters",
+    select: ["name", "favoriteColor"]
   });
+
+expect(result).toBeDefined();
+});
 });
 ```
 

@@ -20,12 +20,13 @@ export function compileOrderFormatter(templates) {
 export function compileResourceMappers(schema, type, mappers) {
 	const resSchema = schema.resources[type];
 	const mappable = { ...resSchema.attributes, ...resSchema.relationships };
+	const fromApiMappers = mappers.fromApi ?? {};
 	const fns = mapValues(mappable, (_, name) => {
-		if (name in mappers) {
-			if (typeof mappers[name] === "function") {
-				return mappers[name];
-			} else if (typeof mappers[name] === "string") {
-				return (val) => val[mappers[name]];
+		if (name in fromApiMappers) {
+			if (typeof fromApiMappers[name] === "function") {
+				return fromApiMappers[name];
+			} else if (typeof fromApiMappers[name] === "string") {
+				return (val) => val[fromApiMappers[name]];
 			} else {
 				throw new Error("mappers must be functions or strings");
 			}

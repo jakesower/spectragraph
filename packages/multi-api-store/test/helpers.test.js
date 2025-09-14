@@ -93,7 +93,7 @@ describe("compileResourceMappers", () => {
 	};
 
 	it("uses default mapping when no mapper provided", () => {
-		const mapper = compileResourceMappers(schema, "users", {});
+		const mapper = compileResourceMappers(schema, "users", { fromApi: {} });
 		const resource = { name: "John", email: "john@test.com", age: 30 };
 
 		expect(mapper(resource)).toEqual({
@@ -105,8 +105,10 @@ describe("compileResourceMappers", () => {
 
 	it("applies string mappers", () => {
 		const mappers = {
-			name: "full_name",
-			email: "email_address",
+			fromApi: {
+				name: "full_name",
+				email: "email_address",
+			},
 		};
 		const mapper = compileResourceMappers(schema, "users", mappers);
 		const resource = {
@@ -124,8 +126,10 @@ describe("compileResourceMappers", () => {
 
 	it("applies function mappers", () => {
 		const mappers = {
-			name: (res) => res.first_name + " " + res.last_name,
-			age: (res) => parseInt(res.birth_year),
+			fromApi: {
+				name: (res) => res.first_name + " " + res.last_name,
+				age: (res) => parseInt(res.birth_year),
+			},
 		};
 		const mapper = compileResourceMappers(schema, "users", mappers);
 		const resource = {
@@ -143,7 +147,7 @@ describe("compileResourceMappers", () => {
 	});
 
 	it("excludes undefined values from result", () => {
-		const mapper = compileResourceMappers(schema, "users", {});
+		const mapper = compileResourceMappers(schema, "users", { fromApi: {} });
 		const resource = { name: "John", email: undefined };
 
 		expect(mapper(resource)).toEqual({
@@ -152,7 +156,7 @@ describe("compileResourceMappers", () => {
 	});
 
 	it("throws error for invalid mapper type", () => {
-		const mappers = { name: 123 };
+		const mappers = { fromApi: { name: 123 } };
 
 		expect(() => compileResourceMappers(schema, "users", mappers)).toThrow(
 			"mappers must be functions or strings",
@@ -161,7 +165,9 @@ describe("compileResourceMappers", () => {
 
 	it("handles relationships", () => {
 		const mappers = {
-			posts: "post_ids",
+			fromApi: {
+				posts: "post_ids",
+			},
 		};
 		const mapper = compileResourceMappers(schema, "users", mappers);
 		const resource = {

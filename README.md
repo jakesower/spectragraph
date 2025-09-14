@@ -7,27 +7,27 @@ A unified, expressive query language for multiple data sources. Query databases,
 ```javascript
 // Same query works across different data sources
 const result = await store.query({
-	type: "users",
-	select: [
-		"name",
-		"email",
-		{
-			posts: [
-				"title",
-				"createdAt",
-				{
-					comments: [
-						"content",
-						{
-							author: ["name"],
-						},
-					],
-				},
-			],
-		},
-	],
-	where: { active: true },
-	limit: 10,
+  type: "users",
+  select: [
+    "name",
+    "email",
+    {
+      posts: [
+        "title",
+        "createdAt",
+        {
+          comments: [
+            "content",
+            {
+              author: ["name"],
+            },
+        ],
+    },
+],
+},
+],
+where: { active: true },
+limit: 10,
 });
 
 // Works with: PostgreSQL, SQLite, in-memory data, REST APIs
@@ -48,58 +48,58 @@ import { createMemoryStore } from "@spectragraph/memory-store";
 
 // Define your data schema
 const schema = {
-	resources: {
-		users: {
-			attributes: {
-				name: { type: "string" },
-				email: { type: "string" },
-			},
-			relationships: {
-				posts: { type: "posts", cardinality: "hasMany" },
-			},
-		},
-		posts: {
-			attributes: {
-				title: { type: "string" },
-				content: { type: "string" },
-			},
-			relationships: {
-				author: { type: "users", cardinality: "belongsTo" },
-			},
-		},
-	},
+  resources: {
+    users: {
+      attributes: {
+        name: { type: "string" },
+        email: { type: "string" },
+      },
+    relationships: {
+      posts: { type: "posts", cardinality: "hasMany" },
+    },
+},
+posts: {
+  attributes: {
+    title: { type: "string" },
+    content: { type: "string" },
+  },
+relationships: {
+  author: { type: "users", cardinality: "belongsTo" },
+},
+},
+},
 };
 
 // Create store with initial data
 const store = createMemoryStore(schema, {
-	initialData: {
-		users: {
-			1: {
-				id: "1",
-				type: "users",
-				attributes: { name: "Alice", email: "alice@example.com" },
-				relationships: { posts: [{ type: "posts", id: "1" }] },
-			},
-		},
-		posts: {
-			1: {
-				id: "1",
-				type: "posts",
-				attributes: { title: "Hello World", content: "My first post" },
-				relationships: { author: { type: "users", id: "1" } },
-			},
-		},
-	},
+  initialData: {
+    users: {
+      1: {
+        id: "1",
+        type: "users",
+        attributes: { name: "Alice", email: "alice@example.com" },
+        relationships: { posts: [{ type: "posts", id: "1" }] },
+      },
+  },
+posts: {
+  1: {
+    id: "1",
+    type: "posts",
+    attributes: { title: "Hello World", content: "My first post" },
+    relationships: { author: { type: "users", id: "1" } },
+  },
+},
+},
 });
 
 // Query with expressions
 const analytics = await store.query({
-	type: "users",
-	select: {
-		name: "name",
-		postCount: { $count: "posts" },
-		avgPostLength: { $avg: "posts.$.content.length" },
-	},
+  type: "users",
+  select: {
+    name: "name",
+    postCount: { $count: "posts" },
+    avgPostLength: { $avg: "posts.$.content.length" },
+  },
 });
 
 console.log(analytics);
@@ -152,8 +152,8 @@ console.log(analytics);
     published: true,
     createdAt: { $gte: "2024-01-01" }
   },
-  order: [{ createdAt: "desc" }],
-  limit: 5
+order: [{ createdAt: "desc" }],
+limit: 5
 }
 ```
 
@@ -169,8 +169,8 @@ console.log(analytics);
       $first: {
         $orderBy: ["departments", { $desc: { $avg: "employees.$.performance" } }]
       }
-    }
   }
+}
 }
 ```
 
@@ -181,14 +181,14 @@ console.log(analytics);
 {
   type: "users",
   select: ["name", {
-    posts: ["title", "createdAt", {
-      comments: {
-        select: ["content"],
-        limit: 3
-      }
-    }]
-  }],
-  where: { active: true }
+      posts: ["title", "createdAt", {
+          comments: {
+            select: ["content"],
+            limit: 3
+          }
+      }]
+}],
+where: { active: true }
 }
 ```
 
@@ -218,19 +218,19 @@ WHERE u.active = true;
 ```javascript
 // Same query works on PostgreSQL, SQLite, in-memory, or API stores
 const result = await store.query({
-	type: "users",
-	select: [
-		"name",
-		{
-			posts: [
-				"title",
-				{
-					comments: ["content"],
-				},
-			],
-		},
-	],
-	where: { active: true },
+  type: "users",
+  select: [
+    "name",
+    {
+      posts: [
+        "title",
+        {
+          comments: ["content"],
+        },
+    ],
+},
+],
+where: { active: true },
 });
 ```
 

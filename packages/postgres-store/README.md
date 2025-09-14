@@ -107,9 +107,9 @@ const newTeam = await store.create({
     city: "Phoenix",
     founded: 2014,
   },
-  relationships: {
-    homeField: { type: "fields", id: "field-1" },
-  },
+relationships: {
+  homeField: { type: "fields", id: "field-1" },
+},
 });
 ```
 
@@ -177,14 +177,14 @@ const results = await store.query({
   where: {
     city: { eq: "Phoenix" },
   },
-  select: {
-    name: "name",
-    homeMatches: {
-      select: ["date", "opponent"],
-      order: { date: "desc" },
-      limit: 5,
-    },
+select: {
+  name: "name",
+  homeMatches: {
+    select: ["date", "opponent"],
+    order: { date: "desc" },
+    limit: 5,
   },
+},
 });
 ```
 
@@ -237,10 +237,10 @@ const store = createPostgresStore(schema, client, {
     "teams.name": "VARCHAR(255)",
     "matches.metadata": "JSONB",
   },
-  indexConfig: {
-    "teams.city": { type: "btree" },
-    "matches.date": { type: "btree" },
-  },
+indexConfig: {
+  "teams.city": { type: "btree" },
+  "matches.date": { type: "btree" },
+},
 });
 ```
 
@@ -274,7 +274,7 @@ const query = {
       select: ["date", "opponent"],
       where: { date: { gte: "2024-01-01" } }
     }
-  }
+}
 };
 
 // Generated SQL uses JOINs and subqueries for efficient execution
@@ -297,29 +297,29 @@ const schema = {
         city: { type: "string" },
         founded: { type: "integer" },
       },
-      relationships: {
-        homeMatches: {
-          type: "matches",
-          cardinality: "many",
-          inverse: "homeTeam",
-        },
+    relationships: {
+      homeMatches: {
+        type: "matches",
+        cardinality: "many",
+        inverse: "homeTeam",
       },
-    },
-    matches: {
-      attributes: {
-        id: { type: "string" },
-        date: { type: "string" },
-        venue: { type: "string" },
-      },
-      relationships: {
-        homeTeam: {
-          type: "teams",
-          cardinality: "one",
-          inverse: "homeMatches",
-        },
-      },
-    },
   },
+},
+matches: {
+  attributes: {
+    id: { type: "string" },
+    date: { type: "string" },
+    venue: { type: "string" },
+  },
+relationships: {
+  homeTeam: {
+    type: "teams",
+    cardinality: "one",
+    inverse: "homeMatches",
+  },
+},
+},
+},
 };
 
 const client = new Client(process.env.DATABASE_URL);
@@ -374,18 +374,18 @@ const results = await store.query({
     founded: { gte: 2000 },
     city: { in: ["Phoenix", "Scottsdale", "Tempe"] },
   },
-  select: {
-    name: "name",
-    city: "city",
-    homeMatches: {
-      where: { date: { gte: "2024-01-01" } },
-      select: ["date", "venue"],
-      order: { date: "desc" },
-      limit: 5,
-    },
+select: {
+  name: "name",
+  city: "city",
+  homeMatches: {
+    where: { date: { gte: "2024-01-01" } },
+    select: ["date", "venue"],
+    order: { date: "desc" },
+    limit: 5,
   },
-  order: { founded: "desc" },
-  limit: 20,
+},
+order: { founded: "desc" },
+limit: 20,
 });
 ```
 
@@ -397,24 +397,24 @@ await client.connect();
 
 try {
   await client.query('BEGIN');
-  
+
   const store = createPostgresStore(schema, client);
-  
+
   const team = await store.create({
     type: "teams",
     attributes: { name: "New Team" }
   });
-  
-  const match = await store.create({
-    type: "matches",
-    attributes: { date: "2024-12-01", venue: "Stadium" },
-    relationships: { homeTeam: { type: "teams", id: team.id } }
-  });
-  
-  await client.query('COMMIT');
+
+const match = await store.create({
+  type: "matches",
+  attributes: { date: "2024-12-01", venue: "Stadium" },
+  relationships: { homeTeam: { type: "teams", id: team.id } }
+});
+
+await client.query('COMMIT');
 } catch (error) {
-  await client.query('ROLLBACK');
-  throw error;
+await client.query('ROLLBACK');
+throw error;
 }
 ```
 

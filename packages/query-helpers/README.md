@@ -40,16 +40,16 @@ Flattens a nested query into a linear array of query breakdown items.
 import { flattenQuery } from "@spectragraph/query-helpers";
 
 const breakdown = flattenQuery(schema, {
-	type: "teams",
-	select: {
-		name: "name",
-		homeMatches: {
-			select: {
-				field: "field",
-				awayTeam: { select: ["name"] },
-			},
-		},
-	},
+  type: "teams",
+  select: {
+    name: "name",
+    homeMatches: {
+      select: {
+        field: "field",
+        awayTeam: { select: ["name"] },
+      },
+  },
+},
 });
 
 // Returns array with separate items for teams, matches, and related teams
@@ -72,9 +72,9 @@ Maps over each query in a flattened query structure.
 import { flatMapQuery } from "@spectragraph/query-helpers";
 
 const resourceTypes = flatMapQuery(schema, query, (subquery, info) => ({
-	type: info.type,
-	path: info.path,
-	hasWhere: !!subquery.where,
+  type: info.type,
+  path: info.path,
+  hasWhere: !!subquery.where,
 }));
 ```
 
@@ -92,7 +92,7 @@ Iterates over each query in a flattened query structure.
 import { forEachQuery } from "@spectragraph/query-helpers";
 
 forEachQuery(schema, query, (subquery, info) => {
-	console.log(`Processing ${info.type} at path: ${info.path.join(".")}`);
+  console.log(`Processing ${info.type} at path: ${info.path.join(".")}`);
 });
 ```
 
@@ -112,9 +112,9 @@ Tests whether some query in a flattened query structure matches a condition.
 import { someQuery } from "@spectragraph/query-helpers";
 
 const hasComplexWhere = someQuery(
-	schema,
-	query,
-	(subquery, info) => subquery.where && Object.keys(subquery.where).length > 2,
+schema,
+query,
+(subquery, info) => subquery.where && Object.keys(subquery.where).length > 2,
 );
 ```
 
@@ -124,14 +124,14 @@ const hasComplexWhere = someQuery(
 
 ```typescript
 interface QueryBreakdownItem {
-	path: string[]; // Path to this query level
-	attributes: any; // Selected attributes
-	relationships: any; // Selected relationships
-	type: string; // Resource type
-	query: Query; // The query object
-	parent: QueryBreakdownItem | null; // Parent breakdown item if any
-	parentQuery: Query | null; // Parent query if any
-	parentRelationship: string | null; // Parent relationship name if any
+  path: string[]; // Path to this query level
+  attributes: any; // Selected attributes
+  relationships: any; // Selected relationships
+  type: string; // Resource type
+  query: Query; // The query object
+  parent: QueryBreakdownItem | null; // Parent breakdown item if any
+  parentQuery: Query | null; // Parent query if any
+  parentRelationship: string | null; // Parent relationship name if any
 }
 ```
 
@@ -143,58 +143,58 @@ interface QueryBreakdownItem {
 import { flattenQuery, forEachQuery } from "@spectragraph/query-helpers";
 
 const schema = {
-	resources: {
-		teams: {
-			attributes: {
-				id: { type: "string" },
-				name: { type: "string" },
-			},
-			relationships: {
-				homeMatches: {
-					type: "matches",
-					cardinality: "many",
-					inverse: "homeTeam",
-				},
-			},
-		},
-		matches: {
-			attributes: {
-				id: { type: "string" },
-				field: { type: "string" },
-			},
-			relationships: {
-				homeTeam: { type: "teams", cardinality: "one", inverse: "homeMatches" },
-			},
-		},
-	},
+  resources: {
+    teams: {
+      attributes: {
+        id: { type: "string" },
+        name: { type: "string" },
+      },
+    relationships: {
+      homeMatches: {
+        type: "matches",
+        cardinality: "many",
+        inverse: "homeTeam",
+      },
+  },
+},
+matches: {
+  attributes: {
+    id: { type: "string" },
+    field: { type: "string" },
+  },
+relationships: {
+  homeTeam: { type: "teams", cardinality: "one", inverse: "homeMatches" },
+},
+},
+},
 };
 
 const query = {
-	type: "teams",
-	select: {
-		name: "name",
-		homeMatches: {
-			select: {
-				field: "field",
-				homeTeam: { select: ["name"] },
-			},
-		},
-	},
+  type: "teams",
+  select: {
+    name: "name",
+    homeMatches: {
+      select: {
+        field: "field",
+        homeTeam: { select: ["name"] },
+      },
+  },
+},
 };
 
 // Flatten the query to see all levels
 const breakdown = flattenQuery(schema, query);
 console.log(
-	breakdown.map((item) => ({
-		type: item.type,
-		path: item.path.join("."),
-		attributes: item.attributes,
-	})),
+breakdown.map((item) => ({
+  type: item.type,
+  path: item.path.join("."),
+  attributes: item.attributes,
+})),
 );
 
 // Iterate over each query level
 forEachQuery(schema, query, (subquery, info) => {
-	console.log(`${info.type}: ${info.attributes.join(", ")}`);
+  console.log(`${info.type}: ${info.attributes.join(", ")}`);
 });
 ```
 
@@ -205,27 +205,27 @@ import { someQuery, flatMapQuery } from "@spectragraph/query-helpers";
 
 // Check if any subquery has complex filtering
 const hasComplexFilters = someQuery(schema, query, (subquery) => {
-	return (
-		subquery.where &&
-		Object.keys(subquery.where).some(
-			(key) =>
-				typeof subquery.where[key] === "object" &&
-				"$and" in subquery.where[key],
-		)
-	);
+  return (
+  subquery.where &&
+  Object.keys(subquery.where).some(
+  (key) =>
+  typeof subquery.where[key] === "object" &&
+  "$and" in subquery.where[key],
+  )
+);
 });
 
 // Extract all resource types used in the query
 const resourceTypes = new Set(
-	flatMapQuery(schema, query, (_, info) => info.type),
+flatMapQuery(schema, query, (_, info) => info.type),
 );
 
 // Find all queries that need special permissions
 const restrictedQueries = flatMapQuery(schema, query, (subquery, info) => {
-	if (subquery.where?.classified === true) {
-		return { type: info.type, path: info.path };
-	}
-	return null;
+  if (subquery.where?.classified === true) {
+    return { type: info.type, path: info.path };
+  }
+return null;
 }).filter(Boolean);
 ```
 
@@ -235,8 +235,8 @@ SpectraGraph Query Helpers includes comprehensive TypeScript definitions:
 
 ```typescript
 import type {
-	QueryBreakdown,
-	QueryBreakdownItem,
+  QueryBreakdown,
+  QueryBreakdownItem,
 } from "@spectragraph/query-helpers";
 
 import type { Schema, RootQuery } from "@spectragraph/core";
