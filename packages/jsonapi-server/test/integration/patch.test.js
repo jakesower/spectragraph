@@ -763,5 +763,5 @@ it("keeps many-to-many foreign relationships that belong to a second resource", 
 	await api.delete(`/bears/${oopsyBear.data.id}`);
 	await api.delete(`/bears/${alwaysThereBear.data.id}`);
 	await api.delete(`/powers/${createdPower.data.id}`);
-  await api.delete(`/powers/${createdPower2.data.id}`);
+	await api.delete(`/powers/${createdPower2.data.id}`);
 });

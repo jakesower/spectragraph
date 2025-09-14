@@ -349,18 +349,18 @@ const fields = ["name", "email"];
 const includeStats = true;
 
 const query = {
-	type: "users",
-	select: [
-		...fields,
-		...(includeStats
-			? [
-					{
-						postCount: { $count: "posts" },
-						avgRating: { $mean: "posts" },
-					},
-				]
-			: []),
-	],
+  type: "users",
+  select: [
+    ...fields,
+    ...(includeStats
+      ? [
+          {
+            postCount: { $count: "posts" },
+            avgRating: { $mean: "posts" },
+          },
+        ]
+      : []),
+  ],
 };
 ```
 

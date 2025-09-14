@@ -9,7 +9,7 @@ import {
 	allBearsResult,
 	allBearsResponse,
 } from "../fixtures/formatted-care-bear-data.js";
-import { careBearData } from "../fixtures/care-bear-data.js";  
+import { careBearData } from "../fixtures/care-bear-data.js";
 
 const store = createMemoryStore(careBearSchema, { initialData: careBearData });
 

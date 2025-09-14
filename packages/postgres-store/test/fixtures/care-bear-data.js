@@ -171,7 +171,8 @@ export const careBearData = {
 			attributes: {
 				companionId: "1",
 				name: "Brave Heart Lion",
-				description: "Strong and brave leader\nAlways ready to help\nLives in Care-a-Lot",
+				description:
+					"Strong and brave leader\nAlways ready to help\nLives in Care-a-Lot",
 			},
 			relationships: {},
 		},
@@ -181,7 +182,8 @@ export const careBearData = {
 			attributes: {
 				companionId: "2",
 				name: "Cozy Heart Penguin",
-				description: "Warm and caring friend.\nLoves to sing and dance.\nBrings joy to everyone.",
+				description:
+					"Warm and caring friend.\nLoves to sing and dance.\nBrings joy to everyone.",
 			},
 			relationships: {},
 		},
@@ -191,7 +193,8 @@ export const careBearData = {
 			attributes: {
 				companionId: "3",
 				name: "Loyal Heart Dog",
-				description: "Faithful companion\nAlways loyal to friends\nHelps bears with tasks\nstart: Always loyal\nend: Never gives up",
+				description:
+					"Faithful companion\nAlways loyal to friends\nHelps bears with tasks\nstart: Always loyal\nend: Never gives up",
 			},
 			relationships: {},
 		},

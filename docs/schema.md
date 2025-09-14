@@ -18,27 +18,27 @@ A SpectraGraph schema is a JSON object that describes all resource types in your
 
 ```javascript
 const schema = {
-	resources: {
-		users: {
-			attributes: {
-				name: { type: "string" },
-				email: { type: "string" },
-			},
-			relationships: {
-				posts: { type: "posts", cardinality: "many" },
-			},
-		},
-		posts: {
-			attributes: {
-				title: { type: "string" },
-				content: { type: "string" },
-				words: { type: "integer", minimum: 1 },
-			},
-			relationships: {
-				author: { type: "users", cardinality: "belongsTo" },
-			},
-		},
-	},
+  resources: {
+    users: {
+      attributes: {
+        name: { type: "string" },
+        email: { type: "string" },
+      },
+      relationships: {
+        posts: { type: "posts", cardinality: "many" },
+      },
+    },
+    posts: {
+      attributes: {
+        title: { type: "string" },
+        content: { type: "string" },
+        words: { type: "integer", minimum: 1 },
+      },
+      relationships: {
+        author: { type: "users", cardinality: "belongsTo" },
+      },
+    },
+  },
 };
 ```
 
@@ -340,19 +340,19 @@ SpectraGraph validates schemas to catch errors early:
 import { validateSchema } from "@spectragraph/core";
 
 const schema = {
-	resources: {
-		users: {
-			attributes: { name: { type: "string" } },
-		},
-	},
+  resources: {
+    users: {
+      attributes: { name: { type: "string" } },
+    },
+  },
 };
 
 // Validate schema
 try {
-	validateSchema(schema);
-	console.log("Schema is valid");
+  validateSchema(schema);
+  console.log("Schema is valid");
 } catch (error) {
-	console.error("Schema validation failed:", error.message);
+  console.error("Schema validation failed:", error.message);
 }
 ```
 
@@ -362,94 +362,94 @@ try {
 
 ```javascript
 const ecommerceSchema = {
-	resources: {
-		customers: {
-			attributes: {
-				firstName: { type: "string" },
-				lastName: { type: "string" },
-				email: { type: "string", format: "email" },
-				createdAt: { type: "string", format: "date-time" },
-			},
-			requiredAttributes: ["firstName", "lastName", "email"],
-			relationships: {
-				orders: { type: "orders", cardinality: "many" },
-				profile: { type: "customerProfiles", cardinality: "one" },
-			},
-		},
+  resources: {
+    customers: {
+      attributes: {
+        firstName: { type: "string" },
+        lastName: { type: "string" },
+        email: { type: "string", format: "email" },
+        createdAt: { type: "string", format: "date-time" },
+      },
+      requiredAttributes: ["firstName", "lastName", "email"],
+      relationships: {
+        orders: { type: "orders", cardinality: "many" },
+        profile: { type: "customerProfiles", cardinality: "one" },
+      },
+    },
 
-		orders: {
-			attributes: {
-				orderNumber: { type: "string" },
-				status: {
-					type: "string",
-					enum: ["pending", "processing", "shipped", "delivered"],
-				},
-				total: { type: "number", minimum: 0 },
-				createdAt: { type: "string", format: "date-time" },
-			},
-			requiredAttributes: ["orderNumber"],
-			relationships: {
-				customer: { type: "customers", cardinality: "belongsTo" },
-				items: { type: "orderItems", cardinality: "many" },
-			},
-		},
+    orders: {
+      attributes: {
+        orderNumber: { type: "string" },
+        status: {
+          type: "string",
+          enum: ["pending", "processing", "shipped", "delivered"],
+        },
+        total: { type: "number", minimum: 0 },
+        createdAt: { type: "string", format: "date-time" },
+      },
+      requiredAttributes: ["orderNumber"],
+      relationships: {
+        customer: { type: "customers", cardinality: "belongsTo" },
+        items: { type: "orderItems", cardinality: "many" },
+      },
+    },
 
-		products: {
-			attributes: {
-				name: { type: "string" },
-				description: { type: "string" },
-				price: { type: "number", minimum: 0 },
-				inStock: { type: "boolean", default: true },
-			},
-			requiredAttributes: ["name"],
-			relationships: {
-				category: { type: "categories", cardinality: "belongsTo" },
-				orderItems: { type: "orderItems", cardinality: "many" },
-			},
-		},
+    products: {
+      attributes: {
+        name: { type: "string" },
+        description: { type: "string" },
+        price: { type: "number", minimum: 0 },
+        inStock: { type: "boolean", default: true },
+      },
+      requiredAttributes: ["name"],
+      relationships: {
+        category: { type: "categories", cardinality: "belongsTo" },
+        orderItems: { type: "orderItems", cardinality: "many" },
+      },
+    },
 
-		orderItems: {
-			attributes: {
-				quantity: { type: "integer", minimum: 1 },
-				unitPrice: { type: "number", minimum: 0 },
-			},
-			relationships: {
-				order: { type: "orders", cardinality: "belongsTo" },
-				product: { type: "products", cardinality: "belongsTo" },
-			},
-		},
+    orderItems: {
+      attributes: {
+        quantity: { type: "integer", minimum: 1 },
+        unitPrice: { type: "number", minimum: 0 },
+      },
+      relationships: {
+        order: { type: "orders", cardinality: "belongsTo" },
+        product: { type: "products", cardinality: "belongsTo" },
+      },
+    },
 
-		categories: {
-			attributes: {
-				name: { type: "string" },
-				slug: { type: "string" },
-			},
-			relationships: {
-				products: { type: "products", cardinality: "many" },
-				parent: { type: "categories", cardinality: "belongsTo" },
-				children: {
-					type: "categories",
-					cardinality: "many",
-					inverse: "parent",
-				},
-			},
-		},
+    categories: {
+      attributes: {
+        name: { type: "string" },
+        slug: { type: "string" },
+      },
+      relationships: {
+        products: { type: "products", cardinality: "many" },
+        parent: { type: "categories", cardinality: "belongsTo" },
+        children: {
+          type: "categories",
+          cardinality: "many",
+          inverse: "parent",
+        },
+      },
+    },
 
-		customerProfiles: {
-			attributes: {
-				phoneNumber: { type: "string" },
-				dateOfBirth: { type: "string", format: "date" },
-				preferences: { type: "object" },
-			},
-			relationships: {
-				customer: {
-					type: "customers",
-					cardinality: "one",
-					inverse: "profile",
-				},
-			},
-		},
-	},
+    customerProfiles: {
+      attributes: {
+        phoneNumber: { type: "string" },
+        dateOfBirth: { type: "string", format: "date" },
+        preferences: { type: "object" },
+      },
+      relationships: {
+        customer: {
+          type: "customers",
+          cardinality: "one",
+          inverse: "profile",
+        },
+      },
+    },
+  },
 };
 ```
 
@@ -457,97 +457,97 @@ const ecommerceSchema = {
 
 ```javascript
 const cmsSchema = {
-	resources: {
-		articles: {
-			attributes: {
-				title: { type: "string" },
-				slug: { type: "string" },
-				content: { type: "string" },
-				status: { type: "string", enum: ["draft", "published", "archived"] },
-				publishedAt: { type: "string", format: "date-time" },
-				createdAt: { type: "string", format: "date-time" },
-				updatedAt: { type: "string", format: "date-time" },
-			},
-			requiredAttributes: ["title", "slug"],
-			relationships: {
-				author: { type: "users", cardinality: "belongsTo" },
-				category: { type: "categories", cardinality: "belongsTo" },
-				tags: { type: "tags", cardinality: "many" },
-				comments: { type: "comments", cardinality: "many" },
-			},
-		},
+  resources: {
+    articles: {
+      attributes: {
+        title: { type: "string" },
+        slug: { type: "string" },
+        content: { type: "string" },
+        status: { type: "string", enum: ["draft", "published", "archived"] },
+        publishedAt: { type: "string", format: "date-time" },
+        createdAt: { type: "string", format: "date-time" },
+        updatedAt: { type: "string", format: "date-time" },
+      },
+      requiredAttributes: ["title", "slug"],
+      relationships: {
+        author: { type: "users", cardinality: "belongsTo" },
+        category: { type: "categories", cardinality: "belongsTo" },
+        tags: { type: "tags", cardinality: "many" },
+        comments: { type: "comments", cardinality: "many" },
+      },
+    },
 
-		users: {
-			attributes: {
-				username: { type: "string" },
-				email: { type: "string", format: "email" },
-				role: { type: "string", enum: ["admin", "editor", "author"] },
-				active: { type: "boolean", default: true },
-			},
-			relationships: {
-				articles: {
-					type: "articles",
-					cardinality: "many",
-					inverse: "author",
-				},
-				comments: {
-					type: "comments",
-					cardinality: "many",
-					inverse: "author",
-				},
-			},
-		},
+    users: {
+      attributes: {
+        username: { type: "string" },
+        email: { type: "string", format: "email" },
+        role: { type: "string", enum: ["admin", "editor", "author"] },
+        active: { type: "boolean", default: true },
+      },
+      relationships: {
+        articles: {
+          type: "articles",
+          cardinality: "many",
+          inverse: "author",
+        },
+        comments: {
+          type: "comments",
+          cardinality: "many",
+          inverse: "author",
+        },
+      },
+    },
 
-		categories: {
-			attributes: {
-				name: { type: "string" },
-				description: { type: "string" },
-			},
-			relationships: {
-				articles: {
-					type: "articles",
-					cardinality: "many",
-					inverse: "category",
-				},
-			},
-		},
+    categories: {
+      attributes: {
+        name: { type: "string" },
+        description: { type: "string" },
+      },
+      relationships: {
+        articles: {
+          type: "articles",
+          cardinality: "many",
+          inverse: "category",
+        },
+      },
+    },
 
-		tags: {
-			attributes: {
-				name: { type: "string" },
-				color: { type: "string" },
-			},
-			relationships: {
-				articles: { type: "articles", cardinality: "many" },
-			},
-		},
+    tags: {
+      attributes: {
+        name: { type: "string" },
+        color: { type: "string" },
+      },
+      relationships: {
+        articles: { type: "articles", cardinality: "many" },
+      },
+    },
 
-		comments: {
-			attributes: {
-				content: { type: "string" },
-				approved: { type: "boolean", default: false },
-				createdAt: { type: "string", format: "date-time" },
-			},
-			relationships: {
-				article: {
-					type: "articles",
-					cardinality: "one",
-					inverse: "comments",
-				},
-				author: {
-					type: "users",
-					cardinality: "one",
-					inverse: "comments",
-				},
-				parent: { type: "comments", cardinality: "belongsTo" },
-				replies: {
-					type: "comments",
-					cardinality: "many",
-					inverse: "parent",
-				},
-			},
-		},
-	},
+    comments: {
+      attributes: {
+        content: { type: "string" },
+        approved: { type: "boolean", default: false },
+        createdAt: { type: "string", format: "date-time" },
+      },
+      relationships: {
+        article: {
+          type: "articles",
+          cardinality: "one",
+          inverse: "comments",
+        },
+        author: {
+          type: "users",
+          cardinality: "one",
+          inverse: "comments",
+        },
+        parent: { type: "comments", cardinality: "belongsTo" },
+        replies: {
+          type: "comments",
+          cardinality: "many",
+          inverse: "parent",
+        },
+      },
+    },
+  },
 };
 ```
 

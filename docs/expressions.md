@@ -62,20 +62,20 @@ You can create custom expression engines with different capabilities:
 
 ```javascript
 import {
-	createExpressionEngine,
-	filtering,
-	projection,
+  createExpressionEngine,
+  filtering,
+  projection,
 } from "json-expressions";
 
 // Custom engine with only basic operations
 const basicEngine = createExpressionEngine({
-	packs: [filtering],
+  packs: [filtering],
 });
 
 // Use in store configuration
 const store = createMemoryStore(schema, {
-	selectEngine: basicEngine,
-	whereEngine: basicEngine,
+  selectEngine: basicEngine,
+  whereEngine: basicEngine,
 });
 ```
 
@@ -92,13 +92,13 @@ Each pack can be imported and used independently:
 
 ```javascript
 import {
-	createExpressionEngine,
-	filtering,
-	projection,
+  createExpressionEngine,
+  filtering,
+  projection,
 } from "json-expressions";
 
 const customSelectEngine = createExpressionEngine({
-	packs: [filtering, projection],
+  packs: [filtering, projection],
 });
 ```
 
