@@ -30,22 +30,22 @@ import { createMultiApiStore } from "@spectragraph/multi-api-store";
 import { defaultSelectEngine, defaultWhereEngine } from "@spectragraph/core";
 
 const store = createMultiApiStore(schema, {
-	resources: {
-		skeptics: {
-			get: async (options) => {
-				const response = await fetch("/api/skeptics");
-				return response.json();
-			},
-		},
-		investigations: {
-			get: async (options) => {
-				const response = await fetch("/api/investigations");
-				return response.json();
-			},
-		},
-	},
-	selectEngine: defaultSelectEngine, // optional
-	whereEngine: defaultWhereEngine, // optional
+  resources: {
+    skeptics: {
+      get: async (options) => {
+        const response = await fetch("/api/skeptics");
+        return response.json();
+      },
+    },
+    investigations: {
+      get: async (options) => {
+        const response = await fetch("/api/investigations");
+        return response.json();
+      },
+    },
+  },
+  selectEngine: defaultSelectEngine, // optional
+  whereEngine: defaultWhereEngine, // optional
 });
 ```
 
@@ -71,25 +71,25 @@ Special handlers allow you to customize data loading logic for complex scenarios
 
 ```javascript
 const specialHandlers = [
-	{
-		test: (query, context) =>
-			query.type === "investigations" &&
-			context.parentQuery?.type === "skeptics",
-		handler: async (query, context) => {
-			// Load investigations differently when queried from skeptics
-			const skepticId = context.parentQuery.id;
-			const response = await fetch(`/api/skeptics/${skepticId}/investigations`);
-			return response.json();
-		},
-	},
-	{
-		test: (query) => query.type === "weirdBeliefs",
-		handler: (query, context) =>
-			// If we're loading beliefs that are already embedded in investigations data
-			context.parentQuery?.type === "investigations"
-				? []
-				: DEFAULT_APIS.weirdBeliefs.get(query, context),
-	},
+  {
+    test: (query, context) =>
+      query.type === "investigations" &&
+      context.parentQuery?.type === "skeptics",
+    handler: async (query, context) => {
+      // Load investigations differently when queried from skeptics
+      const skepticId = context.parentQuery.id;
+      const response = await fetch(`/api/skeptics/${skepticId}/investigations`);
+      return response.json();
+    },
+  },
+  {
+    test: (query) => query.type === "weirdBeliefs",
+    handler: (query, context) =>
+      // If we're loading beliefs that are already embedded in investigations data
+      context.parentQuery?.type === "investigations"
+        ? []
+        : DEFAULT_APIS.weirdBeliefs.get(query, context),
+  },
 ];
 ```
 
@@ -99,22 +99,22 @@ The multi-API store includes optional caching to improve performance by reducing
 
 ```javascript
 const store = createMultiApiStore(schema, {
-	resources: {
-		skeptics: {
-			get: async () => {
-				const response = await fetch("https://api1.example.com/skeptics");
-				return response.json();
-			},
-		},
-	},
-	cache: {
-		enabled: true,
-		defaultTTL: 5 * 60 * 1000, // 5 minutes in milliseconds
-		keyGenerator: (query, context) => {
-			// Custom cache key generation
-			return `${query.type}-${JSON.stringify(query.select)}-${context.parentQuery?.type || "root"}`;
-		},
-	},
+  resources: {
+    skeptics: {
+      get: async () => {
+        const response = await fetch("https://api1.example.com/skeptics");
+        return response.json();
+      },
+    },
+  },
+  cache: {
+    enabled: true,
+    defaultTTL: 5 * 60 * 1000, // 5 minutes in milliseconds
+    keyGenerator: (query, context) => {
+      // Custom cache key generation
+      return `${query.type}-${JSON.stringify(query.select)}-${context.parentQuery?.type || "root"}`;
+    },
+  },
 });
 ```
 
@@ -139,25 +139,25 @@ The multi-API store supports middleware to enhance request processing with cross
 import { auth, retry, log } from "@spectragraph/multi-api-store";
 
 const store = createMultiApiStore(schema, {
-	middleware: [
-		// Add authentication headers
-		auth.bearerToken(() => getAuthToken()),
+  middleware: [
+    // Add authentication headers
+    auth.bearerToken(() => getAuthToken()),
 
-		// Retry on server errors with exponential backoff
-		retry.exponential({
-			maxRetries: 3,
-			timeout: 30000,
-		}),
+    // Retry on server errors with exponential backoff
+    retry.exponential({
+      maxRetries: 3,
+      timeout: 30000,
+    }),
 
-		// Log all requests and responses
-		log.requests({
-			logger: console,
-			includeTiming: true,
-		}),
-	],
-	resources: {
-		// Resource configuration...
-	},
+    // Log all requests and responses
+    log.requests({
+      logger: console,
+      includeTiming: true,
+    }),
+  ],
+  resources: {
+    // Resource configuration...
+  },
 });
 ```
 
@@ -188,16 +188,16 @@ Middleware functions receive `(context, next)` parameters:
 
 ```javascript
 const customAuth = (context, next) => {
-	return next({
-		...context,
-		request: {
-			...context.request,
-			headers: {
-				...context.request.headers,
-				"X-API-Key": process.env.API_KEY,
-			},
-		},
-	});
+  return next({
+    ...context,
+    request: {
+      ...context.request,
+      headers: {
+        ...context.request.headers,
+        "X-API-Key": process.env.API_KEY,
+      },
+    },
+  });
 };
 ```
 
@@ -231,39 +231,39 @@ Creates a new multi-API store instance.
 import { createMultiApiStore } from "@spectragraph/multi-api-store";
 
 const store = createMultiApiStore(schema, {
-	resources: {
-		skeptics: {
-			get: async (options) => {
-				// Fetch skeptics from your API
-				const response = await fetch("/api/skeptics", {
-					method: "GET",
-					headers: { "Content-Type": "application/json" },
-				});
-				return response.json();
-			},
-		},
-		investigations: {
-			get: async (query, context) => {
-				// Fetch investigations from a different API
-				const response = await fetch(
-					"https://api.sciencechecks.org/investigations",
-					{
-						headers: { Authorization: `Bearer ${process.env.API_KEY}` },
-					},
-				);
-				return response.json();
-			},
-			// Note: No CUD operations configured - will throw StoreOperationNotSupportedError
-		},
-	},
-	specialHandlers: [
-		{
-			test: (query, context) =>
-				query.type === "weirdBeliefs" &&
-				context.parentQuery?.type === "investigations",
-			handler: () => [], // Beliefs already loaded with investigations
-		},
-	],
+  resources: {
+    skeptics: {
+      get: async (options) => {
+        // Fetch skeptics from your API
+        const response = await fetch("/api/skeptics", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        return response.json();
+      },
+    },
+    investigations: {
+      get: async (query, context) => {
+        // Fetch investigations from a different API
+        const response = await fetch(
+          "https://api.sciencechecks.org/investigations",
+          {
+            headers: { Authorization: `Bearer ${process.env.API_KEY}` },
+          },
+        );
+        return response.json();
+      },
+      // Note: No CUD operations configured - will throw StoreOperationNotSupportedError
+    },
+  },
+  specialHandlers: [
+    {
+      test: (query, context) =>
+        query.type === "weirdBeliefs" &&
+        context.parentQuery?.type === "investigations",
+      handler: () => [], // Beliefs already loaded with investigations
+    },
+  ],
 });
 ```
 
@@ -283,17 +283,17 @@ Executes a SpectraGraph query against the configured API endpoints.
 
 ```javascript
 const results = await store.query({
-	type: "skeptics",
-	select: {
-		name: "name",
-		specialty: "specialty",
-		investigations: {
-			select: ["title", "conclusion"],
-		},
-	},
-	where: {
-		yearsActive: { $gte: 10 },
-	},
+  type: "skeptics",
+  select: {
+    name: "name",
+    specialty: "specialty",
+    investigations: {
+      select: ["title", "conclusion"],
+    },
+  },
+  where: {
+    yearsActive: { $gte: 10 },
+  },
 });
 ```
 
@@ -304,30 +304,30 @@ The multi-API store supports write operations when the appropriate handlers are 
 ```javascript
 // Create a new skeptic
 const newSkeptic = await store.create({
-	type: "skeptics",
-	attributes: {
-		name: "Neil deGrasse Tyson",
-		specialty: "Astrophysics and Science Communication",
-		yearsActive: 25,
-		famousQuote:
-			"The good thing about science is that it's true whether or not you believe in it.",
-	},
+  type: "skeptics",
+  attributes: {
+    name: "Neil deGrasse Tyson",
+    specialty: "Astrophysics and Science Communication",
+    yearsActive: 25,
+    famousQuote:
+      "The good thing about science is that it's true whether or not you believe in it.",
+  },
 });
 
 // Update an existing skeptic
 const updatedSkeptic = await store.update({
-	type: "skeptics",
-	id: "james-randi",
-	attributes: {
-		specialty: "Paranormal Investigation and Magic",
-		yearsActive: 52,
-	},
+  type: "skeptics",
+  id: "james-randi",
+  attributes: {
+    specialty: "Paranormal Investigation and Magic",
+    yearsActive: 52,
+  },
 });
 
 // Delete a skeptic
 const deletedSkeptic = await store.delete({
-	type: "skeptics",
-	id: "james-randi",
+  type: "skeptics",
+  id: "james-randi",
 });
 ```
 
@@ -344,12 +344,12 @@ Write operations (create, update, delete) will also throw `StoreOperationNotSupp
 import { StoreOperationNotSupportedError } from "@spectragraph/core";
 
 try {
-	await store.create({ type: "teams", attributes: { name: "New Team" } });
+  await store.create({ type: "teams", attributes: { name: "New Team" } });
 } catch (error) {
-	if (error instanceof StoreOperationNotSupportedError) {
-		console.log("Write operations not supported by multi-API store");
-		// Handle gracefully - perhaps redirect to a writable store
-	}
+  if (error instanceof StoreOperationNotSupportedError) {
+    console.log("Write operations not supported by multi-API store");
+    // Handle gracefully - perhaps redirect to a writable store
+  }
 }
 ```
 
@@ -362,65 +362,65 @@ import { createMultiApiStore } from "@spectragraph/multi-api-store";
 
 // 1. Define your schema
 const schema = {
-	resources: {
-		skeptics: {
-			attributes: {
-				id: { type: "string" },
-				name: { type: "string" },
-				specialty: { type: "string" },
-				yearsActive: { type: "number" },
-			},
-			relationships: {
-				investigations: {
-					type: "investigations",
-					cardinality: "many",
-					inverse: "investigator",
-				},
-			},
-		},
-		investigations: {
-			attributes: {
-				id: { type: "string" },
-				title: { type: "string" },
-				conclusion: { type: "string" },
-				publicationYear: { type: "number" },
-			},
-			relationships: {
-				investigator: {
-					type: "skeptics",
-					cardinality: "one",
-					inverse: "investigations",
-				},
-			},
-		},
-	},
+  resources: {
+    skeptics: {
+      attributes: {
+        id: { type: "string" },
+        name: { type: "string" },
+        specialty: { type: "string" },
+        yearsActive: { type: "number" },
+      },
+      relationships: {
+        investigations: {
+          type: "investigations",
+          cardinality: "many",
+          inverse: "investigator",
+        },
+      },
+    },
+    investigations: {
+      attributes: {
+        id: { type: "string" },
+        title: { type: "string" },
+        conclusion: { type: "string" },
+        publicationYear: { type: "number" },
+      },
+      relationships: {
+        investigator: {
+          type: "skeptics",
+          cardinality: "one",
+          inverse: "investigations",
+        },
+      },
+    },
+  },
 };
 
 // 2. Configure API endpoints
 const store = createMultiApiStore(schema, {
-	resources: {
-		skeptics: {
-			get: async () => {
-				const response = await fetch("https://api1.example.com/skeptics");
-				return response.json();
-			},
-		},
-		investigations: {
-			get: async () => {
-				const response = await fetch("https://api2.example.com/investigations");
-				return response.json();
-			},
-		},
-	},
+  resources: {
+    skeptics: {
+      get: async () => {
+        const response = await fetch("https://api1.example.com/skeptics");
+        return response.json();
+      },
+    },
+    investigations: {
+      get: async () => {
+        const response = await fetch("https://api2.example.com/investigations");
+        return response.json();
+      },
+    },
+  },
 });
 
 // 3. Query the aggregated data
 const results = await store.query({
-	type: "skeptics",
-	select: ["name", "specialty"],
-	where: {
-		yearsActive: { $gte: 5 },
-	},
+  type: "skeptics",
+  select: ["name", "specialty"],
+  where: {
+    yearsActive: { $gte: 5 },
+  },
 });
 
 console.log(results);
@@ -434,83 +434,83 @@ console.log(results);
 
 ```javascript
 const store = createMultiApiStore(schema, {
-	resources: {
-		skeptics: {
-			get: async (options) => {
-				// Use options for filtering, pagination, etc.
-				const params = new URLSearchParams();
-				if (options?.specialty !== undefined) {
-					params.append("specialty", options.specialty);
-				}
+  resources: {
+    skeptics: {
+      get: async (options) => {
+        // Use options for filtering, pagination, etc.
+        const params = new URLSearchParams();
+        if (options?.specialty !== undefined) {
+          params.append("specialty", options.specialty);
+        }
 
-				const response = await fetch(
-					`https://api1.example.com/skeptics?${params}`,
-				);
-				if (!response.ok) {
-					throw new Error(`Skeptics API error: ${response.statusText}`);
-				}
-				return response.json();
-			},
-		},
-		investigations: {
-			get: async (options) => {
-				// Different API with authentication
-				const response = await fetch(
-					"https://api2.example.com/investigations",
-					{
-						headers: {
-							Authorization: `Bearer ${process.env.API_TOKEN}`,
-							"Content-Type": "application/json",
-						},
-					},
-				);
-				return response.json();
-			},
-		},
-		weirdBeliefs: {
-			get: async (options) => {
-				// Third-party API
-				const response = await fetch("https://api3.example.com/beliefs", {
-					headers: {
-						"X-API-Key": process.env.EXTERNAL_API_KEY,
-					},
-				});
-				const data = await response.json();
+        const response = await fetch(
+          `https://api1.example.com/skeptics?${params}`,
+        );
+        if (!response.ok) {
+          throw new Error(`Skeptics API error: ${response.statusText}`);
+        }
+        return response.json();
+      },
+    },
+    investigations: {
+      get: async (options) => {
+        // Different API with authentication
+        const response = await fetch(
+          "https://api2.example.com/investigations",
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.API_TOKEN}`,
+              "Content-Type": "application/json",
+            },
+          },
+        );
+        return response.json();
+      },
+    },
+    weirdBeliefs: {
+      get: async (options) => {
+        // Third-party API
+        const response = await fetch("https://api3.example.com/beliefs", {
+          headers: {
+            "X-API-Key": process.env.EXTERNAL_API_KEY,
+          },
+        });
+        const data = await response.json();
 
-				// Transform external API format to match your schema
-				return data.claims.map((belief) => ({
-					id: belief.beliefId,
-					name: belief.claimName,
-					description: belief.description,
-					category: belief.type,
-					believersCount: belief.adherents,
-					debunked: belief.status === "debunked",
-				}));
-			},
-		},
-	},
-	specialHandlers: [
-		{
-			// When loading investigations from skeptics, use a more efficient endpoint
-			test: (query, context) =>
-				query.type === "investigations" &&
-				context.parentQuery?.type === "skeptics",
-			handler: async (query, context) => {
-				const skepticId = context.parentQuery.id;
-				const response = await fetch(
-					`https://api1.example.com/skeptics/${skepticId}/investigations`,
-				);
-				return response.json();
-			},
-		},
-		{
-			// Avoid loading beliefs if they're already included in investigation data
-			test: (query, context) =>
-				query.type === "weirdBeliefs" &&
-				context.parentQuery?.type === "investigations",
-			handler: () => [], // Return empty - beliefs already loaded with investigations
-		},
-	],
+        // Transform external API format to match your schema
+        return data.claims.map((belief) => ({
+          id: belief.beliefId,
+          name: belief.claimName,
+          description: belief.description,
+          category: belief.type,
+          believersCount: belief.adherents,
+          debunked: belief.status === "debunked",
+        }));
+      },
+    },
+  },
+  specialHandlers: [
+    {
+      // When loading investigations from skeptics, use a more efficient endpoint
+      test: (query, context) =>
+        query.type === "investigations" &&
+        context.parentQuery?.type === "skeptics",
+      handler: async (query, context) => {
+        const skepticId = context.parentQuery.id;
+        const response = await fetch(
+          `https://api1.example.com/skeptics/${skepticId}/investigations`,
+        );
+        return response.json();
+      },
+    },
+    {
+      // Avoid loading beliefs if they're already included in investigation data
+      test: (query, context) =>
+        query.type === "weirdBeliefs" &&
+        context.parentQuery?.type === "investigations",
+      handler: () => [], // Return empty - beliefs already loaded with investigations
+    },
+  ],
 });
 ```
 
@@ -519,20 +519,20 @@ const store = createMultiApiStore(schema, {
 ```javascript
 // Query with relationship traversal
 const results = await store.query({
-	type: "skeptics",
-	select: {
-		name: "name",
-		specialty: "specialty",
-		investigations: {
-			select: ["title", "conclusion"],
-			where: {
-				publicationYear: { $gte: 2000 },
-			},
-		},
-	},
-	where: {
-		yearsActive: { $gte: 10 },
-	},
+  type: "skeptics",
+  select: {
+    name: "name",
+    specialty: "specialty",
+    investigations: {
+      select: ["title", "conclusion"],
+      where: {
+        publicationYear: { $gte: 2000 },
+      },
+    },
+  },
+  where: {
+    yearsActive: { $gte: 10 },
+  },
 });
 
 console.log(results);
@@ -553,49 +553,49 @@ console.log(results);
 ```javascript
 import { createMultiApiStore } from "@spectragraph/multi-api-store";
 import {
-	StoreOperationNotSupportedError,
-	ExpressionNotSupportedError,
+  StoreOperationNotSupportedError,
+  ExpressionNotSupportedError,
 } from "@spectragraph/core";
 
 const store = createMultiApiStore(schema, {
-	resources: {
-		skeptics: {
-			get: async () => {
-				const response = await fetch("https://api1.example.com/skeptics");
-				if (!response.ok) {
-					throw new Error(`API error: ${response.statusText}`);
-				}
-				return response.json();
-			},
-		},
-	},
+  resources: {
+    skeptics: {
+      get: async () => {
+        const response = await fetch("https://api1.example.com/skeptics");
+        if (!response.ok) {
+          throw new Error(`API error: ${response.statusText}`);
+        }
+        return response.json();
+      },
+    },
+  },
 });
 
 try {
-	// This will work - query operations are supported
-	const skeptics = await store.query({
-		type: "skeptics",
-		select: ["name", "specialty"],
-	});
+  // This will work - query operations are supported
+  const skeptics = await store.query({
+    type: "skeptics",
+    select: ["name", "specialty"],
+  });
 
-	// This will throw StoreOperationNotSupportedError
-	await store.create({
-		type: "skeptics",
-		attributes: { name: "New Skeptic", specialty: "Critical Thinking" },
-	});
+  // This will throw StoreOperationNotSupportedError
+  await store.create({
+    type: "skeptics",
+    attributes: { name: "New Skeptic", specialty: "Critical Thinking" },
+  });
 } catch (error) {
-	if (error instanceof StoreOperationNotSupportedError) {
-		console.log(
-			`Operation ${error.operation} not supported by ${error.storeName}`,
-		);
-		// Handle gracefully - perhaps use a different store for writes
-	} else if (error instanceof ExpressionNotSupportedError) {
-		console.log(`Expression ${error.expression} not supported`);
-		// Handle gracefully - perhaps use a simpler query
-	} else {
-		console.error("API error:", error.message);
-		// Handle API errors
-	}
+  if (error instanceof StoreOperationNotSupportedError) {
+    console.log(
+      `Operation ${error.operation} not supported by ${error.storeName}`,
+    );
+    // Handle gracefully - perhaps use a different store for writes
+  } else if (error instanceof ExpressionNotSupportedError) {
+    console.log(`Expression ${error.expression} not supported`);
+    // Handle gracefully - perhaps use a simpler query
+  } else {
+    console.error("API error:", error.message);
+    // Handle API errors
+  }
 }
 ```
 
@@ -606,33 +606,33 @@ SpectraGraph Multi-API Store includes comprehensive TypeScript definitions:
 ```typescript
 import type { Schema, RootQuery, QueryResult } from "@spectragraph/core";
 import type {
-	MultiApiStore,
-	MultiApiStoreConfig,
-	ApiResourceConfig,
+  MultiApiStore,
+  MultiApiStoreConfig,
+  ApiResourceConfig,
 } from "@spectragraph/multi-api-store";
 
 const schema: Schema = {
-	resources: {
-		skeptics: {
-			attributes: {
-				id: { type: "string" },
-				name: { type: "string" },
-				specialty: { type: "string" },
-			},
-			relationships: {},
-		},
-	},
+  resources: {
+    skeptics: {
+      attributes: {
+        id: { type: "string" },
+        name: { type: "string" },
+        specialty: { type: "string" },
+      },
+      relationships: {},
+    },
+  },
 };
 
 const config: MultiApiStoreConfig = {
-	resources: {
-		skeptics: {
-			get: async (): Promise<{ [key: string]: unknown }[]> => {
-				const response = await fetch("https://api1.example.com/skeptics");
-				return response.json();
-			},
-		},
-	},
+  resources: {
+    skeptics: {
+      get: async (): Promise<{ [key: string]: unknown }[]> => {
+        const response = await fetch("https://api1.example.com/skeptics");
+        return response.json();
+      },
+    },
+  },
 };
 
 const store: MultiApiStore = createMultiApiStore(schema, config);
@@ -646,20 +646,20 @@ Use the multi-API store as a unified query layer over multiple microservices:
 
 ```javascript
 const store = createMultiApiStore(schema, {
-	resources: {
-		skeptics: {
-			get: () =>
-				fetch("https://api1.example.com/skeptics").then((r) => r.json()),
-		},
-		investigations: {
-			get: () =>
-				fetch("https://api2.example.com/investigations").then((r) => r.json()),
-		},
-		organizations: {
-			get: () =>
-				fetch("https://api3.example.com/organizations").then((r) => r.json()),
-		},
-	},
+  resources: {
+    skeptics: {
+      get: () =>
+        fetch("https://api1.example.com/skeptics").then((r) => r.json()),
+    },
+    investigations: {
+      get: () =>
+        fetch("https://api2.example.com/investigations").then((r) => r.json()),
+    },
+    organizations: {
+      get: () =>
+        fetch("https://api3.example.com/organizations").then((r) => r.json()),
+    },
+  },
 });
 ```
 
@@ -669,24 +669,24 @@ Combine data from multiple external APIs:
 
 ```javascript
 const store = createMultiApiStore(schema, {
-	resources: {
-		skeptics: {
-			get: () =>
-				fetch("https://api1.example.com/skeptics").then((r) => r.json()),
-		},
-		weirdBeliefs: {
-			get: () =>
-				fetch(`https://api4.example.com/beliefs?key=${API_KEY}`).then((r) =>
-					r.json(),
-				),
-		},
-		investigations: {
-			get: () =>
-				fetch(`https://api5.example.com/research?key=${RESEARCH_KEY}`).then(
-					(r) => r.json(),
-				),
-		},
-	},
+  resources: {
+    skeptics: {
+      get: () =>
+        fetch("https://api1.example.com/skeptics").then((r) => r.json()),
+    },
+    weirdBeliefs: {
+      get: () =>
+        fetch(`https://api4.example.com/beliefs?key=${API_KEY}`).then((r) =>
+          r.json(),
+        ),
+    },
+    investigations: {
+      get: () =>
+        fetch(`https://api5.example.com/research?key=${RESEARCH_KEY}`).then(
+          (r) => r.json(),
+        ),
+    },
+  },
 });
 ```
 
@@ -696,18 +696,18 @@ Use as a mock data layer for development:
 
 ```javascript
 const store = createMultiApiStore(schema, {
-	resources: {
-		skeptics: {
-			get: async () => [
-				{ id: "1", name: "James Randi", specialty: "Paranormal Investigation" },
-				{
-					id: "2",
-					name: "Michael Shermer",
-					specialty: "Scientific Skepticism",
-				},
-			],
-		},
-	},
+  resources: {
+    skeptics: {
+      get: async () => [
+        { id: "1", name: "James Randi", specialty: "Paranormal Investigation" },
+        {
+          id: "2",
+          name: "Michael Shermer",
+          specialty: "Scientific Skepticism",
+        },
+      ],
+    },
+  },
 });
 ```
 

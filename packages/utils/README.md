@@ -111,16 +111,16 @@ import { applyOrMap, pipeThru } from "@spectragraph/utils";
 const data = [{ name: "John" }, { name: "Jane" }];
 
 const addGreeting = (person) => ({
-	...person,
-	greeting: `Hello, ${person.name}`,
+  ...person,
+  greeting: `Hello, ${person.name}`,
 });
 const toUpperCase = (person) => ({
-	...person,
-	name: person.name.toUpperCase(),
+  ...person,
+  name: person.name.toUpperCase(),
 });
 
 const result = applyOrMap(data, (person) =>
-	pipeThru(person, [addGreeting, toUpperCase]),
+  pipeThru(person, [addGreeting, toUpperCase]),
 );
 
 console.log(result);
@@ -136,8 +136,8 @@ console.log(result);
 import { applyOrMapAsync } from "@spectragraph/utils";
 
 async function fetchUserDetails(userId) {
-	const response = await fetch(`/api/users/${userId}`);
-	return response.json();
+  const response = await fetch(`/api/users/${userId}`);
+  return response.json();
 }
 
 // Works with both single IDs and arrays of IDs
@@ -158,17 +158,17 @@ const parseJson = (str) => JSON.parse(str);
 const extractUsers = (data) => data.users;
 const filterActive = (users) => users.filter((u) => u.active);
 const sortByName = (users) =>
-	users.sort((a, b) => a.name.localeCompare(b.name));
+  users.sort((a, b) => a.name.localeCompare(b.name));
 
 // Process data through the pipeline
 const rawData =
-	'{"users": [{"name": "Bob", "active": true}, {"name": "Alice", "active": false}]}';
+  '{"users": [{"name": "Bob", "active": true}, {"name": "Alice", "active": false}]}';
 
 const result = pipeThru(rawData, [
-	parseJson,
-	extractUsers,
-	filterActive,
-	sortByName,
+  parseJson,
+  extractUsers,
+  filterActive,
+  sortByName,
 ]);
 
 console.log(result); // [{ name: "Bob", active: true }]
@@ -181,10 +181,10 @@ import { applyOrMap } from "@spectragraph/utils";
 
 // Safely handle potentially null/undefined data
 function processUserData(userData) {
-	return applyOrMap(userData, (user) => ({
-		...user,
-		displayName: user.firstName + " " + user.lastName,
-	}));
+  return applyOrMap(userData, (user) => ({
+    ...user,
+    displayName: user.firstName + " " + user.lastName,
+  }));
 }
 
 processUserData(null); // Returns: null
@@ -200,29 +200,29 @@ import { applyOrMap, pipeThru } from "@spectragraph/utils";
 
 // Common pattern in SpectraGraph packages
 function normalizeResources(resources) {
-	const addType = (resource) => ({
-		...resource,
-		type: resource.type || "unknown",
-	});
-	const addId = (resource) => ({
-		...resource,
-		id: resource.id || generateId(),
-	});
-	const validateRequired = (resource) => {
-		if (!resource.attributes) throw new Error("Missing attributes");
-		return resource;
-	};
+  const addType = (resource) => ({
+    ...resource,
+    type: resource.type || "unknown",
+  });
+  const addId = (resource) => ({
+    ...resource,
+    id: resource.id || generateId(),
+  });
+  const validateRequired = (resource) => {
+    if (!resource.attributes) throw new Error("Missing attributes");
+    return resource;
+  };
 
-	return applyOrMap(resources, (resource) =>
-		pipeThru(resource, [addType, addId, validateRequired]),
-	);
+  return applyOrMap(resources, (resource) =>
+    pipeThru(resource, [addType, addId, validateRequired]),
+  );
 }
 
 // Works with single resources or arrays
 const singleResource = { attributes: { name: "Test" } };
 const multipleResources = [
-	{ attributes: { name: "Test 1" } },
-	{ attributes: { name: "Test 2" } },
+  { attributes: { name: "Test 1" } },
+  { attributes: { name: "Test 2" } },
 ];
 
 const normalizedSingle = normalizeResources(singleResource);
@@ -242,15 +242,15 @@ const doubled: number[] = applyOrMap(numbers, (x) => x * 2);
 
 // Async operations
 const asyncResult: Promise<string[]> = applyOrMapAsync(
-	["a", "b", "c"],
-	async (str: string): Promise<string> => str.toUpperCase(),
+  ["a", "b", "c"],
+  async (str: string): Promise<string> => str.toUpperCase(),
 );
 
 // Pipeline with type inference
 const result: string = pipeThru(42, [
-	(x: number) => x * 2, // number -> number
-	(x: number) => x.toString(), // number -> string
-	(x: string) => x.padStart(4, "0"), // string -> string
+  (x: number) => x * 2, // number -> number
+  (x: number) => x.toString(), // number -> string
+  (x: string) => x.padStart(4, "0"), // string -> string
 ]);
 ```
 

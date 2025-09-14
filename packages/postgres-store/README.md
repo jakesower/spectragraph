@@ -34,13 +34,13 @@ import { createPostgresStore } from "@spectragraph/postgres-store";
 import { Client } from "pg";
 
 const client = new Client({
-	connectionString: "postgresql://user:password@localhost:5432/mydb",
+  connectionString: "postgresql://user:password@localhost:5432/mydb",
 });
 await client.connect();
 
 const store = createPostgresStore(schema, client, {
-	tablePrefix: "dp_", // optional
-	validator: customValidator, // optional
+  tablePrefix: "dp_", // optional
+  validator: customValidator, // optional
 });
 ```
 
@@ -73,17 +73,17 @@ import { createPostgresStore } from "@spectragraph/postgres-store";
 import { Client } from "pg";
 
 const client = new Client({
-	host: "localhost",
-	port: 5432,
-	database: "myapp",
-	user: "myuser",
-	password: "mypassword",
+  host: "localhost",
+  port: 5432,
+  database: "myapp",
+  user: "myuser",
+  password: "mypassword",
 });
 
 await client.connect();
 
 const store = createPostgresStore(schema, client, {
-	tablePrefix: "app_",
+  tablePrefix: "app_",
 });
 ```
 
@@ -101,15 +101,15 @@ Creates a new resource in the PostgreSQL database with automatic relationship li
 
 ```javascript
 const newTeam = await store.create({
-	type: "teams",
-	attributes: {
-		name: "Phoenix Rising FC",
-		city: "Phoenix",
-		founded: 2014,
-	},
-	relationships: {
-		homeField: { type: "fields", id: "field-1" },
-	},
+  type: "teams",
+  attributes: {
+    name: "Phoenix Rising FC",
+    city: "Phoenix",
+    founded: 2014,
+  },
+  relationships: {
+    homeField: { type: "fields", id: "field-1" },
+  },
 });
 ```
 
@@ -125,12 +125,12 @@ Updates an existing resource with automatic relationship management and validati
 
 ```javascript
 const updatedTeam = await store.update({
-	type: "teams",
-	id: "team-1",
-	attributes: {
-		name: "Phoenix Rising FC (Updated)",
-		active: true,
-	},
+  type: "teams",
+  id: "team-1",
+  attributes: {
+    name: "Phoenix Rising FC (Updated)",
+    active: true,
+  },
 });
 ```
 
@@ -156,8 +156,8 @@ Deletes a resource from the database with proper relationship cleanup.
 
 ```javascript
 await store.delete({
-	type: "teams",
-	id: "team-1",
+  type: "teams",
+  id: "team-1",
 });
 ```
 
@@ -173,18 +173,18 @@ Executes a SpectraGraph query against the PostgreSQL database, generating effici
 
 ```javascript
 const results = await store.query({
-	type: "teams",
-	where: {
-		city: { eq: "Phoenix" },
-	},
-	select: {
-		name: "name",
-		homeMatches: {
-			select: ["date", "opponent"],
-			order: { date: "desc" },
-			limit: 5,
-		},
-	},
+  type: "teams",
+  where: {
+    city: { eq: "Phoenix" },
+  },
+  select: {
+    name: "name",
+    homeMatches: {
+      select: ["date", "opponent"],
+      order: { date: "desc" },
+      limit: 5,
+    },
+  },
 });
 ```
 
@@ -222,10 +222,10 @@ The store automatically creates indexes for:
 
 ```javascript
 const store = createPostgresStore(schema, client, {
-	tablePrefix: "myapp_", // Prefix all table names
-	schemaName: "data_prism", // Use specific PostgreSQL schema
-	createTables: true, // Auto-create tables (default: true)
-	validator: customAjvValidator,
+  tablePrefix: "myapp_", // Prefix all table names
+  schemaName: "data_prism", // Use specific PostgreSQL schema
+  createTables: true, // Auto-create tables (default: true)
+  validator: customAjvValidator,
 });
 ```
 
@@ -233,14 +233,14 @@ const store = createPostgresStore(schema, client, {
 
 ```javascript
 const store = createPostgresStore(schema, client, {
-	columnTypeOverrides: {
-		"teams.name": "VARCHAR(255)",
-		"matches.metadata": "JSONB",
-	},
-	indexConfig: {
-		"teams.city": { type: "btree" },
-		"matches.date": { type: "btree" },
-	},
+  columnTypeOverrides: {
+    "teams.name": "VARCHAR(255)",
+    "matches.metadata": "JSONB",
+  },
+  indexConfig: {
+    "teams.city": { type: "btree" },
+    "matches.date": { type: "btree" },
+  },
 });
 ```
 
@@ -253,9 +253,9 @@ SpectraGraph queries are translated to optimized PostgreSQL SQL:
 ```javascript
 // SpectraGraph query
 const query = {
-	type: "teams",
-	select: ["name", "city"],
-	limit: 10,
+  type: "teams",
+  select: ["name", "city"],
+  limit: 10,
 };
 
 // Generated SQL (approximately)
@@ -267,14 +267,14 @@ const query = {
 ```javascript
 // SpectraGraph query
 const query = {
-	type: "teams",
-	select: {
-		name: "name",
-		homeMatches: {
-			select: ["date", "opponent"],
-			where: { date: { gte: "2024-01-01" } },
-		},
-	},
+  type: "teams",
+  select: {
+    name: "name",
+    homeMatches: {
+      select: ["date", "opponent"],
+      where: { date: { gte: "2024-01-01" } },
+    },
+  },
 };
 
 // Generated SQL uses JOINs and subqueries for efficient execution
@@ -289,37 +289,37 @@ import { createPostgresStore } from "@spectragraph/postgres-store";
 import { Client } from "pg";
 
 const schema = {
-	resources: {
-		teams: {
-			attributes: {
-				id: { type: "string" },
-				name: { type: "string" },
-				city: { type: "string" },
-				founded: { type: "integer" },
-			},
-			relationships: {
-				homeMatches: {
-					type: "matches",
-					cardinality: "many",
-					inverse: "homeTeam",
-				},
-			},
-		},
-		matches: {
-			attributes: {
-				id: { type: "string" },
-				date: { type: "string" },
-				venue: { type: "string" },
-			},
-			relationships: {
-				homeTeam: {
-					type: "teams",
-					cardinality: "one",
-					inverse: "homeMatches",
-				},
-			},
-		},
-	},
+  resources: {
+    teams: {
+      attributes: {
+        id: { type: "string" },
+        name: { type: "string" },
+        city: { type: "string" },
+        founded: { type: "integer" },
+      },
+      relationships: {
+        homeMatches: {
+          type: "matches",
+          cardinality: "many",
+          inverse: "homeTeam",
+        },
+      },
+    },
+    matches: {
+      attributes: {
+        id: { type: "string" },
+        date: { type: "string" },
+        venue: { type: "string" },
+      },
+      relationships: {
+        homeTeam: {
+          type: "teams",
+          cardinality: "one",
+          inverse: "homeMatches",
+        },
+      },
+    },
+  },
 };
 
 const client = new Client(process.env.DATABASE_URL);
@@ -333,34 +333,34 @@ const store = createPostgresStore(schema, client);
 ```javascript
 // Create
 const team = await store.create({
-	type: "teams",
-	attributes: {
-		name: "Arizona Cardinals",
-		city: "Phoenix",
-		founded: 1898,
-	},
+  type: "teams",
+  attributes: {
+    name: "Arizona Cardinals",
+    city: "Phoenix",
+    founded: 1898,
+  },
 });
 
 // Query
 const phoenixTeams = await store.query({
-	type: "teams",
-	where: { city: { eq: "Phoenix" } },
-	select: ["name", "founded"],
+  type: "teams",
+  where: { city: { eq: "Phoenix" } },
+  select: ["name", "founded"],
 });
 
 // Update
 const updatedTeam = await store.update({
-	type: "teams",
-	id: team.id,
-	attributes: {
-		name: "Arizona Cardinals FC",
-	},
+  type: "teams",
+  id: team.id,
+  attributes: {
+    name: "Arizona Cardinals FC",
+  },
 });
 
 // Delete
 await store.delete({
-	type: "teams",
-	id: team.id,
+  type: "teams",
+  id: team.id,
 });
 ```
 
@@ -369,23 +369,23 @@ await store.delete({
 ```javascript
 // Complex query with multiple relationships and filtering
 const results = await store.query({
-	type: "teams",
-	where: {
-		founded: { gte: 2000 },
-		city: { in: ["Phoenix", "Scottsdale", "Tempe"] },
-	},
-	select: {
-		name: "name",
-		city: "city",
-		homeMatches: {
-			where: { date: { gte: "2024-01-01" } },
-			select: ["date", "venue"],
-			order: { date: "desc" },
-			limit: 5,
-		},
-	},
-	order: { founded: "desc" },
-	limit: 20,
+  type: "teams",
+  where: {
+    founded: { gte: 2000 },
+    city: { in: ["Phoenix", "Scottsdale", "Tempe"] },
+  },
+  select: {
+    name: "name",
+    city: "city",
+    homeMatches: {
+      where: { date: { gte: "2024-01-01" } },
+      select: ["date", "venue"],
+      order: { date: "desc" },
+      limit: 5,
+    },
+  },
+  order: { founded: "desc" },
+  limit: 20,
 });
 ```
 
@@ -396,25 +396,25 @@ const client = new Client(DATABASE_URL);
 await client.connect();
 
 try {
-	await client.query("BEGIN");
+  await client.query("BEGIN");
 
-	const store = createPostgresStore(schema, client);
+  const store = createPostgresStore(schema, client);
 
-	const team = await store.create({
-		type: "teams",
-		attributes: { name: "New Team" },
-	});
+  const team = await store.create({
+    type: "teams",
+    attributes: { name: "New Team" },
+  });
 
-	const match = await store.create({
-		type: "matches",
-		attributes: { date: "2024-12-01", venue: "Stadium" },
-		relationships: { homeTeam: { type: "teams", id: team.id } },
-	});
+  const match = await store.create({
+    type: "matches",
+    attributes: { date: "2024-12-01", venue: "Stadium" },
+    relationships: { homeTeam: { type: "teams", id: team.id } },
+  });
 
-	await client.query("COMMIT");
+  await client.query("COMMIT");
 } catch (error) {
-	await client.query("ROLLBACK");
-	throw error;
+  await client.query("ROLLBACK");
+  throw error;
 }
 ```
 
@@ -438,8 +438,8 @@ For production applications, use connection pooling:
 import { Pool } from "pg";
 
 const pool = new Pool({
-	connectionString: process.env.DATABASE_URL,
-	max: 20, // maximum number of connections
+  connectionString: process.env.DATABASE_URL,
+  max: 20, // maximum number of connections
 });
 
 const store = createPostgresStore(schema, pool);

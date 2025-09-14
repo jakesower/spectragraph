@@ -16,28 +16,28 @@ import { createServer } from "@spectragraph/jsonapi-server";
 import { MemoryStore } from "@spectragraph/memory-store";
 
 const schema = {
-	resources: {
-		posts: {
-			attributes: {
-				id: { type: "string" },
-				title: { type: "string" },
-				content: { type: "string" },
-			},
-			relationships: {
-				author: { type: "users", cardinality: "one", inverse: "posts" },
-			},
-		},
-		users: {
-			attributes: {
-				id: { type: "string" },
-				name: { type: "string" },
-				email: { type: "string" },
-			},
-			relationships: {
-				posts: { type: "posts", cardinality: "many", inverse: "author" },
-			},
-		},
-	},
+  resources: {
+    posts: {
+      attributes: {
+        id: { type: "string" },
+        title: { type: "string" },
+        content: { type: "string" },
+      },
+      relationships: {
+        author: { type: "users", cardinality: "one", inverse: "posts" },
+      },
+    },
+    users: {
+      attributes: {
+        id: { type: "string" },
+        name: { type: "string" },
+        email: { type: "string" },
+      },
+      relationships: {
+        posts: { type: "posts", cardinality: "many", inverse: "author" },
+      },
+    },
+  },
 };
 
 const store = new MemoryStore(schema);
@@ -101,7 +101,7 @@ app.use(express.json());
 applySchemaRoutes(schema, store, app);
 
 app.get("/health", (req, res) => {
-	res.json({ status: "ok" });
+  res.json({ status: "ok" });
 });
 
 app.listen(3000);
@@ -153,13 +153,13 @@ Parses JSON:API request parameters into SpectraGraph query format.
 import { parseRequest } from "@spectragraph/jsonapi-server";
 
 const query = parseRequest(schema, {
-	type: "posts",
-	include: "author",
-	"fields[posts]": "title,content",
-	"filter[published]": "true",
-	sort: "-createdAt",
-	"page[size]": "10",
-	"page[number]": "2",
+  type: "posts",
+  include: "author",
+  "fields[posts]": "title,content",
+  "filter[published]": "true",
+  sort: "-createdAt",
+  "page[size]": "10",
+  "page[number]": "2",
 });
 ```
 
@@ -236,19 +236,19 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-	"data": {
-		"type": "posts",
-		"id": "123",
-		"attributes": {
-			"title": "My First Post",
-			"content": "This is the content..."
-		},
-		"relationships": {
-			"author": {
-				"data": { "type": "users", "id": "1" }
-			}
-		}
-	}
+  "data": {
+    "type": "posts",
+    "id": "123",
+    "attributes": {
+      "title": "My First Post",
+      "content": "This is the content..."
+    },
+    "relationships": {
+      "author": {
+        "data": { "type": "users", "id": "1" }
+      }
+    }
+  }
 }
 ```
 
@@ -260,29 +260,29 @@ GET /posts?include=author&fields[posts]=title&fields[users]=name
 
 ```json
 {
-	"data": [
-		{
-			"type": "posts",
-			"id": "123",
-			"attributes": {
-				"title": "My First Post"
-			},
-			"relationships": {
-				"author": {
-					"data": { "type": "users", "id": "1" }
-				}
-			}
-		}
-	],
-	"included": [
-		{
-			"type": "users",
-			"id": "1",
-			"attributes": {
-				"name": "John Doe"
-			}
-		}
-	]
+  "data": [
+    {
+      "type": "posts",
+      "id": "123",
+      "attributes": {
+        "title": "My First Post"
+      },
+      "relationships": {
+        "author": {
+          "data": { "type": "users", "id": "1" }
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "type": "users",
+      "id": "1",
+      "attributes": {
+        "name": "John Doe"
+      }
+    }
+  ]
 }
 ```
 
@@ -304,7 +304,7 @@ createServer(schema, pgStore);
 // With JSON:API Store (proxy to another JSON:API server)
 import { JSONAPIStore } from "@spectragraph/jsonapi-store";
 const jsonApiStore = new JSONAPIStore(schema, {
-	baseURL: "https://api.example.com",
+  baseURL: "https://api.example.com",
 });
 createServer(schema, jsonApiStore);
 ```
@@ -321,14 +321,14 @@ Errors are returned in JSON:API error format:
 
 ```json
 {
-	"errors": [
-		{
-			"status": "400",
-			"title": "Invalid request",
-			"description": "The request failed to pass the JSON:API schema validator",
-			"meta": { "field": "/data/type", "message": "is required" }
-		}
-	]
+  "errors": [
+    {
+      "status": "400",
+      "title": "Invalid request",
+      "description": "The request failed to pass the JSON:API schema validator",
+      "meta": { "field": "/data/type", "message": "is required" }
+    }
+  ]
 }
 ```
 
@@ -363,20 +363,20 @@ const handlers = createJSONAPIHandlers(schema, store);
 
 // Wrap handlers with custom error handling
 const wrappedHandler = (handler) => async (req, res, next) => {
-	try {
-		await handler(req, res);
-	} catch (error) {
-		console.error("Request failed:", error);
-		res.status(500).json({
-			errors: [
-				{
-					status: "500",
-					title: "Internal Server Error",
-					description: error.message,
-				},
-			],
-		});
-	}
+  try {
+    await handler(req, res);
+  } catch (error) {
+    console.error("Request failed:", error);
+    res.status(500).json({
+      errors: [
+        {
+          status: "500",
+          title: "Internal Server Error",
+          description: error.message,
+        },
+      ],
+    });
+  }
 };
 
 app.get("/posts", wrappedHandler(handlers.getAllHandler("posts")));

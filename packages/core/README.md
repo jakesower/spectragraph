@@ -24,38 +24,38 @@ Schemas define the structure of your data, including resource types, attributes,
 
 ```javascript
 const schema = {
-	resources: {
-		teams: {
-			attributes: {
-				id: { type: "string" },
-				name: { type: "string" },
-				city: { type: "string" },
-			},
-			relationships: {
-				homeMatches: {
-					type: "matches",
-					cardinality: "many",
-					inverse: "homeTeam",
-				},
-				awayMatches: {
-					type: "matches",
-					cardinality: "many",
-					inverse: "awayTeam",
-				},
-			},
-		},
-		matches: {
-			attributes: {
-				id: { type: "string" },
-				field: { type: "string" },
-				ageGroup: { type: "integer" },
-			},
-			relationships: {
-				homeTeam: { type: "teams", cardinality: "one", inverse: "homeMatches" },
-				awayTeam: { type: "teams", cardinality: "one", inverse: "awayMatches" },
-			},
-		},
-	},
+  resources: {
+    teams: {
+      attributes: {
+        id: { type: "string" },
+        name: { type: "string" },
+        city: { type: "string" },
+      },
+      relationships: {
+        homeMatches: {
+          type: "matches",
+          cardinality: "many",
+          inverse: "homeTeam",
+        },
+        awayMatches: {
+          type: "matches",
+          cardinality: "many",
+          inverse: "awayTeam",
+        },
+      },
+    },
+    matches: {
+      attributes: {
+        id: { type: "string" },
+        field: { type: "string" },
+        ageGroup: { type: "integer" },
+      },
+      relationships: {
+        homeTeam: { type: "teams", cardinality: "one", inverse: "homeMatches" },
+        awayTeam: { type: "teams", cardinality: "one", inverse: "awayMatches" },
+      },
+    },
+  },
 };
 ```
 
@@ -65,46 +65,46 @@ Graphs represent your actual data in a normalized structure, organized by resour
 
 ```javascript
 const graph = {
-	teams: {
-		"team-1": {
-			type: "teams",
-			id: "team-1",
-			attributes: { name: "Arizona Bay FC", city: "Phoenix" },
-			relationships: {
-				homeMatches: [{ type: "matches", id: "match-1" }],
-				awayMatches: [{ type: "matches", id: "match-2" }],
-			},
-		},
-		"team-2": {
-			type: "teams",
-			id: "team-2",
-			attributes: { name: "Scottsdale Surf", city: "Scottsdale" },
-			relationships: {
-				homeMatches: [{ type: "matches", id: "match-2" }],
-				awayMatches: [{ type: "matches", id: "match-1" }],
-			},
-		},
-	},
-	matches: {
-		"match-1": {
-			type: "matches",
-			id: "match-1",
-			attributes: { field: "Phoenix Park 1", ageGroup: 11 },
-			relationships: {
-				homeTeam: { type: "teams", id: "team-1" },
-				awayTeam: { type: "teams", id: "team-2" },
-			},
-		},
-		"match-2": {
-			type: "matches",
-			id: "match-2",
-			attributes: { field: "Scottsdale Community Center", ageGroup: 11 },
-			relationships: {
-				homeTeam: { type: "teams", id: "team-2" },
-				awayTeam: { type: "teams", id: "team-1" },
-			},
-		},
-	},
+  teams: {
+    "team-1": {
+      type: "teams",
+      id: "team-1",
+      attributes: { name: "Arizona Bay FC", city: "Phoenix" },
+      relationships: {
+        homeMatches: [{ type: "matches", id: "match-1" }],
+        awayMatches: [{ type: "matches", id: "match-2" }],
+      },
+    },
+    "team-2": {
+      type: "teams",
+      id: "team-2",
+      attributes: { name: "Scottsdale Surf", city: "Scottsdale" },
+      relationships: {
+        homeMatches: [{ type: "matches", id: "match-2" }],
+        awayMatches: [{ type: "matches", id: "match-1" }],
+      },
+    },
+  },
+  matches: {
+    "match-1": {
+      type: "matches",
+      id: "match-1",
+      attributes: { field: "Phoenix Park 1", ageGroup: 11 },
+      relationships: {
+        homeTeam: { type: "teams", id: "team-1" },
+        awayTeam: { type: "teams", id: "team-2" },
+      },
+    },
+    "match-2": {
+      type: "matches",
+      id: "match-2",
+      attributes: { field: "Scottsdale Community Center", ageGroup: 11 },
+      relationships: {
+        homeTeam: { type: "teams", id: "team-2" },
+        awayTeam: { type: "teams", id: "team-1" },
+      },
+    },
+  },
 };
 ```
 
@@ -114,8 +114,8 @@ Queries describe what data you want to retrieve, closely matching your desired o
 
 ```javascript
 const query = {
-	type: "teams",
-	select: ["name", { homeMatches: ["field", "ageGroup"] }],
+  type: "teams",
+  select: ["name", { homeMatches: ["field", "ageGroup"] }],
 };
 ```
 
@@ -152,11 +152,11 @@ Conditional logic:
 
 ```json
 {
-	"$if": {
-		"if": { "$eq": "Phoenix" },
-		"then": { "$get": "name" },
-		"else": "Away Team"
-	}
+  "$if": {
+    "if": { "$eq": "Phoenix" },
+    "then": { "$get": "name" },
+    "else": "Away Team"
+  }
 }
 ```
 
@@ -232,46 +232,46 @@ Expressions can be used in both `where` clauses for filtering and `select` claus
 ```javascript
 // Query teams with expressions in where clause
 const teamQuery = {
-	type: "teams",
-	where: {
-		$and: [
-			{ founded: { $gte: 2000 } }, // founded >= 2000
-			{ founded: { $lte: 2020 } }, // founded <= 2020
-			{ active: { $eq: true } }, // active === true
-		],
-	},
-	select: {
-		name: "name",
-		city: "city",
-		seasonsActive: { $subtract: [2024, { $get: "founded" }] }, // Computed field
-		division: "division",
-	},
+  type: "teams",
+  where: {
+    $and: [
+      { founded: { $gte: 2000 } }, // founded >= 2000
+      { founded: { $lte: 2020 } }, // founded <= 2020
+      { active: { $eq: true } }, // active === true
+    ],
+  },
+  select: {
+    name: "name",
+    city: "city",
+    seasonsActive: { $subtract: [2024, { $get: "founded" }] }, // Computed field
+    division: "division",
+  },
 };
 
 // Complex conditional logic for match analysis
 const matchQuery = {
-	type: "matches",
-	select: {
-		field: "field",
-		ageGroup: "ageGroup",
-		status: {
-			$case: {
-				value: { $get: "ageGroup" },
-				cases: [
-					{ when: { $lt: 12 }, then: "Youth League" },
-					{ when: { $lt: 16 }, then: "Junior League" },
-					{ when: { $gte: 16 }, then: "Senior League" },
-				],
-				default: "Unassigned",
-			},
-		},
-		isPlayoff: {
-			$and: [
-				{ $gte: 10 }, // week >= 10
-				{ $eq: "important" }, // importance === "important"
-			],
-		},
-	},
+  type: "matches",
+  select: {
+    field: "field",
+    ageGroup: "ageGroup",
+    status: {
+      $case: {
+        value: { $get: "ageGroup" },
+        cases: [
+          { when: { $lt: 12 }, then: "Youth League" },
+          { when: { $lt: 16 }, then: "Junior League" },
+          { when: { $gte: 16 }, then: "Senior League" },
+        ],
+        default: "Unassigned",
+      },
+    },
+    isPlayoff: {
+      $and: [
+        { $gte: 10 }, // week >= 10
+        { $eq: "important" }, // importance === "important"
+      ],
+    },
+  },
 };
 ```
 
@@ -408,8 +408,8 @@ Normalizes a query by expanding shorthand syntax and ensuring consistent structu
 import { normalizeQuery } from "@spectragraph/core";
 
 const normalized = normalizeQuery(schema, {
-	type: "users",
-	select: "*", // Expands to all attributes
+  type: "users",
+  select: "*", // Expands to all attributes
 });
 ```
 
@@ -431,16 +431,16 @@ Executes a query against a graph directly (convenience function).
 import { queryGraph } from "@spectragraph/core";
 
 const results = queryGraph(
-	schema,
-	{
-		type: "teams",
-		id: "team-1",
-		select: {
-			name: "name",
-			homeMatches: { select: ["field"] },
-		},
-	},
-	graph,
+  schema,
+  {
+    type: "teams",
+    id: "team-1",
+    select: {
+      name: "name",
+      homeMatches: { select: ["field"] },
+    },
+  },
+  graph,
 );
 ```
 
@@ -462,11 +462,11 @@ Converts a flat resource object into SpectraGraph's normalized format.
 import { normalizeResource } from "@spectragraph/core";
 
 const flatTeam = {
-	id: "team-1",
-	name: "Tempe Tidal Wave",
-	city: "Tempe",
-	homeMatches: ["match-1", "match-3"], // IDs or objects
-	awayMatches: ["match-2", "match-4"],
+  id: "team-1",
+  name: "Tempe Tidal Wave",
+  city: "Tempe",
+  homeMatches: ["match-1", "match-3"], // IDs or objects
+  awayMatches: ["match-2", "match-4"],
 };
 
 const normalized = normalizeResource(schema, "teams", flatTeam);
@@ -490,16 +490,16 @@ Merges two partial resources of the same type, combining their attributes and re
 import { mergeResources } from "@spectragraph/core";
 
 const existing = {
-	type: "teams",
-	id: "team-1",
-	attributes: { name: "Old Name", founded: 2000 },
-	relationships: { homeField: { type: "fields", id: "field-1" } },
+  type: "teams",
+  id: "team-1",
+  attributes: { name: "Old Name", founded: 2000 },
+  relationships: { homeField: { type: "fields", id: "field-1" } },
 };
 
 const update = {
-	type: "teams",
-	id: "team-1",
-	attributes: { name: "New Name", active: true }, // name will override
+  type: "teams",
+  id: "team-1",
+  attributes: { name: "New Name", active: true }, // name will override
 };
 
 const merged = mergeResources(existing, update);
@@ -528,17 +528,17 @@ Creates a complete graph from an array of resource objects, recursively processi
 import { createGraphFromResources } from "@spectragraph/core";
 
 const flatTeam = {
-	id: "team-1",
-	name: "Arizona Bay FC",
-	city: "Phoenix",
-	homeMatches: [
-		{
-			id: "match-1",
-			field: "Phoenix Park 1",
-			ageGroup: 11,
-			awayTeam: "team-2",
-		},
-	],
+  id: "team-1",
+  name: "Arizona Bay FC",
+  city: "Phoenix",
+  homeMatches: [
+    {
+      id: "match-1",
+      field: "Phoenix Park 1",
+      ageGroup: 11,
+      awayTeam: "team-2",
+    },
+  ],
 };
 
 const graph = createGraphFromResources(schema, "teams", [flatTeam]);
@@ -572,23 +572,23 @@ import { ExpressionNotSupportedError } from "@spectragraph/core";
 
 // In a store implementation
 if (!this.supportsRegex) {
-	throw new ExpressionNotSupportedError(
-		"$matchesRegex",
-		"simple-store",
-		"Regex operations require additional dependencies",
-	);
+  throw new ExpressionNotSupportedError(
+    "$matchesRegex",
+    "simple-store",
+    "Regex operations require additional dependencies",
+  );
 }
 
 // In application code
 try {
-	const results = await store.query(queryWithRegex);
+  const results = await store.query(queryWithRegex);
 } catch (error) {
-	if (error instanceof ExpressionNotSupportedError) {
-		console.log(
-			`Expression ${error.expression} not supported by ${error.storeName}`,
-		);
-		// Handle gracefully, perhaps with a fallback query
-	}
+  if (error instanceof ExpressionNotSupportedError) {
+    console.log(
+      `Expression ${error.expression} not supported by ${error.storeName}`,
+    );
+    // Handle gracefully, perhaps with a fallback query
+  }
 }
 ```
 
@@ -614,33 +614,33 @@ import { StoreOperationNotSupportedError } from "@spectragraph/core";
 
 // In a readonly store implementation
 class ReadOnlyStore {
-	create(resource) {
-		throw new StoreOperationNotSupportedError(
-			"create",
-			"readonly-store",
-			"This store only supports read operations",
-		);
-	}
+  create(resource) {
+    throw new StoreOperationNotSupportedError(
+      "create",
+      "readonly-store",
+      "This store only supports read operations",
+    );
+  }
 
-	update(resource) {
-		throw new StoreOperationNotSupportedError("update", "readonly-store");
-	}
+  update(resource) {
+    throw new StoreOperationNotSupportedError("update", "readonly-store");
+  }
 
-	delete(resource) {
-		throw new StoreOperationNotSupportedError("delete", "readonly-store");
-	}
+  delete(resource) {
+    throw new StoreOperationNotSupportedError("delete", "readonly-store");
+  }
 }
 
 // In application code
 try {
-	await store.create(newResource);
+  await store.create(newResource);
 } catch (error) {
-	if (error instanceof StoreOperationNotSupportedError) {
-		console.log(
-			`Operation ${error.operation} not supported by ${error.storeName}`,
-		);
-		// Handle gracefully, perhaps by using a different store or informing the user
-	}
+  if (error instanceof StoreOperationNotSupportedError) {
+    console.log(
+      `Operation ${error.operation} not supported by ${error.storeName}`,
+    );
+    // Handle gracefully, perhaps by using a different store or informing the user
+  }
 }
 ```
 
@@ -662,7 +662,7 @@ import { validateSchema } from "@spectragraph/core";
 
 const errors = validateSchema(mySchema);
 if (errors.length > 0) {
-	console.error("Schema validation failed:", errors);
+  console.error("Schema validation failed:", errors);
 }
 ```
 
@@ -684,7 +684,7 @@ import { validateQuery } from "@spectragraph/core";
 
 const errors = validateQuery(schema, query);
 if (errors.length > 0) {
-	console.error("Query validation failed:", errors);
+  console.error("Query validation failed:", errors);
 }
 ```
 
@@ -702,7 +702,7 @@ Creates a new AJV validator instance configured for SpectraGraph.
 import { createValidator } from "@spectragraph/core";
 
 const validator = createValidator({
-	ajvSchemas: [myCustomSchema],
+  ajvSchemas: [myCustomSchema],
 });
 ```
 
@@ -726,7 +726,7 @@ import { defaultSelectEngine } from "@spectragraph/core";
 
 // Use in custom query normalization
 const normalizedQuery = normalizeQuery(schema, query, {
-	selectEngine: defaultSelectEngine,
+  selectEngine: defaultSelectEngine,
 });
 ```
 
@@ -739,7 +739,7 @@ import { defaultWhereEngine } from "@spectragraph/core";
 
 // Use in custom query validation
 const errors = validateQuery(schema, query, {
-	whereEngine: defaultWhereEngine,
+  whereEngine: defaultWhereEngine,
 });
 ```
 
@@ -759,8 +759,8 @@ Validates a resource for creation operations.
 import { validateCreateResource } from "@spectragraph/core";
 
 const errors = validateCreateResource(schema, {
-	type: "teams",
-	attributes: { name: "Scottsdale Surf", city: "Scottsdale" },
+  type: "teams",
+  attributes: { name: "Scottsdale Surf", city: "Scottsdale" },
 });
 ```
 
@@ -818,7 +818,7 @@ import { validateQueryResult } from "@spectragraph/core";
 
 const errors = validateQueryResult(schema, query, results);
 if (errors.length > 0) {
-	console.error("Query result validation failed:", errors);
+  console.error("Query result validation failed:", errors);
 }
 ```
 
@@ -899,34 +899,34 @@ Validates that query results match the expected structure. Throws on validation 
 
 ```javascript
 import {
-	ensureValidSchema,
-	createEmptyGraph,
-	queryGraph,
-	normalizeResource,
+  ensureValidSchema,
+  createEmptyGraph,
+  queryGraph,
+  normalizeResource,
 } from "@spectragraph/core";
 
 // 1. Define your schema
 const schema = {
-	resources: {
-		teams: {
-			attributes: {
-				id: { type: "string" },
-				name: { type: "string" },
-			},
-			relationships: {
-				homeMatches: {
-					type: "matches",
-					cardinality: "many",
-					inverse: "homeTeam",
-				},
-				awayMatches: {
-					type: "matches",
-					cardinality: "many",
-					inverse: "awayTeam",
-				},
-			},
-		},
-	},
+  resources: {
+    teams: {
+      attributes: {
+        id: { type: "string" },
+        name: { type: "string" },
+      },
+      relationships: {
+        homeMatches: {
+          type: "matches",
+          cardinality: "many",
+          inverse: "homeTeam",
+        },
+        awayMatches: {
+          type: "matches",
+          cardinality: "many",
+          inverse: "awayTeam",
+        },
+      },
+    },
+  },
 };
 
 // 2. Validate the schema
@@ -941,12 +941,12 @@ graph.teams["1"] = normalizedTeam;
 
 // 4. Query the data
 const results = queryGraph(
-	schema,
-	{
-		type: "teams",
-		select: ["name"],
-	},
-	graph,
+  schema,
+  {
+    type: "teams",
+    select: ["name"],
+  },
+  graph,
 );
 
 console.log(results); // [{ name: "Arizona Bay FC" }]
@@ -956,51 +956,51 @@ console.log(results); // [{ name: "Arizona Bay FC" }]
 
 ```javascript
 const schema = {
-	resources: {
-		teams: {
-			attributes: {
-				id: { type: "string" },
-				name: { type: "string" },
-			},
-			relationships: {
-				homeMatches: {
-					type: "matches",
-					cardinality: "many",
-					inverse: "homeTeam",
-				},
-				awayMatches: {
-					type: "matches",
-					cardinality: "many",
-					inverse: "awayTeam",
-				},
-			},
-		},
-		matches: {
-			attributes: {
-				id: { type: "string" },
-				field: { type: "string" },
-			},
-			relationships: {
-				homeTeam: { type: "teams", cardinality: "one", inverse: "homeMatches" },
-				awayTeam: { type: "teams", cardinality: "one", inverse: "awayMatches" },
-			},
-		},
-	},
+  resources: {
+    teams: {
+      attributes: {
+        id: { type: "string" },
+        name: { type: "string" },
+      },
+      relationships: {
+        homeMatches: {
+          type: "matches",
+          cardinality: "many",
+          inverse: "homeTeam",
+        },
+        awayMatches: {
+          type: "matches",
+          cardinality: "many",
+          inverse: "awayTeam",
+        },
+      },
+    },
+    matches: {
+      attributes: {
+        id: { type: "string" },
+        field: { type: "string" },
+      },
+      relationships: {
+        homeTeam: { type: "teams", cardinality: "one", inverse: "homeMatches" },
+        awayTeam: { type: "teams", cardinality: "one", inverse: "awayMatches" },
+      },
+    },
+  },
 };
 
 // Query with relationship traversal
 const results = queryGraph(
-	schema,
-	{
-		type: "teams",
-		select: {
-			name: "name",
-			homeMatches: {
-				select: ["field", "awayTeam"],
-			},
-		},
-	},
-	graph,
+  schema,
+  {
+    type: "teams",
+    select: {
+      name: "name",
+      homeMatches: {
+        select: ["field", "awayTeam"],
+      },
+    },
+  },
+  graph,
 );
 ```
 
@@ -1008,30 +1008,30 @@ const results = queryGraph(
 
 ```javascript
 import {
-	validateCreateResource,
-	ensureValidCreateResource,
+  validateCreateResource,
+  ensureValidCreateResource,
 } from "@spectragraph/core";
 
 const newTeam = {
-	type: "teams",
-	attributes: {
-		name: "Mesa Mariners",
-		city: "Mesa",
-	},
+  type: "teams",
+  attributes: {
+    name: "Mesa Mariners",
+    city: "Mesa",
+  },
 };
 
 // Option 1: Check errors manually
 const errors = validateCreateResource(schema, newTeam);
 if (errors.length > 0) {
-	console.error("Validation failed:", errors);
+  console.error("Validation failed:", errors);
 }
 
 // Option 2: Throw on validation failure
 try {
-	ensureValidCreateResource(schema, newTeam);
-	console.log("Resource is valid!");
+  ensureValidCreateResource(schema, newTeam);
+  console.log("Resource is valid!");
 } catch (error) {
-	console.error("Validation failed:", error.message);
+  console.error("Validation failed:", error.message);
 }
 ```
 
@@ -1041,34 +1041,34 @@ SpectraGraph Core includes comprehensive TypeScript definitions. Import types as
 
 ```typescript
 import type {
-	Schema,
-	Graph,
-	Query,
-	RootQuery,
-	NormalResource,
+  Schema,
+  Graph,
+  Query,
+  RootQuery,
+  NormalResource,
 } from "@spectragraph/core";
 
 const schema: Schema = {
-	resources: {
-		teams: {
-			attributes: {
-				id: { type: "string" },
-				name: { type: "string" },
-			},
-			relationships: {
-				homeMatches: {
-					type: "matches",
-					cardinality: "many",
-					inverse: "homeTeam",
-				},
-				awayMatches: {
-					type: "matches",
-					cardinality: "many",
-					inverse: "awayTeam",
-				},
-			},
-		},
-	},
+  resources: {
+    teams: {
+      attributes: {
+        id: { type: "string" },
+        name: { type: "string" },
+      },
+      relationships: {
+        homeMatches: {
+          type: "matches",
+          cardinality: "many",
+          inverse: "homeTeam",
+        },
+        awayMatches: {
+          type: "matches",
+          cardinality: "many",
+          inverse: "awayTeam",
+        },
+      },
+    },
+  },
 };
 ```
 
@@ -1078,19 +1078,19 @@ const schema: Schema = {
 
 ```javascript
 import {
-	createValidator,
-	validateSchema,
-	ensureValidSchema,
+  createValidator,
+  validateSchema,
+  ensureValidSchema,
 } from "@spectragraph/core";
 
 const customValidator = createValidator({
-	ajvSchemas: [myCustomSchema],
+  ajvSchemas: [myCustomSchema],
 });
 
 // Option 1: Check errors manually
 const errors = validateSchema(schema, { validator: customValidator });
 if (errors.length > 0) {
-	console.error("Schema validation failed:", errors);
+  console.error("Schema validation failed:", errors);
 }
 
 // Option 2: Throw on validation failure

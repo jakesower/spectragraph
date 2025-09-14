@@ -35,7 +35,7 @@ import Database from "better-sqlite3";
 
 const db = new Database("path/to/database.sqlite");
 const store = createSQLiteStore(schema, db, {
-	tableMapping: { teams: "team_table" }, // optional
+  tableMapping: { teams: "team_table" }, // optional
 });
 ```
 
@@ -64,10 +64,10 @@ import Database from "better-sqlite3";
 const db = new Database("./data/sports.sqlite");
 
 const store = createSQLiteStore(schema, db, {
-	tableMapping: {
-		teams: "team_data",
-		matches: "match_results",
-	},
+  tableMapping: {
+    teams: "team_data",
+    matches: "match_results",
+  },
 });
 ```
 
@@ -85,19 +85,19 @@ Executes a SpectraGraph query against the SQLite database, generating efficient 
 
 ```javascript
 const results = await store.query({
-	type: "teams",
-	where: {
-		city: { eq: "Phoenix" },
-	},
-	select: {
-		name: "name",
-		city: "city",
-		homeMatches: {
-			select: ["date", "venue"],
-			order: { date: "desc" },
-			limit: 5,
-		},
-	},
+  type: "teams",
+  where: {
+    city: { eq: "Phoenix" },
+  },
+  select: {
+    name: "name",
+    city: "city",
+    homeMatches: {
+      select: ["date", "venue"],
+      order: { date: "desc" },
+      limit: 5,
+    },
+  },
 });
 ```
 
@@ -113,12 +113,12 @@ Creates a new resource in the database.
 
 ```javascript
 const newTeam = await store.create({
-	type: "teams",
-	attributes: {
-		name: "Phoenix Suns",
-		city: "Phoenix",
-		founded: 1968,
-	},
+  type: "teams",
+  attributes: {
+    name: "Phoenix Suns",
+    city: "Phoenix",
+    founded: 1968,
+  },
 });
 ```
 
@@ -134,11 +134,11 @@ Updates an existing resource in the database.
 
 ```javascript
 const updatedTeam = await store.update({
-	type: "teams",
-	id: "team-1",
-	attributes: {
-		city: "Tempe",
-	},
+  type: "teams",
+  id: "team-1",
+  attributes: {
+    city: "Tempe",
+  },
 });
 ```
 
@@ -154,12 +154,12 @@ Creates or updates a resource depending on whether it exists.
 
 ```javascript
 const team = await store.upsert({
-	type: "teams",
-	id: "team-1",
-	attributes: {
-		name: "Phoenix Suns",
-		city: "Phoenix",
-	},
+  type: "teams",
+  id: "team-1",
+  attributes: {
+    name: "Phoenix Suns",
+    city: "Phoenix",
+  },
 });
 ```
 
@@ -175,8 +175,8 @@ Deletes a resource from the database.
 
 ```javascript
 const deleted = await store.delete({
-	type: "teams",
-	id: "team-1",
+  type: "teams",
+  id: "team-1",
 });
 ```
 
@@ -217,14 +217,14 @@ If your database doesn't follow SpectraGraph conventions:
 
 ```javascript
 const store = createSQLiteStore(schema, db, {
-	tableMapping: {
-		teams: "team_master",
-		matches: "game_results",
-	},
-	columnMapping: {
-		"teams.founded": "founding_year",
-		"matches.venue": "stadium_name",
-	},
+  tableMapping: {
+    teams: "team_master",
+    matches: "game_results",
+  },
+  columnMapping: {
+    "teams.founded": "founding_year",
+    "matches.venue": "stadium_name",
+  },
 });
 ```
 
@@ -237,10 +237,10 @@ SpectraGraph queries are translated to optimized SQLite SQL:
 ```javascript
 // SpectraGraph query
 const query = {
-	type: "teams",
-	select: ["name", "city"],
-	where: { city: { eq: "Phoenix" } },
-	limit: 10,
+  type: "teams",
+  select: ["name", "city"],
+  where: { city: { eq: "Phoenix" } },
+  limit: 10,
 };
 
 // Generated SQL (approximately)
@@ -252,14 +252,14 @@ const query = {
 ```javascript
 // SpectraGraph query
 const query = {
-	type: "teams",
-	select: {
-		name: "name",
-		homeMatches: {
-			select: ["date", "venue"],
-			where: { date: { gte: "2024-01-01" } },
-		},
-	},
+  type: "teams",
+  select: {
+    name: "name",
+    homeMatches: {
+      select: ["date", "venue"],
+      where: { date: { gte: "2024-01-01" } },
+    },
+  },
 };
 
 // Generated SQL uses JOINs for efficient relationship traversal
@@ -274,37 +274,37 @@ import { createSQLiteStore } from "@spectragraph/sqlite-store";
 import Database from "better-sqlite3";
 
 const schema = {
-	resources: {
-		teams: {
-			attributes: {
-				id: { type: "string" },
-				name: { type: "string" },
-				city: { type: "string" },
-				founded: { type: "integer" },
-			},
-			relationships: {
-				homeMatches: {
-					type: "matches",
-					cardinality: "many",
-					inverse: "homeTeam",
-				},
-			},
-		},
-		matches: {
-			attributes: {
-				id: { type: "string" },
-				date: { type: "string" },
-				venue: { type: "string" },
-			},
-			relationships: {
-				homeTeam: {
-					type: "teams",
-					cardinality: "one",
-					inverse: "homeMatches",
-				},
-			},
-		},
-	},
+  resources: {
+    teams: {
+      attributes: {
+        id: { type: "string" },
+        name: { type: "string" },
+        city: { type: "string" },
+        founded: { type: "integer" },
+      },
+      relationships: {
+        homeMatches: {
+          type: "matches",
+          cardinality: "many",
+          inverse: "homeTeam",
+        },
+      },
+    },
+    matches: {
+      attributes: {
+        id: { type: "string" },
+        date: { type: "string" },
+        venue: { type: "string" },
+      },
+      relationships: {
+        homeTeam: {
+          type: "teams",
+          cardinality: "one",
+          inverse: "homeMatches",
+        },
+      },
+    },
+  },
 };
 
 // Open SQLite database
@@ -317,23 +317,23 @@ const store = createSQLiteStore(schema, db);
 ```javascript
 // Get all teams
 const allTeams = await store.query({
-	type: "teams",
-	select: ["name", "city"],
+  type: "teams",
+  select: ["name", "city"],
 });
 
 // Get teams in specific city
 const phoenixTeams = await store.query({
-	type: "teams",
-	where: { city: { eq: "Phoenix" } },
-	select: ["name", "founded"],
-	order: { founded: "desc" },
+  type: "teams",
+  where: { city: { eq: "Phoenix" } },
+  select: ["name", "founded"],
+  order: { founded: "desc" },
 });
 
 // Get team by ID
 const team = await store.query({
-	type: "teams",
-	id: "team-1",
-	select: ["name", "city", "founded"],
+  type: "teams",
+  id: "team-1",
+  select: ["name", "city", "founded"],
 });
 ```
 
@@ -342,34 +342,34 @@ const team = await store.query({
 ```javascript
 // Teams with their recent matches
 const teamsWithMatches = await store.query({
-	type: "teams",
-	select: {
-		name: "name",
-		city: "city",
-		homeMatches: {
-			select: ["date", "venue"],
-			where: { date: { gte: "2024-01-01" } },
-			order: { date: "desc" },
-			limit: 5,
-		},
-	},
+  type: "teams",
+  select: {
+    name: "name",
+    city: "city",
+    homeMatches: {
+      select: ["date", "venue"],
+      where: { date: { gte: "2024-01-01" } },
+      order: { date: "desc" },
+      limit: 5,
+    },
+  },
 });
 
 // Matches with team information
 const matchesWithTeams = await store.query({
-	type: "matches",
-	select: {
-		date: "date",
-		venue: "venue",
-		homeTeam: {
-			select: ["name", "city"],
-		},
-		awayTeam: {
-			select: ["name", "city"],
-		},
-	},
-	order: { date: "desc" },
-	limit: 10,
+  type: "matches",
+  select: {
+    date: "date",
+    venue: "venue",
+    homeTeam: {
+      select: ["name", "city"],
+    },
+    awayTeam: {
+      select: ["name", "city"],
+    },
+  },
+  order: { date: "desc" },
+  limit: 10,
 });
 ```
 
@@ -378,32 +378,32 @@ const matchesWithTeams = await store.query({
 ```javascript
 // Teams founded after 2000 in specific cities
 const modernTeams = await store.query({
-	type: "teams",
-	where: {
-		and: [
-			{ founded: { gte: 2000 } },
-			{ city: { in: ["Phoenix", "Scottsdale", "Tempe"] } },
-		],
-	},
-	select: ["name", "city", "founded"],
-	order: { founded: "asc" },
+  type: "teams",
+  where: {
+    and: [
+      { founded: { gte: 2000 } },
+      { city: { in: ["Phoenix", "Scottsdale", "Tempe"] } },
+    ],
+  },
+  select: ["name", "city", "founded"],
+  order: { founded: "asc" },
 });
 
 // Recent home matches for active teams
 const recentHomeMatches = await store.query({
-	type: "matches",
-	where: {
-		and: [{ date: { gte: "2024-01-01" } }, { homeTeam: { exists: true } }],
-	},
-	select: {
-		date: "date",
-		venue: "venue",
-		homeTeam: {
-			select: ["name"],
-		},
-	},
-	order: { date: "desc" },
-	limit: 20,
+  type: "matches",
+  where: {
+    and: [{ date: { gte: "2024-01-01" } }, { homeTeam: { exists: true } }],
+  },
+  select: {
+    date: "date",
+    venue: "venue",
+    homeTeam: {
+      select: ["name"],
+    },
+  },
+  order: { date: "desc" },
+  limit: 20,
 });
 ```
 
@@ -412,50 +412,50 @@ const recentHomeMatches = await store.query({
 ```javascript
 // Create a new team
 const newTeam = await store.create({
-	type: "teams",
-	attributes: {
-		name: "Phoenix Suns",
-		city: "Phoenix",
-		founded: 1968,
-	},
+  type: "teams",
+  attributes: {
+    name: "Phoenix Suns",
+    city: "Phoenix",
+    founded: 1968,
+  },
 });
 
 // Create a match with relationships
 const newMatch = await store.create({
-	type: "matches",
-	attributes: {
-		date: "2024-03-15",
-		venue: "Footprint Center",
-	},
-	relationships: {
-		homeTeam: { type: "teams", id: newTeam.id },
-	},
+  type: "matches",
+  attributes: {
+    date: "2024-03-15",
+    venue: "Footprint Center",
+  },
+  relationships: {
+    homeTeam: { type: "teams", id: newTeam.id },
+  },
 });
 
 // Update team information
 const updatedTeam = await store.update({
-	type: "teams",
-	id: newTeam.id,
-	attributes: {
-		city: "Tempe", // Team moved cities
-	},
+  type: "teams",
+  id: newTeam.id,
+  attributes: {
+    city: "Tempe", // Team moved cities
+  },
 });
 
 // Upsert operation (create or update)
 const team = await store.upsert({
-	type: "teams",
-	id: "custom-team-id",
-	attributes: {
-		name: "Arizona Cardinals",
-		city: "Glendale",
-		founded: 1898,
-	},
+  type: "teams",
+  id: "custom-team-id",
+  attributes: {
+    name: "Arizona Cardinals",
+    city: "Glendale",
+    founded: 1898,
+  },
 });
 
 // Delete a team
 await store.delete({
-	type: "teams",
-	id: "team-to-remove",
+  type: "teams",
+  id: "team-to-remove",
 });
 ```
 
