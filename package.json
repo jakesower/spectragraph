@@ -14,8 +14,8 @@
 		"test": "npm run test --workspaces",
 		"lint": "npm run lint --workspaces",
 		"lint:fix": "npm run lint --workspaces -- --fix",
-		"format:check": "npm run format:check --workspaces",
-		"format:fix": "npm run format:fix --workspaces"
+		"format:check": "prettier --check \"README.md\" \"docs/**/*.md\" && npm run format:check --workspaces",
+		"format:fix": "prettier --write \"README.md\" \"docs/**/*.md\" && npm run format:fix --workspaces"
 	},
 	"devDependencies": {
 		"@changesets/cli": "^2.29.6",

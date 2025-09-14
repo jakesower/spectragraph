@@ -31,9 +31,9 @@ Execute a query and return results.
 
 ```javascript
 const users = await store.query({
-	type: "users",
-	select: ["name", "email"],
-	where: { active: true },
+  type: "users",
+  select: ["name", "email"],
+  where: { active: true },
 });
 ```
 
@@ -51,8 +51,8 @@ Create a new resource.
 
 ```javascript
 const newUser = await store.create({
-	type: "users",
-	attributes: { name: "Alice", email: "alice@example.com" },
+  type: "users",
+  attributes: { name: "Alice", email: "alice@example.com" },
 });
 ```
 
@@ -70,9 +70,9 @@ Update an existing resource.
 
 ```javascript
 const updatedUser = await store.update({
-	type: "users",
-	id: "1",
-	attributes: { name: "Alice Smith" },
+  type: "users",
+  id: "1",
+  attributes: { name: "Alice Smith" },
 });
 ```
 
@@ -90,9 +90,9 @@ Create or update a resource (create if no ID, update if ID exists).
 
 ```javascript
 const user = await store.upsert({
-	type: "users",
-	id: "1", // Will update if exists, create if not
-	attributes: { name: "Alice", email: "alice@example.com" },
+  type: "users",
+  id: "1", // Will update if exists, create if not
+  attributes: { name: "Alice", email: "alice@example.com" },
 });
 ```
 
@@ -152,8 +152,8 @@ Normalize a query to standard form.
 
 ```javascript
 const normalQuery = normalizeQuery(schema, query, {
-	selectEngine,
-	whereEngine,
+  selectEngine,
+  whereEngine,
 });
 ```
 
@@ -188,8 +188,8 @@ Execute a query against an in-memory graph.
 
 ```javascript
 const results = queryGraph(schema, normalizedQuery, graph, {
-	selectEngine,
-	whereEngine,
+  selectEngine,
+  whereEngine,
 });
 ```
 
@@ -211,7 +211,7 @@ Validate a schema object.
 ```javascript
 const result = validateSchema(schema, { validator });
 if (!result.valid) {
-	console.error("Schema errors:", result.errors);
+  console.error("Schema errors:", result.errors);
 }
 ```
 
@@ -390,7 +390,7 @@ Default expression engine for SELECT clauses.
 import { defaultSelectEngine } from "@spectragraph/core";
 
 const result = queryGraph(schema, query, graph, {
-	selectEngine: defaultSelectEngine,
+  selectEngine: defaultSelectEngine,
 });
 ```
 
@@ -406,7 +406,7 @@ Default expression engine for WHERE clauses.
 import { defaultWhereEngine } from "@spectragraph/core";
 
 const result = queryGraph(schema, query, graph, {
-	whereEngine: defaultWhereEngine,
+  whereEngine: defaultWhereEngine,
 });
 ```
 
@@ -424,7 +424,7 @@ Default expression engine for WHERE clauses.
 import { defaultValidator } from "@spectragraph/core";
 
 const result = validateCreateResource(schema, resource, {
-	validator: defaultValidator,
+  validator: defaultValidator,
 });
 ```
 
@@ -464,15 +464,15 @@ import { ExpressionNotSupportedError } from "@spectragraph/core";
 
 // In a custom expression engine
 const customWhereEngine = {
-	expressions: {
-		$matchesRegex: (field, pattern) => {
-			throw new ExpressionNotSupportedError(
-				"$matchesRegex",
-				"MyCustomStore",
-				"Regular expressions not supported by backend API",
-			);
-		},
-	},
+  expressions: {
+    $matchesRegex: (field, pattern) => {
+      throw new ExpressionNotSupportedError(
+        "$matchesRegex",
+        "MyCustomStore",
+        "Regular expressions not supported by backend API",
+      );
+    },
+  },
 };
 ```
 
@@ -500,37 +500,37 @@ new StoreOperationNotSupportedError(operation, storeName, reason?)
 import { StoreOperationNotSupportedError } from "@spectragraph/core";
 
 export function createReadOnlyStore(schema, apiClient) {
-	return {
-		// Query is supported
-		async query(query) {
-			// Implementation here
-		},
+  return {
+    // Query is supported
+    async query(query) {
+      // Implementation here
+    },
 
-		// Write operations are not supported
-		async create(resource) {
-			throw new StoreOperationNotSupportedError(
-				"create",
-				"ReadOnlyStore",
-				"This store provides read-only access to the API",
-			);
-		},
+    // Write operations are not supported
+    async create(resource) {
+      throw new StoreOperationNotSupportedError(
+        "create",
+        "ReadOnlyStore",
+        "This store provides read-only access to the API",
+      );
+    },
 
-		async update(resource) {
-			throw new StoreOperationNotSupportedError(
-				"update",
-				"ReadOnlyStore",
-				"This store provides read-only access to the API",
-			);
-		},
+    async update(resource) {
+      throw new StoreOperationNotSupportedError(
+        "update",
+        "ReadOnlyStore",
+        "This store provides read-only access to the API",
+      );
+    },
 
-		async delete(resource) {
-			throw new StoreOperationNotSupportedError(
-				"delete",
-				"ReadOnlyStore",
-				"This store provides read-only access to the API",
-			);
-		},
-	};
+    async delete(resource) {
+      throw new StoreOperationNotSupportedError(
+        "delete",
+        "ReadOnlyStore",
+        "This store provides read-only access to the API",
+      );
+    },
+  };
 }
 ```
 

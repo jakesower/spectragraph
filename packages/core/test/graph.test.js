@@ -86,8 +86,8 @@ describe("mergeGraphs", () => {
 			relationships: {},
 		};
 
-		const left = { bears: { "1": leftBear } };
-		const right = { bears: { "1": rightBear } };
+		const left = { bears: { 1: leftBear } };
+		const right = { bears: { 1: rightBear } };
 
 		const merged = mergeGraphs(left, right);
 
@@ -100,7 +100,9 @@ describe("mergeGraphs", () => {
 
 		const merged = mergeGraphs(left, right);
 
-		expect(merged.bears).toEqual(pick(careBearData.bears, ["1", "2", "3", "4"]));
+		expect(merged.bears).toEqual(
+			pick(careBearData.bears, ["1", "2", "3", "4"]),
+		);
 	});
 
 	it("handles empty graphs", () => {

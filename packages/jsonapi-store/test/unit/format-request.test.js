@@ -26,7 +26,7 @@ function expectUrlsToBeEquivalent(actual, expected) {
 
 	// Compare base URL and path
 	expect(actualParsed.baseAndPath).toBe(expectedParsed.baseAndPath);
-	
+
 	// Compare parameters (order independent)
 	expect(actualParsed.params).toEqual(expectedParsed.params);
 }

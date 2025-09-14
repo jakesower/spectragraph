@@ -34,12 +34,12 @@ SpectraGraph core provides essential utilities for store implementation:
 
 ```javascript
 import {
-	ensureValidSchema,
-	ensureValidQuery,
-	normalizeQuery,
-	ensureValidCreateResource,
-	ensureValidUpdateResource,
-	ensureValidDeleteResource,
+  ensureValidSchema,
+  ensureValidQuery,
+  normalizeQuery,
+  ensureValidCreateResource,
+  ensureValidUpdateResource,
+  ensureValidDeleteResource,
 } from "@spectragraph/core";
 
 // Validate schema on store creation
@@ -47,8 +47,8 @@ ensureValidSchema(schema, { validator });
 
 // Normalize and validate queries
 const normalizedQuery = normalizeQuery(schema, query, {
-	selectEngine,
-	whereEngine,
+  selectEngine,
+  whereEngine,
 });
 ensureValidQuery(schema, normalizedQuery, { selectEngine, whereEngine });
 ```
@@ -66,10 +66,10 @@ ensureValidDeleteResource(schema, resource, validator);
 
 ```javascript
 import {
-	createEmptyGraph,
-	linkInverses,
-	mergeGraphsDeep,
-	queryGraph,
+  createEmptyGraph,
+  linkInverses,
+  mergeGraphsDeep,
+  queryGraph,
 } from "@spectragraph/core";
 
 // Create empty graph structure from schema
@@ -88,15 +88,15 @@ const result = queryGraph(schema, query, graph, { selectEngine, whereEngine });
 
 ```javascript
 import {
-	ensureValidSchema,
-	ensureValidQuery,
-	normalizeQuery,
-	ensureValidCreateResource,
-	ensureValidUpdateResource,
-	ensureValidDeleteResource,
-	defaultValidator,
-	defaultSelectEngine,
-	defaultWhereEngine,
+  ensureValidSchema,
+  ensureValidQuery,
+  normalizeQuery,
+  ensureValidCreateResource,
+  ensureValidUpdateResource,
+  ensureValidDeleteResource,
+  defaultValidator,
+  defaultSelectEngine,
+  defaultWhereEngine,
 } from "@spectragraph/core";
 
 /**
@@ -105,53 +105,53 @@ import {
  * @param {Object} config - Store configuration options
  */
 export function createCustomStore(schema, config = {}) {
-	const {
-		connection, // unique to this store
-		validator = defaultValidator,
-		selectEngine = defaultSelectEngine,
-		whereEngine = defaultWhereEngine,
-	} = config;
+  const {
+    connection, // unique to this store
+    validator = defaultValidator,
+    selectEngine = defaultSelectEngine,
+    whereEngine = defaultWhereEngine,
+  } = config;
 
-	// Validate schema on creation
-	ensureValidSchema(schema, { validator });
+  // Validate schema on creation
+  ensureValidSchema(schema, { validator });
 
-	return {
-		async query(query) {
-			// Normalize and validate query
-			const normalizedQuery = normalizeQuery(schema, query, {
-				selectEngine,
-				whereEngine,
-			});
-			ensureValidQuery(schema, normalizedQuery, { selectEngine, whereEngine });
+  return {
+    async query(query) {
+      // Normalize and validate query
+      const normalizedQuery = normalizeQuery(schema, query, {
+        selectEngine,
+        whereEngine,
+      });
+      ensureValidQuery(schema, normalizedQuery, { selectEngine, whereEngine });
 
-			// TODO: Implement query execution for your data source
-			return executeQuery(connection, normalizedQuery);
-		},
+      // TODO: Implement query execution for your data source
+      return executeQuery(connection, normalizedQuery);
+    },
 
-		async create(resource) {
-			ensureValidCreateResource(schema, resource, validator);
-			// TODO: Implement resource creation
-			return createResource(connection, resource);
-		},
+    async create(resource) {
+      ensureValidCreateResource(schema, resource, validator);
+      // TODO: Implement resource creation
+      return createResource(connection, resource);
+    },
 
-		async update(resource) {
-			ensureValidUpdateResource(schema, resource, validator);
-			// TODO: Implement resource updating
-			return updateResource(connection, resource);
-		},
+    async update(resource) {
+      ensureValidUpdateResource(schema, resource, validator);
+      // TODO: Implement resource updating
+      return updateResource(connection, resource);
+    },
 
-		async upsert(resource) {
-			// Common upsert implementation
-			const exists = await resourceExists(connection, resource);
-			return exists ? this.update(resource) : this.create(resource);
-		},
+    async upsert(resource) {
+      // Common upsert implementation
+      const exists = await resourceExists(connection, resource);
+      return exists ? this.update(resource) : this.create(resource);
+    },
 
-		async delete(resource) {
-			ensureValidDeleteResource(schema, resource, validator);
-			// TODO: Implement resource deletion
-			return deleteResource(connection, resource);
-		},
-	};
+    async delete(resource) {
+      ensureValidDeleteResource(schema, resource, validator);
+      // TODO: Implement resource deletion
+      return deleteResource(connection, resource);
+    },
+  };
 }
 ```
 
@@ -161,44 +161,44 @@ Here's how the memory store implements the core interface:
 
 ```javascript
 export function createMemoryStore(schema, config = {}) {
-	ensureValidSchema(schema, { validator });
+  ensureValidSchema(schema, { validator });
 
-	let storeGraph = mergeGraphsDeep(createEmptyGraph(schema), initialData);
+  let storeGraph = mergeGraphsDeep(createEmptyGraph(schema), initialData);
 
-	return {
-		async query(query) {
-			const normalQuery = normalizeQuery(schema, query, {
-				selectEngine,
-				whereEngine,
-			});
-			ensureValidQuery(schema, normalQuery, { selectEngine, whereEngine });
-			return queryGraph(schema, normalQuery, storeGraph, {
-				selectEngine,
-				whereEngine,
-			});
-		},
+  return {
+    async query(query) {
+      const normalQuery = normalizeQuery(schema, query, {
+        selectEngine,
+        whereEngine,
+      });
+      ensureValidQuery(schema, normalQuery, { selectEngine, whereEngine });
+      return queryGraph(schema, normalQuery, storeGraph, {
+        selectEngine,
+        whereEngine,
+      });
+    },
 
-		async create(resource) {
-			ensureValidCreateResource(schema, resource, validator);
-			return createAction(resource, { schema, storeGraph });
-		},
+    async create(resource) {
+      ensureValidCreateResource(schema, resource, validator);
+      return createAction(resource, { schema, storeGraph });
+    },
 
-		async update(resource) {
-			ensureValidUpdateResource(schema, resource, validator);
-			return updateAction(resource, { schema, storeGraph });
-		},
+    async update(resource) {
+      ensureValidUpdateResource(schema, resource, validator);
+      return updateAction(resource, { schema, storeGraph });
+    },
 
-		async upsert(resource) {
-			return "id" in resource && storeGraph[resource.type][resource.id]
-				? this.update(resource)
-				: this.create(resource);
-		},
+    async upsert(resource) {
+      return "id" in resource && storeGraph[resource.type][resource.id]
+        ? this.update(resource)
+        : this.create(resource);
+    },
 
-		async delete(resource) {
-			ensureValidDeleteResource(schema, resource, validator);
-			return deleteAction(resource, { schema, storeGraph });
-		},
-	};
+    async delete(resource) {
+      ensureValidDeleteResource(schema, resource, validator);
+      return deleteAction(resource, { schema, storeGraph });
+    },
+  };
 }
 ```
 
@@ -210,44 +210,44 @@ For REST API backends:
 
 ```javascript
 export function createAPIStore(schema, config) {
-	return {
-		async query(query) {
-			const normalizedQuery = normalizeQuery(schema, query);
-			ensureValidQuery(schema, normalizedQuery);
+  return {
+    async query(query) {
+      const normalizedQuery = normalizeQuery(schema, query);
+      ensureValidQuery(schema, normalizedQuery);
 
-			// Convert SpectraGraph query to API parameters
-			const apiParams = convertToAPIParams(normalizedQuery);
+      // Convert SpectraGraph query to API parameters
+      const apiParams = convertToAPIParams(normalizedQuery);
 
-			const response = await fetch(`${baseURL}/${query.type}`, {
-				method: "GET",
-				headers: { "Content-Type": "application/json" },
-				// Add query parameters
-				...apiParams,
-			});
+      const response = await fetch(`${baseURL}/${query.type}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        // Add query parameters
+        ...apiParams,
+      });
 
-			if (!response.ok) {
-				throw new Error(`API error: ${response.status}`);
-			}
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
 
-			const apiData = await response.json();
-			return convertFromAPIFormat(apiData);
-		},
+      const apiData = await response.json();
+      return convertFromAPIFormat(apiData);
+    },
 
-		async create(resource) {
-			ensureValidCreateResource(schema, resource, validator);
+    async create(resource) {
+      ensureValidCreateResource(schema, resource, validator);
 
-			const apiData = convertToAPIFormat(resource);
-			const response = await fetch(`${baseURL}/${resource.type}`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(apiData),
-			});
+      const apiData = convertToAPIFormat(resource);
+      const response = await fetch(`${baseURL}/${resource.type}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(apiData),
+      });
 
-			return convertFromAPIFormat(await response.json());
-		},
+      return convertFromAPIFormat(await response.json());
+    },
 
-		// ... other methods
-	};
+    // ... other methods
+  };
 }
 ```
 
@@ -259,46 +259,46 @@ For SQL databases:
 
 ```javascript
 export function createSQLStore(schema, connection, config) {
-	return {
-		async query(query) {
-			const normalizedQuery = normalizeQuery(schema, query);
-			ensureValidQuery(schema, normalizedQuery);
+  return {
+    async query(query) {
+      const normalizedQuery = normalizeQuery(schema, query);
+      ensureValidQuery(schema, normalizedQuery);
 
-			// Convert to SQL
-			const { sql, params } = convertToSQL(schema, normalizedQuery);
+      // Convert to SQL
+      const { sql, params } = convertToSQL(schema, normalizedQuery);
 
-			// Execute query
-			const rows = await connection.query(sql, params);
+      // Execute query
+      const rows = await connection.query(sql, params);
 
-			// Convert back to SpectraGraph format
-			return convertRowsToResources(rows, schema, normalizedQuery);
-		},
+      // Convert back to SpectraGraph format
+      return convertRowsToResources(rows, schema, normalizedQuery);
+    },
 
-		async create(resource) {
-			ensureValidCreateResource(schema, resource, validator);
+    async create(resource) {
+      ensureValidCreateResource(schema, resource, validator);
 
-			const { sql, params } = generateInsertSQL(schema, resource);
-			const result = await connection.query(sql, params);
+      const { sql, params } = generateInsertSQL(schema, resource);
+      const result = await connection.query(sql, params);
 
-			return { ...resource, id: result.insertId };
-		},
+      return { ...resource, id: result.insertId };
+    },
 
-		async update(resource) {
-			ensureValidUpdateResource(schema, resource, validator);
+    async update(resource) {
+      ensureValidUpdateResource(schema, resource, validator);
 
-			const { sql, params } = generateUpdateSQL(schema, resource);
-			await connection.query(sql, params);
+      const { sql, params } = generateUpdateSQL(schema, resource);
+      await connection.query(sql, params);
 
-			return resource;
-		},
+      return resource;
+    },
 
-		async delete(resource) {
-			ensureValidDeleteResource(schema, resource, validator);
+    async delete(resource) {
+      ensureValidDeleteResource(schema, resource, validator);
 
-			const { sql, params } = generateDeleteSQL(schema, resource);
-			await connection.query(sql, params);
-		},
-	};
+      const { sql, params } = generateDeleteSQL(schema, resource);
+      await connection.query(sql, params);
+    },
+  };
 }
 ```
 
@@ -313,70 +313,71 @@ import { defaultSelectEngine, defaultWhereEngine } from "@spectragraph/core";
 
 // Default engines handle most expressions in JavaScript
 const result = queryGraph(schema, query, graph, {
-	selectEngine: defaultSelectEngine,
-	whereEngine: defaultWhereEngine,
+  selectEngine: defaultSelectEngine,
+  whereEngine: defaultWhereEngine,
 });
 ```
 
 ### Custom Expression Translation (ADVANCED!)
 
 For SQL stores, expressions are implemented with separate engines for generating SQL and extracting variables. Each expression definition has two functions:
+
 - `where`: generates the SQL fragment
 - `vars`: extracts the parameters for the SQL query
 
 ```javascript
 // Example from the postgres-store implementation
 const sqlExpressions = {
-	$eq: {
-		where: () => " = ?",
-		vars: (operand) => operand,
-	},
-	$matchesRegex: {
-		where: (operand) => {
-			// Handle inline flags like (?i) for case-insensitive
-			const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
-			if (flagMatch && flagMatch[1].includes("i")) {
-				return " ~* ?"; // Case-insensitive regex in PostgreSQL
-			}
-			return " ~ ?"; // Case-sensitive regex
-		},
-		vars: (operand) => {
-			// Extract and process the regex pattern
-			const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
-			if (flagMatch) {
-				const [, flags, pattern] = flagMatch;
-				let processedPattern = pattern;
-				
-				// Handle multiline and dotall flags
-				if (flags.includes("m")) {
-					processedPattern = processedPattern.replace(/\^/g, "(^|(?<=\\n))");
-					processedPattern = processedPattern.replace(/\$/g, "(?=\\n|$)");
-				}
-				if (flags.includes("s")) {
-					processedPattern = processedPattern.replace(/\./g, "[\\s\\S]");
-				}
-				
-				return [processedPattern];
-			}
-			return [operand];
-		},
-	},
-	$matchesGlob: {
-		where: () => " SIMILAR TO ?", 
-		vars: (operand) => {
-			// Convert GLOB pattern to PostgreSQL SIMILAR TO pattern
-			return [operand.replace(/\*/g, "%").replace(/\?/g, "_")];
-		},
-	},
+  $eq: {
+    where: () => " = ?",
+    vars: (operand) => operand,
+  },
+  $matchesRegex: {
+    where: (operand) => {
+      // Handle inline flags like (?i) for case-insensitive
+      const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
+      if (flagMatch && flagMatch[1].includes("i")) {
+        return " ~* ?"; // Case-insensitive regex in PostgreSQL
+      }
+      return " ~ ?"; // Case-sensitive regex
+    },
+    vars: (operand) => {
+      // Extract and process the regex pattern
+      const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
+      if (flagMatch) {
+        const [, flags, pattern] = flagMatch;
+        let processedPattern = pattern;
+
+        // Handle multiline and dotall flags
+        if (flags.includes("m")) {
+          processedPattern = processedPattern.replace(/\^/g, "(^|(?<=\\n))");
+          processedPattern = processedPattern.replace(/\$/g, "(?=\\n|$)");
+        }
+        if (flags.includes("s")) {
+          processedPattern = processedPattern.replace(/\./g, "[\\s\\S]");
+        }
+
+        return [processedPattern];
+      }
+      return [operand];
+    },
+  },
+  $matchesGlob: {
+    where: () => " SIMILAR TO ?",
+    vars: (operand) => {
+      // Convert GLOB pattern to PostgreSQL SIMILAR TO pattern
+      return [operand.replace(/\*/g, "%").replace(/\?/g, "_")];
+    },
+  },
 };
 
 // Create the expression engines
 export const whereExpressionEngine = createExpressionEngine(
-	mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.where })),
+  mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.where })),
 );
 
 export const varsExpressionEngine = createExpressionEngine(
-	mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.vars })),
+  mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.vars })),
 );
 ```
 
@@ -389,18 +390,18 @@ export const varsExpressionEngine = createExpressionEngine(
  */
 
 const customEngine = {
-	// Each expression handler receives the expression parameters
-	expressions: {
-		$count: (operand) => `COUNT(${operand})`,
-		$sum: (operand) => `SUM(${operand})`,
-		$avg: (operand) => `AVG(${operand})`,
+  // Each expression handler receives the expression parameters
+  expressions: {
+    $count: (operand) => `COUNT(${operand})`,
+    $sum: (operand) => `SUM(${operand})`,
+    $avg: (operand) => `AVG(${operand})`,
 
-		// Custom expressions
-		$myCustom: (operand) => {
-			const { field, params } = operand;
-			return `CUSTOM_FUNCTION(${field}, ${params})`;
-		},
-	},
+    // Custom expressions
+    $myCustom: (operand) => {
+      const { field, params } = operand;
+      return `CUSTOM_FUNCTION(${field}, ${params})`;
+    },
+  },
 };
 ```
 
@@ -417,19 +418,19 @@ import { runInterfaceTests } from "@spectragraph/interface-tests";
 import { createMyStore } from "./my-store.js";
 
 describe("My Custom Store", () => {
-	let store;
+  let store;
 
-	beforeEach(() => {
-		store = createMyStore(testSchema, testConnection);
-	});
+  beforeEach(() => {
+    store = createMyStore(testSchema, testConnection);
+  });
 
-	// Run standard compliance tests
-	runInterfaceTests(() => store);
+  // Run standard compliance tests
+  runInterfaceTests(() => store);
 
-	// Add store-specific tests
-	it("handles custom feature", async () => {
-		// Test store-specific functionality
-	});
+  // Add store-specific tests
+  it("handles custom feature", async () => {
+    // Test store-specific functionality
+  });
 });
 ```
 
@@ -446,8 +447,8 @@ await store.merge(careBearData);
 
 // Run queries
 const result = await store.query({
-	type: "bears",
-	select: ["name", { home: ["name"] }],
+  type: "bears",
+  select: ["name", { home: ["name"] }],
 });
 ```
 
@@ -455,28 +456,28 @@ const result = await store.query({
 
 ```javascript
 describe("Custom Store Features", () => {
-	it("optimizes complex queries", async () => {
-		const query = {
-			type: "users",
-			select: ["name", { posts: [{ comments: ["content"] }] }],
-		};
+  it("optimizes complex queries", async () => {
+    const query = {
+      type: "users",
+      select: ["name", { posts: [{ comments: ["content"] }] }],
+    };
 
-		const startTime = Date.now();
-		const result = await store.query(query);
-		const duration = Date.now() - startTime;
+    const startTime = Date.now();
+    const result = await store.query(query);
+    const duration = Date.now() - startTime;
 
-		expect(result).toHaveLength(3);
-		expect(duration).toBeLessThan(100); // Performance assertion
-	});
+    expect(result).toHaveLength(3);
+    expect(duration).toBeLessThan(100); // Performance assertion
+  });
 
-	it("handles connection failures gracefully", async () => {
-		// Simulate connection failure
-		mockConnection.reject(new Error("Connection lost"));
+  it("handles connection failures gracefully", async () => {
+    // Simulate connection failure
+    mockConnection.reject(new Error("Connection lost"));
 
-		await expect(
-			store.query({ type: "users", select: ["name"] }),
-		).rejects.toThrow("Connection lost");
-	});
+    await expect(
+      store.query({ type: "users", select: ["name"] }),
+    ).rejects.toThrow("Connection lost");
+  });
 });
 ```
 
@@ -486,30 +487,30 @@ describe("Custom Store Features", () => {
 
 ```json
 {
-	"name": "@my-org/spectragraph-custom-store",
-	"version": "1.0.0",
-	"type": "module",
-	"main": "./dist/index.cjs.js",
-	"module": "./dist/index.esm.js",
-	"types": "./dist/index.d.ts",
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.esm.js",
-			"require": "./dist/index.cjs.js"
-		}
-	},
-	"peerDependencies": {
-		"@spectragraph/core": ">=0.1.0"
-	},
-	"dependencies": {
-		"my-data-source-client": "^2.0.0"
-	},
-	"devDependencies": {
-		"@spectragraph/interface-tests": "*",
-		"vitest": "^3.0.0"
-	},
-	"keywords": ["spectragraph", "data-store", "query-engine"]
+  "name": "@my-org/spectragraph-custom-store",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/index.cjs.js",
+  "module": "./dist/index.esm.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.cjs.js"
+    }
+  },
+  "peerDependencies": {
+    "@spectragraph/core": ">=0.1.0"
+  },
+  "dependencies": {
+    "my-data-source-client": "^2.0.0"
+  },
+  "devDependencies": {
+    "@spectragraph/interface-tests": "*",
+    "vitest": "^3.0.0"
+  },
+  "keywords": ["spectragraph", "data-store", "query-engine"]
 }
 ```
 

@@ -343,7 +343,10 @@ describe("validateQuery", () => {
 				selectEngine,
 				whereEngine,
 			});
-			ensureValidQuery(careBearSchema, normalQuery, { selectEngine, whereEngine });
+			ensureValidQuery(careBearSchema, normalQuery, {
+				selectEngine,
+				whereEngine,
+			});
 		});
 	});
 });

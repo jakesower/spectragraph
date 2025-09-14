@@ -21,13 +21,13 @@ const result = await store.query({
             {
               author: ["name"],
             },
-        ],
+          ],
+        },
+      ],
     },
-],
-},
-],
-where: { active: true },
-limit: 10,
+  ],
+  where: { active: true },
+  limit: 10,
 });
 
 // Works with: PostgreSQL, SQLite, in-memory data, REST APIs
@@ -54,20 +54,20 @@ const schema = {
         name: { type: "string" },
         email: { type: "string" },
       },
-    relationships: {
-      posts: { type: "posts", cardinality: "hasMany" },
+      relationships: {
+        posts: { type: "posts", cardinality: "hasMany" },
+      },
     },
-},
-posts: {
-  attributes: {
-    title: { type: "string" },
-    content: { type: "string" },
+    posts: {
+      attributes: {
+        title: { type: "string" },
+        content: { type: "string" },
+      },
+      relationships: {
+        author: { type: "users", cardinality: "belongsTo" },
+      },
+    },
   },
-relationships: {
-  author: { type: "users", cardinality: "belongsTo" },
-},
-},
-},
 };
 
 // Create store with initial data
@@ -80,16 +80,16 @@ const store = createMemoryStore(schema, {
         attributes: { name: "Alice", email: "alice@example.com" },
         relationships: { posts: [{ type: "posts", id: "1" }] },
       },
+    },
+    posts: {
+      1: {
+        id: "1",
+        type: "posts",
+        attributes: { title: "Hello World", content: "My first post" },
+        relationships: { author: { type: "users", id: "1" } },
+      },
+    },
   },
-posts: {
-  1: {
-    id: "1",
-    type: "posts",
-    attributes: { title: "Hello World", content: "My first post" },
-    relationships: { author: { type: "users", id: "1" } },
-  },
-},
-},
 });
 
 // Query with expressions
@@ -134,8 +134,8 @@ console.log(analytics);
 
 ## Available Stores
 
-| Store                                                     | Use Case                             | Status    |
-| --------------------------------------------------------- | ------------------------------------ | --------- |
+| Store                                                       | Use Case                             | Status    |
+| ----------------------------------------------------------- | ------------------------------------ | --------- |
 | **[@spectragraph/memory-store](packages/memory-store)**     | In-memory data, testing, prototyping | ✅ Stable |
 | **[@spectragraph/postgres-store](packages/postgres-store)** | PostgreSQL databases                 | ✅ Stable |
 | **[@spectragraph/sqlite-store](packages/sqlite-store)**     | SQLite databases                     | ✅ Stable |
@@ -227,10 +227,10 @@ const result = await store.query({
         {
           comments: ["content"],
         },
-    ],
-},
-],
-where: { active: true },
+      ],
+    },
+  ],
+  where: { active: true },
 });
 ```
 

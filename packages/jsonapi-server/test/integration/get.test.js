@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import careBearSchema from "../fixtures/care-bears.schema.json";
-import { careBearData } from "../fixtures/care-bear-data.js";  
+import { careBearData } from "../fixtures/care-bear-data.js";
 import { parseRequest } from "../../src/parse-request.js";
 import { api, makeRequest } from "../helpers.js";
 import { omit, pick } from "es-toolkit";
@@ -24,7 +24,9 @@ describe("requests with no subqueries", () => {
 			data: {
 				type: "powers",
 				id: "careBearStare",
-				attributes: omit(careBearData.powers.careBearStare.attributes, ["powerId"]),
+				attributes: omit(careBearData.powers.careBearStare.attributes, [
+					"powerId",
+				]),
 				relationships: {},
 			},
 		});
