@@ -29,7 +29,7 @@ import { createMyStore } from "my-store-implementation";
 
 // Your store factory function
 function createStore() {
-  return createMyStore(schema, config);
+	return createMyStore(schema, config);
 }
 
 // Run all interface tests
@@ -40,19 +40,19 @@ runInterfaceTests(createStore);
 
 ```javascript
 import {
-  runQueryTests,
-  runCreateTests,
-  runUpdateTests,
-  runDeleteTests,
-  runUpsertTests
+	runQueryTests,
+	runCreateTests,
+	runUpdateTests,
+	runDeleteTests,
+	runUpsertTests,
 } from "@spectragraph/interface-tests";
 
 describe("My Store Implementation", () => {
-  runQueryTests(createStore);
-  runCreateTests(createStore);
-  runUpdateTests(createStore);
-  runDeleteTests(createStore);
-  runUpsertTests(createStore);
+	runQueryTests(createStore);
+	runCreateTests(createStore);
+	runUpdateTests(createStore);
+	runDeleteTests(createStore);
+	runUpsertTests(createStore);
 });
 ```
 
@@ -62,13 +62,13 @@ The package provides standardized test data and schemas:
 
 ```javascript
 import {
-  careBearSchema,
-  soccerSchema,
-  geojsonSchema,
-  jsonApiSchema,
-  jsonSchemaTestingSchema,
-  careBearData,
-  careBearDataFlat
+	careBearSchema,
+	soccerSchema,
+	geojsonSchema,
+	jsonApiSchema,
+	jsonSchemaTestingSchema,
+	careBearData,
+	careBearDataFlat,
 } from "@spectragraph/interface-tests";
 
 // Use schemas in your own tests
@@ -89,7 +89,7 @@ Runs the complete interface test suite, covering all CRUD operations and queryin
 
 ```javascript
 function createStore() {
-  return createMemoryStore(schema, { initialData: {} });
+	return createMemoryStore(schema, { initialData: {} });
 }
 
 runInterfaceTests(createStore);
@@ -136,21 +136,21 @@ When implementing a SpectraGraph store, your store should provide these methods:
 
 ```javascript
 const store = {
-  async create(resource) {
-    // Create new resource, return normalized resource
-  },
-async update(resource) {
-  // Update existing resource, return updated normalized resource
-},
-async upsert(resource) {
-  // Create or update resource, return normalized resource
-},
-async delete(resource) {
-  // Delete resource by type and id
-},
-async query(query) {
-  // Execute query, return results matching query structure
-}
+	async create(resource) {
+		// Create new resource, return normalized resource
+	},
+	async update(resource) {
+		// Update existing resource, return updated normalized resource
+	},
+	async upsert(resource) {
+		// Create or update resource, return normalized resource
+	},
+	async delete(resource) {
+		// Delete resource by type and id
+	},
+	async query(query) {
+		// Execute query, return results matching query structure
+	},
 };
 ```
 
@@ -200,11 +200,14 @@ async query(query) {
 ### Basic Store Testing
 
 ```javascript
-import { runInterfaceTests, careBearSchema } from "@spectragraph/interface-tests";
+import {
+	runInterfaceTests,
+	careBearSchema,
+} from "@spectragraph/interface-tests";
 import { createMyCustomStore } from "./my-store";
 
 function createStore() {
-  return createMyCustomStore(careBearSchema);
+	return createMyCustomStore(careBearSchema);
 }
 
 // This will run hundreds of tests covering all aspects
@@ -218,18 +221,18 @@ import { careBearSchema, careBearData } from "@spectragraph/interface-tests";
 import { describe, it, expect } from "vitest";
 
 describe("My Custom Store Features", () => {
-  it("should handle my special case", async () => {
-    const store = createMyCustomStore(careBearSchema, {
-      initialData: careBearData
-    });
+	it("should handle my special case", async () => {
+		const store = createMyCustomStore(careBearSchema, {
+			initialData: careBearData,
+		});
 
-  const result = await store.query({
-    type: "characters",
-    select: ["name", "favoriteColor"]
-  });
+		const result = await store.query({
+			type: "characters",
+			select: ["name", "favoriteColor"],
+		});
 
-expect(result).toBeDefined();
-});
+		expect(result).toBeDefined();
+	});
 });
 ```
 
