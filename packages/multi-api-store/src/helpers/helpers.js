@@ -46,3 +46,21 @@ export function buildAsyncMiddlewarePipe(middleware) {
 	const init = (val) => val;
 	return middleware.reduceRight((onion, mw) => (val) => mw(val, onion), init);
 }
+
+export async function handleFetchResponse(response) {
+	// handle Response objects (from handlers that use fetch)
+	if (response && typeof response.ok === "boolean") {
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({
+				message: response.statusText,
+			}));
+			throw new Error(errorData.message || `HTTP ${response.status}`, {
+				cause: { data: errorData, originalError: response },
+			});
+		}
+		return await response.json();
+	} else {
+		// custom handlers can return whatever
+		return response;
+	}
+}

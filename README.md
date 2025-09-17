@@ -134,11 +134,11 @@ console.log(analytics);
 
 ## Available Stores
 
-| Store                                                       | Use Case                             | Status    |
-| ----------------------------------------------------------- | ------------------------------------ | --------- |
-| **[@spectragraph/memory-store](packages/memory-store)**     | In-memory data, testing, prototyping | ✅ Stable |
-| **[@spectragraph/postgres-store](packages/postgres-store)** | PostgreSQL databases                 | ✅ Stable |
-| **[@spectragraph/sqlite-store](packages/sqlite-store)**     | SQLite databases                     | ✅ Stable |
+| Store                                                       | Use Case                             | Status |
+| ----------------------------------------------------------- | ------------------------------------ | ------ |
+| **[@spectragraph/memory-store](packages/memory-store)**     | In-memory data, testing, prototyping | Stable |
+| **[@spectragraph/postgres-store](packages/postgres-store)** | PostgreSQL databases                 | Stable |
+| **[@spectragraph/sqlite-store](packages/sqlite-store)**     | SQLite databases                     | Stable |
 
 ## Advanced Query Examples
 
@@ -152,8 +152,8 @@ console.log(analytics);
     published: true,
     createdAt: { $gte: "2024-01-01" }
   },
-order: [{ createdAt: "desc" }],
-limit: 5
+  order: [{ createdAt: "desc" }],
+  limit: 5
 }
 ```
 
@@ -169,8 +169,8 @@ limit: 5
       $first: {
         $orderBy: ["departments", { $desc: { $avg: "employees.$.performance" } }]
       }
+    }
   }
-}
 }
 ```
 
@@ -187,8 +187,8 @@ limit: 5
             limit: 3
           }
       }]
-}],
-where: { active: true }
+  }],
+  where: { active: true }
 }
 ```
 
@@ -234,10 +234,6 @@ const result = await store.query({
 });
 ```
 
-## Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
 ## License
 
-MIT © [Jake Sower](https://github.com/jakesower)
+AGPL-3.0 © [Jake Sower](https://github.com/jakesower)

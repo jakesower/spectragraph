@@ -6,6 +6,7 @@
  * @param {number} config.defaultTTL - Default TTL in milliseconds
  * @param {function} config.keyGenerator - Function to generate cache keys
  * @param {Object} config.resourceKeyGenerators - Per-resource key generators
+ * @param {function} config.dependsOnTypes - Function to determine what types a query depends on
  * @returns {Object} Cache instance with withCache and clearByType methods
  */
 export function createCache(config = {}) {
@@ -18,7 +19,7 @@ export function createCache(config = {}) {
 			config.keyGenerator ??
 			((query, context) =>
 				JSON.stringify({ query, parentQueryType: context.parentQuery?.type })),
-		resourceKeyGenerators: config.resourceKeyGenerators ?? {},
+		dependsOnTypes: config.dependsOnTypes,
 		...config,
 	};
 
@@ -60,7 +61,17 @@ export function createCache(config = {}) {
 			: cacheConfig.defaultTTL
 				? now + cacheConfig.defaultTTL
 				: undefined;
-		cache.set(key, { value: fetched, expiry });
+
+		// Store query for dependency tracking (only if keyOrQuery is a query object)
+		const originalQuery = typeof keyOrQuery === "string" ? null : keyOrQuery;
+		cache.set(key, { value: fetched, expiry, originalQuery });
+
+		// If the fetched value is a promise, handle rejections by clearing from cache
+		if (fetched && typeof fetched.then === "function") {
+			fetched.catch(() => {
+				cache.delete(key);
+			});
+		}
 
 		return fetched;
 	};
@@ -70,13 +81,13 @@ export function createCache(config = {}) {
 	 * @param {string} type - Resource type to clear cache for
 	 */
 	const clearByType = (type) => {
-		if (!cacheConfig.enabled) {
-			return;
-		}
-
-		Array.from(cache.keys())
-			.filter((key) => key.includes(`"type":"${type}"`))
-			.forEach((key) => cache.delete(key));
+		Array.from(cache.entries())
+			.filter(([, entry]) => {
+				if (!entry.originalQuery) return false;
+				const dependencies = cacheConfig.dependsOnTypes(entry.originalQuery);
+				return dependencies.includes(type);
+			})
+			.forEach(([key]) => cache.delete(key));
 	};
 
 	/**
@@ -91,9 +102,6 @@ export function createCache(config = {}) {
 	 * @param {string} key - Cache key to clear
 	 */
 	const clearKey = (key) => {
-		if (!cacheConfig.enabled) {
-			return;
-		}
 		cache.delete(key);
 	};
 
