@@ -12,7 +12,9 @@ import {
 } from "@spectragraph/core";
 import { loadQueryGraph } from "./load-query-graph.js";
 import { createCache } from "./cache.js";
-import { standardHandler } from "./standard-handler.js";
+import { standardHandlers } from "./default-config.js";
+import { mapValues } from "es-toolkit";
+import { compileResourceMappers } from "./helpers/helpers.js";
 
 /**
  * Helper to handle Response objects from standard handler or return direct data
@@ -28,7 +30,7 @@ async function handleHandlerResult(result, fallbackValue = null) {
 				message: result.statusText,
 			}));
 			throw new Error(errorData.message || `HTTP ${result.status}`, {
-				cause: { data: errorData, response: result },
+				cause: { data: errorData, originalError: result },
 			});
 		}
 
@@ -45,39 +47,37 @@ async function handleHandlerResult(result, fallbackValue = null) {
 	return result;
 }
 
-export function createMultiApiStore(schema, config) {
+export function createMultiApiStore(schema, config = {}) {
 	ensureValidSchema(schema);
 
-	if (typeof config?.resources !== "object") {
-		throw new Error(
-			"config.resources must be an object describing the configuration for each resource",
-		);
-	}
+	// normalize resource config
+	const normalConfig = {
+		middleware: [],
+		specialHandlers: [],
+		...config,
+		resources: mapValues(config.resources ?? {}, (resConfig, type) => ({
+			...resConfig,
+			handlers: mapValues(resConfig.handlers ?? {}, (h) => ({
+				fetch: h.fetch,
+				mapResource: h.mappers
+					? compileResourceMappers(schema, type, h.mappers)
+					: (res) => res,
+			})),
+		})),
+	};
 
 	const {
-		cache: cacheConfig,
 		validator = defaultValidator,
 		selectEngine = defaultSelectEngine,
 		whereEngine = defaultWhereEngine,
 		specialHandlers = [],
-	} = config;
+	} = normalConfig;
 
-	// Extract per-resource cache key generators from resource configs
-	const resourceKeyGenerators = {};
-	Object.entries(config.resources).forEach(([type, resourceConfig]) => {
-		if (resourceConfig.cacheKeyGenerator) {
-			resourceKeyGenerators[type] = resourceConfig.cacheKeyGenerator;
-		}
-	});
-
-	const cache = createCache({
-		...cacheConfig,
-		resourceKeyGenerators,
-	});
+	const cache = createCache(normalConfig);
 
 	const storeContext = {
 		schema,
-		config,
+		config: normalConfig,
 		specialHandlers: specialHandlers ?? [],
 		withCache: cache.withCache,
 		cache,
@@ -102,12 +102,16 @@ export function createMultiApiStore(schema, config) {
 		ensureValidCreateResource(schema, resource, validator);
 
 		const createHandler =
-			config.resources[type]?.create ?? standardHandler.create;
+			normalConfig.resources[type]?.create ?? standardHandlers.create;
 
 		// Clear cache for this resource type when creating
 		cache.clearByType(type);
 
-		const result = await createHandler(resource, { schema, config });
+		const result = await createHandler(resource, {
+			schema,
+			config: normalConfig,
+		});
+
 		return handleHandlerResult(result);
 	};
 
@@ -117,12 +121,16 @@ export function createMultiApiStore(schema, config) {
 		ensureValidUpdateResource(schema, resource, validator);
 
 		const updateHandler =
-			config.resources[type]?.update ?? standardHandler.update;
+			normalConfig.resources[type]?.update ?? standardHandlers.update;
 
 		// Clear cache for this resource type when updating
 		cache.clearByType(type);
 
-		const result = await updateHandler(resource, { schema, config });
+		const result = await updateHandler(resource, {
+			schema,
+			config: normalConfig,
+		});
+
 		return handleHandlerResult(result);
 	};
 
@@ -132,12 +140,16 @@ export function createMultiApiStore(schema, config) {
 		ensureValidDeleteResource(schema, resource, validator);
 
 		const deleteHandler =
-			config.resources[type]?.delete ?? standardHandler.delete;
+			normalConfig.resources[type]?.delete ?? standardHandlers.delete;
 
 		// Clear cache for this resource type when deleting
 		cache.clearByType(type);
 
-		const result = await deleteHandler(resource, { schema, config });
+		const result = await deleteHandler(resource, {
+			schema,
+			config: normalConfig,
+		});
+
 		return handleHandlerResult(result, resource);
 	};
 

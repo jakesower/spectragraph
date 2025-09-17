@@ -5,18 +5,10 @@ import {
 } from "@spectragraph/core";
 import {
 	buildAsyncMiddlewarePipe,
-	compileResourceMappers,
+	handleFetchResponse,
 } from "./helpers/helpers.js";
-import { standardHandler } from "./standard-handler.js";
-
-const queryParamsToStr = (queryParams) =>
-	queryParams && queryParams.length > 0
-		? `?${queryParams.map((obj) =>
-				Object.entries(obj)
-					.map(([k, v]) => `${k}=${v}`)
-					.join("&"),
-			)}`
-		: "";
+import { defaultConfig } from "./default-config.js";
+import { toMerged } from "es-toolkit";
 
 /**
  * Loads all the data needed for a query to run, including its subqueries.
@@ -25,91 +17,61 @@ const queryParamsToStr = (queryParams) =>
  * @returns {import('@spectragraph/core').Graph} - A graph with all the data necessary for the query to be executed loaded.
  */
 export async function loadQueryGraph(rootQuery, storeContext) {
-	const {
-		config: { middleware = [] },
-		schema,
-		specialHandlers = [],
-		withCache,
-	} = storeContext;
+	const { config, schema, middleware, specialHandlers, withCache } =
+		storeContext;
 
 	const step = async (query, queryContext) => {
 		const context = { ...storeContext, ...queryContext };
-		const { config = {} } = context;
-		const resourceConfig = config.resources[query.type] ?? {};
-		const { get, mappers } = resourceConfig;
-
-		const mapFn = mappers
-			? compileResourceMappers(schema, query.type, mappers)
-			: (res) => res;
 
 		// Check for special handlers first
 		const specialHandler = specialHandlers.find((h) => h.test(query, context));
-		const handler = specialHandler?.handler ?? get ?? standardHandler.get;
 
-		// Determine if this resource uses manual caching or should force refresh
-		const isManuallyCaching =
-			specialHandler?.cache?.manual ||
-			(resourceConfig.cache?.manual ?? storeContext.manualCaching);
+		// Build out the context relevant to this step (rightmost args take priority)
+		const stepConfig = [
+			defaultConfig,
+			config,
+			context.resources[query.type] ?? {},
+			specialHandler ?? {},
+		].reduce(toMerged);
 
 		const fetchWithCache = async (ctx) => {
 			const finishedCtx = {
 				...ctx,
 				request: {
 					...ctx.request,
-					queryParamsStr: queryParamsToStr(ctx.request.queryParams),
+					queryParamsStr: stepConfig.stringifyQueryParams(
+						ctx.request.queryParams,
+					),
 				},
 			};
 
 			const fetcher = async () => {
-				const response = await handler(finishedCtx);
+				const response = await stepConfig.handlers.get.fetch(finishedCtx);
+				const data = await handleFetchResponse(response);
 
-				// Handle Response objects (from standard handler)
-				if (response && typeof response.ok === "boolean") {
-					if (!response.ok) {
-						const errorData = await response.json().catch(() => ({
-							message: response.statusText,
-						}));
-						throw new Error(errorData.message || `HTTP ${response.status}`, {
-							cause: { data: errorData, response },
-						});
-					}
-					const data = await response.json();
-					if (data === null || data === undefined) {
-						return createGraphFromResources(schema, query.type, []);
-					}
-					const asArray = Array.isArray(data) ? data : [data];
-					const mapped = asArray.map(mapFn);
-					return createGraphFromResources(schema, query.type, mapped);
-				}
+				if (data === null || data === undefined) return {};
 
-				// Handle direct data (from custom handlers)
-				if (response === null || response === undefined) {
-					return createGraphFromResources(schema, query.type, []);
-				}
-
-				const asArray = Array.isArray(response) ? response : [response];
-				const mapped = asArray.map(mapFn);
+				const asArray = Array.isArray(data) ? data : [data];
+				const mapped = asArray.map(stepConfig.handlers.get.map);
 				return createGraphFromResources(schema, query.type, mapped);
 			};
 
-			if (isManuallyCaching) return fetcher();
+			if (stepConfig.cache.manual) return fetcher();
 
-			return withCache(query, fetcher, { context });
-		};
-
-		const initRequest = {
-			baseURL: resourceConfig.baseURL ?? storeContext.baseURL ?? "",
-			request: {
-				headers: { Accept: "application/json" },
-				queryParams: [],
-			},
-			...context,
-			query,
+			const key = stepConfig.cache.generateKey(query, context);
+			return withCache(key, fetcher, { context });
 		};
 
 		const pipe = buildAsyncMiddlewarePipe([...middleware, fetchWithCache]);
-
-		const queryPromise = pipe(initRequest);
+		const middlewareCtx = {
+			schema,
+			query,
+			request: stepConfig.request,
+			parentQuery: context.parentQuery,
+			config: stepConfig,
+			withCache,
+		};
+		const queryPromise = pipe(middlewareCtx);
 
 		const subqueryContext = { ...context, parentQuery: query };
 		const relatedGraphPromises = Object.keys(
