@@ -3,27 +3,30 @@ import { createMultiApiStore } from "../src/multi-api-store.js";
 
 const testSchema = {
 	resources: {
-		organizations: {
+		theories: {
+			idAttribute: "id",
+			attributes: {
+				id: { type: "string" },
+				title: { type: "string" },
+				category: { type: "string" },
+			},
+			relationships: {},
+		},
+		evidence: {
+			idAttribute: "id",
+			attributes: {
+				id: { type: "string" },
+				description: { type: "string" },
+				reliability: { type: "string" },
+			},
+			relationships: {},
+		},
+		sources: {
 			idAttribute: "id",
 			attributes: {
 				id: { type: "string" },
 				name: { type: "string" },
-			},
-			relationships: {},
-		},
-		exposures: {
-			idAttribute: "id",
-			attributes: {
-				id: { type: "string" },
-				data: { type: "string" },
-			},
-			relationships: {},
-		},
-		assets: {
-			idAttribute: "id",
-			attributes: {
-				id: { type: "string" },
-				address: { type: "string" },
+				credibility: { type: "string" },
 			},
 			relationships: {},
 		},
@@ -32,12 +35,16 @@ const testSchema = {
 
 describe("Manual Cache Mode", () => {
 	it("allows handlers to control caching manually", async () => {
-		const fetchOrg1 = vi
+		const fetchConspiracy1 = vi
 			.fn()
-			.mockResolvedValue([{ id: "org1", name: "Org 1" }]);
-		const fetchOrg2 = vi
+			.mockResolvedValue([
+				{ id: "theory1", title: "Moon Landing Hoax", category: "space" },
+			]);
+		const fetchConspiracy2 = vi
 			.fn()
-			.mockResolvedValue([{ id: "org2", name: "Org 2" }]);
+			.mockResolvedValue([
+				{ id: "theory2", title: "Flat Earth", category: "space" },
+			]);
 
 		const config = {
 			cache: {
@@ -45,71 +52,81 @@ describe("Manual Cache Mode", () => {
 				defaultTTL: 60000,
 			},
 			resources: {
-				exposures: {
-					cache: { manual: true }, // Enable manual caching for exposures
+				evidence: {
+					cache: { manual: true }, // Enable manual caching for evidence
 					get: async (ctx) => {
-						const { organizationIds, withCache } = ctx;
+						const { categoryIds, withCache } = ctx;
 
-						// Replicate the redzone-store exposures pattern
-						const exposuresByOrg = await Promise.all(
-							organizationIds.map((orgId) =>
-								withCache(`allExposures-${orgId}`, async () => {
-									if (orgId === "org1") return fetchOrg1();
-									if (orgId === "org2") return fetchOrg2();
+						// Fetch evidence for each conspiracy category with manual caching
+						const evidenceByCategory = await Promise.all(
+							categoryIds.map((categoryId) =>
+								withCache(`allEvidence-${categoryId}`, async () => {
+									if (categoryId === "space") return fetchConspiracy1();
+									if (categoryId === "government") return fetchConspiracy2();
 									return [];
 								}),
 							),
 						);
 
-						return exposuresByOrg.flat();
+						return evidenceByCategory.flat();
 					},
 				},
-				organizations: {
+				theories: {
 					// Automatic caching (default)
-					get: async () => [{ id: "org1", name: "Auto Cached Org" }],
+					get: async () => [
+						{ id: "theory1", title: "Auto Cached Theory", category: "space" },
+					],
 				},
 			},
 		};
 
 		const store = createMultiApiStore(testSchema, config);
 
-		// First query - should cache per organization
+		// First query - should cache per category
 		const result1 = await store.query(
-			{ type: "exposures", select: ["data"] },
-			{ organizationIds: ["org1", "org2"] },
+			{ type: "evidence", select: ["description"] },
+			{ categoryIds: ["space", "government"] },
 		);
 
-		expect(fetchOrg1).toHaveBeenCalledTimes(1);
-		expect(fetchOrg2).toHaveBeenCalledTimes(1);
+		expect(fetchConspiracy1).toHaveBeenCalledTimes(1);
+		expect(fetchConspiracy2).toHaveBeenCalledTimes(1);
 		expect(result1).toHaveLength(2);
 
-		// Second query with same orgs - should use cache
+		// Second query with same categories - should use cache
 		const result2 = await store.query(
-			{ type: "exposures", select: ["data"] },
-			{ organizationIds: ["org1", "org2"] },
+			{ type: "evidence", select: ["description"] },
+			{ categoryIds: ["space", "government"] },
 		);
 
-		expect(fetchOrg1).toHaveBeenCalledTimes(1); // Still 1, cached
-		expect(fetchOrg2).toHaveBeenCalledTimes(1); // Still 1, cached
+		expect(fetchConspiracy1).toHaveBeenCalledTimes(1); // Still 1, cached
+		expect(fetchConspiracy2).toHaveBeenCalledTimes(1); // Still 1, cached
 		expect(result2).toHaveLength(2);
 
-		// Query with only org1 - should use cache for org1
+		// Query with only space category - should use cache
 		const result3 = await store.query(
-			{ type: "exposures", select: ["data"] },
-			{ organizationIds: ["org1"] },
+			{ type: "evidence", select: ["description"] },
+			{ categoryIds: ["space"] },
 		);
 
-		expect(fetchOrg1).toHaveBeenCalledTimes(1); // Still 1, cached
+		expect(fetchConspiracy1).toHaveBeenCalledTimes(1); // Still 1, cached
 		expect(result3).toHaveLength(1);
 	});
 
 	it("mixes automatic and manual caching in the same store", async () => {
-		const orgHandler = vi
+		const theoryHandler = vi
 			.fn()
-			.mockResolvedValue([{ id: "org1", name: "Org 1" }]);
+			.mockResolvedValue([
+				{ id: "theory1", title: "UFO Cover-Up", category: "aliens" },
+			]);
 		const manualHandler = vi
 			.fn()
-			.mockResolvedValue([{ id: "asset1", address: "123 Main St" }]);
+			.mockResolvedValue([
+				{
+					id: "source1",
+					name: "Anonymous Whistleblower",
+					credibility: "questionable",
+				},
+			]);
 
 		const config = {
 			cache: {
@@ -117,17 +134,17 @@ describe("Manual Cache Mode", () => {
 				defaultTTL: 60000,
 			},
 			resources: {
-				organizations: {
+				theories: {
 					// Automatic caching
-					get: orgHandler,
+					get: theoryHandler,
 				},
-				assets: {
+				sources: {
 					cache: { manual: true }, // Manual caching
 					get: async (ctx) => {
 						const { withCache, query } = ctx;
 
-						// Manual cache control
-						return withCache(`asset-${query.id}`, manualHandler);
+						// Manual cache control for sources
+						return withCache(`source-${query.id}`, manualHandler);
 					},
 				},
 			},
@@ -135,28 +152,30 @@ describe("Manual Cache Mode", () => {
 
 		const store = createMultiApiStore(testSchema, config);
 
-		// Query organizations (automatic caching)
-		await store.query({ type: "organizations", select: ["name"] });
-		await store.query({ type: "organizations", select: ["name"] });
+		// Query theories (automatic caching)
+		await store.query({ type: "theories", select: ["title"] });
+		await store.query({ type: "theories", select: ["title"] });
 
-		expect(orgHandler).toHaveBeenCalledTimes(1); // Cached automatically
+		expect(theoryHandler).toHaveBeenCalledTimes(1); // Cached automatically
 
-		// Query assets (manual caching)
-		await store.query({ type: "assets", id: "asset1", select: ["address"] });
-		await store.query({ type: "assets", id: "asset1", select: ["address"] });
+		// Query sources (manual caching)
+		await store.query({ type: "sources", id: "source1", select: ["name"] });
+		await store.query({ type: "sources", id: "source1", select: ["name"] });
 
 		expect(manualHandler).toHaveBeenCalledTimes(1); // Cached manually
 	});
 
 	it("supports manual mode in special handlers", async () => {
-		const multiOrgHandler = vi
+		const multiSourceHandler = vi
 			.fn()
-			.mockResolvedValue([{ id: "asset1", address: "Found" }]);
+			.mockResolvedValue([
+				{ id: "source1", name: "Deep Throat", credibility: "high" },
+			]);
 
 		const config = {
 			cache: { enabled: true },
 			resources: {
-				assets: {
+				sources: {
 					get: async () => {
 						throw new Error("Should not be called");
 					},
@@ -165,17 +184,17 @@ describe("Manual Cache Mode", () => {
 			specialHandlers: [
 				{
 					test: (query, context) =>
-						query.type === "assets" && context.organizationIds?.length > 1,
+						query.type === "sources" && context.investigatorIds?.length > 1,
 					cache: { manual: true }, // Manual mode for special handler
 					handler: async (ctx) => {
-						const { withCache, organizationIds, query } = ctx;
+						const { withCache, investigatorIds, query } = ctx;
 
-						// Try each org until we find the asset
-						for (const orgId of organizationIds) {
+						// Try each investigator's network until we find the source
+						for (const investigatorId of investigatorIds) {
 							const result = await withCache(
-								`asset-${query.id}-org-${orgId}`,
+								`source-${query.id}-investigator-${investigatorId}`,
 								async () => {
-									return multiOrgHandler();
+									return multiSourceHandler();
 								},
 							);
 
@@ -191,20 +210,20 @@ describe("Manual Cache Mode", () => {
 
 		// Query that triggers special handler
 		const result = await store.query(
-			{ type: "assets", id: "asset1", select: ["address"] },
-			{ organizationIds: ["org1", "org2"] },
+			{ type: "sources", id: "source1", select: ["name"] },
+			{ investigatorIds: ["inv1", "inv2"] },
 		);
 
-		expect(result).toEqual({ address: "Found" });
-		expect(multiOrgHandler).toHaveBeenCalledTimes(1);
+		expect(result).toEqual({ name: "Deep Throat" });
+		expect(multiSourceHandler).toHaveBeenCalledTimes(1);
 
 		// Second query - should use cache
 		await store.query(
-			{ type: "assets", id: "asset1", select: ["address"] },
-			{ organizationIds: ["org1", "org2"] },
+			{ type: "sources", id: "source1", select: ["name"] },
+			{ investigatorIds: ["inv1", "inv2"] },
 		);
 
-		expect(multiOrgHandler).toHaveBeenCalledTimes(1); // Still 1, cached
+		expect(multiSourceHandler).toHaveBeenCalledTimes(1); // Still 1, cached
 	});
 
 	it("passes withCache to all handlers regardless of manual mode", async () => {
@@ -213,17 +232,23 @@ describe("Manual Cache Mode", () => {
 		const config = {
 			cache: { enabled: true },
 			resources: {
-				organizations: {
+				theories: {
 					get: async (ctx) => {
 						receivedContext = ctx;
-						return [{ id: "org1", name: "Org 1" }];
+						return [
+							{
+								id: "theory1",
+								title: "Government Mind Control",
+								category: "psychology",
+							},
+						];
 					},
 				},
 			},
 		};
 
 		const store = createMultiApiStore(testSchema, config);
-		await store.query({ type: "organizations", select: ["name"] });
+		await store.query({ type: "theories", select: ["title"] });
 
 		expect(receivedContext).toBeDefined();
 		expect(typeof receivedContext.withCache).toBe("function");

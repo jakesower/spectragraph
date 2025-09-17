@@ -84,8 +84,20 @@ export const standardHandlers = {
 export const defaultConfig = {
 	cache: {
 		enabled: true,
+		manual: false,
+		defaultTTL: 5 * 60 * 1000, // 5 minutes default
 		generateKey: (query) => `${query.type}-${query.id ?? ""}`,
-		dependsOnTypes: (query) => [query.type],
+		dependsOnTypes: (query, options = {}) => {
+			const { schema } = options;
+			if (!schema) return [query.type];
+
+			const resourceType = query.type;
+			const resourceSchema = schema.resources?.[resourceType];
+			const relatedTypes = Object.values(resourceSchema?.relationships ?? {})
+				.map(rel => rel.type);
+
+			return [resourceType, ...relatedTypes];
+		},
 	},
 	handlers: mapValues(standardHandlers, (h) => ({
 		fetch: h,
