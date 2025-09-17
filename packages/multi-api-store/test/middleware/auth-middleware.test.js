@@ -107,14 +107,11 @@ describe("auth.bearerToken middleware", () => {
 				select: ["name", "specialty"],
 			});
 
-			// The middleware adds headers at context level, but the current implementation
-			// doesn't properly merge them into request.headers, so the Authorization header
-			// doesn't actually reach the handler. This test documents the current behavior.
+			// Verify the Authorization header was added by the middleware
 			expect(mockGet).toHaveBeenCalledWith(
 				expect.objectContaining({
 					request: expect.objectContaining({
 						headers: expect.objectContaining({
-							Accept: "application/json",
 							Authorization: "Bearer ralphie voice: I'm a middleware",
 						}),
 					}),

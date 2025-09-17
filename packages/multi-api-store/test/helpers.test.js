@@ -5,6 +5,7 @@ import {
 	compileOrderFormatter,
 	compileResourceMappers,
 	buildAsyncMiddlewarePipe,
+	handleFetchResponse,
 } from "../src/helpers/helpers.js";
 
 describe("compileFormatter", () => {
@@ -246,5 +247,131 @@ describe("buildAsyncMiddlewarePipe", () => {
 		const result = await pipe("test");
 
 		expect(result).toBe("TEST-SUFFIX");
+	});
+});
+
+describe("handleFetchResponse", () => {
+	it("handles successful Response objects", async () => {
+		const mockResponse = {
+			ok: true,
+			json: async () => ({ data: "test", id: 1 }),
+		};
+
+		const result = await handleFetchResponse(mockResponse);
+		expect(result).toEqual({ data: "test", id: 1 });
+	});
+
+	it("handles failed Response objects with JSON error data", async () => {
+		const mockResponse = {
+			ok: false,
+			status: 404,
+			statusText: "Not Found",
+			json: async () => ({ message: "Resource not found", code: "NOT_FOUND" }),
+		};
+
+		await expect(handleFetchResponse(mockResponse)).rejects.toThrow(
+			"Resource not found",
+		);
+
+		try {
+			await handleFetchResponse(mockResponse);
+		} catch (error) {
+			expect(error.cause.data).toEqual({
+				message: "Resource not found",
+				code: "NOT_FOUND",
+			});
+			expect(error.cause.originalError).toBe(mockResponse);
+		}
+	});
+
+	it("handles failed Response objects with fallback to statusText", async () => {
+		const mockResponse = {
+			ok: false,
+			status: 500,
+			statusText: "Internal Server Error",
+			json: async () => {
+				throw new Error("Failed to parse JSON");
+			},
+		};
+
+		await expect(handleFetchResponse(mockResponse)).rejects.toThrow(
+			"Internal Server Error",
+		);
+
+		try {
+			await handleFetchResponse(mockResponse);
+		} catch (error) {
+			expect(error.cause.data).toEqual({ message: "Internal Server Error" });
+			expect(error.cause.originalError).toBe(mockResponse);
+		}
+	});
+
+	it("handles failed Response objects with empty error message", async () => {
+		const mockResponse = {
+			ok: false,
+			status: 400,
+			statusText: "Bad Request",
+			json: async () => ({}), // Empty error object
+		};
+
+		await expect(handleFetchResponse(mockResponse)).rejects.toThrow("HTTP 400");
+	});
+
+	it("falls back to HTTP status when statusText is empty", async () => {
+		const mockResponse = {
+			ok: false,
+			status: 502,
+			statusText: "", // Empty statusText
+			json: async () => {
+				throw new Error("Failed to parse JSON");
+			},
+		};
+
+		await expect(handleFetchResponse(mockResponse)).rejects.toThrow("HTTP 502");
+	});
+
+	it("handles non-Response objects (direct data)", async () => {
+		const directData = { name: "John", age: 30 };
+		const result = await handleFetchResponse(directData);
+		expect(result).toBe(directData);
+	});
+
+	it("handles null responses", async () => {
+		const result = await handleFetchResponse(null);
+		expect(result).toBe(null);
+	});
+
+	it("handles undefined responses", async () => {
+		const result = await handleFetchResponse(undefined);
+		expect(result).toBe(undefined);
+	});
+
+	it("handles primitive responses", async () => {
+		expect(await handleFetchResponse("string")).toBe("string");
+		expect(await handleFetchResponse(42)).toBe(42);
+		expect(await handleFetchResponse(true)).toBe(true);
+	});
+
+	it("preserves error cause structure", async () => {
+		const mockResponse = {
+			ok: false,
+			status: 403,
+			statusText: "Forbidden",
+			json: async () => ({
+				message: "Access denied",
+				details: "Insufficient permissions",
+			}),
+		};
+
+		try {
+			await handleFetchResponse(mockResponse);
+			expect(true).toBe(false); // Should not reach here
+		} catch (error) {
+			expect(error.message).toBe("Access denied");
+			expect(error.cause).toHaveProperty("data");
+			expect(error.cause).toHaveProperty("originalError");
+			expect(error.cause.data.details).toBe("Insufficient permissions");
+			expect(error.cause.originalError).toBe(mockResponse);
+		}
 	});
 });

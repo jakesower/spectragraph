@@ -7,7 +7,7 @@ import {
 	buildAsyncMiddlewarePipe,
 	handleFetchResponse,
 } from "./helpers/helpers.js";
-import { defaultConfig } from "./default-config.js";
+import { defaultConfig, standardHandlers } from "./default-config.js";
 import { toMerged } from "es-toolkit";
 
 /**
@@ -46,30 +46,42 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 			};
 
 			const fetcher = async () => {
-				const response = await stepConfig.handlers.get.fetch(finishedCtx);
+				// Use special handler if available, otherwise use regular handler
+				const handler = specialHandler?.handler ??
+					stepConfig.handlers?.get?.fetch ??
+					stepConfig.handlers?.get ??
+					standardHandlers.get;
+				const response = await handler(finishedCtx);
 				const data = await handleFetchResponse(response);
 
-				if (data === null || data === undefined) return {};
-
-				const asArray = Array.isArray(data) ? data : [data];
-				const mapped = asArray.map(stepConfig.handlers.get.map);
+				const asArray = data === null || data === undefined ? [] :
+					Array.isArray(data) ? data : [data];
+				const mapper = specialHandler?.handler ? (x) => x :
+					(stepConfig.handlers?.get?.map ?? ((x) => x));
+				const mapped = asArray.map(mapper);
 				return createGraphFromResources(schema, query.type, mapped);
 			};
 
 			if (stepConfig.cache.manual) return fetcher();
 
 			const key = stepConfig.cache.generateKey(query, context);
-			return withCache(key, fetcher, { context });
+			return withCache(key, fetcher, { config: stepConfig, context, query });
 		};
 
 		const pipe = buildAsyncMiddlewarePipe([...middleware, fetchWithCache]);
 		const middlewareCtx = {
+			...context, // Include all context properties like organizationIds
 			schema,
 			query,
 			request: stepConfig.request,
 			parentQuery: context.parentQuery,
 			config: stepConfig,
-			withCache,
+			withCache: (key, fetcher, options = {}) => withCache(key, fetcher, {
+				config: stepConfig,
+				context: options.context,
+				query,
+				...options,
+			}),
 		};
 		const queryPromise = pipe(middlewareCtx);
 

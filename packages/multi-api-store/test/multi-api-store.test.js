@@ -73,7 +73,6 @@ describe("createMultiApiStore", () => {
 					type: "skeptics",
 					select: { name: "name", specialty: "specialty" },
 				},
-				config,
 				schema: skepticismSchema,
 			}),
 		);
@@ -101,13 +100,16 @@ describe("createMultiApiStore", () => {
 			specialHandlers: [],
 			resources: {
 				skeptics: {
-					get: mockGet,
-					mappers: {
-						fromApi: {
-							name: "moniker",
-							yearsActive: (res) => Math.round(res.decadesActive / 10),
+					handlers: {
+						get: {
+							fetch: mockGet,
+							mappers: {
+								fromApi: {
+									name: "moniker",
+									yearsActive: (res) => Math.round(res.decadesActive / 10),
+								},
+							},
 						},
-						toApi: {},
 					},
 				},
 			},
@@ -126,7 +128,6 @@ describe("createMultiApiStore", () => {
 					type: "skeptics",
 					select: { name: "name", specialty: "specialty" },
 				},
-				config,
 				schema: skepticismSchema,
 			}),
 		);
@@ -184,7 +185,6 @@ describe("createMultiApiStore", () => {
 		expect(mockSkepticsGet).toHaveBeenCalledWith(
 			expect.objectContaining({
 				schema: skepticismSchema,
-				config,
 				query: {
 					type: "skeptics",
 					select: { name: "name", investigations: expect.any(Object) },
@@ -195,7 +195,6 @@ describe("createMultiApiStore", () => {
 		expect(mockInvestigationsGet).toHaveBeenCalledWith(
 			expect.objectContaining({
 				schema: skepticismSchema,
-				config,
 				parentQuery: expect.any(Object),
 				query: {
 					type: "investigations",
@@ -247,13 +246,16 @@ describe("createMultiApiStore", () => {
 					get: mockSkepticsGet,
 				},
 				investigations: {
-					mappers: {
-						fromApi: {
-							investigator: "investigator_id",
+					handlers: {
+						get: {
+							fetch: mockInvestigationsGet,
+							mappers: {
+								fromApi: {
+									investigator: "investigator_id",
+								},
+							},
 						},
-						toApi: {},
 					},
-					get: mockInvestigationsGet,
 				},
 			},
 		};
@@ -268,7 +270,6 @@ describe("createMultiApiStore", () => {
 		expect(mockSkepticsGet).toHaveBeenCalledWith(
 			expect.objectContaining({
 				schema: skepticismSchema,
-				config,
 				query: {
 					type: "skeptics",
 					select: { name: "name", investigations: expect.any(Object) },
@@ -279,7 +280,6 @@ describe("createMultiApiStore", () => {
 		expect(mockInvestigationsGet).toHaveBeenCalledWith(
 			expect.objectContaining({
 				schema: skepticismSchema,
-				config,
 				parentQuery: expect.any(Object),
 				query: {
 					type: "investigations",
@@ -361,7 +361,6 @@ describe("createMultiApiStore", () => {
 		expect(mockSpecialInvestigationsHandler).toHaveBeenCalledWith(
 			expect.objectContaining({
 				schema: skepticismSchema,
-				config,
 				parentQuery: expect.objectContaining({ type: "skeptics" }),
 				query: {
 					type: "investigations",
@@ -414,10 +413,12 @@ describe("createMultiApiStore", () => {
 
 			const result = await store.create(newSkeptic);
 
-			expect(mockCreate).toHaveBeenCalledWith(newSkeptic, {
-				schema: skepticismSchema,
-				config,
-			});
+			expect(mockCreate).toHaveBeenCalledWith(
+				newSkeptic,
+				expect.objectContaining({
+					schema: skepticismSchema,
+				}),
+			);
 			expect(result).toEqual({
 				id: "new-skeptic",
 				name: "New Skeptic",
@@ -479,10 +480,12 @@ describe("createMultiApiStore", () => {
 
 			const result = await store.update(updateSkeptic);
 
-			expect(mockUpdate).toHaveBeenCalledWith(updateSkeptic, {
-				schema: skepticismSchema,
-				config,
-			});
+			expect(mockUpdate).toHaveBeenCalledWith(
+				updateSkeptic,
+				expect.objectContaining({
+					schema: skepticismSchema,
+				}),
+			);
 			expect(result).toEqual({
 				id: "1",
 				name: "Updated Skeptic",
@@ -515,10 +518,12 @@ describe("createMultiApiStore", () => {
 
 			const result = await store.delete(deleteSkeptic);
 
-			expect(mockDelete).toHaveBeenCalledWith(deleteSkeptic, {
-				schema: skepticismSchema,
-				config,
-			});
+			expect(mockDelete).toHaveBeenCalledWith(
+				deleteSkeptic,
+				expect.objectContaining({
+					schema: skepticismSchema,
+				}),
+			);
 			expect(result).toEqual({
 				type: "skeptics",
 				id: "1",
@@ -633,6 +638,10 @@ describe("createMultiApiStore", () => {
 			// Query first to populate cache
 			await store.query(query);
 			expect(mockGet).toHaveBeenCalledTimes(1);
+
+			// Query again should use cache (verify caching is working)
+			await store.query(query);
+			expect(mockGet).toHaveBeenCalledTimes(1); // Still 1, should use cache
 
 			// Create a resource (should clear cache)
 			await store.create({

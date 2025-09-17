@@ -12,7 +12,7 @@ import {
 } from "@spectragraph/core";
 import { loadQueryGraph } from "./load-query-graph.js";
 import { createCache } from "./cache.js";
-import { standardHandlers } from "./default-config.js";
+import { standardHandlers, defaultConfig } from "./default-config.js";
 import { mapValues } from "es-toolkit";
 import { compileResourceMappers } from "./helpers/helpers.js";
 
@@ -50,20 +50,49 @@ async function handleHandlerResult(result, fallbackValue = null) {
 export function createMultiApiStore(schema, config = {}) {
 	ensureValidSchema(schema);
 
-	// normalize resource config
+	// normalize config
 	const normalConfig = {
 		middleware: [],
 		specialHandlers: [],
 		...config,
-		resources: mapValues(config.resources ?? {}, (resConfig, type) => ({
-			...resConfig,
-			handlers: mapValues(resConfig.handlers ?? {}, (h) => ({
+		// Handle baseURL at root level for backwards compatibility
+		request: {
+			...defaultConfig.request,
+			...config.request,
+			...(config.baseURL && { baseURL: config.baseURL }),
+		},
+		// Properly merge cache config to include defaults
+		cache: {
+			...defaultConfig.cache,
+			...config.cache,
+		},
+		resources: mapValues(config.resources ?? {}, (resConfig, type) => {
+			// Handle both shorthand format (get: fn) and full format (handlers: { get: { fetch: fn } })
+			const handlers = {};
+
+			// Check for shorthand handlers (get, create, update, delete directly on resConfig)
+			for (const op of ["get", "create", "update", "delete"]) {
+				if (resConfig[op]) {
+					handlers[op] = {
+						fetch: resConfig[op],
+						map: (res) => res,
+					};
+				}
+			}
+
+			// Merge with explicit handlers config
+			const explicitHandlers = mapValues(resConfig.handlers ?? {}, (h) => ({
 				fetch: h.fetch,
-				mapResource: h.mappers
+				map: h.mappers
 					? compileResourceMappers(schema, type, h.mappers)
 					: (res) => res,
-			})),
-		})),
+			}));
+
+			return {
+				...resConfig,
+				handlers: { ...handlers, ...explicitHandlers },
+			};
+		}),
 	};
 
 	const {
@@ -78,6 +107,8 @@ export function createMultiApiStore(schema, config = {}) {
 	const storeContext = {
 		schema,
 		config: normalConfig,
+		resources: normalConfig.resources,
+		middleware: normalConfig.middleware ?? [],
 		specialHandlers: specialHandlers ?? [],
 		withCache: cache.withCache,
 		cache,
@@ -102,10 +133,12 @@ export function createMultiApiStore(schema, config = {}) {
 		ensureValidCreateResource(schema, resource, validator);
 
 		const createHandler =
-			normalConfig.resources[type]?.create ?? standardHandlers.create;
+			normalConfig.resources[type]?.handlers?.create?.fetch ??
+			normalConfig.resources[type]?.create ??
+			standardHandlers.create;
 
 		// Clear cache for this resource type when creating
-		cache.clearByType(type);
+		cache.clearByType(type, normalConfig, { schema });
 
 		const result = await createHandler(resource, {
 			schema,
@@ -121,10 +154,12 @@ export function createMultiApiStore(schema, config = {}) {
 		ensureValidUpdateResource(schema, resource, validator);
 
 		const updateHandler =
-			normalConfig.resources[type]?.update ?? standardHandlers.update;
+			normalConfig.resources[type]?.handlers?.update?.fetch ??
+			normalConfig.resources[type]?.update ??
+			standardHandlers.update;
 
 		// Clear cache for this resource type when updating
-		cache.clearByType(type);
+		cache.clearByType(type, normalConfig, { schema });
 
 		const result = await updateHandler(resource, {
 			schema,
@@ -140,10 +175,12 @@ export function createMultiApiStore(schema, config = {}) {
 		ensureValidDeleteResource(schema, resource, validator);
 
 		const deleteHandler =
-			normalConfig.resources[type]?.delete ?? standardHandlers.delete;
+			normalConfig.resources[type]?.handlers?.delete?.fetch ??
+			normalConfig.resources[type]?.delete ??
+			standardHandlers.delete;
 
 		// Clear cache for this resource type when deleting
-		cache.clearByType(type);
+		cache.clearByType(type, normalConfig, { schema });
 
 		const result = await deleteHandler(resource, {
 			schema,
