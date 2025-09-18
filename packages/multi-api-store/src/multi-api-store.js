@@ -47,6 +47,26 @@ async function handleHandlerResult(result, fallbackValue = null) {
 	return result;
 }
 
+/**
+ * Creates a multi-API store that can delegate operations to different API handlers.
+ * Supports custom handlers, caching, middleware, and relationship-aware cache invalidation.
+ *
+ * @param {import('@spectragraph/core').Schema} schema - The schema defining resource types and relationships
+ * @param {Object} [config={}] - Configuration object
+ * @param {Object} [config.cache] - Cache configuration options
+ * @param {boolean} [config.cache.enabled=true] - Whether caching is enabled
+ * @param {number} [config.cache.defaultTTL] - Default time-to-live for cache entries in milliseconds
+ * @param {Function} [config.cache.dependsOnTypes] - Function to determine which resource types a query depends on
+ * @param {Object} [config.resources] - Resource-specific handler configurations
+ * @param {Object} [config.resources.*.handlers] - Handler definitions for each operation (get, create, update, delete)
+ * @param {Object} [config.resources.*.handlers.*.fetch] - The fetch function for the operation
+ * @param {Object|Function} [config.resources.*.handlers.*.map] - Response mapping function or mappers config
+ * @param {Array} [config.middleware] - Middleware functions to apply to all requests
+ * @param {Array} [config.specialHandlers] - Special handlers that override resource handlers based on conditions
+ * @param {string} [config.baseURL] - Base URL for standard HTTP handlers
+ * @param {Object} [config.request] - Default request configuration
+ * @returns {import('@spectragraph/core').Store} Store instance with query, create, update, delete, and upsert methods
+ */
 export function createMultiApiStore(schema, config = {}) {
 	ensureValidSchema(schema);
 
@@ -55,42 +75,28 @@ export function createMultiApiStore(schema, config = {}) {
 		middleware: [],
 		specialHandlers: [],
 		...config,
-		// Handle baseURL at root level for backwards compatibility
 		request: {
 			...defaultConfig.request,
 			...config.request,
 			...(config.baseURL && { baseURL: config.baseURL }),
 		},
-		// Properly merge cache config to include defaults
 		cache: {
 			...defaultConfig.cache,
 			...config.cache,
 		},
 		resources: mapValues(config.resources ?? {}, (resConfig, type) => {
-			// Handle both shorthand format (get: fn) and full format (handlers: { get: { fetch: fn } })
-			const handlers = {};
-
-			// Check for shorthand handlers (get, create, update, delete directly on resConfig)
-			for (const op of ["get", "create", "update", "delete"]) {
-				if (resConfig[op]) {
-					handlers[op] = {
-						fetch: resConfig[op],
-						map: (res) => res,
-					};
-				}
-			}
-
-			// Merge with explicit handlers config
-			const explicitHandlers = mapValues(resConfig.handlers ?? {}, (h) => ({
+			const handlers = mapValues(resConfig.handlers ?? {}, (h) => ({
 				fetch: h.fetch,
-				map: h.mappers
-					? compileResourceMappers(schema, type, h.mappers)
-					: (res) => res,
+				map:
+					h.map ??
+					(h.mappers
+						? compileResourceMappers(schema, type, h.mappers)
+						: (res) => res),
 			}));
 
 			return {
 				...resConfig,
-				handlers: { ...handlers, ...explicitHandlers },
+				handlers,
 			};
 		}),
 	};
@@ -134,7 +140,6 @@ export function createMultiApiStore(schema, config = {}) {
 
 		const createHandler =
 			normalConfig.resources[type]?.handlers?.create?.fetch ??
-			normalConfig.resources[type]?.create ??
 			standardHandlers.create;
 
 		// Clear cache for this resource type when creating
@@ -155,7 +160,6 @@ export function createMultiApiStore(schema, config = {}) {
 
 		const updateHandler =
 			normalConfig.resources[type]?.handlers?.update?.fetch ??
-			normalConfig.resources[type]?.update ??
 			standardHandlers.update;
 
 		// Clear cache for this resource type when updating
@@ -176,7 +180,6 @@ export function createMultiApiStore(schema, config = {}) {
 
 		const deleteHandler =
 			normalConfig.resources[type]?.handlers?.delete?.fetch ??
-			normalConfig.resources[type]?.delete ??
 			standardHandlers.delete;
 
 		// Clear cache for this resource type when deleting

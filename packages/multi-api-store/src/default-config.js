@@ -36,6 +36,16 @@ import { mapValues } from "es-toolkit";
  * @property {Function} [stringifyQueryParams] - Query parameter serialization function
  */
 
+/**
+ * Standard HTTP handlers for RESTful API operations.
+ * These handlers implement common patterns for GET, POST, PATCH, and DELETE operations.
+ *
+ * @type {Object}
+ * @property {Function} get - GET handler for fetching resources
+ * @property {Function} create - POST handler for creating resources
+ * @property {Function} update - PATCH handler for updating resources
+ * @property {Function} delete - DELETE handler for removing resources
+ */
 export const standardHandlers = {
 	get: async (context) => {
 		const { request, query } = context;
@@ -80,7 +90,12 @@ export const standardHandlers = {
 	},
 };
 
-/** @type {StoreConfig} */
+/**
+ * Default configuration for multi-api-store with relationship-aware cache invalidation.
+ * Provides sensible defaults for caching, handlers, and request configuration.
+ *
+ * @type {StoreConfig}
+ */
 export const defaultConfig = {
 	cache: {
 		enabled: true,
@@ -93,8 +108,9 @@ export const defaultConfig = {
 
 			const resourceType = query.type;
 			const resourceSchema = schema.resources?.[resourceType];
-			const relatedTypes = Object.values(resourceSchema?.relationships ?? {})
-				.map(rel => rel.type);
+			const relatedTypes = Object.values(
+				resourceSchema?.relationships ?? {},
+			).map((rel) => rel.type);
 
 			return [resourceType, ...relatedTypes];
 		},
@@ -104,7 +120,7 @@ export const defaultConfig = {
 		map: (x) => x,
 	})),
 	request: {
-		baseURL: "/",
+		baseURL: "",
 		headers: {},
 		queryParams: [],
 	},

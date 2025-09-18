@@ -54,28 +54,40 @@ describe("Manual Cache Mode", () => {
 			resources: {
 				evidence: {
 					cache: { manual: true }, // Enable manual caching for evidence
-					get: async (ctx) => {
-						const { categoryIds, withCache } = ctx;
+					handlers: {
+						get: {
+							fetch: async (ctx) => {
+								const { categoryIds, withCache } = ctx;
 
-						// Fetch evidence for each conspiracy category with manual caching
-						const evidenceByCategory = await Promise.all(
-							categoryIds.map((categoryId) =>
-								withCache(`allEvidence-${categoryId}`, async () => {
-									if (categoryId === "space") return fetchConspiracy1();
-									if (categoryId === "government") return fetchConspiracy2();
-									return [];
-								}),
-							),
-						);
+								// Fetch evidence for each conspiracy category with manual caching
+								const evidenceByCategory = await Promise.all(
+									categoryIds.map((categoryId) =>
+										withCache(`allEvidence-${categoryId}`, async () => {
+											if (categoryId === "space") return fetchConspiracy1();
+											if (categoryId === "government")
+												return fetchConspiracy2();
+											return [];
+										}),
+									),
+								);
 
-						return evidenceByCategory.flat();
+								return evidenceByCategory.flat();
+							},
+						},
 					},
 				},
 				theories: {
-					// Automatic caching (default)
-					get: async () => [
-						{ id: "theory1", title: "Auto Cached Theory", category: "space" },
-					],
+					handlers: {
+						get: {
+							fetch: async () => [
+								{
+									id: "theory1",
+									title: "Auto Cached Theory",
+									category: "space",
+								},
+							],
+						},
+					},
 				},
 			},
 		};
@@ -118,15 +130,13 @@ describe("Manual Cache Mode", () => {
 			.mockResolvedValue([
 				{ id: "theory1", title: "UFO Cover-Up", category: "aliens" },
 			]);
-		const manualHandler = vi
-			.fn()
-			.mockResolvedValue([
-				{
-					id: "source1",
-					name: "Anonymous Whistleblower",
-					credibility: "questionable",
-				},
-			]);
+		const manualHandler = vi.fn().mockResolvedValue([
+			{
+				id: "source1",
+				name: "Anonymous Whistleblower",
+				credibility: "questionable",
+			},
+		]);
 
 		const config = {
 			cache: {
@@ -136,15 +146,23 @@ describe("Manual Cache Mode", () => {
 			resources: {
 				theories: {
 					// Automatic caching
-					get: theoryHandler,
+					handlers: {
+						get: {
+							fetch: theoryHandler,
+						},
+					},
 				},
 				sources: {
 					cache: { manual: true }, // Manual caching
-					get: async (ctx) => {
-						const { withCache, query } = ctx;
+					handlers: {
+						get: {
+							fetch: async (ctx) => {
+								const { withCache, query } = ctx;
 
-						// Manual cache control for sources
-						return withCache(`source-${query.id}`, manualHandler);
+								// Manual cache control for sources
+								return withCache(`source-${query.id}`, manualHandler);
+							},
+						},
 					},
 				},
 			},
@@ -176,8 +194,12 @@ describe("Manual Cache Mode", () => {
 			cache: { enabled: true },
 			resources: {
 				sources: {
-					get: async () => {
-						throw new Error("Should not be called");
+					handlers: {
+						get: {
+							fetch: async () => {
+								throw new Error("Should not be called");
+							},
+						},
 					},
 				},
 			},
@@ -233,15 +255,19 @@ describe("Manual Cache Mode", () => {
 			cache: { enabled: true },
 			resources: {
 				theories: {
-					get: async (ctx) => {
-						receivedContext = ctx;
-						return [
-							{
-								id: "theory1",
-								title: "Government Mind Control",
-								category: "psychology",
+					handlers: {
+						get: {
+							fetch: async (ctx) => {
+								receivedContext = ctx;
+								return [
+									{
+										id: "theory1",
+										title: "Government Mind Control",
+										category: "psychology",
+									},
+								];
 							},
-						];
+						},
 					},
 				},
 			},

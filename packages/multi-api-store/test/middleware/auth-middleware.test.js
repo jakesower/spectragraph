@@ -95,7 +95,11 @@ describe("auth.bearerToken middleware", () => {
 				middleware: [auth.bearerToken(() => "ralphie voice: I'm a middleware")],
 				resources: {
 					skeptics: {
-						get: mockGet,
+						handlers: {
+							get: {
+								fetch: mockGet,
+							},
+						},
 					},
 				},
 			};
@@ -211,7 +215,11 @@ describe("auth.queryParam middleware", () => {
 				middleware: [auth.queryParam(() => "secret-api-key", "access_token")],
 				resources: {
 					skeptics: {
-						get: mockGet,
+						handlers: {
+							get: {
+								fetch: mockGet,
+							},
+						},
 					},
 				},
 			};

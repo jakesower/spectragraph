@@ -1,6 +1,12 @@
 const defaultBackoffFn = (attempt) =>
 	Math.min(1000 * Math.pow(2, attempt) * (0.75 + Math.random() * 0.5), 30000);
 
+/**
+ * Retry middleware collection for handling request failures with backoff strategies.
+ *
+ * @type {Object}
+ * @property {Function} exponential - Creates middleware with exponential backoff retry logic
+ */
 export const retry = {
 	exponential(config = {}) {
 		const {

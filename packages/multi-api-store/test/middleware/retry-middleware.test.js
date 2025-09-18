@@ -133,7 +133,11 @@ describe("retry.exponential middleware", () => {
 				middleware: [retry.exponential({ backoffFn })],
 				resources: {
 					skeptics: {
-						get: mockGet,
+						handlers: {
+							get: {
+								fetch: mockGet,
+							},
+						},
 					},
 				},
 			};
@@ -169,7 +173,11 @@ describe("retry.exponential middleware", () => {
 				middleware: [retry.exponential({ backoffFn })],
 				resources: {
 					skeptics: {
-						get: mockGet,
+						handlers: {
+							get: {
+								fetch: mockGet,
+							},
+						},
 					},
 				},
 			};

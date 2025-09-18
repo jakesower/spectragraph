@@ -12,9 +12,16 @@ import { toMerged } from "es-toolkit";
 
 /**
  * Loads all the data needed for a query to run, including its subqueries.
- * @param {import('@spectragraph/core').NormalRootQuery} rootQuery - The query to execute.
- * @param {Object} storeContext - Context related to the state of the application, managed by StoreContext
- * @returns {import('@spectragraph/core').Graph} - A graph with all the data necessary for the query to be executed loaded.
+ * Executes handlers through middleware pipeline, applies caching, and builds a complete data graph.
+ *
+ * @param {import('@spectragraph/core').NormalRootQuery} rootQuery - The normalized query to execute
+ * @param {Object} storeContext - Store context containing configuration and handlers
+ * @param {Object} storeContext.config - Store configuration including resources and middleware
+ * @param {import('@spectragraph/core').Schema} storeContext.schema - Schema defining resource types and relationships
+ * @param {Array} storeContext.middleware - Middleware functions to apply to requests
+ * @param {Array} storeContext.specialHandlers - Special handlers that override resource handlers
+ * @param {Function} storeContext.withCache - Cache wrapper function
+ * @returns {Promise<import('@spectragraph/core').Graph>} Graph with all data necessary for query execution
  */
 export async function loadQueryGraph(rootQuery, storeContext) {
 	const { config, schema, middleware, specialHandlers, withCache } =
@@ -47,17 +54,23 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 
 			const fetcher = async () => {
 				// Use special handler if available, otherwise use regular handler
-				const handler = specialHandler?.handler ??
+				const handler =
+					specialHandler?.handler ??
 					stepConfig.handlers?.get?.fetch ??
 					stepConfig.handlers?.get ??
 					standardHandlers.get;
 				const response = await handler(finishedCtx);
 				const data = await handleFetchResponse(response);
 
-				const asArray = data === null || data === undefined ? [] :
-					Array.isArray(data) ? data : [data];
-				const mapper = specialHandler?.handler ? (x) => x :
-					(stepConfig.handlers?.get?.map ?? ((x) => x));
+				const asArray =
+					data === null || data === undefined
+						? []
+						: Array.isArray(data)
+							? data
+							: [data];
+				const mapper = specialHandler?.handler
+					? (x) => x
+					: (stepConfig.handlers?.get?.map ?? ((x) => x));
 				const mapped = asArray.map(mapper);
 				return createGraphFromResources(schema, query.type, mapped);
 			};
@@ -76,12 +89,13 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 			request: stepConfig.request,
 			parentQuery: context.parentQuery,
 			config: stepConfig,
-			withCache: (key, fetcher, options = {}) => withCache(key, fetcher, {
-				config: stepConfig,
-				context: options.context,
-				query,
-				...options,
-			}),
+			withCache: (key, fetcher, options = {}) =>
+				withCache(key, fetcher, {
+					config: stepConfig,
+					context: options.context,
+					query,
+					...options,
+				}),
 		};
 		const queryPromise = pipe(middlewareCtx);
 

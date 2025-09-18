@@ -1,6 +1,12 @@
 /**
- * Creates a simple TTL-based cache for multi-api-store
- * @returns {Object} Cache instance with withCache and clearByType methods
+ * Creates a simple TTL-based cache for multi-api-store with relationship-aware invalidation.
+ * Provides cache wrapper functions and type-based clearing for cache invalidation.
+ *
+ * @returns {Object} Cache instance
+ * @returns {Function} returns.withCache - Cache wrapper function that caches results of async operations
+ * @returns {Function} returns.clearByType - Clears cache entries based on resource type dependencies
+ * @returns {Function} returns.clear - Clears all cache entries
+ * @returns {Function} returns.clearKey - Clears a specific cache entry by key
  */
 export function createCache() {
 	const cache = new Map();
@@ -65,7 +71,10 @@ export function createCache() {
 			.filter(([, entry]) => {
 				if (!entry.originalQuery) return false;
 				try {
-					const dependencies = cacheConfig.dependsOnTypes(entry.originalQuery, options);
+					const dependencies = cacheConfig.dependsOnTypes(
+						entry.originalQuery,
+						options,
+					);
 					return Array.isArray(dependencies) && dependencies.includes(type);
 				} catch {
 					// If dependsOnTypes throws, skip this entry

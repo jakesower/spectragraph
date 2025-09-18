@@ -12,7 +12,7 @@ describe("createMultiApiStore", () => {
 		const config = {
 			cache: { enabled: true, defaultTTL: 60000 },
 			resources: {
-				skeptics: { get: mockGet },
+				skeptics: { handlers: { get: { fetch: mockGet } } },
 			},
 		};
 
@@ -55,7 +55,11 @@ describe("createMultiApiStore", () => {
 			specialHandlers: [],
 			resources: {
 				skeptics: {
-					get: mockGet,
+					handlers: {
+						get: {
+							fetch: mockGet,
+						},
+					},
 				},
 			},
 		};
@@ -167,10 +171,18 @@ describe("createMultiApiStore", () => {
 			specialHandlers: [],
 			resources: {
 				skeptics: {
-					get: mockSkepticsGet,
+					handlers: {
+						get: {
+							fetch: mockSkepticsGet,
+						},
+					},
 				},
 				investigations: {
-					get: mockInvestigationsGet,
+					handlers: {
+						get: {
+							fetch: mockInvestigationsGet,
+						},
+					},
 				},
 			},
 		};
@@ -243,7 +255,11 @@ describe("createMultiApiStore", () => {
 			specialHandlers: [],
 			resources: {
 				skeptics: {
-					get: mockSkepticsGet,
+					handlers: {
+						get: {
+							fetch: mockSkepticsGet,
+						},
+					},
 				},
 				investigations: {
 					handlers: {
@@ -341,10 +357,18 @@ describe("createMultiApiStore", () => {
 			],
 			resources: {
 				skeptics: {
-					get: mockSkepticsGet,
+					handlers: {
+						get: {
+							fetch: mockSkepticsGet,
+						},
+					},
 				},
 				investigations: {
-					get: mockInvestigationsGet,
+					handlers: {
+						get: {
+							fetch: mockInvestigationsGet,
+						},
+					},
 				},
 			},
 		};
@@ -394,8 +418,14 @@ describe("createMultiApiStore", () => {
 			const config = {
 				resources: {
 					skeptics: {
-						get: vi.fn(),
-						create: mockCreate,
+						handlers: {
+							get: {
+								fetch: vi.fn(),
+							},
+							create: {
+								fetch: mockCreate,
+							},
+						},
 					},
 				},
 			};
@@ -461,8 +491,14 @@ describe("createMultiApiStore", () => {
 			const config = {
 				resources: {
 					skeptics: {
-						get: vi.fn(),
-						update: mockUpdate,
+						handlers: {
+							get: {
+								fetch: vi.fn(),
+							},
+							update: {
+								fetch: mockUpdate,
+							},
+						},
 					},
 				},
 			};
@@ -503,8 +539,14 @@ describe("createMultiApiStore", () => {
 			const config = {
 				resources: {
 					skeptics: {
-						get: vi.fn(),
-						delete: mockDelete,
+						handlers: {
+							get: {
+								fetch: vi.fn(),
+							},
+							delete: {
+								fetch: mockDelete,
+							},
+						},
 					},
 				},
 			};
@@ -550,7 +592,11 @@ describe("createMultiApiStore", () => {
 				},
 				resources: {
 					skeptics: {
-						get: mockGet,
+						handlers: {
+							get: {
+								fetch: mockGet,
+							},
+						},
 					},
 				},
 			};
@@ -585,7 +631,11 @@ describe("createMultiApiStore", () => {
 				},
 				resources: {
 					skeptics: {
-						get: mockGet,
+						handlers: {
+							get: {
+								fetch: mockGet,
+							},
+						},
 					},
 				},
 			};
@@ -622,8 +672,14 @@ describe("createMultiApiStore", () => {
 				},
 				resources: {
 					skeptics: {
-						get: mockGet,
-						create: mockCreate,
+						handlers: {
+							get: {
+								fetch: mockGet,
+							},
+							create: {
+								fetch: mockCreate,
+							},
+						},
 					},
 				},
 			};
@@ -964,7 +1020,11 @@ describe("handler tests", () => {
 				middleware: [badMiddleware],
 				resources: {
 					skeptics: {
-						get: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
+						handlers: {
+							get: {
+								fetch: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
+							},
+						},
 					},
 				},
 			};
@@ -991,7 +1051,11 @@ describe("handler tests", () => {
 				middleware: [badMiddleware],
 				resources: {
 					skeptics: {
-						get: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
+						handlers: {
+							get: {
+								fetch: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
+							},
+						},
 					},
 				},
 			};
@@ -1018,7 +1082,11 @@ describe("handler tests", () => {
 				middleware: [badMiddleware],
 				resources: {
 					skeptics: {
-						get: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
+						handlers: {
+							get: {
+								fetch: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
+							},
+						},
 					},
 				},
 			};
@@ -1042,7 +1110,11 @@ describe("handler tests", () => {
 				middleware: [badMiddleware],
 				resources: {
 					skeptics: {
-						get: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
+						handlers: {
+							get: {
+								fetch: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
+							},
+						},
 					},
 				},
 			};
@@ -1060,7 +1132,11 @@ describe("handler tests", () => {
 			const config = {
 				resources: {
 					skeptics: {
-						get: vi.fn().mockRejectedValue(resourceError),
+						handlers: {
+							get: {
+								fetch: vi.fn().mockRejectedValue(resourceError),
+							},
+						},
 					},
 				},
 			};
