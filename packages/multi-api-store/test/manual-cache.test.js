@@ -65,7 +65,7 @@ describe("Manual Cache Mode", () => {
 										withCache(`allEvidence-${categoryId}`, async () => {
 											if (categoryId === "space") return fetchConspiracy1();
 											if (categoryId === "government")
-												return fetchConspiracy2();
+												{return fetchConspiracy2();}
 											return [];
 										}),
 									),

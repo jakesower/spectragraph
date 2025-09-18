@@ -3,12 +3,12 @@ import {
 	linkInverses,
 	mergeGraphsDeep,
 } from "@spectragraph/core";
+import { toMerged } from "es-toolkit";
 import {
 	buildAsyncMiddlewarePipe,
 	handleFetchResponse,
 } from "./helpers/helpers.js";
 import { defaultConfig, standardHandlers } from "./default-config.js";
-import { toMerged } from "es-toolkit";
 
 /**
  * Loads all the data needed for a query to run, including its subqueries.

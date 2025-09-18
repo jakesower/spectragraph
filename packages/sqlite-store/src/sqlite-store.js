@@ -6,12 +6,12 @@ import {
 	ensureValidUpdateResource,
 	normalizeQuery,
 } from "@spectragraph/core";
+import { applyOrMap } from "@spectragraph/utils";
 import { query as getQuery } from "./query/index.js";
 import { create } from "./create.js";
 import { deleteResource } from "./delete.js";
 import { update } from "./update.js";
 import { merge } from "./merge.js";
-import { applyOrMap } from "@spectragraph/utils";
 import { withTransaction } from "./lib/store-helpers.js";
 
 /**

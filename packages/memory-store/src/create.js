@@ -1,6 +1,6 @@
 import { createResource, mergeResources } from "@spectragraph/core";
-import { setInverseRelationships } from "./lib/store-helpers.js";
 import { v4 as v4UUID } from "uuid";
+import { setInverseRelationships } from "./lib/store-helpers.js";
 
 /**
  * Creates a new resource in the store and sets up all inverse relationships.

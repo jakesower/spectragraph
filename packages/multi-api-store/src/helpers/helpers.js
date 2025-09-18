@@ -83,15 +83,15 @@ export function buildAsyncMiddlewarePipe(middleware) {
 }
 
 /**
- * Handles fetch Response objects and extracts JSON data, with error handling.
- * Supports both Response objects (from fetch) and direct data returns.
+ * Handles Response objects from handlers, extracting data with error handling.
  *
- * @param {Response|*} response - Response object from fetch or direct data
- * @returns {Promise<*>} Parsed JSON data from response or the original data
+ * @param {Response|*} response - Response object or direct data
+ * @param {*} [fallbackValue] - Value to return for empty successful responses
+ * @returns {Promise<*>} Parsed data or original value
  * @throws {Error} When response indicates an error status
  */
-export async function handleFetchResponse(response) {
-	// handle Response objects (from handlers that use fetch)
+export async function handleResponseData(response, fallbackValue) {
+	// Handle Response objects
 	if (response && typeof response.ok === "boolean") {
 		if (!response.ok) {
 			const errorData = await response.json().catch(() => ({
@@ -101,9 +101,28 @@ export async function handleFetchResponse(response) {
 				cause: { data: errorData, originalError: response },
 			});
 		}
+
+		// Handle empty responses with fallback
+		if (fallbackValue !== undefined) {
+			const text = await response.text();
+			return text ? JSON.parse(text) : fallbackValue;
+		}
+
 		return await response.json();
-	} else {
-		// custom handlers can return whatever
-		return response;
 	}
+
+	// Handle direct data returns
+	return response;
+}
+
+/**
+ * Handles fetch Response objects and extracts JSON data, with error handling.
+ * Supports both Response objects (from fetch) and direct data returns.
+ *
+ * @param {Response|*} response - Response object from fetch or direct data
+ * @returns {Promise<*>} Parsed JSON data from response or the original data
+ * @throws {Error} When response indicates an error status
+ */
+export async function handleFetchResponse(response) {
+	return handleResponseData(response);
 }
