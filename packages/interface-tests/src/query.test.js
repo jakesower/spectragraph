@@ -1,6 +1,6 @@
 import { expect, it, describe } from "vitest";
-import { careBearData, careBearSchema } from "./fixtures/index.js";
 import { normalizeQuery } from "@spectragraph/core";
+import { careBearData, careBearSchema } from "./fixtures/index.js";
 import { testExpressionOrSkip } from "./test-helpers.js";
 
 export function runQueryTests(createStore) {

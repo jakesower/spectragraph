@@ -1,6 +1,6 @@
+import { StoreOperationNotSupportedError } from "@spectragraph/core";
 import { formatRequest } from "./format-request.js";
 import { parseResponse } from "./parse-response.js";
-import { StoreOperationNotSupportedError } from "@spectragraph/core";
 
 /**
  * Creates a JSON:API store that proxies requests to a remote JSON:API server

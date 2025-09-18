@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { getClient } from "./get-client.js";
 import { createPostgresStore } from "../src/postgres-store.js";
 import { careBearSchema } from "../../interface-tests/src/index.js";
-import { careBearConfig } from "./fixtures/care-bear-config.js";
 import { careBearData } from "../../interface-tests/src/index.js";
 import { reset } from "../scripts/seed.js";
+import { careBearConfig } from "./fixtures/care-bear-config.js";
+import { getClient } from "./get-client.js";
 
 // Most delete tests are covered by interface-tests via interface.test.js
 // This file contains PostgreSQL-specific database-level verification tests

@@ -1,7 +1,7 @@
 import { applyOrMap, promiseObjectAll } from "@spectragraph/utils";
+import { mapValues } from "es-toolkit";
 import { create } from "./create.js";
 import { update } from "./update.js";
-import { mapValues } from "es-toolkit";
 
 /**
  * @typedef {import("./postgres-store.js").CreateResource | import("./postgres-store.js").UpdateResource} UpsertResource

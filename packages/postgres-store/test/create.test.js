@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach } from "vitest";
 import { randomBytes } from "node:crypto";
-import { getClient } from "./get-client.js";
+import { describe, it, expect, beforeEach } from "vitest";
 import { createPostgresStore } from "../src/postgres-store.js";
 import { careBearSchema } from "../../interface-tests/src/index.js";
-import { careBearConfig } from "./fixtures/care-bear-config.js";
 import { careBearData } from "../../interface-tests/src/index.js";
 import { reset } from "../scripts/seed.js";
+import { getClient } from "./get-client.js";
+import { careBearConfig } from "./fixtures/care-bear-config.js";
 
 // Most create tests are covered by interface-tests via interface.test.js
 // This file contains PostgreSQL-specific create functionality tests

@@ -1,6 +1,6 @@
 import { mapValues, uniq } from "es-toolkit";
-import { validateSchema } from "./schema.js";
 import { applyOrMap } from "@spectragraph/utils";
+import { validateSchema } from "./schema.js";
 import { normalizeResource } from "./resource.js";
 import { ensure } from "./lib/helpers.js";
 export { createQueryGraph, queryGraph } from "./graph/query-graph.js";

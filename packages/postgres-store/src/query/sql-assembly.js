@@ -1,7 +1,7 @@
 import { mapValues } from "es-toolkit";
 import { varsExpressionEngine } from "../helpers/where-expressions.js";
-import { SQL_CLAUSE_CONFIG } from "./clause-config.js";
 import { replacePlaceholders } from "../helpers/query-helpers.js";
+import { SQL_CLAUSE_CONFIG } from "./clause-config.js";
 
 /**
  * Combines parsed query clauses into single values for each clause type

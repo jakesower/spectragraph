@@ -1,7 +1,7 @@
 import { applyOrMap, promiseObjectAll } from "@spectragraph/utils";
+import { mapValues } from "es-toolkit";
 import { create } from "./create.js";
 import { update } from "./update.js";
-import { mapValues } from "es-toolkit";
 
 /**
  * @typedef {import("./sqlite-store.js").CreateResource | import("./sqlite-store.js").UpdateResource} UpsertResource

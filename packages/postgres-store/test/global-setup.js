@@ -1,5 +1,5 @@
-import { startTestDb, stopTestDb } from "./test-db-setup.js";
 import { reset } from "../scripts/seed.js";
+import { startTestDb, stopTestDb } from "./test-db-setup.js";
 import { careBearData } from "./fixtures/care-bear-data.js";
 import { careBearSchema } from "./fixtures/care-bear-schema.js";
 import { careBearConfig } from "./fixtures/care-bear-config.js";

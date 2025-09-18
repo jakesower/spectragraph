@@ -1,8 +1,8 @@
 import { mapValues } from "es-toolkit";
 import { applyOrMap } from "@spectragraph/utils";
+import { ensureValidMergeResource } from "@spectragraph/core";
 import { create as createAction } from "./create.js";
 import { update as updateAction } from "./update.js";
-import { ensureValidMergeResource } from "@spectragraph/core";
 
 /**
  * @typedef {import("@spectragraph/core").CreateResource | import("@spectragraph/core").UpdateResource} UpsertResource

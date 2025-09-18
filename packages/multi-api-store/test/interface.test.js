@@ -1,12 +1,12 @@
 import { vi } from "vitest";
 import { createMemoryStore } from "@spectragraph/memory-store";
+import { mapValues } from "es-toolkit";
 import {
 	careBearData,
 	careBearSchema,
 	runInterfaceTests,
 } from "../../interface-tests/src/index.js";
 import { createMultiApiStore } from "../src/multi-api-store.js";
-import { mapValues } from "es-toolkit";
 
 function parseUrl(url) {
 	const urlObj = new URL(url);

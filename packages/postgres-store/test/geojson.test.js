@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createValidator } from "@spectragraph/core";
-import { getClient } from "./get-client.js";
 import { createPostgresStore } from "../src/postgres-store.js";
 import { careBearSchema } from "../../interface-tests/src/index.js";
 import { careBearData } from "../../interface-tests/src/index.js";
-import { careBearConfig } from "./fixtures/care-bear-config.js";
 import { reset } from "../scripts/seed.js";
 import geojsonSchema from "../../../schemas/geojson.schema.json" with { type: "json" };
+import { careBearConfig } from "./fixtures/care-bear-config.js";
+import { getClient } from "./get-client.js";
 
 // PostgreSQL-specific GeoJSON/PostGIS functionality tests
 describe("PostgreSQL GeoJSON/PostGIS Tests", () => {

@@ -10,42 +10,14 @@ import {
 	defaultSelectEngine,
 	defaultWhereEngine,
 } from "@spectragraph/core";
+import { mapValues } from "es-toolkit";
 import { loadQueryGraph } from "./load-query-graph.js";
 import { createCache } from "./cache.js";
 import { standardHandlers, defaultConfig } from "./default-config.js";
-import { mapValues } from "es-toolkit";
-import { compileResourceMappers } from "./helpers/helpers.js";
-
-/**
- * Helper to handle Response objects from standard handler or return direct data
- * @param {*} result - The result from a handler (Response object or direct data)
- * @param {*} fallbackValue - Value to return for empty responses (used by delete)
- * @returns {Promise<*>} Parsed response data
- */
-async function handleHandlerResult(result, fallbackValue = null) {
-	// Handle Response objects (from standard handler)
-	if (result && typeof result.ok === "boolean") {
-		if (!result.ok) {
-			const errorData = await result.json().catch(() => ({
-				message: result.statusText,
-			}));
-			throw new Error(errorData.message || `HTTP ${result.status}`, {
-				cause: { data: errorData, originalError: result },
-			});
-		}
-
-		// For DELETE operations, some APIs return empty response
-		if (fallbackValue !== null) {
-			const text = await result.text();
-			return text ? JSON.parse(text) : fallbackValue;
-		}
-
-		return result.json();
-	}
-
-	// Handle direct data (from custom handlers)
-	return result;
-}
+import {
+	compileResourceMappers,
+	handleResponseData,
+} from "./helpers/helpers.js";
 
 /**
  * Creates a multi-API store that can delegate operations to different API handlers.
@@ -150,7 +122,7 @@ export function createMultiApiStore(schema, config = {}) {
 			config: normalConfig,
 		});
 
-		return handleHandlerResult(result);
+		return handleResponseData(result);
 	};
 
 	const update = async (resource) => {
@@ -170,7 +142,7 @@ export function createMultiApiStore(schema, config = {}) {
 			config: normalConfig,
 		});
 
-		return handleHandlerResult(result);
+		return handleResponseData(result);
 	};
 
 	const deleteResource = async (resource) => {
@@ -190,7 +162,7 @@ export function createMultiApiStore(schema, config = {}) {
 			config: normalConfig,
 		});
 
-		return handleHandlerResult(result, resource);
+		return handleResponseData(result, resource);
 	};
 
 	return {
