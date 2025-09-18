@@ -28,8 +28,12 @@ describe("createCache", () => {
 		const cache = createCache();
 		const fetcher = vi.fn().mockReturnValue("result");
 
-		const result1 = cache.withCache("key1", fetcher, { config: disabledConfig });
-		const result2 = cache.withCache("key1", fetcher, { config: disabledConfig });
+		const result1 = cache.withCache("key1", fetcher, {
+			config: disabledConfig,
+		});
+		const result2 = cache.withCache("key1", fetcher, {
+			config: disabledConfig,
+		});
 
 		expect(result1).toBe("result");
 		expect(result2).toBe("result");
@@ -57,15 +61,27 @@ describe("createCache", () => {
 		const postsQuery = { type: "posts", id: "1" };
 
 		// Cache some results with different types
-		cache.withCache("users-key", fetcher1, { config: mockConfig, query: usersQuery });
-		cache.withCache("posts-key", fetcher2, { config: mockConfig, query: postsQuery });
+		cache.withCache("users-key", fetcher1, {
+			config: mockConfig,
+			query: usersQuery,
+		});
+		cache.withCache("posts-key", fetcher2, {
+			config: mockConfig,
+			query: postsQuery,
+		});
 
 		// Clear only users cache
 		cache.clearByType("users", mockConfig);
 
 		// Users cache should be cleared, posts should remain
-		cache.withCache("users-key", fetcher1, { config: mockConfig, query: usersQuery });
-		cache.withCache("posts-key", fetcher2, { config: mockConfig, query: postsQuery });
+		cache.withCache("users-key", fetcher1, {
+			config: mockConfig,
+			query: usersQuery,
+		});
+		cache.withCache("posts-key", fetcher2, {
+			config: mockConfig,
+			query: postsQuery,
+		});
 
 		expect(fetcher1).toHaveBeenCalledTimes(2); // Called again after clear
 		expect(fetcher2).toHaveBeenCalledTimes(1); // Still cached
@@ -94,7 +110,7 @@ describe("createCache", () => {
 		const cache = createCache();
 		const fetcher = vi.fn().mockReturnValue("result");
 		const shortTTLConfig = {
-			cache: { ...mockConfig.cache, defaultTTL: 10 } // 10ms TTL
+			cache: { ...mockConfig.cache, defaultTTL: 10 }, // 10ms TTL
 		};
 
 		cache.withCache("key1", fetcher, { config: shortTTLConfig });
@@ -127,7 +143,7 @@ describe("createCache", () => {
 		// forceRefresh should bypass cache
 		cache.withCache("key1", fetcher, {
 			config: mockConfig,
-			context: { forceRefresh: true }
+			context: { forceRefresh: true },
 		});
 		expect(fetcher).toHaveBeenCalledTimes(2); // Fresh fetch
 	});
@@ -179,7 +195,9 @@ describe("createCache", () => {
 		cache.withCache("success-key", successFetcher, { config: mockConfig });
 
 		// Cache a failing promise
-		const failPromise = cache.withCache("fail-key", failFetcher, { config: mockConfig });
+		const failPromise = cache.withCache("fail-key", failFetcher, {
+			config: mockConfig,
+		});
 
 		// Wait for the failure
 		await expect(failPromise).rejects.toThrow("fail");

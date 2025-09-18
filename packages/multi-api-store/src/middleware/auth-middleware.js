@@ -1,3 +1,10 @@
+/**
+ * Authentication middleware collection for adding auth headers and query parameters.
+ *
+ * @type {Object}
+ * @property {Function} bearerToken - Creates middleware for Bearer token authentication
+ * @property {Function} queryParam - Creates middleware for query parameter authentication
+ */
 export const auth = {
 	bearerToken(getToken) {
 		return (ctx, next) =>

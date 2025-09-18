@@ -116,7 +116,11 @@ describe("log.requests middleware", () => {
 				middleware: [log.requests({ logger: mockLogger })],
 				resources: {
 					skeptics: {
-						get: mockGet,
+						handlers: {
+							get: {
+								fetch: mockGet,
+							},
+						},
 					},
 				},
 			};
@@ -157,7 +161,11 @@ describe("log.requests middleware", () => {
 				middleware: [log.requests({ logger: mockLogger })],
 				resources: {
 					skeptics: {
-						get: mockGet,
+						handlers: {
+							get: {
+								fetch: mockGet,
+							},
+						},
 					},
 				},
 			};

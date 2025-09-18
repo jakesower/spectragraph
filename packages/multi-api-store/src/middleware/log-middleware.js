@@ -1,3 +1,9 @@
+/**
+ * Logging middleware collection for request/response logging and timing.
+ *
+ * @type {Object}
+ * @property {Function} requests - Creates middleware for logging request/response information
+ */
 export const log = {
 	requests(config = {}) {
 		const { logger = console, includeTiming = true } = config;

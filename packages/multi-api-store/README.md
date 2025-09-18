@@ -10,8 +10,11 @@ SpectraGraph Multi-API Store is built around several key principles:
 - **API-agnostic**: Works with any API that returns JSON data
 - **Full CRUD support**: Supports create, read, update, and delete operations when configured
 - **Query-compatible**: Full support for SpectraGraph's query language
+- **Handler formats**: Supports standardized handler configurations
 - **Special handlers**: Supports custom logic for complex data loading scenarios
-- **Built-in caching**: Optional caching with TTL support for improved performance
+- **Relationship-aware caching**: Built-in caching with relationship-based invalidation
+- **Middleware support**: Authentication, retry logic, logging, and custom middleware
+- **Standard HTTP handlers**: Built-in RESTful API patterns
 
 ## Installation
 
@@ -19,33 +22,153 @@ SpectraGraph Multi-API Store is built around several key principles:
 npm install @spectragraph/multi-api-store
 ```
 
+## Design Philosophy
+
+SpectraGraph Multi-API Store prioritizes **data consistency over raw performance**. This architectural choice eliminates an entire class of cache coherency bugs at the cost of more conservative cache invalidation. For many applications, this trade-off is favorable—especially during development and for read-heavy workloads.
+
+### Built-in Performance Features
+
+The library includes several performance optimizations out of the box:
+
+- **Automatic Deduplication**: Identical queries execute only once, even across relationship traversals
+- **Intelligent Caching**: TTL-based caching with relationship-aware invalidation
+- **Concurrent Execution**: Related queries run in parallel using Promise.all
+- **Extensible Middleware**: Plugin architecture for batching, circuit breakers, and custom optimizations
+
+### Cache Consistency Strategy
+
+**Read Operations**: Aggressive caching with relationship-aware dependency tracking ensures fast queries while maintaining data consistency across related resources.
+
+**Write Operations (Create/Update/Delete)**: Conservative invalidation strategy clears cache for the modified resource type and all related types. This guarantees consistency but comes with performance trade-offs:
+
+- **Correctness Guarantee**: You'll never see stale data, even in complex relationship scenarios
+- **Performance Impact**: In highly connected schemas, write operations may clear substantial cache portions
+- **Trade-off Rationale**: Eliminates cache coherency bugs that are difficult to debug and reproduce
+
+### When This Approach Works Well
+
+**Ideal Use Cases:**
+
+- Development and prototyping environments
+- Read-heavy applications with occasional writes
+- Applications where data consistency is critical
+- Teams building on complex, interconnected schemas
+
+**Consider Alternative Strategies When:**
+
+- Write operations significantly outnumber reads
+- Microsecond response times are required
+- Cache invalidation costs exceed consistency benefits
+- You have sophisticated cache management requirements
+
+### Performance Tuning Options
+
+```javascript
+// Default: Correctness-first approach
+const store = createMultiApiStore(schema, {
+  resources: {
+    users: { handlers: { get: { fetch: fetchUsers } } },
+  },
+});
+
+// Custom cache strategy for specific performance needs
+const store = createMultiApiStore(schema, {
+  cache: {
+    enabled: true,
+    defaultTTL: 5 * 60 * 1000, // Shorter TTL for fresher data
+    dependsOnTypes: (query) => [query.type], // Only invalidate exact type
+  },
+  middleware: [
+    // Add custom middleware for batching, circuit breakers, etc.
+    customBatchingMiddleware(),
+    retry.exponential({ maxRetries: 3 }),
+  ],
+  resources: {
+    /* handlers */
+  },
+});
+
+// Disable caching for write-heavy scenarios
+const store = createMultiApiStore(schema, {
+  cache: { enabled: false },
+  middleware: [
+    /* custom performance middleware */
+  ],
+  resources: {
+    /* handlers */
+  },
+});
+```
+
+This design ensures applications work correctly from day one, with clear paths for performance optimization as requirements evolve.
+
 ## Core Concepts
 
-### Multi-API Store
+### Handler Configuration Formats
 
-The multi-API store acts as a read-only aggregation layer over multiple API endpoints. Each resource type in your schema can be configured with a getter function that fetches data from the appropriate API endpoint.
+The multi-API store supports standardized handler configuration formats for consistency and clarity:
+
+**Form 1 (Preferred) - With Mappers:**
 
 ```javascript
 import { createMultiApiStore } from "@spectragraph/multi-api-store";
-import { defaultSelectEngine, defaultWhereEngine } from "@spectragraph/core";
 
 const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
-      get: async (options) => {
-        const response = await fetch("/api/skeptics");
-        return response.json();
-      },
-    },
-    investigations: {
-      get: async (options) => {
-        const response = await fetch("/api/investigations");
-        return response.json();
+      handlers: {
+        get: {
+          fetch: async (context) => {
+            const response = await fetch("/api/skeptics");
+            return response.json();
+          },
+          mappers: {
+            fromApi: {
+              fullName: "name", // Map API's fullName to schema's name
+              yearsInField: "yearsActive", // Map API field names
+            },
+          },
+        },
+        create: {
+          fetch: async (resource, context) => {
+            const response = await fetch("/api/skeptics", {
+              method: "POST",
+              body: JSON.stringify(resource.attributes),
+              headers: { "Content-Type": "application/json" },
+            });
+            return response.json();
+          },
+        },
       },
     },
   },
-  selectEngine: defaultSelectEngine, // optional
-  whereEngine: defaultWhereEngine, // optional
+});
+```
+
+**Form 2 (Acceptable) - With Map Function:**
+
+```javascript
+const store = createMultiApiStore(schema, {
+  resources: {
+    skeptics: {
+      handlers: {
+        get: {
+          fetch: async (context) => {
+            const response = await fetch("/api/skeptics");
+            return response.json();
+          },
+          map: (response) => {
+            // Transform response to match schema
+            return response.map((item) => ({
+              ...item,
+              name: item.fullName,
+              yearsActive: item.yearsInField,
+            }));
+          },
+        },
+      },
+    },
+  },
 });
 ```
 
@@ -57,9 +180,10 @@ The multi-API store provides comprehensive data operations:
 - **create** - Create new resources using configured API handlers
 - **update** - Update existing resources using configured API handlers
 - **delete** - Delete resources using configured API handlers
-- **upsert/merge** - Not supported (throws `StoreOperationNotSupportedError`)
+- **upsert** - Create or update resources based on whether they have an ID
+- **merge** - Not supported (throws `StoreOperationNotSupportedError`)
 
-Write operations (create, update, delete) are only available when the corresponding API handlers are configured for each resource type. If a handler is not provided, the operation will throw a `StoreOperationNotSupportedError`.
+Write operations (create, update, delete, upsert) are only available when the corresponding API handlers are configured for each resource type. If a handler is not provided, the operation will throw a `StoreOperationNotSupportedError`.
 
 ### Special Handlers
 
@@ -93,26 +217,50 @@ const specialHandlers = [
 ];
 ```
 
-### Caching
+### Relationship-Aware Caching
 
-The multi-API store includes optional caching to improve performance by reducing redundant API calls:
+The multi-API store includes intelligent caching that automatically invalidates related data when resources change:
 
 ```javascript
 const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
-      get: async () => {
-        const response = await fetch("https://api1.example.com/skeptics");
-        return response.json();
+      handlers: {
+        get: {
+          fetch: async () => {
+            const response = await fetch("https://api1.example.com/skeptics");
+            return response.json();
+          },
+        },
+        create: {
+          fetch: async (resource) => {
+            const response = await fetch("https://api1.example.com/skeptics", {
+              method: "POST",
+              body: JSON.stringify(resource.attributes),
+              headers: { "Content-Type": "application/json" },
+            });
+            return response.json();
+          },
+        },
       },
     },
   },
   cache: {
     enabled: true,
     defaultTTL: 5 * 60 * 1000, // 5 minutes in milliseconds
-    keyGenerator: (query, context) => {
+    generateKey: (query) => {
       // Custom cache key generation
-      return `${query.type}-${JSON.stringify(query.select)}-${context.parentQuery?.type || "root"}`;
+      return `${query.type}-${query.id ?? ""}-${JSON.stringify(query.select)}`;
+    },
+    dependsOnTypes: (query, options) => {
+      // Custom relationship-aware cache invalidation
+      const { schema } = options;
+      const resourceType = query.type;
+      const resourceSchema = schema.resources[resourceType];
+      const relatedTypes = Object.values(
+        resourceSchema.relationships ?? {},
+      ).map((rel) => rel.type);
+      return [resourceType, ...relatedTypes];
     },
   },
 });
@@ -120,39 +268,55 @@ const store = createMultiApiStore(schema, {
 
 **Cache Configuration Options:**
 
-- `enabled` (boolean, default: false) - Enable or disable caching
+- `enabled` (boolean, default: true) - Enable or disable caching
+- `manual` (boolean, default: false) - Use manual cache control
 - `defaultTTL` (number, default: 5 minutes) - Time-to-live for cached entries in milliseconds
-- `keyGenerator` (function, optional) - Custom function to generate cache keys
+- `generateKey` (function, optional) - Custom function to generate cache keys
+- `dependsOnTypes` (function, optional) - Function to determine cache dependencies
 
-**Cache Behavior:**
+**Relationship-Aware Cache Behavior:**
 
 - Query results are cached based on the query structure and context
-- Cache is automatically cleared for a resource type when create/update/delete operations are performed
+- **Automatic invalidation**: When a resource is created/updated/deleted, cache entries for that type AND all related types are automatically cleared
+- **Relationship tracking**: Default behavior includes all relationship types in cache dependencies
+- **Manual control**: Per-resource manual cache control for complex scenarios
 - Expired cache entries are automatically removed on access
-- Cache keys include parent query context to handle relationship-specific caching
 
-### Middleware
+### Production-Ready Architecture Through Middleware
 
-The multi-API store supports middleware to enhance request processing with cross-cutting concerns like authentication, logging, and retry logic. Middleware functions are executed in order before resource handlers are called.
+Multi-API Store's middleware architecture solves the complex production concerns that emerge when aggregating multiple APIs: batching requests, handling authentication refresh, implementing circuit breakers, managing rate limits, and adding observability. Rather than forcing these concerns into your application code or baking them into an inflexible core, the middleware pipeline lets you compose exactly the production behavior you need.
 
 ```javascript
-import { auth, retry, log } from "@spectragraph/multi-api-store";
-
+// Production-grade API aggregation
 const store = createMultiApiStore(schema, {
   middleware: [
-    // Add authentication headers
-    auth.bearerToken(() => getAuthToken()),
+    // Authentication with token refresh
+    auth.bearerToken(() => getToken(), { refreshOnExpiry: true }),
 
-    // Retry on server errors with exponential backoff
-    retry.exponential({
-      maxRetries: 3,
-      timeout: 30000,
+    // Request batching - combine multiple queries into single API calls
+    batchRequests({
+      windowMs: 100,
+      maxBatchSize: 10,
+      batchableTypes: ["users", "posts"],
     }),
 
-    // Log all requests and responses
-    log.requests({
-      logger: console,
-      includeTiming: true,
+    // Circuit breaker - fail fast when services are degraded
+    circuitBreaker({
+      threshold: 5,
+      resetTimeoutMs: 30000,
+      monitorTypes: ["external-api"],
+    }),
+
+    // Rate limiting per API provider
+    rateLimit.perBaseURL({
+      "api1.example.com": { requestsPerSecond: 100 },
+      "api2.example.com": { requestsPerSecond: 10 },
+    }),
+
+    // Observability and metrics
+    metrics.requestTracing({
+      includeTimings: true,
+      sampleRate: 0.1,
     }),
   ],
   resources: {
@@ -201,6 +365,48 @@ const customAuth = (context, next) => {
 };
 ```
 
+#### Production Patterns
+
+**API Provider Differences**
+When aggregating multiple APIs, each may have different requirements:
+
+```javascript
+const store = createMultiApiStore(schema, {
+  middleware: [
+    // Different auth per API
+    auth.conditional({
+      "internal-api.company.com": auth.bearerToken(() => getInternalToken()),
+      "external-api.partner.com": auth.apiKey(process.env.PARTNER_KEY),
+      "public-api.service.com": auth.none(),
+    }),
+
+    // Different retry strategies
+    retry.conditional({
+      "flaky-api.example.com": retry.exponential({ maxRetries: 5 }),
+      "reliable-api.example.com": retry.exponential({ maxRetries: 1 }),
+    }),
+  ],
+});
+```
+
+#### Why Middleware Architecture?
+
+Multi-API Store uses middleware composition rather than configuration options or inheritance because production API aggregation requires composing complex, often contradictory concerns:
+
+- **Request batching** needs to group queries while **rate limiting** needs to control timing
+- **Circuit breakers** need to fail fast while **retry logic** needs to persist
+- **Authentication** may require different strategies per API while **caching** needs unified keys
+- **Observability** needs to capture all requests while **performance** optimizations need to reduce overhead
+
+Middleware lets you compose exactly the behavior you need without forcing architectural decisions on your application.
+
+**Alternative Approaches and Their Limitations**
+
+- **Configuration-based**: Would require anticipating every possible combination of production needs
+- **Inheritance/Plugin-based**: Creates tight coupling between concerns
+- **Application-level**: Forces every consumer to reimplement production patterns
+- **Core integration**: Creates an inflexible, monolithic store implementation
+
 ### Expression Engines
 
 The multi-API store uses focused expression engines from SpectraGraph Core to provide different capabilities for different query contexts:
@@ -219,13 +425,17 @@ Creates a new multi-API store instance.
 **Parameters:**
 
 - `schema` (Schema) - The SpectraGraph schema defining resource types and relationships
-- `config.resources` (object) - Configuration object mapping resource types to API handlers
+- `config` (object, optional) - Configuration object
+- `config.resources` (object, optional) - Resource configurations with handlers
 - `config.specialHandlers` (array, optional) - Array of special handler objects for custom loading logic
-- `config.cache` (object, optional) - Caching configuration options
+- `config.cache` (object, optional) - Caching configuration options with relationship-aware invalidation
+- `config.middleware` (array, optional) - Middleware functions for request processing
+- `config.baseURL` (string, optional) - Base URL for standard HTTP handlers
+- `config.request` (object, optional) - Default request configuration
 - `config.selectEngine` (SelectExpressionEngine, optional) - Expression engine for SELECT clauses
 - `config.whereEngine` (WhereExpressionEngine, optional) - Expression engine for WHERE clauses
 
-**Returns:** Multi-API store instance with query operations
+**Returns:** Multi-API store instance implementing the Store interface
 
 ```javascript
 import { createMultiApiStore } from "@spectragraph/multi-api-store";
@@ -233,27 +443,45 @@ import { createMultiApiStore } from "@spectragraph/multi-api-store";
 const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
-      get: async (options) => {
-        // Fetch skeptics from your API
-        const response = await fetch("/api/skeptics", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-        return response.json();
+      handlers: {
+        get: {
+          fetch: async (context) => {
+            // Fetch skeptics from your API
+            const response = await fetch("/api/skeptics", {
+              method: "GET",
+              headers: { "Content-Type": "application/json" },
+            });
+            return response.json();
+          },
+        },
+        create: {
+          fetch: async (resource, context) => {
+            const response = await fetch("/api/skeptics", {
+              method: "POST",
+              body: JSON.stringify(resource.attributes),
+              headers: { "Content-Type": "application/json" },
+            });
+            return response.json();
+          },
+        },
       },
     },
     investigations: {
-      get: async (query, context) => {
-        // Fetch investigations from a different API
-        const response = await fetch(
-          "https://api.sciencechecks.org/investigations",
-          {
-            headers: { Authorization: `Bearer ${process.env.API_KEY}` },
+      handlers: {
+        get: {
+          fetch: async (context) => {
+            // Fetch investigations from a different API
+            const response = await fetch(
+              "https://api.sciencechecks.org/investigations",
+              {
+                headers: { Authorization: `Bearer ${process.env.API_KEY}` },
+              },
+            );
+            return response.json();
           },
-        );
-        return response.json();
+        },
+        // Note: No create/update/delete handlers - will throw StoreOperationNotSupportedError
       },
-      // Note: No CUD operations configured - will throw StoreOperationNotSupportedError
     },
   },
   specialHandlers: [
@@ -331,14 +559,30 @@ const deletedSkeptic = await store.delete({
 });
 ```
 
+#### Upsert Operations
+
+The multi-API store supports upsert operations that create or update resources based on whether they have an ID:
+
+```javascript
+// Upsert - creates if no ID, updates if ID present
+const result = await store.upsert({
+  type: "skeptics",
+  id: "carl-sagan", // If present, will update; if absent, will create
+  attributes: {
+    name: "Carl Sagan",
+    specialty: "Astronomy and Science Communication",
+    yearsActive: 40,
+  },
+});
+```
+
 #### Unsupported Operations
 
 The following operations throw `StoreOperationNotSupportedError` when called:
 
-- `store.upsert(resource)` - Upsert operations not supported
 - `store.merge(resource)` - Merge operations not supported
 
-Write operations (create, update, delete) will also throw `StoreOperationNotSupportedError` if the corresponding handler is not configured for the resource type.
+Write operations (create, update, delete, upsert) will also throw `StoreOperationNotSupportedError` if the corresponding handler is not configured for the resource type.
 
 ```javascript
 import { StoreOperationNotSupportedError } from "@spectragraph/core";
@@ -396,19 +640,29 @@ const schema = {
   },
 };
 
-// 2. Configure API endpoints
+// 2. Configure API endpoints with handlers
 const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
-      get: async () => {
-        const response = await fetch("https://api1.example.com/skeptics");
-        return response.json();
+      handlers: {
+        get: {
+          fetch: async () => {
+            const response = await fetch("https://api1.example.com/skeptics");
+            return response.json();
+          },
+        },
       },
     },
     investigations: {
-      get: async () => {
-        const response = await fetch("https://api2.example.com/investigations");
-        return response.json();
+      handlers: {
+        get: {
+          fetch: async () => {
+            const response = await fetch(
+              "https://api2.example.com/investigations",
+            );
+            return response.json();
+          },
+        },
       },
     },
   },
@@ -436,56 +690,68 @@ console.log(results);
 const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
-      get: async (options) => {
-        // Use options for filtering, pagination, etc.
-        const params = new URLSearchParams();
-        if (options?.specialty !== undefined) {
-          params.append("specialty", options.specialty);
-        }
+      handlers: {
+        get: {
+          fetch: async (context) => {
+            // Use context for filtering, pagination, etc.
+            const params = new URLSearchParams();
+            if (context.options?.specialty !== undefined) {
+              params.append("specialty", context.options.specialty);
+            }
 
-        const response = await fetch(
-          `https://api1.example.com/skeptics?${params}`,
-        );
-        if (!response.ok) {
-          throw new Error(`Skeptics API error: ${response.statusText}`);
-        }
-        return response.json();
+            const response = await fetch(
+              `https://api1.example.com/skeptics?${params}`,
+            );
+            if (!response.ok) {
+              throw new Error(`Skeptics API error: ${response.statusText}`);
+            }
+            return response.json();
+          },
+        },
       },
     },
     investigations: {
-      get: async (options) => {
-        // Different API with authentication
-        const response = await fetch(
-          "https://api2.example.com/investigations",
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.API_TOKEN}`,
-              "Content-Type": "application/json",
-            },
+      handlers: {
+        get: {
+          fetch: async (context) => {
+            // Different API with authentication
+            const response = await fetch(
+              "https://api2.example.com/investigations",
+              {
+                headers: {
+                  Authorization: `Bearer ${process.env.API_TOKEN}`,
+                  "Content-Type": "application/json",
+                },
+              },
+            );
+            return response.json();
           },
-        );
-        return response.json();
+        },
       },
     },
     weirdBeliefs: {
-      get: async (options) => {
-        // Third-party API
-        const response = await fetch("https://api3.example.com/beliefs", {
-          headers: {
-            "X-API-Key": process.env.EXTERNAL_API_KEY,
-          },
-        });
-        const data = await response.json();
+      handlers: {
+        get: {
+          fetch: async (context) => {
+            // Third-party API
+            const response = await fetch("https://api3.example.com/beliefs", {
+              headers: {
+                "X-API-Key": process.env.EXTERNAL_API_KEY,
+              },
+            });
+            const data = await response.json();
 
-        // Transform external API format to match your schema
-        return data.claims.map((belief) => ({
-          id: belief.beliefId,
-          name: belief.claimName,
-          description: belief.description,
-          category: belief.type,
-          believersCount: belief.adherents,
-          debunked: belief.status === "debunked",
-        }));
+            // Transform external API format to match your schema
+            return data.claims.map((belief) => ({
+              id: belief.beliefId,
+              name: belief.claimName,
+              description: belief.description,
+              category: belief.type,
+              believersCount: belief.adherents,
+              debunked: belief.status === "debunked",
+            }));
+          },
+        },
       },
     },
   },
@@ -601,14 +867,15 @@ try {
 
 ## TypeScript Support
 
-SpectraGraph Multi-API Store includes comprehensive TypeScript definitions:
+SpectraGraph Multi-API Store includes comprehensive TypeScript definitions with full support for the new handler formats:
 
 ```typescript
 import type { Schema, RootQuery, QueryResult } from "@spectragraph/core";
 import type {
   MultiApiStore,
   MultiApiStoreConfig,
-  ApiResourceConfig,
+  ResourceConfig,
+  HandlerConfig,
 } from "@spectragraph/multi-api-store";
 
 const schema: Schema = {
@@ -627,12 +894,46 @@ const schema: Schema = {
 const config: MultiApiStoreConfig = {
   resources: {
     skeptics: {
-      get: async (): Promise<{ [key: string]: unknown }[]> => {
-        const response = await fetch("https://api1.example.com/skeptics");
-        return response.json();
+      handlers: {
+        get: {
+          fetch: async (context): Promise<any[]> => {
+            const response = await fetch("https://api1.example.com/skeptics");
+            return response.json();
+          },
+          mappers: {
+            fromApi: {
+              fullName: "name", // Map API field to schema field
+            },
+          },
+        },
+        create: {
+          fetch: async (resource, context): Promise<any> => {
+            const response = await fetch("https://api1.example.com/skeptics", {
+              method: "POST",
+              body: JSON.stringify(resource.attributes),
+              headers: { "Content-Type": "application/json" },
+            });
+            return response.json();
+          },
+        },
       },
-    },
+    } satisfies ResourceConfig,
   },
+  middleware: [
+    // Fully typed middleware functions
+    (context, next) => {
+      return next({
+        ...context,
+        request: {
+          ...context.request,
+          headers: {
+            ...context.request.headers,
+            "X-Custom-Header": "value",
+          },
+        },
+      });
+    },
+  ],
 };
 
 const store: MultiApiStore = createMultiApiStore(schema, config);
@@ -648,16 +949,32 @@ Use the multi-API store as a unified query layer over multiple microservices:
 const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
-      get: () =>
-        fetch("https://api1.example.com/skeptics").then((r) => r.json()),
+      handlers: {
+        get: {
+          fetch: () =>
+            fetch("https://api1.example.com/skeptics").then((r) => r.json()),
+        },
+      },
     },
     investigations: {
-      get: () =>
-        fetch("https://api2.example.com/investigations").then((r) => r.json()),
+      handlers: {
+        get: {
+          fetch: () =>
+            fetch("https://api2.example.com/investigations").then((r) =>
+              r.json(),
+            ),
+        },
+      },
     },
     organizations: {
-      get: () =>
-        fetch("https://api3.example.com/organizations").then((r) => r.json()),
+      handlers: {
+        get: {
+          fetch: () =>
+            fetch("https://api3.example.com/organizations").then((r) =>
+              r.json(),
+            ),
+        },
+      },
     },
   },
 });
@@ -665,26 +982,44 @@ const store = createMultiApiStore(schema, {
 
 ### Third-Party API Integration
 
-Combine data from multiple external APIs:
+Combine data from multiple external APIs with response transformation:
 
 ```javascript
 const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
-      get: () =>
-        fetch("https://api1.example.com/skeptics").then((r) => r.json()),
+      handlers: {
+        get: {
+          fetch: () =>
+            fetch("https://api1.example.com/skeptics").then((r) => r.json()),
+        },
+      },
     },
     weirdBeliefs: {
-      get: () =>
-        fetch(`https://api4.example.com/beliefs?key=${API_KEY}`).then((r) =>
-          r.json(),
-        ),
+      handlers: {
+        get: {
+          fetch: () =>
+            fetch(`https://api4.example.com/beliefs?key=${API_KEY}`).then((r) =>
+              r.json(),
+            ),
+          mappers: {
+            fromApi: {
+              beliefName: "name",
+              adherentCount: "believersCount",
+            },
+          },
+        },
+      },
     },
     investigations: {
-      get: () =>
-        fetch(`https://api5.example.com/research?key=${RESEARCH_KEY}`).then(
-          (r) => r.json(),
-        ),
+      handlers: {
+        get: {
+          fetch: () =>
+            fetch(`https://api5.example.com/research?key=${RESEARCH_KEY}`).then(
+              (r) => r.json(),
+            ),
+        },
+      },
     },
   },
 });
@@ -698,14 +1033,28 @@ Use as a mock data layer for development:
 const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
-      get: async () => [
-        { id: "1", name: "James Randi", specialty: "Paranormal Investigation" },
-        {
-          id: "2",
-          name: "Michael Shermer",
-          specialty: "Scientific Skepticism",
+      handlers: {
+        get: {
+          fetch: async () => [
+            {
+              id: "1",
+              name: "James Randi",
+              specialty: "Paranormal Investigation",
+            },
+            {
+              id: "2",
+              name: "Michael Shermer",
+              specialty: "Scientific Skepticism",
+            },
+          ],
         },
-      ],
+        create: {
+          fetch: async (resource) => ({
+            ...resource.attributes,
+            id: Math.random().toString(36).substr(2, 9),
+          }),
+        },
+      },
     },
   },
 });
