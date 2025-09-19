@@ -10,55 +10,44 @@ import type {
   CreateResource,
   UpdateResource,
   DeleteResource,
-  SelectExpressionEngine,
-  WhereExpressionEngine,
-  Graph
 } from "@spectragraph/core";
 
 /**
- * Resource operation configuration
+ * Handler configuration that users can provide
  */
-export interface ResourceOperationConfig {
-  /** Function that actually fetches the resource data. Signature varies by operation type. */
-  fetch?: Function;
-  /** A mapping function applied to each resource after fetching */
-  map?: (apiResource: any, context?: any) => any;
-  /** An object defining mappings for each resource attribute and relationship. Ignored if map is present. */
-  mappers?: { [field: string]: string | Function };
-}
+export type UserHandlerConfig =
+  | Function  // Shorthand: just a fetch function
+  | {
+      /** Function that fetches the resource data */
+      fetch?: Function;
+      /** Response mapping function */
+      map?: (apiResource: any, context?: any) => any;
+      /** Mappers for field transformation (compiled to map function) */
+      mappers?: { [field: string]: string | Function };
+    };
 
 /**
- * Base configuration interface
+ * Normalized handler configuration (after processing)
  */
-export interface Config {
-  /** Config for the cache */
-  cache?: CacheConfig;
-  /** Middleware functions to apply to all requests */
-  middleware?: MiddlewareFunction[];
-  /** Default request configuration */
-  request?: RequestConfig;
-  /** Special handlers that override resource handlers based on conditions */
-  specialHandlers?: SpecialHandler[];
-  /** Query parameter serialization function */
-  stringifyQueryParams?: (paramArray: Array<{ [key: string]: any }>) => string;
-  /** Fetch and map definitions for query operations */
-  query?: Function | ResourceOperationConfig;
-  /** Fetch and map definitions for create operations */
-  create?: Function | ResourceOperationConfig;
-  /** Fetch and map definitions for update operations */
-  update?: Function | ResourceOperationConfig;
-  /** Fetch and map definitions for delete operations */
-  delete?: Function | ResourceOperationConfig;
-}
+export type RuntimeHandlerConfig = {
+  /** Function that fetches the resource data */
+  fetch: Function;
+  /** Response mapping function */
+  map?: (apiResource: any, context?: any) => any;
+};
 
 /**
  * Special handler that can override resource handlers based on conditions
  */
-export interface SpecialHandler extends Config {
+export interface SpecialHandler {
   /** Test function to determine if this handler should be used */
   test(query: any, context: any): boolean;
   /** The handler function to execute when test passes */
   handler(context: MiddlewareContext): Response | any | Promise<Response> | Promise<any>;
+  /** Cache configuration for this special handler */
+  cache?: Partial<CacheConfig>;
+  /** Middleware specific to this handler */
+  middleware?: MiddlewareFunction[];
 }
 
 /**
@@ -103,8 +92,8 @@ export interface MiddlewareContext {
   request: RequestConfig;
   /** Parent query in the hierarchy */
   parentQuery: NormalQuery | null;
-  /** Full merged configuration for this step */
-  config: FullConfig;
+  /** Runtime configuration for this step */
+  config: RuntimeConfig;
   /** Cache wrapper function with pre-bound config and query */
   withCache: Function;
 }
@@ -115,59 +104,62 @@ export interface MiddlewareContext {
 export type MiddlewareFunction = (context: MiddlewareContext, next: (context: MiddlewareContext) => Promise<any>) => Promise<any>;
 
 /**
- * Normalized configuration (after processing function shorthands)
+ * Base store configuration (what users provide)
  */
-export interface NormalConfig {
-  /** Config for the cache */
-  cache?: CacheConfig;
+export interface MultiApiStoreConfig {
+  /** Cache configuration */
+  cache?: Partial<CacheConfig>;
   /** Middleware functions to apply to all requests */
   middleware?: MiddlewareFunction[];
-  /** Default request configuration */
-  request?: RequestConfig;
+  /** Request configuration */
+  request?: Partial<RequestConfig>;
   /** Special handlers that override resource handlers based on conditions */
   specialHandlers?: SpecialHandler[];
   /** Query parameter serialization function */
   stringifyQueryParams?: (paramArray: Array<{ [key: string]: any }>) => string;
-  /** Fetch and map definitions for query operations */
-  query?: ResourceOperationConfig;
-  /** Fetch and map definitions for create operations */
-  create?: ResourceOperationConfig;
-  /** Fetch and map definitions for update operations */
-  update?: ResourceOperationConfig;
-  /** Fetch and map definitions for delete operations */
-  delete?: ResourceOperationConfig;
+
+  /** Resource-specific configurations */
+  resources?: {
+    [resourceType: string]: {
+      /** Cache config for this resource */
+      cache?: Partial<CacheConfig>;
+      /** Middleware for this resource */
+      middleware?: MiddlewareFunction[];
+      /** Query operation handler */
+      query?: UserHandlerConfig;
+      /** Create operation handler */
+      create?: UserHandlerConfig;
+      /** Update operation handler */
+      update?: UserHandlerConfig;
+      /** Delete operation handler */
+      delete?: UserHandlerConfig;
+    }
+  };
+
+  // Legacy support
+  /** @deprecated Use request.baseURL instead */
+  baseURL?: string;
 }
 
 /**
- * Full configuration with all required properties
+ * Runtime configuration (after normalization and defaults)
  */
-export interface FullConfig {
-  /** Config for the cache */
+export interface RuntimeConfig {
+  /** Cache configuration */
   cache: CacheConfig;
-  /** Middleware functions to apply to all requests */
+  /** Middleware functions */
   middleware: MiddlewareFunction[];
-  /** Default request configuration */
+  /** Request configuration */
   request: RequestConfig;
-  /** Special handlers that override resource handlers based on conditions */
+  /** Special handlers */
   specialHandlers: SpecialHandler[];
   /** Query parameter serialization function */
   stringifyQueryParams: (paramArray: Array<{ [key: string]: any }>) => string;
-  /** Fetch and map definitions for query operations */
-  query: ResourceOperationConfig;
-  /** Fetch and map definitions for create operations */
-  create: ResourceOperationConfig;
-  /** Fetch and map definitions for update operations */
-  update: ResourceOperationConfig;
-  /** Fetch and map definitions for delete operations */
-  delete: ResourceOperationConfig;
-}
-
-/**
- * Store configuration
- */
-export interface StoreConfig extends Config {
-  /** Resource-specific handler configurations */
-  resources?: { [resourceType: string]: Config };
+  /** Runtime operation handlers */
+  query: RuntimeHandlerConfig;
+  create: RuntimeHandlerConfig;
+  update: RuntimeHandlerConfig;
+  delete: RuntimeHandlerConfig;
 }
 
 /**
@@ -176,8 +168,8 @@ export interface StoreConfig extends Config {
 export interface StoreContext {
   /** The schema defining resource types and relationships */
   schema: Schema;
-  /** Normalized store configuration */
-  config: NormalConfig;
+  /** Runtime store configuration */
+  config: RuntimeConfig;
   /** Cache wrapper function */
   withCache: Function;
   /** Cache instance with methods for clearing and managing cache entries */
@@ -265,7 +257,7 @@ export interface LogMiddleware {
 /**
  * Creates a new multi-API store instance that aggregates data from multiple API endpoints
  */
-export function createMultiApiStore(schema: Schema, config?: StoreConfig): MultiApiStore;
+export function createMultiApiStore(schema: Schema, config?: MultiApiStoreConfig): MultiApiStore;
 
 // Helper functions
 /**
