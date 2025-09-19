@@ -82,7 +82,7 @@ const camelizeObjectKeys = (obj) => {
 const config = {
   cache: {
     enabled: true,
-    defaultTTL: 5 * 60 * 1000, // 5 minutes
+    ttl: 5 * 60 * 1000, // 5 minutes
   },
   resources: {
     exposures: {

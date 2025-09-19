@@ -75,7 +75,7 @@ const store = createMultiApiStore(schema, {
 const store = createMultiApiStore(schema, {
   cache: {
     enabled: true,
-    defaultTTL: 5 * 60 * 1000, // Shorter TTL for fresher data
+    ttl: 5 * 60 * 1000, // Shorter TTL for fresher data
     dependsOnTypes: (query) => [query.type], // Only invalidate exact type
   },
   middleware: [
@@ -245,7 +245,7 @@ const store = createMultiApiStore(schema, {
   },
   cache: {
     enabled: true,
-    defaultTTL: 5 * 60 * 1000, // 5 minutes in milliseconds
+    ttl: 5 * 60 * 1000, // 5 minutes in milliseconds
     generateKey: (query) => {
       // Custom cache key generation
       return `${query.type}-${query.id ?? ""}-${JSON.stringify(query.select)}`;
@@ -268,7 +268,7 @@ const store = createMultiApiStore(schema, {
 
 - `enabled` (boolean, default: true) - Enable or disable caching
 - `manual` (boolean, default: false) - Use manual cache control
-- `defaultTTL` (number, default: 5 minutes) - Time-to-live for cached entries in milliseconds
+- `ttl` (number, default: 5 minutes) - Time-to-live for cached entries in milliseconds
 - `generateKey` (function, optional) - Custom function to generate cache keys
 - `dependsOnTypes` (function, optional) - Function to determine cache dependencies
 

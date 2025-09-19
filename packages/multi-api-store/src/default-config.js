@@ -2,38 +2,76 @@ import { mapValues } from "es-toolkit";
 
 /**
  * @typedef {Object} CacheConfig
+ * @property {(query: Object, options?: Object) => string[]} [dependsOnTypes] - Function to determine which resource types the query depends on for caching
  * @property {boolean} [enabled] - Whether caching is enabled
- * @property {Function} [generateKey] - Custom cache key generator
+ * @property {(query: Object, context?: Object) => string} [generateKey] - Custom cache key generator
  * @property {boolean} [manual] - Whether to bypass caching
- */
-
-/**
- * @typedef {Object} HandlerConfig
- * @property {Function} [fetch] - Fetch function
- * @property {Function} [map] - Response mapping function
- */
-
-/**
- * @typedef {Object} HandlersConfig
- * @property {HandlerConfig} [query] - QUERY operation handler
- * @property {HandlerConfig} [create] - CREATE operation handler
- * @property {HandlerConfig} [update] - UPDATE operation handler
- * @property {HandlerConfig} [delete] - DELETE operation handler
+ * @property {number} [ttl] - Default TTL for the cache in milliseconds
  */
 
 /**
  * @typedef {Object} RequestConfig
- * @property {string} [baseURL] - Base URL for requests
- * @property {Object} [headers] - Default headers
- * @property {Array<Object>} [queryParams] - Default query parameters
+ * @property {string} [baseURL] - Base URL for standard HTTP handlers
+ * @property {Object} [headers] - HTTP headers to be sent with the request
+ * @property {Object[]} [queryParams] - Initial query params
+ * @property {string} [queryParamsStr] - The query string (typically constructed with stringifyQueryParams)
  */
 
 /**
- * @typedef {Object} StoreConfig
- * @property {CacheConfig} [cache] - Cache configuration
- * @property {HandlersConfig} [handlers] - Request handlers for different operations
+ * @typedef {Config} SpecialHandler
+ * @property {(query: Object, context: Object) => boolean} test - Test applied to context to see if the special handler applies
+ * @property {(context: import('./load-query-graph.js').MiddlewareContext) => (Response|Object|Promise<Response>|Promise<Object>)} handler - Handler function to execute when test passes
+ */
+
+/**
+ * @typedef {Object} ResourceOperationConfig
+ * @property {Function} [fetch] - Function that actually fetches the resource data. Signature varies by operation type.
+ * @property {(apiResource: Object, context?: Object) => Object} [map] - A mapping function applied to each resource after fetching
+ * @property {Object<string, Function|string>} [mappers] - An object defining mappings for each resource attribute and relationship. Ignored if map is present.
+ */
+
+/**
+ * @typedef {Object} Config
+ * @property {CacheConfig} [cache] - Config for the cache
+ * @property {Array<(context: import('./load-query-graph.js').MiddlewareContext, next: Function) => any>} [middleware] - Middleware functions to apply to all requests
  * @property {RequestConfig} [request] - Default request configuration
- * @property {Function} [stringifyQueryParams] - Query parameter serialization function
+ * @property {Array<SpecialHandler>} [specialHandlers] - Special handlers that override resource handlers based on conditions
+ * @property {(paramArray: Object<string, any>[]) => string} [stringifyQueryParams] - Query parameter serialization function
+ * @property {Function|ResourceOperationConfig} [query] - Fetch and map definitions for query operations - if a function is given it's resolved to { fetch: fn }
+ * @property {Function|ResourceOperationConfig} [create] - Fetch and map definitions for create operations - if a function is given it's resolved to { fetch: fn }
+ * @property {Function|ResourceOperationConfig} [update] - Fetch and map definitions for update operations - if a function is given it's resolved to { fetch: fn }
+ * @property {Function|ResourceOperationConfig} [delete] - Fetch and map definitions for delete operations - if a function is given it's resolved to { fetch: fn }
+ */
+
+/**
+ * @typedef {Object} NormalConfig
+ * @property {CacheConfig} [cache] - Config for the cache
+ * @property {Array<(context: import('./load-query-graph.js').MiddlewareContext, next: Function) => any>} [middleware] - Middleware functions to apply to all requests
+ * @property {RequestConfig} [request] - Default request configuration
+ * @property {Array<SpecialHandler>} [specialHandlers] - Special handlers that override resource handlers based on conditions
+ * @property {(paramArray: Object<string, any>[]) => string} [stringifyQueryParams] - Query parameter serialization function
+ * @property {ResourceOperationConfig} [query] - Fetch and map definitions for query operations - if a function is given it's resolved to { fetch: fn }
+ * @property {ResourceOperationConfig} [create] - Fetch and map definitions for create operations - if a function is given it's resolved to { fetch: fn }
+ * @property {ResourceOperationConfig} [update] - Fetch and map definitions for update operations - if a function is given it's resolved to { fetch: fn }
+ * @property {ResourceOperationConfig} [delete] - Fetch and map definitions for delete operations - if a function is given it's resolved to { fetch: fn }
+ */
+
+/**
+ * @typedef {Object} FullConfig
+ * @property {CacheConfig} cache - Config for the cache
+ * @property {Array<(context: import('./load-query-graph.js').MiddlewareContext, next: Function) => any>} middleware - Middleware functions to apply to all requests
+ * @property {RequestConfig} request - Default request configuration
+ * @property {Array<SpecialHandler>} specialHandlers - Special handlers that override resource handlers based on conditions
+ * @property {(paramArray: Object<string, any>[]) => string} stringifyQueryParams - Query parameter serialization function
+ * @property {ResourceOperationConfig} query - Fetch and map definitions for query operations - if a function is given it's resolved to { fetch: fn }
+ * @property {ResourceOperationConfig} create - Fetch and map definitions for create operations - if a function is given it's resolved to { fetch: fn }
+ * @property {ResourceOperationConfig} update - Fetch and map definitions for update operations - if a function is given it's resolved to { fetch: fn }
+ * @property {ResourceOperationConfig} delete - Fetch and map definitions for delete operations - if a function is given it's resolved to { fetch: fn }
+ */
+
+/**
+ * @typedef {Config} StoreConfig
+ * @property {Object<string, Config>} [resources] - Resource-specific handler configurations
  */
 
 /**
@@ -58,7 +96,7 @@ export const standardHandlers = {
 	},
 
 	create: async (resource, { config }) => {
-		const url = `${config.baseURL}/${resource.type}`;
+		const url = `${config.request.baseURL}/${resource.type}`;
 
 		return fetch(url, {
 			method: "POST",
@@ -70,7 +108,7 @@ export const standardHandlers = {
 	},
 
 	update: async (resource, { config }) => {
-		const url = `${config.baseURL}/${resource.type}/${resource.id}`;
+		const url = `${config.request.baseURL}/${resource.type}/${resource.id}`;
 
 		return fetch(url, {
 			method: "PATCH",
@@ -82,7 +120,7 @@ export const standardHandlers = {
 	},
 
 	delete: async (resource, { config }) => {
-		const url = `${config.baseURL}/${resource.type}/${resource.id}`;
+		const url = `${config.request.baseURL}/${resource.type}/${resource.id}`;
 
 		return fetch(url, {
 			method: "DELETE",
@@ -94,13 +132,13 @@ export const standardHandlers = {
  * Default configuration for multi-api-store with relationship-aware cache invalidation.
  * Provides sensible defaults for caching, handlers, and request configuration.
  *
- * @type {StoreConfig}
+ * @type {Partial<Config>}}
  */
 export const defaultConfig = {
 	cache: {
 		enabled: true,
 		manual: false,
-		defaultTTL: 5 * 60 * 1000, // 5 minutes default
+		ttl: 5 * 60 * 1000, // 5 minutes default
 		generateKey: (query) => `${query.type}-${query.id ?? ""}`,
 		dependsOnTypes: (query, options = {}) => {
 			const { schema } = options;
@@ -115,7 +153,7 @@ export const defaultConfig = {
 			return [resourceType, ...relatedTypes];
 		},
 	},
-	handlers: mapValues(standardHandlers, (h) => ({
+	...mapValues(standardHandlers, (h) => ({
 		fetch: h,
 		map: (x) => x,
 	})),

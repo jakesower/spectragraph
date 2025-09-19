@@ -2,6 +2,7 @@
  * Creates a simple TTL-based cache for multi-api-store with relationship-aware invalidation.
  * Provides cache wrapper functions and type-based clearing for cache invalidation.
  *
+ * @param {Object} [config] - Cache configuration options
  * @returns {Object} Cache instance
  * @returns {Function} returns.withCache - Cache wrapper function that caches results of async operations
  * @returns {Function} returns.clearByType - Clears cache entries based on resource type dependencies
@@ -41,8 +42,8 @@ export function createCache() {
 		const fetched = fetcher();
 		const expiry = options.ttl
 			? now + options.ttl
-			: cacheConfig.defaultTTL
-				? now + cacheConfig.defaultTTL
+			: cacheConfig.ttl
+				? now + cacheConfig.ttl
 				: undefined;
 
 		// Store query for dependency tracking

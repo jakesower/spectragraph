@@ -10,7 +10,7 @@ describe("createMultiApiStore", () => {
 			.mockResolvedValueOnce([{ id: "1", name: "Second Call" }]);
 
 		const config = {
-			cache: { enabled: true, defaultTTL: 60000 },
+			cache: { enabled: true, ttl: 60000 },
 			resources: {
 				skeptics: { query: { fetch: mockQuery } },
 			},
@@ -336,7 +336,7 @@ describe("createMultiApiStore", () => {
 					test: (query, context) =>
 						query.type === "investigations" &&
 						context.parentQuery?.type === "skeptics",
-					handler: mockSpecialInvestigationsHandler,
+					query: mockSpecialInvestigationsHandler,
 				},
 			],
 			resources: {
@@ -435,9 +435,9 @@ describe("createMultiApiStore", () => {
 			});
 		});
 
-		it("throws error when no baseURL provided for standard handler", async () => {
+		it("uses empty baseURL when none provided for standard handler", async () => {
 			const config = {
-				// No baseURL
+				// No baseURL - should default to empty string
 				resources: {
 					skeptics: {
 						query: vi.fn(),
@@ -453,9 +453,20 @@ describe("createMultiApiStore", () => {
 				attributes: { name: "New Skeptic" },
 			};
 
-			await expect(store.create(newSkeptic)).rejects.toThrow(
-				"Failed to parse URL from undefined/skeptics",
-			);
+			global.fetch = vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({ id: "new-id", ...newSkeptic }),
+			});
+
+			await store.create(newSkeptic);
+
+			expect(global.fetch).toHaveBeenCalledWith("/skeptics", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(newSkeptic),
+			});
 		});
 
 		it("updates a resource when update handler is available", async () => {
@@ -562,7 +573,7 @@ describe("createMultiApiStore", () => {
 			const config = {
 				cache: {
 					enabled: true,
-					defaultTTL: 1000, // 1 second
+					ttl: 1000, // 1 second
 				},
 				resources: {
 					skeptics: {
@@ -638,7 +649,7 @@ describe("createMultiApiStore", () => {
 			const config = {
 				cache: {
 					enabled: true,
-					defaultTTL: 60000, // 1 minute
+					ttl: 60000, // 1 minute
 				},
 				resources: {
 					skeptics: {
@@ -705,7 +716,9 @@ describe("handler tests", () => {
 		});
 
 		const config = {
-			baseURL: "https://api.skepticism.example.org",
+			request: {
+				baseURL: "https://api.skepticism.example.org",
+			},
 			resources: {
 				skeptics: {},
 			},
@@ -743,7 +756,9 @@ describe("handler tests", () => {
 		});
 
 		const config = {
-			baseURL: "https://api.skepticism.example.org",
+			request: {
+				baseURL: "https://api.skepticism.example.org",
+			},
 			resources: {
 				skeptics: {},
 			},
@@ -778,7 +793,9 @@ describe("handler tests", () => {
 		});
 
 		const config = {
-			baseURL: "https://api.skepticism.example.org",
+			request: {
+				baseURL: "https://api.skepticism.example.org",
+			},
 			resources: {
 				skeptics: {},
 			},
@@ -812,7 +829,9 @@ describe("handler tests", () => {
 		});
 
 		const config = {
-			baseURL: "https://api.skepticism.example.org",
+			request: {
+				baseURL: "https://api.skepticism.example.org",
+			},
 			resources: {
 				skeptics: {}, // No custom create handler
 			},
@@ -862,7 +881,9 @@ describe("handler tests", () => {
 		});
 
 		const config = {
-			baseURL: "https://api.skepticism.example.org",
+			request: {
+				baseURL: "https://api.skepticism.example.org",
+			},
 			resources: {
 				skeptics: {}, // No custom update handler
 			},
@@ -907,7 +928,9 @@ describe("handler tests", () => {
 		});
 
 		const config = {
-			baseURL: "https://api.skepticism.example.org",
+			request: {
+				baseURL: "https://api.skepticism.example.org",
+			},
 			resources: {
 				skeptics: {}, // No custom delete handler
 			},
@@ -944,7 +967,9 @@ describe("handler tests", () => {
 		});
 
 		const config = {
-			baseURL: "https://api.example.org",
+			request: {
+				baseURL: "https://api.example.org",
+			},
 			resources: {
 				skeptics: {
 					// no create handler - should use standard handler
@@ -1115,7 +1140,9 @@ describe("handler tests", () => {
 			});
 
 			const config = {
-				baseURL: "https://api.example.com",
+				request: {
+					baseURL: "https://api.example.com",
+				},
 				resources: {
 					skeptics: {
 						// No get handler - should use standard handler
@@ -1142,7 +1169,9 @@ describe("handler tests", () => {
 			});
 
 			const config = {
-				baseURL: "https://api.example.com",
+				request: {
+					baseURL: "https://api.example.com",
+				},
 				resources: {
 					skeptics: {
 						// No get handler - should use standard handler
@@ -1169,7 +1198,9 @@ describe("handler tests", () => {
 			});
 
 			const config = {
-				baseURL: "https://api.example.com",
+				request: {
+					baseURL: "https://api.example.com",
+				},
 				resources: {
 					skeptics: {
 						// No get handler - should use standard handler
@@ -1196,7 +1227,9 @@ describe("handler tests", () => {
 			});
 
 			const config = {
-				baseURL: "https://api.example.com",
+				request: {
+					baseURL: "https://api.example.com",
+				},
 				resources: {
 					skeptics: {
 						// No get handler - should use standard handler
