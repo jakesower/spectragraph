@@ -15,7 +15,7 @@ import { mapValues } from "es-toolkit";
 
 /**
  * @typedef {Object} HandlersConfig
- * @property {HandlerConfig} [get] - GET operation handler
+ * @property {HandlerConfig} [query] - QUERY operation handler
  * @property {HandlerConfig} [create] - CREATE operation handler
  * @property {HandlerConfig} [update] - UPDATE operation handler
  * @property {HandlerConfig} [delete] - DELETE operation handler
@@ -41,13 +41,13 @@ import { mapValues } from "es-toolkit";
  * These handlers implement common patterns for GET, POST, PATCH, and DELETE operations.
  *
  * @type {Object}
- * @property {Function} get - GET handler for fetching resources
+ * @property {Function} query - QUERY handler for fetching resources
  * @property {Function} create - POST handler for creating resources
  * @property {Function} update - PATCH handler for updating resources
  * @property {Function} delete - DELETE handler for removing resources
  */
 export const standardHandlers = {
-	get: async (context) => {
+	query: async (context) => {
 		const { request, query } = context;
 
 		const url = query.id

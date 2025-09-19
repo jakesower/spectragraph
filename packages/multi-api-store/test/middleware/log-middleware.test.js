@@ -101,7 +101,7 @@ describe("log.requests middleware", () => {
 				error: vi.fn(),
 			};
 
-			const mockGet = vi.fn().mockResolvedValue([
+			const mockQuery = vi.fn().mockResolvedValue([
 				{
 					id: "1",
 					name: "James Randi",
@@ -116,10 +116,8 @@ describe("log.requests middleware", () => {
 				middleware: [log.requests({ logger: mockLogger })],
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: mockGet,
-							},
+						query: {
+							fetch: mockQuery,
 						},
 					},
 				},
@@ -154,17 +152,15 @@ describe("log.requests middleware", () => {
 
 			const serverError = new Error("Internal Server Error");
 			serverError.response = { status: 500, data: { message: "Server error" } };
-			const mockGet = vi.fn().mockRejectedValue(serverError);
+			const mockQuery = vi.fn().mockRejectedValue(serverError);
 
 			const config = {
 				specialHandlers: [],
 				middleware: [log.requests({ logger: mockLogger })],
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: mockGet,
-							},
+						query: {
+							fetch: mockQuery,
 						},
 					},
 				},

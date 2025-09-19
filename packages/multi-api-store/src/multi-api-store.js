@@ -17,6 +17,8 @@ import { standardHandlers, defaultConfig } from "./default-config.js";
 import {
 	compileResourceMappers,
 	handleResponseData,
+	normalizeConfig,
+	normalizeResourceConfig,
 } from "./helpers/helpers.js";
 
 /**
@@ -43,7 +45,7 @@ export function createMultiApiStore(schema, config = {}) {
 	ensureValidSchema(schema);
 
 	// normalize config
-	const normalConfig = {
+	const normalConfig = normalizeConfig({
 		middleware: [],
 		specialHandlers: [],
 		...config,
@@ -56,22 +58,10 @@ export function createMultiApiStore(schema, config = {}) {
 			...defaultConfig.cache,
 			...config.cache,
 		},
-		resources: mapValues(config.resources ?? {}, (resConfig, type) => {
-			const handlers = mapValues(resConfig.handlers ?? {}, (h) => ({
-				fetch: h.fetch,
-				map:
-					h.map ??
-					(h.mappers
-						? compileResourceMappers(schema, type, h.mappers)
-						: (res) => res),
-			}));
-
-			return {
-				...resConfig,
-				handlers,
-			};
-		}),
-	};
+		resources: mapValues(config.resources ?? {}, (resConfig, type) =>
+			normalizeConfig(resConfig, type, schema),
+		),
+	});
 
 	const {
 		validator = defaultValidator,
@@ -111,8 +101,7 @@ export function createMultiApiStore(schema, config = {}) {
 		ensureValidCreateResource(schema, resource, validator);
 
 		const createHandler =
-			normalConfig.resources[type]?.handlers?.create?.fetch ??
-			standardHandlers.create;
+			normalConfig.resources[type]?.create?.fetch ?? standardHandlers.create;
 
 		// Clear cache for this resource type when creating
 		cache.clearByType(type, normalConfig, { schema });
@@ -131,8 +120,7 @@ export function createMultiApiStore(schema, config = {}) {
 		ensureValidUpdateResource(schema, resource, validator);
 
 		const updateHandler =
-			normalConfig.resources[type]?.handlers?.update?.fetch ??
-			standardHandlers.update;
+			normalConfig.resources[type]?.update?.fetch ?? standardHandlers.update;
 
 		// Clear cache for this resource type when updating
 		cache.clearByType(type, normalConfig, { schema });
@@ -151,8 +139,7 @@ export function createMultiApiStore(schema, config = {}) {
 		ensureValidDeleteResource(schema, resource, validator);
 
 		const deleteHandler =
-			normalConfig.resources[type]?.handlers?.delete?.fetch ??
-			standardHandlers.delete;
+			normalConfig.resources[type]?.delete?.fetch ?? standardHandlers.delete;
 
 		// Clear cache for this resource type when deleting
 		cache.clearByType(type, normalConfig, { schema });

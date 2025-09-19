@@ -67,7 +67,7 @@ The library includes several performance optimizations out of the box:
 // Default: Correctness-first approach
 const store = createMultiApiStore(schema, {
   resources: {
-    users: { handlers: { get: { fetch: fetchUsers } } },
+    users: { handlers: { query: { fetch: fetchUsers } } },
   },
 });
 
@@ -117,16 +117,14 @@ const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
       handlers: {
-        get: {
+        query: {
           fetch: async (context) => {
             const response = await fetch("/api/skeptics");
             return response.json();
           },
           mappers: {
-            fromApi: {
-              fullName: "name", // Map API's fullName to schema's name
-              yearsInField: "yearsActive", // Map API field names
-            },
+            fullName: "name", // Map API's fullName to schema's name
+            yearsInField: "yearsActive", // Map API field names
           },
         },
         create: {
@@ -152,7 +150,7 @@ const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
       handlers: {
-        get: {
+        query: {
           fetch: async (context) => {
             const response = await fetch("/api/skeptics");
             return response.json();
@@ -226,7 +224,7 @@ const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
       handlers: {
-        get: {
+        query: {
           fetch: async () => {
             const response = await fetch("https://api1.example.com/skeptics");
             return response.json();
@@ -444,7 +442,7 @@ const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
       handlers: {
-        get: {
+        query: {
           fetch: async (context) => {
             // Fetch skeptics from your API
             const response = await fetch("/api/skeptics", {
@@ -468,7 +466,7 @@ const store = createMultiApiStore(schema, {
     },
     investigations: {
       handlers: {
-        get: {
+        query: {
           fetch: async (context) => {
             // Fetch investigations from a different API
             const response = await fetch(
@@ -645,7 +643,7 @@ const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
       handlers: {
-        get: {
+        query: {
           fetch: async () => {
             const response = await fetch("https://api1.example.com/skeptics");
             return response.json();
@@ -655,7 +653,7 @@ const store = createMultiApiStore(schema, {
     },
     investigations: {
       handlers: {
-        get: {
+        query: {
           fetch: async () => {
             const response = await fetch(
               "https://api2.example.com/investigations",
@@ -691,7 +689,7 @@ const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
       handlers: {
-        get: {
+        query: {
           fetch: async (context) => {
             // Use context for filtering, pagination, etc.
             const params = new URLSearchParams();
@@ -712,7 +710,7 @@ const store = createMultiApiStore(schema, {
     },
     investigations: {
       handlers: {
-        get: {
+        query: {
           fetch: async (context) => {
             // Different API with authentication
             const response = await fetch(
@@ -731,7 +729,7 @@ const store = createMultiApiStore(schema, {
     },
     weirdBeliefs: {
       handlers: {
-        get: {
+        query: {
           fetch: async (context) => {
             // Third-party API
             const response = await fetch("https://api3.example.com/beliefs", {
@@ -826,7 +824,7 @@ import {
 const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
-      get: async () => {
+      query: async () => {
         const response = await fetch("https://api1.example.com/skeptics");
         if (!response.ok) {
           throw new Error(`API error: ${response.statusText}`);
@@ -895,15 +893,13 @@ const config: MultiApiStoreConfig = {
   resources: {
     skeptics: {
       handlers: {
-        get: {
+        query: {
           fetch: async (context): Promise<any[]> => {
             const response = await fetch("https://api1.example.com/skeptics");
             return response.json();
           },
           mappers: {
-            fromApi: {
-              fullName: "name", // Map API field to schema field
-            },
+            fullName: "name", // Map API field to schema field
           },
         },
         create: {
@@ -950,7 +946,7 @@ const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
       handlers: {
-        get: {
+        query: {
           fetch: () =>
             fetch("https://api1.example.com/skeptics").then((r) => r.json()),
         },
@@ -958,7 +954,7 @@ const store = createMultiApiStore(schema, {
     },
     investigations: {
       handlers: {
-        get: {
+        query: {
           fetch: () =>
             fetch("https://api2.example.com/investigations").then((r) =>
               r.json(),
@@ -968,7 +964,7 @@ const store = createMultiApiStore(schema, {
     },
     organizations: {
       handlers: {
-        get: {
+        query: {
           fetch: () =>
             fetch("https://api3.example.com/organizations").then((r) =>
               r.json(),
@@ -989,7 +985,7 @@ const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
       handlers: {
-        get: {
+        query: {
           fetch: () =>
             fetch("https://api1.example.com/skeptics").then((r) => r.json()),
         },
@@ -997,23 +993,21 @@ const store = createMultiApiStore(schema, {
     },
     weirdBeliefs: {
       handlers: {
-        get: {
+        query: {
           fetch: () =>
             fetch(`https://api4.example.com/beliefs?key=${API_KEY}`).then((r) =>
               r.json(),
             ),
           mappers: {
-            fromApi: {
-              beliefName: "name",
-              adherentCount: "believersCount",
-            },
+            beliefName: "name",
+            adherentCount: "believersCount",
           },
         },
       },
     },
     investigations: {
       handlers: {
-        get: {
+        query: {
           fetch: () =>
             fetch(`https://api5.example.com/research?key=${RESEARCH_KEY}`).then(
               (r) => r.json(),
@@ -1034,7 +1028,7 @@ const store = createMultiApiStore(schema, {
   resources: {
     skeptics: {
       handlers: {
-        get: {
+        query: {
           fetch: async () => [
             {
               id: "1",

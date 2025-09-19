@@ -56,9 +56,9 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 				// Use special handler if available, otherwise use regular handler
 				const handler =
 					specialHandler?.handler ??
-					stepConfig.handlers?.get?.fetch ??
-					stepConfig.handlers?.get ??
-					standardHandlers.get;
+					stepConfig.query?.fetch ??
+					stepConfig.query ??
+					standardHandlers.query;
 				const response = await handler(finishedCtx);
 				const data = await handleFetchResponse(response);
 
@@ -68,10 +68,10 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 						: Array.isArray(data)
 							? data
 							: [data];
-				const mapper = specialHandler?.handler
-					? (x) => x
-					: (stepConfig.handlers?.get?.map ?? ((x) => x));
-				const mapped = asArray.map(mapper);
+				const mapper = stepConfig.query?.map;
+				const mapped = mapper
+					? asArray.map((resource) => mapper(resource, finishedCtx))
+					: asArray;
 				return createGraphFromResources(schema, query.type, mapped);
 			};
 

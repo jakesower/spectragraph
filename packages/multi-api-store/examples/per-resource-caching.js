@@ -49,7 +49,7 @@ const config = {
   resources: {
     // Simple collection caching (like organizations-api.js)
     organizations: {
-      get: async () => {
+      query: async () => {
         const response = await fetch('/api/organizations');
         return response.json();
       },
@@ -58,7 +58,7 @@ const config = {
 
     // Collection caching with data transformation (like fires-api.js)  
     fires: {
-      get: async () => {
+      query: async () => {
         const response = await fetch('/api/fires');
         const data = await response.json();
         return data.fires.map(fire => ({ ...fire, transformed: true }));
@@ -68,7 +68,7 @@ const config = {
 
     // Individual resource caching (like assets-api.js)
     assets: {
-      get: async (query, context) => {
+      query: async (query, context) => {
         if (!query.id) {
           throw new Error('Assets can only be loaded by ID');
         }
@@ -91,7 +91,7 @@ const config = {
 
     // Parent-context caching (like fire-updates-api.js)
     fireUpdates: {
-      get: async (query, context) => {
+      query: async (query, context) => {
         const fireId = context.parentQuery.id;
         const response = await fetch(`/api/fires/${fireId}/fire-updates`);
         return response.json();
@@ -101,7 +101,7 @@ const config = {
 
     // Organization-scoped caching (like exposures-api.js)
     exposures: {
-      get: async (query, context) => {
+      query: async (query, context) => {
         const { organizationIds = [] } = context;
         const exposuresByOrg = await Promise.all(
           organizationIds.map(async (orgId) => {

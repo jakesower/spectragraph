@@ -4,7 +4,7 @@ import skepticismSchema from "./fixtures/skepticism.schema.json";
 
 describe("createMultiApiStore", () => {
 	it("supports forceRefresh to clear cache and fetch fresh data", async () => {
-		const mockGet = vi
+		const mockQuery = vi
 			.fn()
 			.mockResolvedValueOnce([{ id: "1", name: "First Call" }])
 			.mockResolvedValueOnce([{ id: "1", name: "Second Call" }]);
@@ -12,7 +12,7 @@ describe("createMultiApiStore", () => {
 		const config = {
 			cache: { enabled: true, defaultTTL: 60000 },
 			resources: {
-				skeptics: { handlers: { get: { fetch: mockGet } } },
+				skeptics: { query: { fetch: mockQuery } },
 			},
 		};
 
@@ -33,7 +33,7 @@ describe("createMultiApiStore", () => {
 		// Call 4: Should now use the refreshed cache
 		const result4 = await store.query({ type: "skeptics", select: ["name"] });
 
-		expect(mockGet).toHaveBeenCalledTimes(2); // Call 1 + call 3 (force refresh)
+		expect(mockQuery).toHaveBeenCalledTimes(2); // Call 1 + call 3 (force refresh)
 		expect(result1[0].name).toBe("First Call");
 		expect(result2[0].name).toBe("First Call"); // Cached from call 1
 		expect(result3[0].name).toBe("Second Call"); // Fresh fetch due to force refresh
@@ -41,7 +41,7 @@ describe("createMultiApiStore", () => {
 	});
 
 	it("queries skeptics with mocked get handler", async () => {
-		const mockGet = vi.fn().mockResolvedValue([
+		const mockQuery = vi.fn().mockResolvedValue([
 			{
 				id: "1",
 				name: "James Randi",
@@ -55,10 +55,8 @@ describe("createMultiApiStore", () => {
 			specialHandlers: [],
 			resources: {
 				skeptics: {
-					handlers: {
-						get: {
-							fetch: mockGet,
-						},
+					query: {
+						fetch: mockQuery,
 					},
 				},
 			},
@@ -71,7 +69,7 @@ describe("createMultiApiStore", () => {
 			select: ["name", "specialty"],
 		});
 
-		expect(mockGet).toHaveBeenCalledWith(
+		expect(mockQuery).toHaveBeenCalledWith(
 			expect.objectContaining({
 				query: {
 					type: "skeptics",
@@ -90,7 +88,7 @@ describe("createMultiApiStore", () => {
 	});
 
 	it("queries skeptics with mappers", async () => {
-		const mockGet = vi.fn().mockResolvedValue([
+		const mockQuery = vi.fn().mockResolvedValue([
 			{
 				id: "1",
 				moniker: "James Randi",
@@ -104,15 +102,11 @@ describe("createMultiApiStore", () => {
 			specialHandlers: [],
 			resources: {
 				skeptics: {
-					handlers: {
-						get: {
-							fetch: mockGet,
-							mappers: {
-								fromApi: {
-									name: "moniker",
-									yearsActive: (res) => Math.round(res.decadesActive / 10),
-								},
-							},
+					query: {
+						fetch: mockQuery,
+						mappers: {
+							name: "moniker",
+							yearsActive: (res) => Math.round(res.decadesActive / 10),
 						},
 					},
 				},
@@ -126,7 +120,7 @@ describe("createMultiApiStore", () => {
 			select: ["name", "specialty"],
 		});
 
-		expect(mockGet).toHaveBeenCalledWith(
+		expect(mockQuery).toHaveBeenCalledWith(
 			expect.objectContaining({
 				query: {
 					type: "skeptics",
@@ -171,17 +165,13 @@ describe("createMultiApiStore", () => {
 			specialHandlers: [],
 			resources: {
 				skeptics: {
-					handlers: {
-						get: {
-							fetch: mockSkepticsGet,
-						},
+					query: {
+						fetch: mockSkepticsGet,
 					},
 				},
 				investigations: {
-					handlers: {
-						get: {
-							fetch: mockInvestigationsGet,
-						},
+					query: {
+						fetch: mockInvestigationsGet,
 					},
 				},
 			},
@@ -255,21 +245,15 @@ describe("createMultiApiStore", () => {
 			specialHandlers: [],
 			resources: {
 				skeptics: {
-					handlers: {
-						get: {
-							fetch: mockSkepticsGet,
-						},
+					query: {
+						fetch: mockSkepticsGet,
 					},
 				},
 				investigations: {
-					handlers: {
-						get: {
-							fetch: mockInvestigationsGet,
-							mappers: {
-								fromApi: {
-									investigator: "investigator_id",
-								},
-							},
+					query: {
+						fetch: mockInvestigationsGet,
+						mappers: {
+							investigator: "investigator_id",
 						},
 					},
 				},
@@ -357,17 +341,13 @@ describe("createMultiApiStore", () => {
 			],
 			resources: {
 				skeptics: {
-					handlers: {
-						get: {
-							fetch: mockSkepticsGet,
-						},
+					query: {
+						fetch: mockSkepticsGet,
 					},
 				},
 				investigations: {
-					handlers: {
-						get: {
-							fetch: mockInvestigationsGet,
-						},
+					query: {
+						fetch: mockInvestigationsGet,
 					},
 				},
 			},
@@ -418,13 +398,11 @@ describe("createMultiApiStore", () => {
 			const config = {
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: vi.fn(),
-							},
-							create: {
-								fetch: mockCreate,
-							},
+						query: {
+							fetch: vi.fn(),
+						},
+						create: {
+							fetch: mockCreate,
 						},
 					},
 				},
@@ -462,7 +440,7 @@ describe("createMultiApiStore", () => {
 				// No baseURL
 				resources: {
 					skeptics: {
-						get: vi.fn(),
+						query: vi.fn(),
 						// no create handler - should use standard handler
 					},
 				},
@@ -491,13 +469,11 @@ describe("createMultiApiStore", () => {
 			const config = {
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: vi.fn(),
-							},
-							update: {
-								fetch: mockUpdate,
-							},
+						query: {
+							fetch: vi.fn(),
+						},
+						update: {
+							fetch: mockUpdate,
 						},
 					},
 				},
@@ -539,13 +515,11 @@ describe("createMultiApiStore", () => {
 			const config = {
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: vi.fn(),
-							},
-							delete: {
-								fetch: mockDelete,
-							},
+						query: {
+							fetch: vi.fn(),
+						},
+						delete: {
+							fetch: mockDelete,
 						},
 					},
 				},
@@ -580,7 +554,7 @@ describe("createMultiApiStore", () => {
 
 	describe("Caching", () => {
 		it("caches query results when caching is enabled", async () => {
-			const mockGet = vi
+			const mockQuery = vi
 				.fn()
 				.mockResolvedValueOnce([{ id: "1", name: "James Randi" }])
 				.mockResolvedValueOnce([{ id: "2", name: "Different Data" }]);
@@ -592,10 +566,8 @@ describe("createMultiApiStore", () => {
 				},
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: mockGet,
-							},
+						query: {
+							fetch: mockQuery,
 						},
 					},
 				},
@@ -610,17 +582,17 @@ describe("createMultiApiStore", () => {
 
 			// First call should hit the API
 			const result1 = await store.query(query);
-			expect(mockGet).toHaveBeenCalledTimes(1);
+			expect(mockQuery).toHaveBeenCalledTimes(1);
 			expect(result1).toEqual([{ name: "James Randi" }]);
 
 			// Second call should use cache
 			const result2 = await store.query(query);
-			expect(mockGet).toHaveBeenCalledTimes(1); // Still 1, not called again
+			expect(mockQuery).toHaveBeenCalledTimes(1); // Still 1, not called again
 			expect(result2).toEqual([{ name: "James Randi" }]);
 		});
 
 		it("does not cache when caching is disabled", async () => {
-			const mockGet = vi
+			const mockQuery = vi
 				.fn()
 				.mockResolvedValueOnce([{ id: "1", name: "James Randi" }])
 				.mockResolvedValueOnce([{ id: "1", name: "James Randi" }]);
@@ -631,10 +603,8 @@ describe("createMultiApiStore", () => {
 				},
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: mockGet,
-							},
+						query: {
+							fetch: mockQuery,
 						},
 					},
 				},
@@ -649,15 +619,15 @@ describe("createMultiApiStore", () => {
 
 			// First call
 			await store.query(query);
-			expect(mockGet).toHaveBeenCalledTimes(1);
+			expect(mockQuery).toHaveBeenCalledTimes(1);
 
 			// Second call should hit API again
 			await store.query(query);
-			expect(mockGet).toHaveBeenCalledTimes(2);
+			expect(mockQuery).toHaveBeenCalledTimes(2);
 		});
 
 		it("clears cache when creating a resource", async () => {
-			const mockGet = vi
+			const mockQuery = vi
 				.fn()
 				.mockResolvedValue([{ id: "1", name: "James Randi" }]);
 			const mockCreate = vi.fn().mockResolvedValue({
@@ -672,13 +642,11 @@ describe("createMultiApiStore", () => {
 				},
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: mockGet,
-							},
-							create: {
-								fetch: mockCreate,
-							},
+						query: {
+							fetch: mockQuery,
+						},
+						create: {
+							fetch: mockCreate,
 						},
 					},
 				},
@@ -693,11 +661,11 @@ describe("createMultiApiStore", () => {
 
 			// Query first to populate cache
 			await store.query(query);
-			expect(mockGet).toHaveBeenCalledTimes(1);
+			expect(mockQuery).toHaveBeenCalledTimes(1);
 
 			// Query again should use cache (verify caching is working)
 			await store.query(query);
-			expect(mockGet).toHaveBeenCalledTimes(1); // Still 1, should use cache
+			expect(mockQuery).toHaveBeenCalledTimes(1); // Still 1, should use cache
 
 			// Create a resource (should clear cache)
 			await store.create({
@@ -707,7 +675,7 @@ describe("createMultiApiStore", () => {
 
 			// Query again should hit API (cache was cleared)
 			await store.query(query);
-			expect(mockGet).toHaveBeenCalledTimes(2);
+			expect(mockQuery).toHaveBeenCalledTimes(2);
 		});
 	});
 });
@@ -1020,10 +988,8 @@ describe("handler tests", () => {
 				middleware: [badMiddleware],
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
-							},
+						query: {
+							fetch: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
 						},
 					},
 				},
@@ -1051,10 +1017,8 @@ describe("handler tests", () => {
 				middleware: [badMiddleware],
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
-							},
+						query: {
+							fetch: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
 						},
 					},
 				},
@@ -1082,10 +1046,8 @@ describe("handler tests", () => {
 				middleware: [badMiddleware],
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
-							},
+						query: {
+							fetch: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
 						},
 					},
 				},
@@ -1110,10 +1072,8 @@ describe("handler tests", () => {
 				middleware: [badMiddleware],
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
-							},
+						query: {
+							fetch: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
 						},
 					},
 				},
@@ -1132,10 +1092,8 @@ describe("handler tests", () => {
 			const config = {
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: vi.fn().mockRejectedValue(resourceError),
-							},
+						query: {
+							fetch: vi.fn().mockRejectedValue(resourceError),
 						},
 					},
 				},

@@ -420,4 +420,77 @@ describe("queryTree core", () => {
 			expect(err.message).not.toMatch("circular structure");
 		}
 	});
+
+	it("allows missing refs in array relationships when allowMissingRefs is true", () => {
+		const graphWithMissingRef = {
+			...careBearData,
+			homes: {
+				...careBearData.homes,
+				1: {
+					...careBearData.homes[1],
+					relationships: {
+						residents: [
+							{ type: "bears", id: "1" },
+							{ type: "bears", id: "999" }, // missing bear
+							{ type: "bears", id: "2" },
+						],
+					},
+				},
+			},
+		};
+
+		const query = {
+			type: "homes",
+			id: "1",
+			select: {
+				residents: { select: ["name"] },
+			},
+		};
+
+		const result = queryGraph(careBearSchema, query, graphWithMissingRef, {
+			allowMissingRefs: true,
+		});
+
+		expect(result).toEqual({
+			residents: [
+				{ name: "Tenderheart Bear" },
+				{ name: "Cheer Bear" },
+				// missing ref is filtered out completely
+			],
+		});
+	});
+
+	it("allows missing refs in single relationships when allowMissingRefs is true", () => {
+		const graphWithMissingRef = {
+			...careBearData,
+			bears: {
+				...careBearData.bears,
+				1: {
+					...careBearData.bears[1],
+					relationships: {
+						...careBearData.bears[1].relationships,
+						home: { type: "homes", id: "999" }, // missing home
+					},
+				},
+			},
+		};
+
+		const query = {
+			type: "bears",
+			id: "1",
+			select: {
+				name: "name",
+				home: { select: ["name"] },
+			},
+		};
+
+		const result = queryGraph(careBearSchema, query, graphWithMissingRef, {
+			allowMissingRefs: true,
+		});
+
+		expect(result).toEqual({
+			name: "Tenderheart Bear",
+			home: null, // missing ref becomes null
+		});
+	});
 });
