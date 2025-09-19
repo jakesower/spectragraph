@@ -23,10 +23,7 @@ export interface HandlerConfig {
   /** Response mapping function (Form 2) */
   map?: (response: any) => any;
   /** Mappers configuration for response transformation (Form 3 - preferred) */
-  mappers?: {
-    fromApi?: { [field: string]: string | ((resource: any) => any) };
-    toApi?: { [field: string]: string | ((resource: any) => any) };
-  };
+  mappers?: { [field: string]: string | ((resource: any) => any) };
 }
 
 /**
@@ -165,7 +162,7 @@ export interface MultiApiStore extends Store {
 // Standard handlers for RESTful API operations
 export interface StandardHandlers {
   /** GET handler for fetching resources */
-  get: (context: any) => Promise<Response>;
+  query: (context: any) => Promise<Response>;
   /** POST handler for creating resources */
   create: (resource: CreateResource, context: any) => Promise<Response>;
   /** PATCH handler for updating resources */
@@ -204,32 +201,15 @@ export interface LogMiddleware {
  */
 export function createMultiApiStore(schema: Schema, config?: MultiApiStoreConfig): MultiApiStore;
 
-/**
- * Creates a simple TTL-based cache for multi-api-store with relationship-aware invalidation
- */
-export function createCache(): {
-  withCache: (key: string, fetcher: () => any, options: any) => any;
-  clearByType: (type: string, config: any, options?: any) => void;
-  clear: () => void;
-  clearKey: (key: string) => void;
-};
-
-/**
- * Loads all the data needed for a query to run, including its subqueries
- */
-export function loadQueryGraph(rootQuery: NormalRootQuery, storeContext: any): Promise<Graph>;
-
 // Helper functions
-export function compileFormatter(templates: any, pivot: string, keys: string[]): (vars: any) => string;
-export function compileWhereFormatter(templates: any): (vars: any) => string;
-export function compileOrderFormatter(templates: any): (vars: any) => string;
-export function compileResourceMappers(schema: Schema, type: string, mappers: any): (resource: any) => any;
-export function buildAsyncMiddlewarePipe(middleware: MiddlewareFunction[]): (val: any) => any;
-export function handleFetchResponse(response: Response | any): Promise<any>;
-
-// Standard handlers and default configuration
-export const standardHandlers: StandardHandlers;
-export const defaultConfig: MultiApiStoreConfig;
+/**
+ * Handles Response objects from handlers, extracting data with error handling.
+ * @param response - Response object or direct data
+ * @param fallbackValue - Value to return for empty successful responses
+ * @returns Parsed data or original value
+ * @throws When response indicates an error status
+ */
+export function handleResponseData(response: Response | any, fallbackValue?: any): Promise<any>;
 
 // Middleware collections
 export const auth: AuthMiddleware;

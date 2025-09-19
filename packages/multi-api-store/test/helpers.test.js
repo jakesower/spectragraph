@@ -3,12 +3,13 @@ import {
 	compileFormatter,
 	compileWhereFormatter,
 	compileOrderFormatter,
-	compileResourceMappers,
 	buildAsyncMiddlewarePipe,
 	handleFetchResponse,
+	normalizeConfig,
 } from "../src/helpers/helpers.js";
 
-describe("compileFormatter", () => {
+// TODO: decide if we're reviving this function
+describe.skip("compileFormatter", () => {
 	it("compiles templates with variable substitution", () => {
 		const templates = {
 			ascending: "ORDER BY ${attribute} ASC",
@@ -43,7 +44,8 @@ describe("compileFormatter", () => {
 	});
 });
 
-describe("compileWhereFormatter", () => {
+// TODO: decide if we're reviving this function
+describe.skip("compileWhereFormatter", () => {
 	it("creates formatter with expressionName pivot and attribute/value keys", () => {
 		const templates = {
 			$eq: "${attribute} = ${value}",
@@ -60,7 +62,8 @@ describe("compileWhereFormatter", () => {
 	});
 });
 
-describe("compileOrderFormatter", () => {
+// TODO: decide if we're reviving this function
+describe.skip("compileOrderFormatter", () => {
 	it("creates formatter with direction pivot and attribute key", () => {
 		const templates = {
 			asc: "ORDER BY ${attribute} ASC",
@@ -77,113 +80,6 @@ describe("compileOrderFormatter", () => {
 	});
 });
 
-describe("compileResourceMappers", () => {
-	const schema = {
-		resources: {
-			users: {
-				attributes: {
-					name: { type: "string" },
-					email: { type: "string" },
-					age: { type: "number" },
-				},
-				relationships: {
-					posts: { type: "posts", cardinality: "many" },
-				},
-			},
-		},
-	};
-
-	it("uses default mapping when no mapper provided", () => {
-		const mapper = compileResourceMappers(schema, "users", { fromApi: {} });
-		const resource = { name: "John", email: "john@test.com", age: 30 };
-
-		expect(mapper(resource)).toEqual({
-			name: "John",
-			email: "john@test.com",
-			age: 30,
-		});
-	});
-
-	it("applies string mappers", () => {
-		const mappers = {
-			fromApi: {
-				name: "full_name",
-				email: "email_address",
-			},
-		};
-		const mapper = compileResourceMappers(schema, "users", mappers);
-		const resource = {
-			full_name: "John Doe",
-			email_address: "john@test.com",
-			age: 30,
-		};
-
-		expect(mapper(resource)).toEqual({
-			name: "John Doe",
-			email: "john@test.com",
-			age: 30,
-		});
-	});
-
-	it("applies function mappers", () => {
-		const mappers = {
-			fromApi: {
-				name: (res) => res.first_name + " " + res.last_name,
-				age: (res) => parseInt(res.birth_year),
-			},
-		};
-		const mapper = compileResourceMappers(schema, "users", mappers);
-		const resource = {
-			first_name: "John",
-			last_name: "Doe",
-			email: "john@test.com",
-			birth_year: "1990",
-		};
-
-		expect(mapper(resource)).toEqual({
-			name: "John Doe",
-			email: "john@test.com",
-			age: 1990,
-		});
-	});
-
-	it("excludes undefined values from result", () => {
-		const mapper = compileResourceMappers(schema, "users", { fromApi: {} });
-		const resource = { name: "John", email: undefined };
-
-		expect(mapper(resource)).toEqual({
-			name: "John",
-		});
-	});
-
-	it("throws error for invalid mapper type", () => {
-		const mappers = { fromApi: { name: 123 } };
-
-		expect(() => compileResourceMappers(schema, "users", mappers)).toThrow(
-			"mappers must be functions or strings",
-		);
-	});
-
-	it("handles relationships", () => {
-		const mappers = {
-			fromApi: {
-				posts: "post_ids",
-			},
-		};
-		const mapper = compileResourceMappers(schema, "users", mappers);
-		const resource = {
-			name: "John",
-			email: "john@test.com",
-			post_ids: ["1", "2", "3"],
-		};
-
-		expect(mapper(resource)).toEqual({
-			name: "John",
-			email: "john@test.com",
-			posts: ["1", "2", "3"],
-		});
-	});
-});
 
 describe("buildAsyncMiddlewarePipe", () => {
 	it("builds middleware pipeline in reverse order", async () => {
@@ -373,5 +269,344 @@ describe("handleFetchResponse", () => {
 			expect(error.cause.data.details).toBe("Insufficient permissions");
 			expect(error.cause.originalError).toBe(mockResponse);
 		}
+	});
+});
+
+describe("normalizeConfig", () => {
+	const mockSchema = {
+		resources: {
+			users: {
+				attributes: {
+					name: { type: "string" },
+					email: { type: "string" },
+					age: { type: "number" },
+				},
+				relationships: {
+					posts: { type: "posts", cardinality: "many" },
+				},
+			},
+		},
+	};
+
+	describe("store-level configuration", () => {
+		it("passes through non-operation properties unchanged", () => {
+			const config = {
+				cache: { enabled: true },
+				middleware: [],
+				specialHandlers: [],
+				someOtherProperty: "test",
+			};
+
+			const result = normalizeConfig(config);
+
+			expect(result.cache).toEqual({ enabled: true });
+			expect(result.middleware).toEqual([]);
+			expect(result.specialHandlers).toEqual([]);
+			expect(result.someOtherProperty).toBe("test");
+		});
+
+		it("handles empty config", () => {
+			const result = normalizeConfig({});
+			expect(result).toEqual({});
+		});
+
+		it("handles config with no operations", () => {
+			const config = {
+				cache: { enabled: true },
+				baseURL: "https://api.example.com",
+			};
+
+			const result = normalizeConfig(config);
+			expect(result).toEqual(config);
+		});
+	});
+
+	describe("resource-level configuration", () => {
+		it("handles function shorthand", () => {
+			const mockFn = () => {};
+			const result = normalizeConfig({ query: mockFn }, "users", mockSchema);
+
+			expect(result).toEqual({
+				query: { fetch: mockFn },
+			});
+		});
+
+		it("handles operation function shorthand", () => {
+			const mockFn = () => {};
+			const config = { query: mockFn, create: mockFn };
+			const result = normalizeConfig(config, "users", mockSchema);
+
+			expect(result).toEqual({
+				query: { fetch: mockFn },
+				create: { fetch: mockFn },
+			});
+		});
+
+		it("handles full format unchanged when no mappers", () => {
+			const mockFn = () => {};
+			const config = {
+				query: { fetch: mockFn, someOtherProp: "test" },
+				create: { fetch: mockFn },
+				nonOperation: "preserved",
+			};
+			const result = normalizeConfig(config, "users", mockSchema);
+
+			expect(result).toEqual({
+				query: { fetch: mockFn, someOtherProp: "test" },
+				create: { fetch: mockFn },
+				nonOperation: "preserved",
+			});
+		});
+
+		it("compiles mappers when provided", () => {
+			const mockFn = () => {};
+			const config = {
+				query: {
+					fetch: mockFn,
+					mappers: {
+						name: "full_name",
+						age: (res) => parseInt(res.birth_year),
+					},
+				},
+			};
+			const result = normalizeConfig(config, "users", mockSchema);
+
+			expect(result.query.fetch).toBe(mockFn);
+			expect(typeof result.query.map).toBe("function");
+			expect(result.query.mappers).toBeUndefined(); // Should be removed after compilation
+		});
+
+		it("preserves existing map function over mappers", () => {
+			const mockFn = () => {};
+			const existingMapFn = () => ({ mapped: true });
+			const config = {
+				query: {
+					fetch: mockFn,
+					map: existingMapFn,
+					mappers: {
+						name: "full_name",
+					},
+				},
+			};
+			const result = normalizeConfig(config, "users", mockSchema);
+
+			expect(result.query.fetch).toBe(mockFn);
+			expect(result.query.map).toBe(existingMapFn);
+			expect(result.query.mappers).toBeUndefined(); // Should be removed after compilation
+		});
+
+		it("skips mapper compilation when no type provided", () => {
+			const mockFn = () => {};
+			const config = {
+				query: {
+					fetch: mockFn,
+					mappers: {
+						name: "full_name",
+					},
+				},
+			};
+			const result = normalizeConfig(config);
+
+			expect(result.query.fetch).toBe(mockFn);
+			expect(result.query.mappers).toBeUndefined(); // Mappers are always deleted by compileOpMappers
+			expect(result.query.map).toBeUndefined();
+		});
+
+		it("skips mapper compilation when no schema provided", () => {
+			const mockFn = () => {};
+			const config = {
+				query: {
+					fetch: mockFn,
+					mappers: {
+						name: "full_name",
+					},
+				},
+			};
+			const result = normalizeConfig(config, "users", undefined);
+
+			expect(result.query.fetch).toBe(mockFn);
+			expect(result.query.mappers).toBeUndefined(); // Mappers are always deleted by compileOpMappers
+			expect(result.query.map).toBeUndefined();
+		});
+
+		it("handles multiple operations with mixed configurations", () => {
+			const queryFn = () => {};
+			const createFn = () => {};
+			const updateFn = () => {};
+			const config = {
+				query: {
+					fetch: queryFn,
+					mappers: { name: "full_name" },
+				},
+				create: createFn, // Function shorthand
+				update: { fetch: updateFn }, // Object without mappers
+				nonOperation: "preserved",
+			};
+			const result = normalizeConfig(config, "users", mockSchema);
+
+			expect(result.query.fetch).toBe(queryFn);
+			expect(typeof result.query.map).toBe("function");
+			expect(result.create.fetch).toBe(createFn);
+			expect(result.update.fetch).toBe(updateFn);
+			expect(result.nonOperation).toBe("preserved");
+		});
+
+		it("works with compiled mappers", () => {
+			const mockFn = () => {};
+			const config = {
+				query: {
+					fetch: mockFn,
+					mappers: {
+						name: "moniker",
+						age: (res) => Math.round(res.decadesActive / 10),
+					},
+				},
+			};
+			const result = normalizeConfig(config, "users", mockSchema);
+
+			// Test the compiled mapper function
+			const mapper = result.query.map;
+			const testResource = {
+				moniker: "John Doe",
+				email: "john@example.com",
+				decadesActive: 25,
+			};
+
+			const mapped = mapper(testResource);
+			expect(mapped.name).toBe("John Doe");
+			expect(mapped.email).toBe("john@example.com");
+			expect(mapped.age).toBe(3); // Math.round(25 / 10)
+		});
+
+		describe("compileResourceMappers behavior", () => {
+			it("uses default mapping when no mapper provided", () => {
+				const mockFn = () => {};
+				const config = {
+					query: {
+						fetch: mockFn,
+						mappers: {},
+					},
+				};
+				const result = normalizeConfig(config, "users", mockSchema);
+				const mapper = result.query.map;
+				const resource = { name: "John", email: "john@test.com", age: 30 };
+
+				expect(mapper(resource)).toEqual({
+					name: "John",
+					email: "john@test.com",
+					age: 30,
+				});
+			});
+
+			it("applies string mappers", () => {
+				const mockFn = () => {};
+				const config = {
+					query: {
+						fetch: mockFn,
+						mappers: {
+							name: "full_name",
+							email: "email_address",
+						},
+					},
+				};
+				const result = normalizeConfig(config, "users", mockSchema);
+				const mapper = result.query.map;
+				const resource = {
+					full_name: "John Doe",
+					email_address: "john@test.com",
+					age: 30,
+				};
+
+				expect(mapper(resource)).toEqual({
+					name: "John Doe",
+					email: "john@test.com",
+					age: 30,
+				});
+			});
+
+			it("applies function mappers", () => {
+				const mockFn = () => {};
+				const config = {
+					query: {
+						fetch: mockFn,
+						mappers: {
+							name: (res) => res.first_name + " " + res.last_name,
+							age: (res) => parseInt(res.birth_year),
+						},
+					},
+				};
+				const result = normalizeConfig(config, "users", mockSchema);
+				const mapper = result.query.map;
+				const resource = {
+					first_name: "John",
+					last_name: "Doe",
+					email: "john@test.com",
+					birth_year: "1990",
+				};
+
+				expect(mapper(resource)).toEqual({
+					name: "John Doe",
+					email: "john@test.com",
+					age: 1990,
+				});
+			});
+
+			it("excludes undefined values from result", () => {
+				const mockFn = () => {};
+				const config = {
+					query: {
+						fetch: mockFn,
+						mappers: {},
+					},
+				};
+				const result = normalizeConfig(config, "users", mockSchema);
+				const mapper = result.query.map;
+				const resource = { name: "John", email: undefined };
+
+				expect(mapper(resource)).toEqual({
+					name: "John",
+				});
+			});
+
+			it("throws error for invalid mapper type", () => {
+				const mappers = { name: 123 };
+				const mockFn = () => {};
+				const config = {
+					query: {
+						fetch: mockFn,
+						mappers,
+					},
+				};
+
+				expect(() => normalizeConfig(config, "users", mockSchema)).toThrow(
+					"mappers must be functions or strings",
+				);
+			});
+
+			it("handles relationships", () => {
+				const mockFn = () => {};
+				const config = {
+					query: {
+						fetch: mockFn,
+						mappers: {
+							posts: "post_ids",
+						},
+					},
+				};
+				const result = normalizeConfig(config, "users", mockSchema);
+				const mapper = result.query.map;
+				const resource = {
+					name: "John",
+					email: "john@test.com",
+					post_ids: ["1", "2", "3"],
+				};
+
+				expect(mapper(resource)).toEqual({
+					name: "John",
+					email: "john@test.com",
+					posts: ["1", "2", "3"],
+				});
+			});
+		});
 	});
 });

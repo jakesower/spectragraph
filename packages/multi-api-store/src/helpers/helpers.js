@@ -1,61 +1,59 @@
 import { mapValues } from "es-toolkit";
 
-/**
- * Compiles a template formatter that can substitute variables based on a pivot value.
- *
- * @param {Object} templates - Object mapping pivot values to template strings
- * @param {string} pivot - The property name to use as the pivot for template selection
- * @param {Array<string>} keys - Array of variable names that can be substituted in templates
- * @returns {Function} Formatter function that takes variables and returns formatted string
- */
-export function compileFormatter(templates, pivot, keys) {
-	const fns = mapValues(
-		templates,
-		(template) => (vars) =>
-			keys.reduce((acc, k) => acc.replaceAll(`$\{${k}}`, vars[k]), template),
-	);
-	return (vars) => fns[vars[pivot]](vars);
-}
+// /**
+//  * Compiles a template formatter that can substitute variables based on a pivot value.
+//  *
+//  * @param {Object} templates - Object mapping pivot values to template strings
+//  * @param {string} pivot - The property name to use as the pivot for template selection
+//  * @param {Array<string>} keys - Array of variable names that can be substituted in templates
+//  * @returns {Function} Formatter function that takes variables and returns formatted string
+//  */
+// export function compileFormatter(templates, pivot, keys) {
+// 	const fns = mapValues(
+// 		templates,
+// 		(template) => (vars) =>
+// 			keys.reduce((acc, k) => acc.replaceAll(`$\{${k}}`, vars[k]), template),
+// 	);
+// 	return (vars) => fns[vars[pivot]](vars);
+// }
 
-/**
- * Compiles a WHERE clause formatter for query conditions.
- *
- * @param {Object} templates - Templates for different expression types
- * @returns {Function} Formatter function for WHERE expressions
- */
-export function compileWhereFormatter(templates) {
-	return compileFormatter(templates, "expressionName", ["attribute", "value"]);
-}
+// /**
+//  * Compiles a WHERE clause formatter for query conditions.
+//  *
+//  * @param {Object} templates - Templates for different expression types
+//  * @returns {Function} Formatter function for WHERE expressions
+//  */
+// export function compileWhereFormatter(templates) {
+// 	return compileFormatter(templates, "expressionName", ["attribute", "value"]);
+// }
 
-/**
- * Compiles an ORDER BY formatter for query sorting.
- *
- * @param {Object} templates - Templates for different sort directions
- * @returns {Function} Formatter function for ORDER BY clauses
- */
-export function compileOrderFormatter(templates) {
-	return compileFormatter(templates, "direction", ["attribute"]);
-}
+// /**
+//  * Compiles an ORDER BY formatter for query sorting.
+//  *
+//  * @param {Object} templates - Templates for different sort directions
+//  * @returns {Function} Formatter function for ORDER BY clauses
+//  */
+// export function compileOrderFormatter(templates) {
+// 	return compileFormatter(templates, "direction", ["attribute"]);
+// }
 
 /**
  * Compiles resource mappers for transforming API responses to match schema expectations.
  *
  * @param {import('@spectragraph/core').Schema} schema - Schema definition
  * @param {string} type - Resource type name
- * @param {Object} mappers - Mapping configuration
- * @param {Object} [mappers.fromApi] - Mappings from API response field names to schema field names
+ * @param {Object} mappers - Mappings from API response field names to schema field names
  * @returns {Function} Mapper function that transforms API responses
  */
-export function compileResourceMappers(schema, type, mappers) {
+function compileResourceMappers(schema, type, mappers) {
 	const resSchema = schema.resources[type];
 	const mappable = { ...resSchema.attributes, ...resSchema.relationships };
-	const fromApiMappers = mappers.fromApi ?? {};
 	const fns = mapValues(mappable, (_, name) => {
-		if (name in fromApiMappers) {
-			if (typeof fromApiMappers[name] === "function") {
-				return fromApiMappers[name];
-			} else if (typeof fromApiMappers[name] === "string") {
-				return (val) => val[fromApiMappers[name]];
+		if (name in mappers) {
+			if (typeof mappers[name] === "function") {
+				return mappers[name];
+			} else if (typeof mappers[name] === "string") {
+				return (val) => val[mappers[name]];
 			} else {
 				throw new Error("mappers must be functions or strings");
 			}
@@ -64,11 +62,54 @@ export function compileResourceMappers(schema, type, mappers) {
 		return (val) => val[name];
 	});
 
-	return (resource) =>
+	return (resource, context) =>
 		Object.entries(fns).reduce((acc, [key, fn]) => {
-			const val = fn(resource);
+			const val = fn(resource, context);
 			return val === undefined ? acc : { ...acc, [key]: val };
 		}, {});
+}
+
+/**
+ * Normalizes resource configuration to the internal format
+ * Supports multiple input formats:
+ * 1. Function shorthand: `{ users: fetchFn }` -> `{ users: { query: { fetch: fetchFn } } }`
+ * 2. Operation shorthand: `{ users: { query: fetchFn } }` -> `{ users: { query: { fetch: fetchFn } } }`
+ * 3. Full format: `{ users: { query: { fetch: fn, map: fn } } }` -> unchanged
+ *
+ * @param {Function|Object} config - Resource configuration to normalize
+ * @param {string|null} type - The type of resource
+ * @param {import("@spectragraph/core").Schema} schema - The store's schema
+ * @returns {Object} Normalized configuration with flattened operations
+ */
+export function normalizeConfig(config, type = null, schema = {}) {
+	const operations = ["query", "create", "update", "delete"];
+
+	const compileOpMappers = (opConfig) => {
+		const configured = {
+			...opConfig,
+			...(type && opConfig.mappers && schema?.resources?.[type]
+				? opConfig.map
+					? { map: opConfig.map }
+					: { map: compileResourceMappers(schema, type, opConfig.mappers) }
+				: {}),
+		};
+		delete configured.mappers;
+		return configured;
+	};
+
+	return operations.reduce(
+		(acc, op) =>
+			config[op]
+				? {
+						...acc,
+						[op]:
+							typeof config[op] === "function"
+								? { fetch: config[op] }
+								: compileOpMappers(config[op]),
+					}
+				: acc,
+		config,
+	);
 }
 
 /**

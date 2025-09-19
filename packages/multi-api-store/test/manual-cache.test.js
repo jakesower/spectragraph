@@ -54,39 +54,36 @@ describe("Manual Cache Mode", () => {
 			resources: {
 				evidence: {
 					cache: { manual: true }, // Enable manual caching for evidence
-					handlers: {
-						get: {
-							fetch: async (ctx) => {
-								const { categoryIds, withCache } = ctx;
+					query: {
+						fetch: async (ctx) => {
+							const { categoryIds, withCache } = ctx;
 
-								// Fetch evidence for each conspiracy category with manual caching
-								const evidenceByCategory = await Promise.all(
-									categoryIds.map((categoryId) =>
-										withCache(`allEvidence-${categoryId}`, async () => {
-											if (categoryId === "space") return fetchConspiracy1();
-											if (categoryId === "government")
-												{return fetchConspiracy2();}
-											return [];
-										}),
-									),
-								);
+							// Fetch evidence for each conspiracy category with manual caching
+							const evidenceByCategory = await Promise.all(
+								categoryIds.map((categoryId) =>
+									withCache(`allEvidence-${categoryId}`, async () => {
+										if (categoryId === "space") return fetchConspiracy1();
+										if (categoryId === "government") {
+											return fetchConspiracy2();
+										}
+										return [];
+									}),
+								),
+							);
 
-								return evidenceByCategory.flat();
-							},
+							return evidenceByCategory.flat();
 						},
 					},
 				},
 				theories: {
-					handlers: {
-						get: {
-							fetch: async () => [
-								{
-									id: "theory1",
-									title: "Auto Cached Theory",
-									category: "space",
-								},
-							],
-						},
+					query: {
+						fetch: async () => [
+							{
+								id: "theory1",
+								title: "Auto Cached Theory",
+								category: "space",
+							},
+						],
 					},
 				},
 			},
@@ -146,22 +143,18 @@ describe("Manual Cache Mode", () => {
 			resources: {
 				theories: {
 					// Automatic caching
-					handlers: {
-						get: {
-							fetch: theoryHandler,
-						},
+					query: {
+						fetch: theoryHandler,
 					},
 				},
 				sources: {
 					cache: { manual: true }, // Manual caching
-					handlers: {
-						get: {
-							fetch: async (ctx) => {
-								const { withCache, query } = ctx;
+					query: {
+						fetch: async (ctx) => {
+							const { withCache, query } = ctx;
 
-								// Manual cache control for sources
-								return withCache(`source-${query.id}`, manualHandler);
-							},
+							// Manual cache control for sources
+							return withCache(`source-${query.id}`, manualHandler);
 						},
 					},
 				},
@@ -194,11 +187,9 @@ describe("Manual Cache Mode", () => {
 			cache: { enabled: true },
 			resources: {
 				sources: {
-					handlers: {
-						get: {
-							fetch: async () => {
-								throw new Error("Should not be called");
-							},
+					query: {
+						fetch: async () => {
+							throw new Error("Should not be called");
 						},
 					},
 				},
@@ -255,18 +246,16 @@ describe("Manual Cache Mode", () => {
 			cache: { enabled: true },
 			resources: {
 				theories: {
-					handlers: {
-						get: {
-							fetch: async (ctx) => {
-								receivedContext = ctx;
-								return [
-									{
-										id: "theory1",
-										title: "Government Mind Control",
-										category: "psychology",
-									},
-								];
-							},
+					query: {
+						fetch: async (ctx) => {
+							receivedContext = ctx;
+							return [
+								{
+									id: "theory1",
+									title: "Government Mind Control",
+									category: "psychology",
+								},
+							];
 						},
 					},
 				},

@@ -114,7 +114,7 @@ describe("retry.exponential middleware", () => {
 				},
 			});
 
-			const mockGet = vi
+			const mockQuery = vi
 				.fn()
 				.mockRejectedValueOnce(gatewayTimeout)
 				.mockRejectedValueOnce(gatewayTimeout)
@@ -133,10 +133,8 @@ describe("retry.exponential middleware", () => {
 				middleware: [retry.exponential({ backoffFn })],
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: mockGet,
-							},
+						query: {
+							fetch: mockQuery,
 						},
 					},
 				},
@@ -149,7 +147,7 @@ describe("retry.exponential middleware", () => {
 				select: ["name", "specialty"],
 			});
 
-			expect(mockGet).toHaveBeenCalledTimes(3);
+			expect(mockQuery).toHaveBeenCalledTimes(3);
 			expect(result).toEqual([
 				{
 					name: "James Randi",
@@ -166,17 +164,15 @@ describe("retry.exponential middleware", () => {
 				},
 			});
 
-			const mockGet = vi.fn().mockRejectedValue(serverError);
+			const mockQuery = vi.fn().mockRejectedValue(serverError);
 
 			const config = {
 				specialHandlers: [],
 				middleware: [retry.exponential({ backoffFn })],
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: mockGet,
-							},
+						query: {
+							fetch: mockQuery,
 						},
 					},
 				},
@@ -191,7 +187,7 @@ describe("retry.exponential middleware", () => {
 				}),
 			).rejects.toThrow();
 
-			expect(mockGet).toHaveBeenCalledTimes(4); // 1 initial + 3 retries
+			expect(mockQuery).toHaveBeenCalledTimes(4); // 1 initial + 3 retries
 		});
 	});
 });

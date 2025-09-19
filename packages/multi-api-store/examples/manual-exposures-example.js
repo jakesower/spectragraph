@@ -90,7 +90,7 @@ const config = {
       cache: { manual: true },
       
       // Exact replication of redzone-store exposures-api.js
-      get: async (query, context) => {
+      query: async (query, context) => {
         const { organizationIds = [], withCache } = context;
 
         // This is the EXACT pattern from redzone-store exposures-api.js

@@ -6,8 +6,8 @@ import skepticismSchema from "../fixtures/skepticism.schema.json";
 describe("auth.bearerToken middleware", () => {
 	describe("in isolation", () => {
 		it("should add Bearer token to Authorization header", () => {
-			const mockGetToken = vi.fn().mockReturnValue("test-token-123");
-			const middleware = auth.bearerToken(mockGetToken);
+			const mockQueryToken = vi.fn().mockReturnValue("test-token-123");
+			const middleware = auth.bearerToken(mockQueryToken);
 
 			const mockNext = vi.fn();
 			const ctx = {
@@ -19,7 +19,7 @@ describe("auth.bearerToken middleware", () => {
 
 			middleware(ctx, mockNext);
 
-			expect(mockGetToken).toHaveBeenCalledOnce();
+			expect(mockQueryToken).toHaveBeenCalledOnce();
 			expect(mockNext).toHaveBeenCalledWith({
 				...ctx,
 				request: {
@@ -32,8 +32,8 @@ describe("auth.bearerToken middleware", () => {
 		});
 
 		it("should overwrite existing Authorization header", () => {
-			const mockGetToken = vi.fn().mockReturnValue("new-token");
-			const middleware = auth.bearerToken(mockGetToken);
+			const mockQueryToken = vi.fn().mockReturnValue("new-token");
+			const middleware = auth.bearerToken(mockQueryToken);
 
 			const mockNext = vi.fn();
 			const ctx = {
@@ -60,10 +60,10 @@ describe("auth.bearerToken middleware", () => {
 		});
 
 		it("should handle getToken function that throws", () => {
-			const mockGetToken = vi.fn().mockImplementation(() => {
+			const mockQueryToken = vi.fn().mockImplementation(() => {
 				throw new Error("Token retrieval failed");
 			});
-			const middleware = auth.bearerToken(mockGetToken);
+			const middleware = auth.bearerToken(mockQueryToken);
 
 			const mockNext = vi.fn();
 			const ctx = {
@@ -80,7 +80,7 @@ describe("auth.bearerToken middleware", () => {
 
 	describe("in examples", () => {
 		it("queries skeptics with auth token", async () => {
-			const mockGet = vi.fn().mockResolvedValue([
+			const mockQuery = vi.fn().mockResolvedValue([
 				{
 					id: "1",
 					name: "James Randi",
@@ -95,10 +95,8 @@ describe("auth.bearerToken middleware", () => {
 				middleware: [auth.bearerToken(() => "ralphie voice: I'm a middleware")],
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: mockGet,
-							},
+						query: {
+							fetch: mockQuery,
 						},
 					},
 				},
@@ -112,7 +110,7 @@ describe("auth.bearerToken middleware", () => {
 			});
 
 			// Verify the Authorization header was added by the middleware
-			expect(mockGet).toHaveBeenCalledWith(
+			expect(mockQuery).toHaveBeenCalledWith(
 				expect.objectContaining({
 					request: expect.objectContaining({
 						headers: expect.objectContaining({
@@ -135,8 +133,8 @@ describe("auth.bearerToken middleware", () => {
 describe("auth.queryParam middleware", () => {
 	describe("in isolation", () => {
 		it("should add token to queryParams with default param name", () => {
-			const mockGetToken = vi.fn().mockReturnValue("test-token-123");
-			const middleware = auth.queryParam(mockGetToken);
+			const mockQueryToken = vi.fn().mockReturnValue("test-token-123");
+			const middleware = auth.queryParam(mockQueryToken);
 
 			const mockNext = vi.fn();
 			const ctx = {
@@ -148,7 +146,7 @@ describe("auth.queryParam middleware", () => {
 
 			middleware(ctx, mockNext);
 
-			expect(mockGetToken).toHaveBeenCalledOnce();
+			expect(mockQueryToken).toHaveBeenCalledOnce();
 			expect(mockNext).toHaveBeenCalledWith({
 				...ctx,
 				request: {
@@ -158,8 +156,8 @@ describe("auth.queryParam middleware", () => {
 		});
 
 		it("should add token to queryParams with custom param name", () => {
-			const mockGetToken = vi.fn().mockReturnValue("custom-token-456");
-			const middleware = auth.queryParam(mockGetToken, "api_key");
+			const mockQueryToken = vi.fn().mockReturnValue("custom-token-456");
+			const middleware = auth.queryParam(mockQueryToken, "api_key");
 
 			const mockNext = vi.fn();
 			const ctx = {
@@ -180,10 +178,10 @@ describe("auth.queryParam middleware", () => {
 		});
 
 		it("should handle getToken function that throws", () => {
-			const mockGetToken = vi.fn().mockImplementation(() => {
+			const mockQueryToken = vi.fn().mockImplementation(() => {
 				throw new Error("Token retrieval failed");
 			});
-			const middleware = auth.queryParam(mockGetToken);
+			const middleware = auth.queryParam(mockQueryToken);
 
 			const mockNext = vi.fn();
 			const ctx = {
@@ -200,7 +198,7 @@ describe("auth.queryParam middleware", () => {
 
 	describe("in examples", () => {
 		it("queries skeptics with auth query param", async () => {
-			const mockGet = vi.fn().mockResolvedValue([
+			const mockQuery = vi.fn().mockResolvedValue([
 				{
 					id: "1",
 					name: "James Randi",
@@ -215,10 +213,8 @@ describe("auth.queryParam middleware", () => {
 				middleware: [auth.queryParam(() => "secret-api-key", "access_token")],
 				resources: {
 					skeptics: {
-						handlers: {
-							get: {
-								fetch: mockGet,
-							},
+						query: {
+							fetch: mockQuery,
 						},
 					},
 				},
@@ -231,7 +227,7 @@ describe("auth.queryParam middleware", () => {
 				select: ["name", "specialty"],
 			});
 
-			expect(mockGet).toHaveBeenCalledWith(
+			expect(mockQuery).toHaveBeenCalledWith(
 				expect.objectContaining({
 					request: expect.objectContaining({
 						queryParamsStr: "?access_token=secret-api-key",
