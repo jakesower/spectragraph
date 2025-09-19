@@ -5,7 +5,7 @@ describe("createCache", () => {
 	const mockConfig = {
 		cache: {
 			enabled: true,
-			defaultTTL: 5 * 60 * 1000,
+			ttl: 5 * 60 * 1000,
 			generateKey: (query) => `${query.type}-${query.id ?? ""}`,
 			dependsOnTypes: (query) => [query.type],
 		},
@@ -110,7 +110,7 @@ describe("createCache", () => {
 		const cache = createCache();
 		const fetcher = vi.fn().mockReturnValue("result");
 		const shortTTLConfig = {
-			cache: { ...mockConfig.cache, defaultTTL: 10 }, // 10ms TTL
+			cache: { ...mockConfig.cache, ttl: 10 }, // 10ms TTL
 		};
 
 		cache.withCache("key1", fetcher, { config: shortTTLConfig });

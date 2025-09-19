@@ -44,7 +44,7 @@ const schema = {
 const config = {
   cache: {
     enabled: true,
-    defaultTTL: 5 * 60 * 1000, // 5 minutes default
+    ttl: 5 * 60 * 1000, // 5 minutes default
   },
   resources: {
     // Simple collection caching (like organizations-api.js)

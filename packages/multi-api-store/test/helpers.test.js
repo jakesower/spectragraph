@@ -80,7 +80,6 @@ describe.skip("compileOrderFormatter", () => {
 	});
 });
 
-
 describe("buildAsyncMiddlewarePipe", () => {
 	it("builds middleware pipeline in reverse order", async () => {
 		const calls = [];
@@ -408,7 +407,7 @@ describe("normalizeConfig", () => {
 			const result = normalizeConfig(config);
 
 			expect(result.query.fetch).toBe(mockFn);
-			expect(result.query.mappers).toBeUndefined(); // Mappers are always deleted by compileOpMappers
+			expect(result.query.mappers).toBeUndefined();
 			expect(result.query.map).toBeUndefined();
 		});
 
@@ -425,7 +424,7 @@ describe("normalizeConfig", () => {
 			const result = normalizeConfig(config, "users", undefined);
 
 			expect(result.query.fetch).toBe(mockFn);
-			expect(result.query.mappers).toBeUndefined(); // Mappers are always deleted by compileOpMappers
+			expect(result.query.mappers).toBeUndefined();
 			expect(result.query.map).toBeUndefined();
 		});
 

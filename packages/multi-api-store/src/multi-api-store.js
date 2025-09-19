@@ -14,31 +14,22 @@ import { mapValues } from "es-toolkit";
 import { loadQueryGraph } from "./load-query-graph.js";
 import { createCache } from "./cache.js";
 import { standardHandlers, defaultConfig } from "./default-config.js";
-import {
-	compileResourceMappers,
-	handleResponseData,
-	normalizeConfig,
-	normalizeResourceConfig,
-} from "./helpers/helpers.js";
+import { handleResponseData, normalizeConfig } from "./helpers/helpers.js";
+
+/**
+ * @typedef {Object} StoreContext
+ * @property {import('@spectragraph/core').Schema} schema - The schema defining resource types and relationships
+ * @property {import('./default-config.js').NormalConfig} config - Normalized store configuration
+ * @property {Function} withCache - Cache wrapper function
+ * @property {Object} cache - Cache instance with methods for clearing and managing cache entries
+ */
 
 /**
  * Creates a multi-API store that can delegate operations to different API handlers.
  * Supports custom handlers, caching, middleware, and relationship-aware cache invalidation.
  *
  * @param {import('@spectragraph/core').Schema} schema - The schema defining resource types and relationships
- * @param {Object} [config={}] - Configuration object
- * @param {Object} [config.cache] - Cache configuration options
- * @param {boolean} [config.cache.enabled=true] - Whether caching is enabled
- * @param {number} [config.cache.defaultTTL] - Default time-to-live for cache entries in milliseconds
- * @param {Function} [config.cache.dependsOnTypes] - Function to determine which resource types a query depends on
- * @param {Object} [config.resources] - Resource-specific handler configurations
- * @param {Object} [config.resources.*.handlers] - Handler definitions for each operation (get, create, update, delete)
- * @param {Object} [config.resources.*.handlers.*.fetch] - The fetch function for the operation
- * @param {Object|Function} [config.resources.*.handlers.*.map] - Response mapping function or mappers config
- * @param {Array} [config.middleware] - Middleware functions to apply to all requests
- * @param {Array} [config.specialHandlers] - Special handlers that override resource handlers based on conditions
- * @param {string} [config.baseURL] - Base URL for standard HTTP handlers
- * @param {Object} [config.request] - Default request configuration
+ * @param {import('./default-config.js').StoreConfig} [config={}] - Configuration object
  * @returns {import('@spectragraph/core').Store} Store instance with query, create, update, delete, and upsert methods
  */
 export function createMultiApiStore(schema, config = {}) {
@@ -47,12 +38,13 @@ export function createMultiApiStore(schema, config = {}) {
 	// normalize config
 	const normalConfig = normalizeConfig({
 		middleware: [],
-		specialHandlers: [],
 		...config,
+		specialHandlers: config.specialHandlers
+			? config.specialHandlers.map(normalizeConfig)
+			: [],
 		request: {
 			...defaultConfig.request,
 			...config.request,
-			...(config.baseURL && { baseURL: config.baseURL }),
 		},
 		cache: {
 			...defaultConfig.cache,
@@ -67,17 +59,14 @@ export function createMultiApiStore(schema, config = {}) {
 		validator = defaultValidator,
 		selectEngine = defaultSelectEngine,
 		whereEngine = defaultWhereEngine,
-		specialHandlers = [],
 	} = normalConfig;
 
 	const cache = createCache(normalConfig);
 
+	/** @type {StoreContext} */
 	const storeContext = {
 		schema,
 		config: normalConfig,
-		resources: normalConfig.resources,
-		middleware: normalConfig.middleware ?? [],
-		specialHandlers: specialHandlers ?? [],
 		withCache: cache.withCache,
 		cache,
 	};

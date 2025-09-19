@@ -49,7 +49,7 @@ describe("Manual Cache Mode", () => {
 		const config = {
 			cache: {
 				enabled: true,
-				defaultTTL: 60000,
+				ttl: 60000,
 			},
 			resources: {
 				evidence: {
@@ -138,7 +138,7 @@ describe("Manual Cache Mode", () => {
 		const config = {
 			cache: {
 				enabled: true,
-				defaultTTL: 60000,
+				ttl: 60000,
 			},
 			resources: {
 				theories: {
@@ -199,7 +199,7 @@ describe("Manual Cache Mode", () => {
 					test: (query, context) =>
 						query.type === "sources" && context.investigatorIds?.length > 1,
 					cache: { manual: true }, // Manual mode for special handler
-					handler: async (ctx) => {
+					query: async (ctx) => {
 						const { withCache, investigatorIds, query } = ctx;
 
 						// Try each investigator's network until we find the source

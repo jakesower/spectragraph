@@ -98,7 +98,9 @@ runInterfaceTests(
 
 		// Multi-API store delegates to memory store for all operations
 		return createMultiApiStore(schema, {
-			baseURL: "http://test.example.com", // Required for fallback standard handler
+			request: {
+				baseURL: "http://test.example.com", // Required for fallback standard handler
+			},
 			resources,
 		});
 	},

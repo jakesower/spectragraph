@@ -76,10 +76,10 @@ function compileResourceMappers(schema, type, mappers) {
  * 2. Operation shorthand: `{ users: { query: fetchFn } }` -> `{ users: { query: { fetch: fetchFn } } }`
  * 3. Full format: `{ users: { query: { fetch: fn, map: fn } } }` -> unchanged
  *
- * @param {Function|Object} config - Resource configuration to normalize
+ * @param {import('./default-config.js').Config} config - Resource configuration to normalize
  * @param {string|null} type - The type of resource
  * @param {import("@spectragraph/core").Schema} schema - The store's schema
- * @returns {Object} Normalized configuration with flattened operations
+ * @returns {import('../default-config.js').NormalConfig} Normalized configuration with flattened operations
  */
 export function normalizeConfig(config, type = null, schema = {}) {
 	const operations = ["query", "create", "update", "delete"];

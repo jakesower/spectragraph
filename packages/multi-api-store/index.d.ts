@@ -5,6 +5,7 @@ import type {
   Store,
   RootQuery,
   NormalRootQuery,
+  NormalQuery,
   QueryResult,
   CreateResource,
   UpdateResource,
@@ -15,107 +16,172 @@ import type {
 } from "@spectragraph/core";
 
 /**
- * Handler configuration for a specific operation
+ * Resource operation configuration
  */
-export interface HandlerConfig {
-  /** The fetch function that performs the actual operation */
-  fetch: (context: any) => Promise<any> | any;
-  /** Response mapping function (Form 2) */
-  map?: (response: any) => any;
-  /** Mappers configuration for response transformation (Form 3 - preferred) */
-  mappers?: { [field: string]: string | ((resource: any) => any) };
+export interface ResourceOperationConfig {
+  /** Function that actually fetches the resource data. Signature varies by operation type. */
+  fetch?: Function;
+  /** A mapping function applied to each resource after fetching */
+  map?: (apiResource: any, context?: any) => any;
+  /** An object defining mappings for each resource attribute and relationship. Ignored if map is present. */
+  mappers?: { [field: string]: string | Function };
 }
 
 /**
- * Resource configuration with handlers object format
+ * Base configuration interface
  */
-export interface ResourceConfig {
-  /** Cache configuration specific to this resource */
-  cache?: {
-    /** Whether to enable manual cache control for this resource */
-    manual?: boolean;
-    /** Custom TTL for this resource type */
-    defaultTTL?: number;
-  };
-  /** Handler definitions for each operation */
-  handlers?: {
-    get?: HandlerConfig;
-    create?: HandlerConfig;
-    update?: HandlerConfig;
-    delete?: HandlerConfig;
-  };
+export interface Config {
+  /** Config for the cache */
+  cache?: CacheConfig;
+  /** Middleware functions to apply to all requests */
+  middleware?: MiddlewareFunction[];
+  /** Default request configuration */
+  request?: RequestConfig;
+  /** Special handlers that override resource handlers based on conditions */
+  specialHandlers?: SpecialHandler[];
+  /** Query parameter serialization function */
+  stringifyQueryParams?: (paramArray: Array<{ [key: string]: any }>) => string;
+  /** Fetch and map definitions for query operations */
+  query?: Function | ResourceOperationConfig;
+  /** Fetch and map definitions for create operations */
+  create?: Function | ResourceOperationConfig;
+  /** Fetch and map definitions for update operations */
+  update?: Function | ResourceOperationConfig;
+  /** Fetch and map definitions for delete operations */
+  delete?: Function | ResourceOperationConfig;
 }
 
 /**
  * Special handler that can override resource handlers based on conditions
  */
-export interface SpecialHandler {
+export interface SpecialHandler extends Config {
   /** Test function to determine if this handler should be used */
-  test(query: NormalRootQuery, context: any): boolean;
-  /** The handler function to execute */
-  handler(context: any): Promise<any> | any;
-  /** Cache configuration for this special handler */
-  cache?: {
-    manual?: boolean;
-    defaultTTL?: number;
-  };
+  test(query: any, context: any): boolean;
+  /** The handler function to execute when test passes */
+  handler(context: MiddlewareContext): Response | any | Promise<Response> | Promise<any>;
 }
 
 /**
  * Cache configuration with relationship-aware invalidation
  */
 export interface CacheConfig {
+  /** Function to determine which resource types the query depends on for caching */
+  dependsOnTypes?: (query: any, options?: any) => string[];
   /** Whether caching is enabled */
   enabled?: boolean;
-  /** Whether to use manual cache control */
+  /** Custom cache key generator */
+  generateKey?: (query: any, context?: any) => string;
+  /** Whether to bypass caching */
   manual?: boolean;
-  /** Default time-to-live for cache entries in milliseconds */
-  defaultTTL?: number;
-  /** Function to generate cache keys */
-  generateKey?: (query: NormalRootQuery, context?: any) => string;
-  /** Function to determine which resource types a query depends on for cache invalidation */
-  dependsOnTypes?: (query: NormalRootQuery, options?: { schema?: Schema }) => string[];
+  /** Default TTL for the cache in milliseconds */
+  ttl?: number;
 }
 
 /**
  * Request configuration for standard HTTP handlers
  */
 export interface RequestConfig {
-  /** Base URL for HTTP requests */
+  /** Base URL for standard HTTP handlers */
   baseURL?: string;
-  /** Default headers to include in requests */
-  headers?: { [key: string]: string };
-  /** Default query parameters to include in requests */
+  /** HTTP headers to be sent with the request */
+  headers?: { [key: string]: any };
+  /** Initial query params */
   queryParams?: Array<{ [key: string]: any }>;
+  /** The query string (typically constructed with stringifyQueryParams) */
+  queryParamsStr?: string;
+}
+
+/**
+ * Middleware context passed to middleware functions
+ */
+export interface MiddlewareContext {
+  /** Schema defining resource types and relationships */
+  schema: Schema;
+  /** The current query being processed */
+  query: NormalRootQuery;
+  /** Request configuration for this step */
+  request: RequestConfig;
+  /** Parent query in the hierarchy */
+  parentQuery: NormalQuery | null;
+  /** Full merged configuration for this step */
+  config: FullConfig;
+  /** Cache wrapper function with pre-bound config and query */
+  withCache: Function;
 }
 
 /**
  * Middleware function type
  */
-export type MiddlewareFunction = (context: any, next: (context: any) => Promise<any>) => Promise<any>;
+export type MiddlewareFunction = (context: MiddlewareContext, next: (context: MiddlewareContext) => Promise<any>) => Promise<any>;
 
 /**
- * Configuration for multi-api-store
+ * Normalized configuration (after processing function shorthands)
  */
-export interface MultiApiStoreConfig {
-  /** Resource-specific configurations */
-  resources?: { [resourceType: string]: ResourceConfig };
-  /** Special handlers that override resource handlers based on conditions */
-  specialHandlers?: SpecialHandler[];
-  /** Cache configuration */
+export interface NormalConfig {
+  /** Config for the cache */
   cache?: CacheConfig;
   /** Middleware functions to apply to all requests */
   middleware?: MiddlewareFunction[];
-  /** Base URL for standard HTTP handlers (legacy, use request.baseURL instead) */
-  baseURL?: string;
-  /** Request configuration for standard handlers */
+  /** Default request configuration */
   request?: RequestConfig;
-  /** Custom select expression engine */
-  selectEngine?: SelectExpressionEngine;
-  /** Custom where expression engine */
-  whereEngine?: WhereExpressionEngine;
+  /** Special handlers that override resource handlers based on conditions */
+  specialHandlers?: SpecialHandler[];
   /** Query parameter serialization function */
-  stringifyQueryParams?: (queryParams: Array<{ [key: string]: any }>) => string;
+  stringifyQueryParams?: (paramArray: Array<{ [key: string]: any }>) => string;
+  /** Fetch and map definitions for query operations */
+  query?: ResourceOperationConfig;
+  /** Fetch and map definitions for create operations */
+  create?: ResourceOperationConfig;
+  /** Fetch and map definitions for update operations */
+  update?: ResourceOperationConfig;
+  /** Fetch and map definitions for delete operations */
+  delete?: ResourceOperationConfig;
+}
+
+/**
+ * Full configuration with all required properties
+ */
+export interface FullConfig {
+  /** Config for the cache */
+  cache: CacheConfig;
+  /** Middleware functions to apply to all requests */
+  middleware: MiddlewareFunction[];
+  /** Default request configuration */
+  request: RequestConfig;
+  /** Special handlers that override resource handlers based on conditions */
+  specialHandlers: SpecialHandler[];
+  /** Query parameter serialization function */
+  stringifyQueryParams: (paramArray: Array<{ [key: string]: any }>) => string;
+  /** Fetch and map definitions for query operations */
+  query: ResourceOperationConfig;
+  /** Fetch and map definitions for create operations */
+  create: ResourceOperationConfig;
+  /** Fetch and map definitions for update operations */
+  update: ResourceOperationConfig;
+  /** Fetch and map definitions for delete operations */
+  delete: ResourceOperationConfig;
+}
+
+/**
+ * Store configuration
+ */
+export interface StoreConfig extends Config {
+  /** Resource-specific handler configurations */
+  resources?: { [resourceType: string]: Config };
+}
+
+/**
+ * Store context object
+ */
+export interface StoreContext {
+  /** The schema defining resource types and relationships */
+  schema: Schema;
+  /** Normalized store configuration */
+  config: NormalConfig;
+  /** Cache wrapper function */
+  withCache: Function;
+  /** Cache instance with methods for clearing and managing cache entries */
+  cache: any;
 }
 
 /**
@@ -199,7 +265,7 @@ export interface LogMiddleware {
 /**
  * Creates a new multi-API store instance that aggregates data from multiple API endpoints
  */
-export function createMultiApiStore(schema: Schema, config?: MultiApiStoreConfig): MultiApiStore;
+export function createMultiApiStore(schema: Schema, config?: StoreConfig): MultiApiStore;
 
 // Helper functions
 /**
