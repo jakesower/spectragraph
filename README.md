@@ -7,17 +7,18 @@ A unified, expressive query language for multiple data sources. Query databases,
 ```javascript
 // Same query works across different data sources
 const result = await store.query({
-  type: "users",
+  type: "patrons",
   select: [
     "name",
     "email",
     {
-      posts: [
-        "title",
-        "createdAt",
+      loans: [
+        "dueDate",
+        "renewalCount",
         {
-          comments: [
-            "content",
+          book: [
+            "title",
+            "isbn",
             {
               author: ["name"],
             },
@@ -26,13 +27,75 @@ const result = await store.query({
       ],
     },
   ],
-  where: { active: true },
+  where: { membershipActive: true },
   limit: 10,
 });
 
 // Works with: PostgreSQL, SQLite, in-memory data, REST APIs
 // Handles relationships automatically with request optimization
 ```
+
+## Start Building Today, Deploy Anywhere Tomorrow
+
+SpectraGraph lets you build with real data relationships from day one then deploy to any infrastructure without changing your queries.
+
+### Development to Production in 3 Steps
+
+**1. Start app development immediately with fixtures**
+
+```javascript
+import { createMemoryStore } from "@spectragraph/memory-store";
+
+// Begin building features with realistic data
+const store = createMemoryStore(schema, {
+  data: {
+    patrons: [{ id: "1", name: "Kenji Nakamura", libraryCard: "LIB001" }],
+    books: [{ id: "b1", title: "The Design of Everyday Things", isbn: "978-0465050659" }],
+  },
+});
+```
+
+**2. Build up your store in parallel**
+
+```javascript
+import { createMultiApiStore } from "@spectragraph/postgres-store";
+
+// Zero code changes in your application as you build out your config
+const store = createMultiApiStore(schema, config);
+```
+
+**3. Combine the two**
+
+```javascript
+import { createMultiApiStore } from "@spectragraph/multi-api-store";
+
+// Switch the store over seamlessly, no application changes required
+const store = createMultiApiStore(schema, {
+  resources: {
+    patrons: { handlers: { query: { fetch: () => membershipAPI.getPatrons() } } },
+    books: {
+      handlers: { query: { fetch: () => catalogAPI.getBooks() } },
+    },
+  },
+});
+```
+
+Your queries and application layer stay the same during the entire process, no matter the data layer.
+
+### Why This Matters
+
+- **Unblock parallel development** - App and backend teams work independently
+- **Validate architecture early** - Prove data model before infrastructure complexity
+- **Deploy flexibly** - Frontend aggregation today, backend service tomorrow
+- **Eliminate rewrites** - Investment compounds across environments
+
+## Performance by Design
+
+Each store optimizes queries using its native capabilities:
+
+- **PostgreSQL store** generates efficient SQL with proper indexes
+- **Multi-API store** batches requests and caches relationships
+- **Memory store** uses JavaScript's native performance for prototyping
 
 ## Installation
 
@@ -49,22 +112,70 @@ import { createMemoryStore } from "@spectragraph/memory-store";
 // Define your data schema
 const schema = {
   resources: {
-    users: {
+    patrons: {
       attributes: {
         name: { type: "string" },
         email: { type: "string" },
+        libraryCard: { type: "string" },
+        membershipActive: { type: "boolean" },
       },
       relationships: {
-        posts: { type: "posts", cardinality: "hasMany" },
+        loans: {
+          type: "loans",
+          cardinality: "many",
+          inverse: "patron",
+        },
       },
     },
-    posts: {
+    books: {
       attributes: {
         title: { type: "string" },
-        content: { type: "string" },
+        isbn: { type: "string" },
+        publishedYear: { type: "number" },
       },
       relationships: {
-        author: { type: "users", cardinality: "belongsTo" },
+        author: {
+          type: "authors",
+          cardinality: "one",
+          inverse: "books",
+        },
+        loans: {
+          type: "loans",
+          cardinality: "many",
+          inverse: "book",
+        },
+      },
+    },
+    authors: {
+      attributes: {
+        name: { type: "string" },
+        biography: { type: "string" },
+      },
+      relationships: {
+        books: {
+          type: "books",
+          cardinality: "many",
+          inverse: "author",
+        },
+      },
+    },
+    loans: {
+      attributes: {
+        dueDate: { type: "string" },
+        renewalCount: { type: "number" },
+        returned: { type: "boolean" },
+      },
+      relationships: {
+        patron: {
+          type: "patrons",
+          cardinality: "one",
+          inverse: "loans",
+        },
+        book: {
+          type: "books",
+          cardinality: "one",
+          inverse: "loans",
+        },
       },
     },
   },
@@ -73,20 +184,57 @@ const schema = {
 // Create store with initial data
 const store = createMemoryStore(schema, {
   initialData: {
-    users: {
+    patrons: {
       1: {
         id: "1",
-        type: "users",
-        attributes: { name: "Alice", email: "alice@example.com" },
-        relationships: { posts: [{ type: "posts", id: "1" }] },
+        type: "patrons",
+        attributes: {
+          name: "Amara Okafor",
+          email: "amara.okafor@email.com",
+          libraryCard: "LIB001"
+        },
+        relationships: { loans: [{ type: "loans", id: "1" }] },
       },
     },
-    posts: {
+    authors: {
       1: {
         id: "1",
-        type: "posts",
-        attributes: { title: "Hello World", content: "My first post" },
-        relationships: { author: { type: "users", id: "1" } },
+        type: "authors",
+        attributes: {
+          name: "Elena Rodriguez",
+          biography: "Award-winning novelist and professor"
+        },
+        relationships: { books: [{ type: "books", id: "1" }] },
+      },
+    },
+    books: {
+      1: {
+        id: "1",
+        type: "books",
+        attributes: {
+          title: "The Art of System Design",
+          isbn: "978-1234567890",
+          publishedYear: 2023
+        },
+        relationships: {
+          author: { type: "authors", id: "1" },
+          loans: [{ type: "loans", id: "1" }]
+        },
+      },
+    },
+    loans: {
+      1: {
+        id: "1",
+        type: "loans",
+        attributes: {
+          dueDate: "2024-02-15",
+          renewalCount: 1,
+          returned: false
+        },
+        relationships: {
+          patron: { type: "patrons", id: "1" },
+          book: { type: "books", id: "1" }
+        },
       },
     },
   },
@@ -94,16 +242,46 @@ const store = createMemoryStore(schema, {
 
 // Query with expressions
 const analytics = await store.query({
-  type: "users",
+  type: "patrons",
   select: {
     name: "name",
-    postCount: { $count: "posts" },
-    avgPostLength: { $avg: "posts.$.content.length" },
+    loanCount: { $count: "loans" },
+    avgRenewals: { $avg: "loans.$.renewalCount" },
   },
 });
 
 console.log(analytics);
-// [{ name: 'Alice', postCount: 1, avgPostLength: 13 }]
+// [{ name: 'Amara Okafor', loanCount: 1, avgRenewals: 1 }]
+```
+
+## Learning Path (5 minutes)
+
+**If you know JSON, you know the basics:**
+
+```javascript
+// This is just asking for patron data
+{ type: "patrons", select: ["name", "email"] }
+```
+
+**If you know GraphQL, relationships work the same way:**
+
+```javascript
+// Nested data, just like GraphQL
+{ type: "patrons", select: ["name", { loans: [{ book: ["title"] }] }] }
+```
+
+**If you know SQL, filtering is familiar:**
+
+```javascript
+// WHERE clauses, just in JSON
+{ type: "patrons", where: { membershipActive: true }, limit: 10 }
+```
+
+**If you know JavaScript, expressions are just functions:**
+
+```javascript
+// Count and average, like Array methods
+{ type: "patrons", select: { loanCount: { $count: "loans" } } }
 ```
 
 ## Use Cases
@@ -134,11 +312,12 @@ console.log(analytics);
 
 ## Available Stores
 
-| Store                                                       | Use Case                             | Status |
-| ----------------------------------------------------------- | ------------------------------------ | ------ |
-| **[@spectragraph/memory-store](packages/memory-store)**     | In-memory data, testing, prototyping | Stable |
-| **[@spectragraph/postgres-store](packages/postgres-store)** | PostgreSQL databases                 | Stable |
-| **[@spectragraph/sqlite-store](packages/sqlite-store)**     | SQLite databases                     | Stable |
+| Store                                                         | Use Case                             | Status |
+| ------------------------------------------------------------- | ------------------------------------ | ------ |
+| **[@spectragraph/memory-store](packages/memory-store)**       | In-memory data, testing, prototyping | Stable |
+| **[@spectragraph/multi-api-store](packages/multi-api-store)** | Multiple REST APIs, frontend BFF     | Stable |
+| **[@spectragraph/postgres-store](packages/postgres-store)**   | PostgreSQL databases                 | Stable |
+| **[@spectragraph/sqlite-store](packages/sqlite-store)**       | SQLite databases                     | Stable |
 
 ## Advanced Query Examples
 
@@ -146,31 +325,13 @@ console.log(analytics);
 
 ```javascript
 {
-  type: "posts",
-  select: ["title", "createdAt"],
+  type: "books",
+  select: ["title", "publishedYear"],
   where: {
-    published: true,
-    createdAt: { $gte: "2024-01-01" }
+    publishedYear: { $gte: 2020 }
   },
-  order: [{ createdAt: "desc" }],
+  order: [{ publishedYear: "desc" }],
   limit: 5
-}
-```
-
-### Complex Expressions
-
-```javascript
-{
-  type: "companies",
-  select: {
-    name: "name",
-    avgEmployeeSalary: { $avg: "departments.$.employees.$.salary" },
-    topDepartment: {
-      $first: {
-        $orderBy: ["departments", { $desc: { $avg: "employees.$.performance" } }]
-      }
-    }
-  }
 }
 ```
 
@@ -179,16 +340,16 @@ console.log(analytics);
 ```javascript
 // Same query pattern works across different store types
 {
-  type: "users",
+  type: "patrons",
   select: ["name", {
-      posts: ["title", "createdAt", {
-          comments: {
-            select: ["content"],
-            limit: 3
-          }
-      }]
+    loans: ["dueDate", "renewalCount", {
+      book: {
+        select: ["title", "isbn"],
+        limit: 3
+      }
+    }]
   }],
-  where: { active: true }
+  where: { membershipActive: true }
 }
 ```
 
@@ -206,11 +367,12 @@ console.log(analytics);
 
 ```sql
 -- PostgreSQL
-SELECT u.name, p.title, c.content
-FROM users u
-LEFT JOIN posts p ON u.id = p.user_id
-LEFT JOIN comments c ON p.id = c.post_id
-WHERE u.active = true;
+SELECT p.name, b.title, a.name as author_name
+FROM patrons p
+LEFT JOIN loans l ON p.id = l.patron_id
+LEFT JOIN books b ON l.book_id = b.id
+LEFT JOIN authors a ON b.author_id = a.id
+WHERE p.membership_active = true;
 ```
 
 **Write once, run anywhere:**
@@ -218,19 +380,24 @@ WHERE u.active = true;
 ```javascript
 // Same query works on PostgreSQL, SQLite, in-memory, or API stores
 const result = await store.query({
-  type: "users",
+  type: "patrons",
   select: [
     "name",
     {
-      posts: [
-        "title",
+      loans: [
+        "dueDate",
         {
-          comments: ["content"],
+          book: [
+            "title",
+            {
+              author: ["name"],
+            },
+          ],
         },
       ],
     },
   ],
-  where: { active: true },
+  where: { membershipActive: true },
 });
 ```
 
