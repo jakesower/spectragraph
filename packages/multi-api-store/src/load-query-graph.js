@@ -6,7 +6,7 @@ import {
 import { toMerged } from "es-toolkit";
 import {
 	buildAsyncMiddlewarePipe,
-	handleFetchResponse,
+	handleResponseData,
 } from "./helpers/helpers.js";
 import { defaultConfig } from "./default-config.js";
 
@@ -62,7 +62,7 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 			const fetcher = async () => {
 				// Use special handler if available, otherwise use regular handler
 				const response = await stepConfig.query.fetch(finishedCtx);
-				const data = await handleFetchResponse(response);
+				const data = await handleResponseData(response);
 
 				const asArray =
 					data === null || data === undefined

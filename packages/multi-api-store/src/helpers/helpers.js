@@ -84,7 +84,7 @@ function compileResourceMappers(schema, type, mappers) {
 export function normalizeConfig(config, type = null, schema = {}) {
 	const operations = ["query", "create", "update", "delete"];
 
-	const compileOpMappers = (opConfig) => {
+	const compileOpMappers = (opConfig) => { 
 		const configured = {
 			...opConfig,
 			...(type && opConfig.mappers && schema?.resources?.[type]
@@ -154,16 +154,4 @@ export async function handleResponseData(response, fallbackValue) {
 
 	// Handle direct data returns
 	return response;
-}
-
-/**
- * Handles fetch Response objects and extracts JSON data, with error handling.
- * Supports both Response objects (from fetch) and direct data returns.
- *
- * @param {Response|*} response - Response object from fetch or direct data
- * @returns {Promise<*>} Parsed JSON data from response or the original data
- * @throws {Error} When response indicates an error status
- */
-export async function handleFetchResponse(response) {
-	return handleResponseData(response);
 }

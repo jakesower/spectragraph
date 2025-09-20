@@ -4,7 +4,7 @@ import {
 	compileWhereFormatter,
 	compileOrderFormatter,
 	buildAsyncMiddlewarePipe,
-	handleFetchResponse,
+	handleResponseData,
 	normalizeConfig,
 } from "../src/helpers/helpers.js";
 
@@ -145,14 +145,14 @@ describe("buildAsyncMiddlewarePipe", () => {
 	});
 });
 
-describe("handleFetchResponse", () => {
+describe("handleResponseData", () => {
 	it("handles successful Response objects", async () => {
 		const mockResponse = {
 			ok: true,
 			json: async () => ({ data: "test", id: 1 }),
 		};
 
-		const result = await handleFetchResponse(mockResponse);
+		const result = await handleResponseData(mockResponse);
 		expect(result).toEqual({ data: "test", id: 1 });
 	});
 
@@ -164,12 +164,12 @@ describe("handleFetchResponse", () => {
 			json: async () => ({ message: "Resource not found", code: "NOT_FOUND" }),
 		};
 
-		await expect(handleFetchResponse(mockResponse)).rejects.toThrow(
+		await expect(handleResponseData(mockResponse)).rejects.toThrow(
 			"Resource not found",
 		);
 
 		try {
-			await handleFetchResponse(mockResponse);
+			await handleResponseData(mockResponse);
 		} catch (error) {
 			expect(error.cause.data).toEqual({
 				message: "Resource not found",
@@ -189,12 +189,12 @@ describe("handleFetchResponse", () => {
 			},
 		};
 
-		await expect(handleFetchResponse(mockResponse)).rejects.toThrow(
+		await expect(handleResponseData(mockResponse)).rejects.toThrow(
 			"Internal Server Error",
 		);
 
 		try {
-			await handleFetchResponse(mockResponse);
+			await handleResponseData(mockResponse);
 		} catch (error) {
 			expect(error.cause.data).toEqual({ message: "Internal Server Error" });
 			expect(error.cause.originalError).toBe(mockResponse);
@@ -209,7 +209,7 @@ describe("handleFetchResponse", () => {
 			json: async () => ({}), // Empty error object
 		};
 
-		await expect(handleFetchResponse(mockResponse)).rejects.toThrow("HTTP 400");
+		await expect(handleResponseData(mockResponse)).rejects.toThrow("HTTP 400");
 	});
 
 	it("falls back to HTTP status when statusText is empty", async () => {
@@ -222,29 +222,29 @@ describe("handleFetchResponse", () => {
 			},
 		};
 
-		await expect(handleFetchResponse(mockResponse)).rejects.toThrow("HTTP 502");
+		await expect(handleResponseData(mockResponse)).rejects.toThrow("HTTP 502");
 	});
 
 	it("handles non-Response objects (direct data)", async () => {
 		const directData = { name: "John", age: 30 };
-		const result = await handleFetchResponse(directData);
+		const result = await handleResponseData(directData);
 		expect(result).toBe(directData);
 	});
 
 	it("handles null responses", async () => {
-		const result = await handleFetchResponse(null);
+		const result = await handleResponseData(null);
 		expect(result).toBe(null);
 	});
 
 	it("handles undefined responses", async () => {
-		const result = await handleFetchResponse(undefined);
+		const result = await handleResponseData(undefined);
 		expect(result).toBe(undefined);
 	});
 
 	it("handles primitive responses", async () => {
-		expect(await handleFetchResponse("string")).toBe("string");
-		expect(await handleFetchResponse(42)).toBe(42);
-		expect(await handleFetchResponse(true)).toBe(true);
+		expect(await handleResponseData("string")).toBe("string");
+		expect(await handleResponseData(42)).toBe(42);
+		expect(await handleResponseData(true)).toBe(true);
 	});
 
 	it("preserves error cause structure", async () => {
@@ -259,7 +259,7 @@ describe("handleFetchResponse", () => {
 		};
 
 		try {
-			await handleFetchResponse(mockResponse);
+			await handleResponseData(mockResponse);
 			expect(true).toBe(false); // Should not reach here
 		} catch (error) {
 			expect(error.message).toBe("Access denied");
