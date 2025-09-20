@@ -159,7 +159,7 @@ export const defaultConfig = {
 	})),
 	request: {
 		baseURL: "",
-		headers: {},
+		headers: { Accept: "application/json" },
 		queryParams: [],
 	},
 	stringifyQueryParams: (queryParams) => {

@@ -248,9 +248,16 @@ export interface RetryMiddleware {
 
 export interface LogMiddleware {
   /** Creates middleware for logging request/response information */
-  requests: (config?: {
-    logger?: Pick<Console, 'log'>;
-    includeTiming?: boolean;
+  simple: (config?: {
+    logger?: Pick<Console, 'log' | 'error'>;
+  }) => MiddlewareFunction;
+  /** Creates monitoring middleware with configurable hooks */
+  monitor: (config?: {
+    hooks?: Array<{
+      test: (result: any, context: any, info: { duration: number; cacheHit: boolean; error?: Error }) => boolean;
+      action: (result: any, context: any, info: { duration: number; cacheHit: boolean; error?: Error }) => void;
+    }>;
+    onError?: (testError: Error, hook: any) => any;
   }) => MiddlewareFunction;
 }
 
