@@ -208,7 +208,7 @@ Join team cities:
 
 The json-expressions library provides comprehensive operations including:
 
-- **Core**: `$compose`, `$debug`, `$ensurePath`, `$get`, `$prop`, `$isDefined`, `$literal`, `$pipe`
+- **Core**: `$compose`, `$debug`, `$ensurePath`, `$get`, `$prop`, `$isPresent`, `$literal`, `$pipe`
 - **Conditionals**: `$switch`, `$case`, `$if`
 - **Logic**: `$and`, `$not`, `$or`
 - **Comparisons**: `$eq`, `$gt`, `$gte`, `$lt`, `$lte`, `$in`, `$nin`, `$ne`

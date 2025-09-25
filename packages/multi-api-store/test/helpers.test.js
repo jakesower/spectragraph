@@ -476,6 +476,5 @@ describe("normalizeConfig", () => {
 			expect(mapped.email).toBe("john@example.com");
 			expect(mapped.age).toBe(3); // Math.round(25 / 10)
 		});
-
 	});
 });

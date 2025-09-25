@@ -158,8 +158,6 @@ function runQuery(rootQuery, data, options = {}) {
 					return (result) => {
 						if (result[propName] === undefined) {
 							if (options.allowMissingRefs) return null;
-
-							console.log(result, propName);
 							throw new Error(
 								`The "${propName}" relationship is undefined on a resource of type "${query.type}". You probably have an invalid schema or constructed your graph wrong. Try linking the inverses (via "linkInverses"), check your schema to make sure all inverses have been defined correctly there, and make sure all resources have been loaded into the graph.`,
 							);

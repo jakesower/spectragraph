@@ -18,15 +18,15 @@
 		"format:fix": "prettier --write \"README.md\" \"docs/**/*.md\" && npm run format:fix --workspaces"
 	},
 	"devDependencies": {
-		"@changesets/cli": "^2.29.6",
-		"@eslint/js": "^9.32.0",
+		"@changesets/cli": "^2.29.7",
+		"@eslint/js": "^9.36.0",
 		"@rollup/plugin-commonjs": "^28.0.6",
 		"@rollup/plugin-node-resolve": "^16.0.1",
-		"eslint": "^9.32.0",
+		"eslint": "^9.36.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-import": "^2.32.0",
 		"prettier": "^3.6.2",
-		"rollup": "^4.45.3"
+		"rollup": "^4.52.2"
 	},
 	"dependencies": {
 		"es-toolkit": "^1.39.10"

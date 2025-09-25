@@ -79,20 +79,20 @@ const createSQLExpressions = (db) => ({
  * Expression engine for generating WHERE clause SQL
  */
 export const createWhereExpressionEngine = ({ db }) =>
-	createExpressionEngine(
-		mapValues(createSQLExpressions(db), (expr) => ({
+	createExpressionEngine({
+		custom: mapValues(createSQLExpressions(db), (expr) => ({
 			...expr,
 			evaluate: expr.where,
 		})),
-	);
+	});
 
 /**
  * Expression engine for extracting SQL variables/parameters
  */
 export const createVarsExpressionEngine = ({ db }) =>
-	createExpressionEngine(
-		mapValues(createSQLExpressions(db), (expr) => ({
+	createExpressionEngine({
+		custom: mapValues(createSQLExpressions(db), (expr) => ({
 			...expr,
 			evaluate: expr.vars,
 		})),
-	);
+	});

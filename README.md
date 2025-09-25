@@ -50,7 +50,13 @@ import { createMemoryStore } from "@spectragraph/memory-store";
 const store = createMemoryStore(schema, {
   data: {
     patrons: [{ id: "1", name: "Kenji Nakamura", libraryCard: "LIB001" }],
-    books: [{ id: "b1", title: "The Design of Everyday Things", isbn: "978-0465050659" }],
+    books: [
+      {
+        id: "b1",
+        title: "The Design of Everyday Things",
+        isbn: "978-0465050659",
+      },
+    ],
   },
 });
 ```
@@ -72,7 +78,9 @@ import { createMultiApiStore } from "@spectragraph/multi-api-store";
 // Switch the store over seamlessly, no application changes required
 const store = createMultiApiStore(schema, {
   resources: {
-    patrons: { handlers: { query: { fetch: () => membershipAPI.getPatrons() } } },
+    patrons: {
+      handlers: { query: { fetch: () => membershipAPI.getPatrons() } },
+    },
     books: {
       handlers: { query: { fetch: () => catalogAPI.getBooks() } },
     },
@@ -191,7 +199,7 @@ const store = createMemoryStore(schema, {
         attributes: {
           name: "Amara Okafor",
           email: "amara.okafor@email.com",
-          libraryCard: "LIB001"
+          libraryCard: "LIB001",
         },
         relationships: { loans: [{ type: "loans", id: "1" }] },
       },
@@ -202,7 +210,7 @@ const store = createMemoryStore(schema, {
         type: "authors",
         attributes: {
           name: "Elena Rodriguez",
-          biography: "Award-winning novelist and professor"
+          biography: "Award-winning novelist and professor",
         },
         relationships: { books: [{ type: "books", id: "1" }] },
       },
@@ -214,11 +222,11 @@ const store = createMemoryStore(schema, {
         attributes: {
           title: "The Art of System Design",
           isbn: "978-1234567890",
-          publishedYear: 2023
+          publishedYear: 2023,
         },
         relationships: {
           author: { type: "authors", id: "1" },
-          loans: [{ type: "loans", id: "1" }]
+          loans: [{ type: "loans", id: "1" }],
         },
       },
     },
@@ -229,11 +237,11 @@ const store = createMemoryStore(schema, {
         attributes: {
           dueDate: "2024-02-15",
           renewalCount: 1,
-          returned: false
+          returned: false,
         },
         relationships: {
           patron: { type: "patrons", id: "1" },
-          book: { type: "books", id: "1" }
+          book: { type: "books", id: "1" },
         },
       },
     },

@@ -35,11 +35,11 @@
 		"@rollup/plugin-node-resolve": "^16.0.1",
 		"ajv": "^8.17.1",
 		"ajv-formats": "^3.0.1",
-		"axios": "^1.11.0",
+		"axios": "^1.12.2",
 		"express": "^5.1.0",
-		"rollup": "^4.48.0",
-		"start-server-and-test": "^2.0.13",
-		"vite": "7.1.3",
+		"rollup": "^4.52.2",
+		"start-server-and-test": "^2.1.2",
+		"vite": "7.1.7",
 		"vitest": "^3.2.4"
 	},
 	"publishConfig": {
@@ -55,7 +55,7 @@
 	"dependencies": {
 		"@spectragraph/query-helpers": "*",
 		"@spectragraph/utils": "*",
-		"es-toolkit": "^1.26.0",
-		"json-expressions": "^0.2.1"
+		"es-toolkit": "^1.39.10",
+		"json-expressions": "^0.8.2"
 	}
 }

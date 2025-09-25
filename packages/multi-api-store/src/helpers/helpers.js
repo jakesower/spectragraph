@@ -84,7 +84,7 @@ function compileResourceMappers(schema, type, mappers) {
 export function normalizeConfig(config, type = null, schema = {}) {
 	const operations = ["query", "create", "update", "delete"];
 
-	const compileOpMappers = (opConfig) => { 
+	const compileOpMappers = (opConfig) => {
 		const configured = {
 			...opConfig,
 			...(type && opConfig.mappers && schema?.resources?.[type]
