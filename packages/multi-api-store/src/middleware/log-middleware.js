@@ -83,7 +83,9 @@ export const log = {
 				return result;
 			} catch (error) {
 				const duration = Date.now() - start;
-				logger.error(`✗ ${ctx.query.type} failed (${duration}ms): ${error.message}`);
+				logger.error(
+					`✗ ${ctx.query.type} failed (${duration}ms): ${error.message}`,
+				);
 				throw error;
 			}
 		};

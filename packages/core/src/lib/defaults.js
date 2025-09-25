@@ -2,6 +2,7 @@ import Ajv from "ajv";
 import addFormats from "ajv-formats";
 import addErrors from "ajv-errors";
 import {
+	aggregation,
 	createExpressionEngine,
 	filtering,
 	projection,
@@ -28,7 +29,7 @@ import {
  * @type {SelectExpressionEngine}
  */
 export const defaultSelectEngine = createExpressionEngine({
-	packs: [filtering, projection],
+	packs: [filtering, projection, aggregation],
 });
 
 /**

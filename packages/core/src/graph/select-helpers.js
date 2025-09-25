@@ -23,7 +23,7 @@ function distributeStrings(expression, expressionEngine) {
 			$pipe: [
 				{ $get: iteratee },
 				{ $flatMap: distributeStrings(rest.join(".$."), expressionEngine) },
-				{ $filter: { $isDefined: {} } },
+				{ $filter: { $isPresent: true } },
 			],
 		};
 	}

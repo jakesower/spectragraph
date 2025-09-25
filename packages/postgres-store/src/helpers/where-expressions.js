@@ -89,13 +89,19 @@ const sqlExpressions = {
 /**
  * Expression engine for generating WHERE clause SQL
  */
-export const whereExpressionEngine = createExpressionEngine(
-	mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.where })),
-);
+export const whereExpressionEngine = createExpressionEngine({
+	custom: mapValues(sqlExpressions, (expr) => ({
+		...expr,
+		evaluate: expr.where,
+	})),
+});
 
 /**
  * Expression engine for extracting SQL variables/parameters
  */
-export const varsExpressionEngine = createExpressionEngine(
-	mapValues(sqlExpressions, (expr) => ({ ...expr, evaluate: expr.vars })),
-);
+export const varsExpressionEngine = createExpressionEngine({
+	custom: mapValues(sqlExpressions, (expr) => ({
+		...expr,
+		evaluate: expr.vars,
+	})),
+});

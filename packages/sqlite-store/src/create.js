@@ -37,7 +37,7 @@ export async function create(resource, context) {
 	);
 
 	// Generate UUID if no ID provided
-	const resourceId = resource.id || randomUUID();
+	const resourceId = resource.id ?? randomUUID();
 	const idColumns = [snakeCase(idAttribute)];
 	const idVars = [resourceId];
 

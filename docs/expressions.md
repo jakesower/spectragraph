@@ -44,7 +44,7 @@ SpectraGraph uses expression engines to evaluate expressions in different contex
 
 The default expression engine for SELECT clauses supports filtering, aggregation, transformation, and projection operations.
 
-**Available expressions:** `$and`, `$case`, `$concat`, `$count`, `$debug`, `$distinct`, `$eq`, `$filter`, `$flatMap`, `$get`, `$gt`, `$gte`, `$if`, `$in`, `$isDefined`, `$isNotNull`, `$isNull`, `$join`, `$literal`, `$lowercase`, `$lt`, `$lte`, `$map`, `$matchesGlob`, `$matchesLike`, `$matchesRegex`, `$max`, `$mean`, `$min`, `$ne`, `$nin`, `$not`, `$or`, `$pipe`, `$prop`, `$substring`, `$sum`, `$uppercase`
+**Available expressions:** `$and`, `$case`, `$concat`, `$count`, `$debug`, `$distinct`, `$eq`, `$filter`, `$flatMap`, `$get`, `$gt`, `$gte`, `$if`, `$in`, `$isPresent`, `$isNotNull`, `$isNull`, `$join`, `$literal`, `$lowercase`, `$lt`, `$lte`, `$map`, `$matchesGlob`, `$matchesLike`, `$matchesRegex`, `$max`, `$mean`, `$min`, `$ne`, `$nin`, `$not`, `$or`, `$pipe`, `$prop`, `$substring`, `$sum`, `$uppercase`
 
 **JSON Expressions packs:** `filtering` + `projection`
 
@@ -52,7 +52,7 @@ The default expression engine for SELECT clauses supports filtering, aggregation
 
 The default expression engine for WHERE clauses supports filtering and logic operations only (no aggregation or transformation).
 
-**Available expressions:** `$and`, `$debug`, `$eq`, `$filter`, `$get`, `$gt`, `$gte`, `$if`, `$in`, `$isDefined`, `$isNotNull`, `$isNull`, `$literal`, `$lt`, `$lte`, `$map`, `$matchesGlob`, `$matchesLike`, `$matchesRegex`, `$ne`, `$nin`, `$not`, `$or`, `$pipe`, `$prop`
+**Available expressions:** `$and`, `$debug`, `$eq`, `$filter`, `$get`, `$gt`, `$gte`, `$if`, `$in`, `$isPresent`, `$isNotNull`, `$isNull`, `$literal`, `$lt`, `$lte`, `$map`, `$matchesGlob`, `$matchesLike`, `$matchesRegex`, `$ne`, `$nin`, `$not`, `$or`, `$pipe`, `$prop`
 
 **JSON Expressions packs:** `filtering`
 
@@ -274,7 +274,7 @@ For detailed documentation on individual expressions, see the [json-expressions 
 - `$get` - Access nested properties
 - `$prop` - Dynamic property access
 - `$literal` - Return literal value
-- `$isDefined` - Check if value is defined
+- `$isPresent` - Check if value is defined
 - `$isNull` - Check if value is null
 - `$isNotNull` - Check if value is not null
 
@@ -284,7 +284,7 @@ For detailed documentation on individual expressions, see the [json-expressions 
   select: {
     name: "name",
     city: { $get: "address.city" },
-    hasPhone: { $isDefined: "phoneNumber" }
+    hasPhone: { $isPresent: "phoneNumber" }
   }
 }
 ```

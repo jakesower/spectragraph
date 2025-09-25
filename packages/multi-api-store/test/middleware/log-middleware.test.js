@@ -171,7 +171,7 @@ describe("log.monitor middleware", () => {
 			const middleware = log.monitor({ hooks });
 			const mockNext = vi.fn().mockResolvedValue({
 				data: "success",
-				meta: { cacheHit: true }
+				meta: { cacheHit: true },
 			});
 			const ctx = {
 				query: { type: "test" },
@@ -182,7 +182,7 @@ describe("log.monitor middleware", () => {
 			expect(mockNext).toHaveBeenCalledTimes(1);
 			expect(result).toEqual({
 				data: "success",
-				meta: { cacheHit: true }
+				meta: { cacheHit: true },
 			});
 		});
 
@@ -249,7 +249,7 @@ describe("log.monitor middleware", () => {
 			const middleware = log.monitor({ hooks });
 			const mockNext = vi.fn().mockResolvedValue({
 				data: "cached data",
-				meta: { cacheHit: true }
+				meta: { cacheHit: true },
 			});
 			const ctx = { query: { type: "test" } };
 
@@ -261,13 +261,15 @@ describe("log.monitor middleware", () => {
 				{
 					duration: expect.any(Number),
 					cacheHit: true,
-				}
+				},
 			);
 		});
 
 		it("should handle hook test errors with onError callback", async () => {
 			const testError = new Error("Test failed");
-			const testHook = vi.fn().mockImplementation(() => { throw testError; });
+			const testHook = vi.fn().mockImplementation(() => {
+				throw testError;
+			});
 			const actionHook = vi.fn();
 			const onError = vi.fn();
 			const hooks = [{ test: testHook, action: actionHook }];
@@ -278,14 +280,19 @@ describe("log.monitor middleware", () => {
 
 			await middleware(ctx, mockNext);
 
-			expect(onError).toHaveBeenCalledWith(testError, { test: testHook, action: actionHook });
+			expect(onError).toHaveBeenCalledWith(testError, {
+				test: testHook,
+				action: actionHook,
+			});
 			expect(actionHook).not.toHaveBeenCalled();
 		});
 
 		it("should handle hook action errors with onError callback", async () => {
 			const actionError = new Error("Action failed");
 			const testHook = vi.fn().mockReturnValue(true);
-			const actionHook = vi.fn().mockImplementation(() => { throw actionError; });
+			const actionHook = vi.fn().mockImplementation(() => {
+				throw actionError;
+			});
 			const onError = vi.fn();
 			const hooks = [{ test: testHook, action: actionHook }];
 
@@ -295,13 +302,18 @@ describe("log.monitor middleware", () => {
 
 			await middleware(ctx, mockNext);
 
-			expect(onError).toHaveBeenCalledWith(actionError, { test: testHook, action: actionHook });
+			expect(onError).toHaveBeenCalledWith(actionError, {
+				test: testHook,
+				action: actionHook,
+			});
 		});
 
 		it("should throw hook errors when no onError handler provided", async () => {
 			const actionError = new Error("Action failed");
 			const testHook = vi.fn().mockReturnValue(true);
-			const actionHook = vi.fn().mockImplementation(() => { throw actionError; });
+			const actionHook = vi.fn().mockImplementation(() => {
+				throw actionError;
+			});
 			const hooks = [{ test: testHook, action: actionHook }];
 
 			const middleware = log.monitor({ hooks });
@@ -318,13 +330,13 @@ describe("log.monitor middleware", () => {
 			const hooks = [
 				{
 					test: (result, ctx, info) => info.duration > 100,
-					action: slowQueryAlert
-				}
+					action: slowQueryAlert,
+				},
 			];
 
 			const middleware = log.monitor({ hooks });
 			const mockNext = vi.fn().mockImplementation(async () => {
-				await new Promise(resolve => setTimeout(resolve, 150));
+				await new Promise((resolve) => setTimeout(resolve, 150));
 				return "success";
 			});
 			const ctx = { query: { type: "test" } };
@@ -342,14 +354,14 @@ describe("log.monitor middleware", () => {
 			const hooks = [
 				{
 					test: (result, ctx, info) => info.cacheHit,
-					action: cacheMetrics
-				}
+					action: cacheMetrics,
+				},
 			];
 
 			const middleware = log.monitor({ hooks });
 			const mockNext = vi.fn().mockResolvedValue({
 				data: "cached",
-				meta: { cacheHit: true }
+				meta: { cacheHit: true },
 			});
 			const ctx = { query: { type: "test" } };
 
@@ -361,7 +373,7 @@ describe("log.monitor middleware", () => {
 				{
 					duration: expect.any(Number),
 					cacheHit: true,
-				}
+				},
 			);
 		});
 
@@ -370,8 +382,8 @@ describe("log.monitor middleware", () => {
 			const hooks = [
 				{
 					test: (result, ctx, info) => !!info.error,
-					action: errorTracker
-				}
+					action: errorTracker,
+				},
 			];
 
 			const middleware = log.monitor({ hooks });
