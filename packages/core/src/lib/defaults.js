@@ -1,12 +1,7 @@
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
 import addErrors from "ajv-errors";
-import {
-	aggregation,
-	createExpressionEngine,
-	filtering,
-	projection,
-} from "json-expressions";
+import { createSelectEngine, createWhereEngine } from "./expression-engines.js";
 
 /**
  * @typedef {Object} SelectExpressionEngine
@@ -28,17 +23,13 @@ import {
  * Default expression engine for SELECT clauses
  * @type {SelectExpressionEngine}
  */
-export const defaultSelectEngine = createExpressionEngine({
-	packs: [filtering, projection, aggregation],
-});
+export const defaultSelectEngine = createSelectEngine();
 
 /**
  * Default expression engine for WHERE clauses
  * @type {WhereExpressionEngine}
  */
-export const defaultWhereEngine = createExpressionEngine({
-	packs: [filtering],
-});
+export const defaultWhereEngine = createWhereEngine();
 
 export const defaultValidator = new Ajv({
 	allErrors: true,

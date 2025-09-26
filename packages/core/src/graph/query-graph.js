@@ -94,9 +94,9 @@ function runQuery(rootQuery, data, options = {}) {
 			where(results) {
 				if (Object.keys(query.where).length === 0) return results;
 
-				return results.filter((result) => {
-					return whereEngine.apply(query.where, result);
-				});
+				return results.filter((result) =>
+					whereEngine.apply(query.where, result),
+				);
 			},
 			order(results) {
 				const order = Array.isArray(query.order) ? query.order : [query.order];

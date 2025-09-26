@@ -562,4 +562,4 @@ const cmsSchema = {
 7. **Document complex relationships** - Add comments for business logic via "$comment" keys anywhere you like
 
 For query examples using these schemas, see [query.md](query.md).
-For expression usage with schema data, see [expressions.md](expressions.md).
+For expression usage with schema data, see the [json-expressions documentation](https://github.com/jakesower/json-expressions/blob/main/docs/expressions.md).

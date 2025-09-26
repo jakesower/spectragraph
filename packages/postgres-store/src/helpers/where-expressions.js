@@ -75,12 +75,12 @@ const sqlExpressions = {
 	},
 	$matchesGlob: {
 		name: "$matchesGlob",
-		where: () => " SIMILAR TO ?", // PostgreSQL equivalent to GLOB
+		where: () => " ILIKE ?", // PostgreSQL case-insensitive equivalent to GLOB
 		vars: (operand) => {
-			// Convert GLOB pattern to PostgreSQL SIMILAR TO pattern
+			// Convert GLOB pattern to PostgreSQL LIKE pattern
 			let pattern = operand
-				.replace(/\*/g, "%") // * becomes %
-				.replace(/\?/g, "_"); // ? becomes _
+				.replace(/\*/g, "%") // * becomes % (match any characters)
+				.replace(/\?/g, "_"); // ? becomes _ (match any single character)
 			return [pattern];
 		},
 	},

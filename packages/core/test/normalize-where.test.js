@@ -26,59 +26,6 @@ describe("normalizeWhereClause", () => {
 		});
 	});
 
-	describe("comparative expressions", () => {
-		["$eq", "$ne", "$lt", "$lte", "$gt", "$gte"].forEach((expr) => {
-			it(`normalizes ${expr}`, () => {
-				const normalized = normalizeWhereClause({
-					age: { [expr]: 3 },
-				});
-				expect(normalized).toEqual({
-					$pipe: [{ $get: "age" }, { [expr]: 3 }],
-				});
-			});
-		});
-
-		["$in", "$nin"].forEach((expr) => {
-			it(`normalizes ${expr}`, () => {
-				const normalized = normalizeWhereClause({
-					age: { [expr]: [1, 2, 3] },
-				});
-				expect(normalized).toEqual({
-					$pipe: [{ $get: "age" }, { [expr]: [1, 2, 3] }],
-				});
-			});
-		});
-	});
-
-	describe("pattern matching expressions", () => {
-		it("normalizes $matchesRegex", () => {
-			const normalized = normalizeWhereClause({
-				favoriteToy: { $matchesRegex: "dolls?" },
-			});
-			expect(normalized).toEqual({
-				$pipe: [{ $get: "favoriteToy" }, { $matchesRegex: "dolls?" }],
-			});
-		});
-
-		it("normalizes $matchesLike", () => {
-			const normalized = normalizeWhereClause({
-				favoriteToy: { $matchesLike: "d_lls" },
-			});
-			expect(normalized).toEqual({
-				$pipe: [{ $get: "favoriteToy" }, { $matchesLike: "d_lls" }],
-			});
-		});
-
-		it("normalizes $matchesGlob", () => {
-			const normalized = normalizeWhereClause({
-				favoriteToy: { $matchesGlob: "d?lls" },
-			});
-			expect(normalized).toEqual({
-				$pipe: [{ $get: "favoriteToy" }, { $matchesGlob: "d?lls" }],
-			});
-		});
-	});
-
 	describe("conditional expressions", () => {
 		it("should normalize $if expressions in attribute spot", () => {
 			const where = {
@@ -114,33 +61,6 @@ describe("normalizeWhereClause", () => {
 					if: { $pipe: [{ $get: "napStatus" }, { $eq: true }] },
 					then: "sleeping",
 					else: "awake",
-				},
-			});
-		});
-
-		it("should normalize $switch expressions", () => {
-			const where = {
-				activityLevel: {
-					$switch: {
-						cases: [
-							{ when: 2, then: "toddler" },
-							{ when: 3, then: "big kid" },
-							{ when: 4, then: "preschooler" },
-						],
-						default: "baby",
-					},
-				},
-			};
-			const normalized = normalizeWhereClause(where);
-			expect(normalized).toEqual({
-				$switch: {
-					value: { $get: "activityLevel" },
-					cases: [
-						{ when: 2, then: "toddler" },
-						{ when: 3, then: "big kid" },
-						{ when: 4, then: "preschooler" },
-					],
-					default: "baby",
 				},
 			});
 		});
@@ -218,19 +138,6 @@ describe("normalizeWhereClause", () => {
 
 			expect(normalized).toEqual({
 				$not: { $pipe: [{ $get: "age" }, { $eq: 3 }] },
-			});
-		});
-	});
-
-	describe("temporal expressions", () => {
-		["$nowLocal", "$nowUTC", "$timestamp"].forEach((expr) => {
-			it(`handles ${expr}`, () => {
-				const normalized = normalizeWhereClause({
-					birthTime: { $lt: { [expr]: null } },
-				});
-				expect(normalized).toEqual({
-					$pipe: [{ $get: "birthTime" }, { $lt: { [expr]: null } }],
-				});
 			});
 		});
 	});

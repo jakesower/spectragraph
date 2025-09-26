@@ -365,7 +365,7 @@ console.log(analytics);
 
 - **[Query Guide](docs/query.md)** - Complete query language reference
 - **[Schema Guide](docs/schema.md)** - Defining data structures and relationships
-- **[Expression Reference](docs/expressions.md)** - Built-in functions and operators
+- **[Expression Reference](https://github.com/jakesower/json-expressions/blob/main/docs/expressions.md)** - Built-in functions and operators (json-expressions)
 - **[Store Creation Guide](docs/store-creation.md)** - Building custom stores
 - **[API Reference](docs/api.md)** - Full API documentation
 
