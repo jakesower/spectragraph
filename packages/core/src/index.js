@@ -6,6 +6,10 @@ export {
 	defaultWhereEngine,
 } from "./lib/defaults.js";
 export {
+	createSelectEngine,
+	createWhereEngine,
+} from "./lib/expression-engines.js";
+export {
 	linkInverses,
 	createEmptyGraph,
 	createGraphFromResources,

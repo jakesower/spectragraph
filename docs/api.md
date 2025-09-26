@@ -815,5 +815,5 @@ For practical usage examples, see:
 
 - [Query Guide](query.md) - Complete query language reference
 - [Schema Guide](schema.md) - Schema definition examples
-- [Expression Guide](expressions.md) - Expression usage patterns
+- [Expression Guide](https://github.com/jakesower/json-expressions/blob/main/docs/expressions.md) - Expression usage patterns (json-expressions)
 - [Store Creation](store-creation.md) - Building custom stores

@@ -55,4 +55,76 @@ describe("PostgreSQL-Specific Query Tests", () => {
 
 		expect(result).toEqual({ name: "Brave Heart Lion" });
 	});
+
+	describe("PostgreSQL-specific expression operators", () => {
+		it("filters using $matchesGlob operator with wildcard", async () => {
+			const result = await store.query({
+				type: "bears",
+				select: ["name"],
+				where: {
+					name: { $matchesGlob: "*Heart*" },
+				},
+				orderBy: { property: "name", direction: "asc" },
+			});
+
+			expect(result).toEqual([
+				{ name: "Tenderheart Bear" },
+				{ name: "Smart Heart Bear" },
+			]);
+		});
+
+		it("filters using $matchesGlob operator with question mark", async () => {
+			const result = await store.query({
+				type: "bears",
+				select: ["name"],
+				where: {
+					name: { $matchesGlob: "?heer Bear" },
+				},
+			});
+
+			expect(result).toEqual([{ name: "Cheer Bear" }]);
+		});
+
+		it("filters using $matchesGlob operator with multiple wildcards", async () => {
+			const result = await store.query({
+				type: "bears",
+				select: ["name"],
+				where: {
+					name: { $matchesGlob: "?*h Bear" },
+				},
+				orderBy: { property: "name", direction: "asc" },
+			});
+
+			expect(result).toEqual([{ name: "Wish Bear" }]);
+		});
+
+		it("filters using $matchesGlob operator with companions", async () => {
+			const result = await store.query({
+				type: "companions",
+				select: ["name"],
+				where: {
+					name: { $matchesGlob: "*Heart*" },
+				},
+				orderBy: { property: "name", direction: "asc" },
+			});
+
+			expect(result).toEqual([
+				{ name: "Brave Heart Lion" },
+				{ name: "Cozy Heart Penguin" },
+				{ name: "Loyal Heart Dog" },
+			]);
+		});
+
+		it("filters using $matchesGlob operator with no matches", async () => {
+			const result = await store.query({
+				type: "bears",
+				select: ["name"],
+				where: {
+					name: { $matchesGlob: "*XYZ*" },
+				},
+			});
+
+			expect(result).toEqual([]);
+		});
+	});
 });

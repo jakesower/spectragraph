@@ -441,5 +441,5 @@ Common validation errors and how to fix them:
 }
 ```
 
-For complete expression reference, see [expressions.md](expressions.md).
+For complete expression reference, see the [json-expressions documentation](https://github.com/jakesower/json-expressions/blob/main/docs/expressions.md).
 For schema definition guide, see [schema.md](schema.md).

@@ -1,6 +1,8 @@
 import { expect, it, describe } from "vitest";
 import { queryGraph } from "../../src/graph.js";
 import { careBearSchema, careBearData } from "../interface-tests/src/index.js";
+import { createExpressionEngine } from "json-expressions";
+import { createWhereEngine, normalizeQuery } from "../../src/index.js";
 
 describe("where clauses", () => {
 	it("filters on an implicit property equality constraint", async () => {
@@ -181,7 +183,7 @@ describe("where clauses", () => {
 		});
 	});
 
-	describe("where expressions", () => {
+	describe("advanced expressions", () => {
 		it("filters using an $or operation", async () => {
 			const query = {
 				type: "bears",
@@ -232,47 +234,59 @@ describe("where clauses", () => {
 			expect(result).toEqual([{ id: "1" }, { id: "3" }]);
 		});
 
-		it("filters using $eq", () => {
-			const graph = {
-				bears: {
-					3: {
-						id: "3",
-						type: "bears",
-						attributes: { id: "3", bellyBadge: "shooting star" },
-						relationships: {},
-					},
-				},
-				homes: {},
-				powers: {
-					careBearStare: {
-						id: "careBearStare",
-						type: "powers",
-						attributes: { powerId: "careBearStare" },
-						relationships: {
-							wielders: [{ type: "bears", id: "3" }],
-						},
+		it("filters using $match", () => {
+			const query = {
+				type: "bears",
+				select: ["name"],
+				where: {
+					$matches: {
+						yearIntroduced: { $lte: 1982 },
+						bellyBadge: "shooting star",
 					},
 				},
 			};
+			const result = queryGraph(careBearSchema, query, careBearData);
+
+			expect(result).toEqual([{ name: "Wish Bear" }]);
+		});
+
+		it("filters with a custom expression", () => {
+			const whereEngine = createWhereEngine({
+				custom: {
+					$isOdd: {
+						apply: (operand, inputData) => inputData % 2 === 1,
+					},
+				},
+			});
 
 			const query = {
-				type: "powers",
-				id: "careBearStare",
-				select: {
-					powerId: "powerId",
-					wielders: {
-						select: { id: "id" },
-						where: { bellyBadge: { $eq: "shooting star" } },
-						type: "bears",
+				type: "bears",
+				select: ["name"],
+				where: {
+					$matches: {
+						yearIntroduced: { $isOdd: null },
 					},
 				},
 			};
-
-			const result = queryGraph(careBearSchema, query, graph);
-			expect(result).toEqual({
-				powerId: "careBearStare",
-				wielders: [{ id: "3" }],
+			const result = queryGraph(careBearSchema, query, careBearData, {
+				whereEngine,
 			});
+
+			expect(result).toEqual([{ name: "Smart Heart Bear" }]);
+		});
+
+		it("errors with an undefined custom expression", () => {
+			const query = {
+				type: "bears",
+				select: ["name"],
+				where: {
+					yearIntroduced: { $anUndefinedExpression: null },
+				},
+			};
+
+			expect(() =>
+				queryGraph(careBearSchema, query, careBearData),
+			).toThrowError();
 		});
 	});
 });
