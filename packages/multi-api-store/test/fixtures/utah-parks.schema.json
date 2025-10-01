@@ -1,0 +1,93 @@
+{
+	"resources": {
+		"parks": {
+			"idAttribute": "id",
+			"attributes": {
+				"id": { "type": "string" },
+				"name": { "type": "string" },
+				"location": { "type": "string" },
+				"established": { "type": "number" },
+				"bestSeason": { "type": "string" },
+				"description": { "type": "string" }
+			},
+			"relationships": {
+				"activities": {
+					"type": "activities",
+					"cardinality": "many",
+					"inverse": "park"
+				},
+				"lodging": {
+					"type": "lodging",
+					"cardinality": "many",
+					"inverse": "nearbyPark"
+				},
+				"nearbyPark": {
+					"type": "parks",
+					"cardinality": "one",
+					"inverse": "closestNeighbor"
+				},
+				"closestNeighbor": {
+					"type": "parks",
+					"cardinality": "one",
+					"inverse": "nearbyPark"
+				}
+			}
+		},
+		"activities": {
+			"idAttribute": "id",
+			"attributes": {
+				"id": { "type": "string" },
+				"name": { "type": "string" },
+				"difficulty": { "type": "string" },
+				"duration": { "type": "number" },
+				"description": { "type": "string" },
+				"seasonAvailable": { "type": "array" }
+			},
+			"relationships": {
+				"park": {
+					"type": "parks",
+					"cardinality": "one",
+					"inverse": "activities"
+				},
+				"type": {
+					"type": "activityTypes",
+					"cardinality": "one",
+					"inverse": "activities"
+				}
+			}
+		},
+		"activityTypes": {
+			"idAttribute": "id",
+			"attributes": {
+				"id": { "type": "string" },
+				"name": { "type": "string" },
+				"category": { "type": "string" },
+				"requiresPermit": { "type": "boolean" }
+			},
+			"relationships": {
+				"activities": {
+					"type": "activities",
+					"cardinality": "many",
+					"inverse": "type"
+				}
+			}
+		},
+		"lodging": {
+			"idAttribute": "id",
+			"attributes": {
+				"id": { "type": "string" },
+				"name": { "type": "string" },
+				"type": { "type": "string" },
+				"pricePerNight": { "type": "number" },
+				"amenities": { "type": "array" }
+			},
+			"relationships": {
+				"nearbyPark": {
+					"type": "parks",
+					"cardinality": "one",
+					"inverse": "lodging"
+				}
+			}
+		}
+	}
+}

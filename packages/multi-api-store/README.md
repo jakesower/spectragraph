@@ -33,7 +33,7 @@ The library includes several performance optimizations out of the box:
 - **Automatic Deduplication**: Identical queries execute only once, even across relationship traversals
 - **Intelligent Caching**: TTL-based caching with relationship-aware invalidation
 - **Concurrent Execution**: Related queries run in parallel using Promise.all
-- **Extensible Middleware**: Plugin architecture for batching, circuit breakers, and custom optimizations
+- **Extensible Middleware**: Plugin architecture for authentication, retry logic, logging, and custom optimizations
 
 ### Cache Consistency Strategy
 
@@ -79,9 +79,9 @@ const store = createMultiApiStore(schema, {
     dependsOnTypes: (query) => [query.type], // Only invalidate exact type
   },
   middleware: [
-    // Add custom middleware for batching, circuit breakers, etc.
-    customBatchingMiddleware(),
+    auth.bearerToken(() => getToken()),
     retry.exponential({ maxRetries: 3 }),
+    log.requests({ includeTiming: true }),
   ],
   resources: {
     /* handlers */
@@ -115,21 +115,21 @@ import { createMultiApiStore } from "@spectragraph/multi-api-store";
 
 const store = createMultiApiStore(schema, {
   resources: {
-    skeptics: {
+    parks: {
       handlers: {
         query: {
           fetch: async (context) => {
-            const response = await fetch("/api/skeptics");
+            const response = await fetch("/api/parks");
             return response.json();
           },
           mappers: {
-            fullName: "name", // Map API's fullName to schema's name
-            yearsInField: "yearsActive", // Map API field names
+            parkName: "name", // Map API's parkName to schema's name
+            coordinates: "location", // Map API field names
           },
         },
         create: {
           fetch: async (resource, context) => {
-            const response = await fetch("/api/skeptics", {
+            const response = await fetch("/api/parks", {
               method: "POST",
               body: JSON.stringify(resource.attributes),
               headers: { "Content-Type": "application/json" },
@@ -148,19 +148,19 @@ const store = createMultiApiStore(schema, {
 ```javascript
 const store = createMultiApiStore(schema, {
   resources: {
-    skeptics: {
+    parks: {
       handlers: {
         query: {
           fetch: async (context) => {
-            const response = await fetch("/api/skeptics");
+            const response = await fetch("/api/parks");
             return response.json();
           },
           map: (response) => {
             // Transform response to match schema
             return response.map((item) => ({
               ...item,
-              name: item.fullName,
-              yearsActive: item.yearsInField,
+              name: item.parkName,
+              location: item.coordinates,
             }));
           },
         },
@@ -195,22 +195,21 @@ Special handlers allow you to customize data loading logic for complex scenarios
 const specialHandlers = [
   {
     test: (query, context) =>
-      query.type === "investigations" &&
-      context.parentQuery?.type === "skeptics",
+      query.type === "activities" && context.parentQuery?.type === "parks",
     handler: async (query, context) => {
-      // Load investigations differently when queried from skeptics
-      const skepticId = context.parentQuery.id;
-      const response = await fetch(`/api/skeptics/${skepticId}/investigations`);
+      // Load activities differently when queried from parks
+      const parkId = context.parentQuery.id;
+      const response = await fetch(`/api/parks/${parkId}/activities`);
       return response.json();
     },
   },
   {
-    test: (query) => query.type === "weirdBeliefs",
+    test: (query) => query.type === "lodging",
     handler: (query, context) =>
-      // If we're loading beliefs that are already embedded in investigations data
-      context.parentQuery?.type === "investigations"
+      // If we're loading lodging that's already embedded in booking data
+      context.parentQuery?.type === "bookings"
         ? []
-        : DEFAULT_APIS.weirdBeliefs.get(query, context),
+        : DEFAULT_APIS.lodging.get(query, context),
   },
 ];
 ```
@@ -222,17 +221,17 @@ The multi-API store includes intelligent caching that automatically invalidates 
 ```javascript
 const store = createMultiApiStore(schema, {
   resources: {
-    skeptics: {
+    parks: {
       handlers: {
         query: {
           fetch: async () => {
-            const response = await fetch("https://api1.example.com/skeptics");
+            const response = await fetch("https://api.nps.gov/parks");
             return response.json();
           },
         },
         create: {
           fetch: async (resource) => {
-            const response = await fetch("https://api1.example.com/skeptics", {
+            const response = await fetch("https://api.nps.gov/parks", {
               method: "POST",
               body: JSON.stringify(resource.attributes),
               headers: { "Content-Type": "application/json" },
@@ -280,42 +279,25 @@ const store = createMultiApiStore(schema, {
 - **Manual control**: Per-resource manual cache control for complex scenarios
 - Expired cache entries are automatically removed on access
 
-### Production-Ready Architecture Through Middleware
+### Production-Ready Middleware
 
-Multi-API Store's middleware architecture solves the complex production concerns that emerge when aggregating multiple APIs: batching requests, handling authentication refresh, implementing circuit breakers, managing rate limits, and adding observability. Rather than forcing these concerns into your application code or baking them into an inflexible core, the middleware pipeline lets you compose exactly the production behavior you need.
+Multi-API Store's middleware architecture handles common production concerns: authentication, request retry, timeout handling, and observability. Rather than forcing these concerns into your application code or baking them into an inflexible core, the middleware pipeline lets you compose exactly the behavior you need.
 
 ```javascript
 // Production-grade API aggregation
 const store = createMultiApiStore(schema, {
   middleware: [
-    // Authentication with token refresh
-    auth.bearerToken(() => getToken(), { refreshOnExpiry: true }),
+    // Authentication
+    auth.bearerToken(() => getToken()),
 
-    // Request batching - combine multiple queries into single API calls
-    batchRequests({
-      windowMs: 100,
-      maxBatchSize: 10,
-      batchableTypes: ["users", "posts"],
-    }),
+    // Request timeout
+    timeout(5000), // 5 second max per request
 
-    // Circuit breaker - fail fast when services are degraded
-    circuitBreaker({
-      threshold: 5,
-      resetTimeoutMs: 30000,
-      monitorTypes: ["external-api"],
-    }),
+    // Automatic retry with exponential backoff
+    retry.exponential({ maxRetries: 3 }),
 
-    // Rate limiting per API provider
-    rateLimit.perBaseURL({
-      "api1.example.com": { requestsPerSecond: 100 },
-      "api2.example.com": { requestsPerSecond: 10 },
-    }),
-
-    // Observability and metrics
-    metrics.requestTracing({
-      includeTimings: true,
-      sampleRate: 0.1,
-    }),
+    // Request/response logging
+    log.requests({ includeTiming: true }),
   ],
   resources: {
     // Resource configuration...
@@ -330,11 +312,17 @@ const store = createMultiApiStore(schema, {
 - `auth.bearerToken(getToken)` - Adds Bearer token to Authorization header
 - `auth.queryParam(getToken, paramName)` - Adds token as query parameter
 
+**Timeout (`timeout`)**
+
+- `timeout(ms)` - Abort requests that exceed time limit
+  - Uses AbortController for clean cancellation
+  - Prevents hanging requests from blocking UI
+
 **Retry (`retry`)**
 
 - `retry.exponential(config)` - Retries failed requests with exponential backoff
   - Only retries 5xx server errors (not 4xx client errors)
-  - Configurable `maxRetries`, `timeout`, and `backoffFn`
+  - Configurable `maxRetries`, `initialDelay`, and `backoffFn`
 
 **Logging (`log`)**
 
@@ -349,6 +337,7 @@ Middleware functions receive `(context, next)` parameters:
 - `next` - Function to call the next middleware or handler
 
 ```javascript
+// Add custom headers
 const customAuth = (context, next) => {
   return next({
     ...context,
@@ -361,49 +350,25 @@ const customAuth = (context, next) => {
     },
   });
 };
-```
 
-#### Production Patterns
-
-**API Provider Differences**
-When aggregating multiple APIs, each may have different requirements:
-
-```javascript
-const store = createMultiApiStore(schema, {
-  middleware: [
-    // Different auth per API
-    auth.conditional({
-      "internal-api.company.com": auth.bearerToken(() => getInternalToken()),
-      "external-api.partner.com": auth.apiKey(process.env.PARTNER_KEY),
-      "public-api.service.com": auth.none(),
-    }),
-
-    // Different retry strategies
-    retry.conditional({
-      "flaky-api.example.com": retry.exponential({ maxRetries: 5 }),
-      "reliable-api.example.com": retry.exponential({ maxRetries: 1 }),
-    }),
-  ],
-});
+// Custom middleware for domain-specific needs
+// Examples: request batching, circuit breakers, rate limiting
+const customBatching = (context, next) => {
+  // Your batching logic here
+  return next(context);
+};
 ```
 
 #### Why Middleware Architecture?
 
-Multi-API Store uses middleware composition rather than configuration options or inheritance because production API aggregation requires composing complex, often contradictory concerns:
+Multi-API Store uses middleware composition rather than configuration options because production API aggregation requires flexible composition of concerns:
 
-- **Request batching** needs to group queries while **rate limiting** needs to control timing
-- **Circuit breakers** need to fail fast while **retry logic** needs to persist
-- **Authentication** may require different strategies per API while **caching** needs unified keys
-- **Observability** needs to capture all requests while **performance** optimizations need to reduce overhead
+- Authentication strategies vary by API (Bearer tokens, API keys, OAuth)
+- Retry logic needs to handle different failure patterns
+- Timeout requirements differ based on API characteristics
+- Logging needs vary by environment (development vs production)
 
 Middleware lets you compose exactly the behavior you need without forcing architectural decisions on your application.
-
-**Alternative Approaches and Their Limitations**
-
-- **Configuration-based**: Would require anticipating every possible combination of production needs
-- **Inheritance/Plugin-based**: Creates tight coupling between concerns
-- **Application-level**: Forces every consumer to reimplement production patterns
-- **Core integration**: Creates an inflexible, monolithic store implementation
 
 ### Expression Engines
 
@@ -440,12 +405,12 @@ import { createMultiApiStore } from "@spectragraph/multi-api-store";
 
 const store = createMultiApiStore(schema, {
   resources: {
-    skeptics: {
+    parks: {
       handlers: {
         query: {
           fetch: async (context) => {
-            // Fetch skeptics from your API
-            const response = await fetch("/api/skeptics", {
+            // Fetch parks from National Park Service API
+            const response = await fetch("/api/parks", {
               method: "GET",
               headers: { "Content-Type": "application/json" },
             });
@@ -454,7 +419,7 @@ const store = createMultiApiStore(schema, {
         },
         create: {
           fetch: async (resource, context) => {
-            const response = await fetch("/api/skeptics", {
+            const response = await fetch("/api/parks", {
               method: "POST",
               body: JSON.stringify(resource.attributes),
               headers: { "Content-Type": "application/json" },
@@ -464,13 +429,13 @@ const store = createMultiApiStore(schema, {
         },
       },
     },
-    investigations: {
+    activities: {
       handlers: {
         query: {
           fetch: async (context) => {
-            // Fetch investigations from a different API
+            // Fetch activities from Recreation.gov API
             const response = await fetch(
-              "https://api.sciencechecks.org/investigations",
+              "https://api.recreation.gov/activities",
               {
                 headers: { Authorization: `Bearer ${process.env.API_KEY}` },
               },
@@ -485,9 +450,8 @@ const store = createMultiApiStore(schema, {
   specialHandlers: [
     {
       test: (query, context) =>
-        query.type === "weirdBeliefs" &&
-        context.parentQuery?.type === "investigations",
-      handler: () => [], // Beliefs already loaded with investigations
+        query.type === "lodging" && context.parentQuery?.type === "bookings",
+      handler: () => [], // Lodging already loaded with bookings
     },
   ],
 });
@@ -509,16 +473,16 @@ Executes a SpectraGraph query against the configured API endpoints.
 
 ```javascript
 const results = await store.query({
-  type: "skeptics",
+  type: "parks",
   select: {
     name: "name",
-    specialty: "specialty",
-    investigations: {
-      select: ["title", "conclusion"],
+    location: "location",
+    activities: {
+      select: ["name", "difficulty"],
     },
   },
   where: {
-    yearsActive: { $gte: 10 },
+    location: { $eq: "Utah" },
   },
 });
 ```
@@ -528,32 +492,32 @@ const results = await store.query({
 The multi-API store supports write operations when the appropriate handlers are configured:
 
 ```javascript
-// Create a new skeptic
-const newSkeptic = await store.create({
-  type: "skeptics",
+// Create a new booking
+const newBooking = await store.create({
+  type: "bookings",
   attributes: {
-    name: "Neil deGrasse Tyson",
-    specialty: "Astrophysics and Science Communication",
-    yearsActive: 25,
-    famousQuote:
-      "The good thing about science is that it's true whether or not you believe in it.",
+    travelerId: "user-123",
+    parkId: "zion",
+    lodgingId: "lodge-456",
+    startDate: "2024-05-15",
+    endDate: "2024-05-20",
   },
 });
 
-// Update an existing skeptic
-const updatedSkeptic = await store.update({
-  type: "skeptics",
-  id: "james-randi",
+// Update an existing booking
+const updatedBooking = await store.update({
+  type: "bookings",
+  id: "booking-789",
   attributes: {
-    specialty: "Paranormal Investigation and Magic",
-    yearsActive: 52,
+    endDate: "2024-05-22",
+    lodgingId: "campground-101",
   },
 });
 
-// Delete a skeptic
-const deletedSkeptic = await store.delete({
-  type: "skeptics",
-  id: "james-randi",
+// Delete a booking
+const deletedBooking = await store.delete({
+  type: "bookings",
+  id: "booking-789",
 });
 ```
 
@@ -564,12 +528,13 @@ The multi-API store supports upsert operations that create or update resources b
 ```javascript
 // Upsert - creates if no ID, updates if ID present
 const result = await store.upsert({
-  type: "skeptics",
-  id: "carl-sagan", // If present, will update; if absent, will create
+  type: "bookings",
+  id: "booking-456", // If present, will update; if absent, will create
   attributes: {
-    name: "Carl Sagan",
-    specialty: "Astronomy and Science Communication",
-    yearsActive: 40,
+    travelerId: "user-789",
+    parkId: "arches",
+    startDate: "2024-06-10",
+    endDate: "2024-06-15",
   },
 });
 ```
@@ -605,33 +570,33 @@ import { createMultiApiStore } from "@spectragraph/multi-api-store";
 // 1. Define your schema
 const schema = {
   resources: {
-    skeptics: {
+    parks: {
       attributes: {
         id: { type: "string" },
         name: { type: "string" },
-        specialty: { type: "string" },
-        yearsActive: { type: "number" },
+        location: { type: "string" },
+        bestSeason: { type: "string" },
       },
       relationships: {
-        investigations: {
-          type: "investigations",
+        activities: {
+          type: "activities",
           cardinality: "many",
-          inverse: "investigator",
+          inverse: "park",
         },
       },
     },
-    investigations: {
+    activities: {
       attributes: {
         id: { type: "string" },
-        title: { type: "string" },
-        conclusion: { type: "string" },
-        publicationYear: { type: "number" },
+        name: { type: "string" },
+        difficulty: { type: "string" },
+        duration: { type: "number" },
       },
       relationships: {
-        investigator: {
-          type: "skeptics",
+        park: {
+          type: "parks",
           cardinality: "one",
-          inverse: "investigations",
+          inverse: "activities",
         },
       },
     },
@@ -641,22 +606,22 @@ const schema = {
 // 2. Configure API endpoints with handlers
 const store = createMultiApiStore(schema, {
   resources: {
-    skeptics: {
+    parks: {
       handlers: {
         query: {
           fetch: async () => {
-            const response = await fetch("https://api1.example.com/skeptics");
+            const response = await fetch("https://api.nps.gov/parks");
             return response.json();
           },
         },
       },
     },
-    investigations: {
+    activities: {
       handlers: {
         query: {
           fetch: async () => {
             const response = await fetch(
-              "https://api2.example.com/investigations",
+              "https://api.recreation.gov/activities",
             );
             return response.json();
           },
@@ -668,17 +633,17 @@ const store = createMultiApiStore(schema, {
 
 // 3. Query the aggregated data
 const results = await store.query({
-  type: "skeptics",
-  select: ["name", "specialty"],
+  type: "parks",
+  select: ["name", "location"],
   where: {
-    yearsActive: { $gte: 5 },
+    bestSeason: { $eq: "spring" },
   },
 });
 
 console.log(results);
 // [
-//   { name: "James Randi", specialty: "Paranormal Investigation" },
-//   { name: "Michael Shermer", specialty: "Scientific Skepticism" }
+//   { name: "Zion National Park", location: "Utah" },
+//   { name: "Bryce Canyon", location: "Utah" }
 // ]
 ```
 
@@ -687,66 +652,65 @@ console.log(results);
 ```javascript
 const store = createMultiApiStore(schema, {
   resources: {
-    skeptics: {
+    parks: {
       handlers: {
         query: {
           fetch: async (context) => {
             // Use context for filtering, pagination, etc.
             const params = new URLSearchParams();
-            if (context.options?.specialty !== undefined) {
-              params.append("specialty", context.options.specialty);
+            if (context.options?.state !== undefined) {
+              params.append("stateCode", context.options.state);
             }
 
             const response = await fetch(
-              `https://api1.example.com/skeptics?${params}`,
+              `https://api.nps.gov/api/v1/parks?${params}`,
             );
             if (!response.ok) {
-              throw new Error(`Skeptics API error: ${response.statusText}`);
+              throw new Error(`Parks API error: ${response.statusText}`);
             }
             return response.json();
           },
         },
       },
     },
-    investigations: {
+    lodging: {
       handlers: {
         query: {
           fetch: async (context) => {
             // Different API with authentication
-            const response = await fetch(
-              "https://api2.example.com/investigations",
-              {
-                headers: {
-                  Authorization: `Bearer ${process.env.API_TOKEN}`,
-                  "Content-Type": "application/json",
-                },
+            const response = await fetch("https://api.booking.com/lodging", {
+              headers: {
+                Authorization: `Bearer ${process.env.API_TOKEN}`,
+                "Content-Type": "application/json",
               },
-            );
+            });
             return response.json();
           },
         },
       },
     },
-    weirdBeliefs: {
+    activities: {
       handlers: {
         query: {
           fetch: async (context) => {
             // Third-party API
-            const response = await fetch("https://api3.example.com/beliefs", {
-              headers: {
-                "X-API-Key": process.env.EXTERNAL_API_KEY,
+            const response = await fetch(
+              "https://api.recreation.gov/activities",
+              {
+                headers: {
+                  "X-API-Key": process.env.RECREATION_API_KEY,
+                },
               },
-            });
+            );
             const data = await response.json();
 
             // Transform external API format to match your schema
-            return data.claims.map((belief) => ({
-              id: belief.beliefId,
-              name: belief.claimName,
-              description: belief.description,
-              category: belief.type,
-              believersCount: belief.adherents,
-              debunked: belief.status === "debunked",
+            return data.activities.map((activity) => ({
+              id: activity.activityId,
+              name: activity.activityName,
+              description: activity.desc,
+              difficulty: activity.level,
+              duration: activity.durationMinutes,
             }));
           },
         },
@@ -755,24 +719,22 @@ const store = createMultiApiStore(schema, {
   },
   specialHandlers: [
     {
-      // When loading investigations from skeptics, use a more efficient endpoint
+      // When loading activities from parks, use a more efficient endpoint
       test: (query, context) =>
-        query.type === "investigations" &&
-        context.parentQuery?.type === "skeptics",
+        query.type === "activities" && context.parentQuery?.type === "parks",
       handler: async (query, context) => {
-        const skepticId = context.parentQuery.id;
+        const parkId = context.parentQuery.id;
         const response = await fetch(
-          `https://api1.example.com/skeptics/${skepticId}/investigations`,
+          `https://api.nps.gov/api/v1/parks/${parkId}/activities`,
         );
         return response.json();
       },
     },
     {
-      // Avoid loading beliefs if they're already included in investigation data
+      // Avoid loading lodging if it's already included in booking data
       test: (query, context) =>
-        query.type === "weirdBeliefs" &&
-        context.parentQuery?.type === "investigations",
-      handler: () => [], // Return empty - beliefs already loaded with investigations
+        query.type === "lodging" && context.parentQuery?.type === "bookings",
+      handler: () => [], // Return empty - lodging already loaded with bookings
     },
   ],
 });
@@ -783,30 +745,30 @@ const store = createMultiApiStore(schema, {
 ```javascript
 // Query with relationship traversal
 const results = await store.query({
-  type: "skeptics",
+  type: "parks",
   select: {
     name: "name",
-    specialty: "specialty",
-    investigations: {
-      select: ["title", "conclusion"],
+    location: "location",
+    activities: {
+      select: ["name", "difficulty", "duration"],
       where: {
-        publicationYear: { $gte: 2000 },
+        difficulty: { $in: ["easy", "moderate"] },
       },
     },
   },
   where: {
-    yearsActive: { $gte: 10 },
+    location: { $eq: "Utah" },
   },
 });
 
 console.log(results);
 // [
 //   {
-//     name: "James Randi",
-//     specialty: "Paranormal Investigation",
-//     investigations: [
-//       { title: "Testing Psychic Claims", conclusion: "No evidence found" },
-//       { title: "Dowsing Rod Analysis", conclusion: "Results no better than chance" }
+//     name: "Zion National Park",
+//     location: "Utah",
+//     activities: [
+//       { name: "Angels Landing", difficulty: "moderate", duration: 240 },
+//       { name: "Riverside Walk", difficulty: "easy", duration: 60 }
 //     ]
 //   }
 // ]
@@ -823,13 +785,17 @@ import {
 
 const store = createMultiApiStore(schema, {
   resources: {
-    skeptics: {
-      query: async () => {
-        const response = await fetch("https://api1.example.com/skeptics");
-        if (!response.ok) {
-          throw new Error(`API error: ${response.statusText}`);
-        }
-        return response.json();
+    parks: {
+      handlers: {
+        query: {
+          fetch: async () => {
+            const response = await fetch("https://api.nps.gov/parks");
+            if (!response.ok) {
+              throw new Error(`API error: ${response.statusText}`);
+            }
+            return response.json();
+          },
+        },
       },
     },
   },
@@ -837,15 +803,15 @@ const store = createMultiApiStore(schema, {
 
 try {
   // This will work - query operations are supported
-  const skeptics = await store.query({
-    type: "skeptics",
-    select: ["name", "specialty"],
+  const parks = await store.query({
+    type: "parks",
+    select: ["name", "location"],
   });
 
-  // This will throw StoreOperationNotSupportedError
+  // This will throw StoreOperationNotSupportedError (no create handler configured)
   await store.create({
-    type: "skeptics",
-    attributes: { name: "New Skeptic", specialty: "Critical Thinking" },
+    type: "parks",
+    attributes: { name: "New Park", location: "Utah" },
   });
 } catch (error) {
   if (error instanceof StoreOperationNotSupportedError) {
@@ -878,11 +844,11 @@ import type {
 
 const schema: Schema = {
   resources: {
-    skeptics: {
+    parks: {
       attributes: {
         id: { type: "string" },
         name: { type: "string" },
-        specialty: { type: "string" },
+        location: { type: "string" },
       },
       relationships: {},
     },
@@ -891,20 +857,20 @@ const schema: Schema = {
 
 const config: MultiApiStoreConfig = {
   resources: {
-    skeptics: {
+    parks: {
       handlers: {
         query: {
           fetch: async (context): Promise<any[]> => {
-            const response = await fetch("https://api1.example.com/skeptics");
+            const response = await fetch("https://api.nps.gov/parks");
             return response.json();
           },
           mappers: {
-            fullName: "name", // Map API field to schema field
+            parkName: "name", // Map API field to schema field
           },
         },
         create: {
           fetch: async (resource, context): Promise<any> => {
-            const response = await fetch("https://api1.example.com/skeptics", {
+            const response = await fetch("https://api.nps.gov/parks", {
               method: "POST",
               body: JSON.stringify(resource.attributes),
               headers: { "Content-Type": "application/json" },
@@ -944,31 +910,26 @@ Use the multi-API store as a unified query layer over multiple microservices:
 ```javascript
 const store = createMultiApiStore(schema, {
   resources: {
-    skeptics: {
+    parks: {
       handlers: {
         query: {
-          fetch: () =>
-            fetch("https://api1.example.com/skeptics").then((r) => r.json()),
+          fetch: () => fetch("https://api.nps.gov/parks").then((r) => r.json()),
         },
       },
     },
-    investigations: {
+    lodging: {
       handlers: {
         query: {
           fetch: () =>
-            fetch("https://api2.example.com/investigations").then((r) =>
-              r.json(),
-            ),
+            fetch("https://api.booking.com/lodging").then((r) => r.json()),
         },
       },
     },
-    organizations: {
+    bookings: {
       handlers: {
         query: {
           fetch: () =>
-            fetch("https://api3.example.com/organizations").then((r) =>
-              r.json(),
-            ),
+            fetch("https://api.yourcompany.com/bookings").then((r) => r.json()),
         },
       },
     },
@@ -983,33 +944,32 @@ Combine data from multiple external APIs with response transformation:
 ```javascript
 const store = createMultiApiStore(schema, {
   resources: {
-    skeptics: {
+    parks: {
       handlers: {
         query: {
-          fetch: () =>
-            fetch("https://api1.example.com/skeptics").then((r) => r.json()),
+          fetch: () => fetch("https://api.nps.gov/parks").then((r) => r.json()),
         },
       },
     },
-    weirdBeliefs: {
+    activities: {
       handlers: {
         query: {
           fetch: () =>
-            fetch(`https://api4.example.com/beliefs?key=${API_KEY}`).then((r) =>
-              r.json(),
+            fetch(`https://api.recreation.gov/activities?key=${API_KEY}`).then(
+              (r) => r.json(),
             ),
           mappers: {
-            beliefName: "name",
-            adherentCount: "believersCount",
+            activityName: "name",
+            durationMinutes: "duration",
           },
         },
       },
     },
-    investigations: {
+    lodging: {
       handlers: {
         query: {
           fetch: () =>
-            fetch(`https://api5.example.com/research?key=${RESEARCH_KEY}`).then(
+            fetch(`https://api.booking.com/lodging?key=${BOOKING_KEY}`).then(
               (r) => r.json(),
             ),
         },
@@ -1026,19 +986,21 @@ Use as a mock data layer for development:
 ```javascript
 const store = createMultiApiStore(schema, {
   resources: {
-    skeptics: {
+    parks: {
       handlers: {
         query: {
           fetch: async () => [
             {
-              id: "1",
-              name: "James Randi",
-              specialty: "Paranormal Investigation",
+              id: "zion",
+              name: "Zion National Park",
+              location: "Utah",
+              bestSeason: "spring",
             },
             {
-              id: "2",
-              name: "Michael Shermer",
-              specialty: "Scientific Skepticism",
+              id: "bryce",
+              name: "Bryce Canyon",
+              location: "Utah",
+              bestSeason: "fall",
             },
           ],
         },

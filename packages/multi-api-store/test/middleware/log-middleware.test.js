@@ -1,7 +1,7 @@
 import { expect, it, describe, vi } from "vitest";
 import { log } from "../../src/middleware/log-middleware.js";
 import { createMultiApiStore } from "../../src/multi-api-store.js";
-import skepticismSchema from "../fixtures/skepticism.schema.json";
+import utahParksSchema from "../fixtures/utah-parks.schema.json";
 
 describe("log.simple middleware", () => {
 	describe("in isolation", () => {
@@ -74,7 +74,7 @@ describe("log.simple middleware", () => {
 	});
 
 	describe("in examples", () => {
-		it("logs successful skeptics query", async () => {
+		it("logs successful parks query", async () => {
 			const mockLogger = {
 				log: vi.fn(),
 				error: vi.fn(),
@@ -82,11 +82,11 @@ describe("log.simple middleware", () => {
 
 			const mockQuery = vi.fn().mockResolvedValue([
 				{
-					id: "1",
-					name: "James Randi",
-					specialty: "Magic debunking",
-					yearsActive: 50,
-					famousQuote: "No amount of belief makes something a fact.",
+					id: "zion",
+					name: "Zion National Park",
+					location: "Utah",
+					established: 1919,
+					bestSeason: "spring",
 				},
 			]);
 
@@ -94,7 +94,7 @@ describe("log.simple middleware", () => {
 				specialHandlers: [],
 				middleware: [log.simple({ logger: mockLogger })],
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: mockQuery,
 						},
@@ -102,28 +102,28 @@ describe("log.simple middleware", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			const result = await store.query({
-				type: "skeptics",
-				select: ["name", "specialty"],
+				type: "parks",
+				select: ["name", "location"],
 			});
 
-			expect(mockLogger.log).toHaveBeenCalledWith("→ skeptics request started");
+			expect(mockLogger.log).toHaveBeenCalledWith("→ parks request started");
 			expect(mockLogger.log).toHaveBeenCalledWith(
-				expect.stringMatching(/✓ skeptics completed \(\d+ms\)/),
+				expect.stringMatching(/✓ parks completed \(\d+ms\)/),
 			);
 			expect(mockLogger.error).not.toHaveBeenCalled();
 
 			expect(result).toEqual([
 				{
-					name: "James Randi",
-					specialty: "Magic debunking",
+					name: "Zion National Park",
+					location: "Utah",
 				},
 			]);
 		});
 
-		it("logs failed skeptics query", async () => {
+		it("logs failed parks query", async () => {
 			const mockLogger = {
 				log: vi.fn(),
 				error: vi.fn(),
@@ -137,7 +137,7 @@ describe("log.simple middleware", () => {
 				specialHandlers: [],
 				middleware: [log.simple({ logger: mockLogger })],
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: mockQuery,
 						},
@@ -145,19 +145,19 @@ describe("log.simple middleware", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			await expect(
 				store.query({
-					type: "skeptics",
-					select: ["name", "specialty"],
+					type: "parks",
+					select: ["name", "location"],
 				}),
 			).rejects.toThrow();
 
-			expect(mockLogger.log).toHaveBeenCalledWith("→ skeptics request started");
+			expect(mockLogger.log).toHaveBeenCalledWith("→ parks request started");
 			expect(mockLogger.error).toHaveBeenCalledWith(
 				expect.stringMatching(
-					/✗ skeptics failed \(\d+ms\): Internal Server Error/,
+					/✗ parks failed \(\d+ms\): Internal Server Error/,
 				),
 			);
 		});

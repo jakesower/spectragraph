@@ -1,0 +1,174 @@
+{
+	"parks": {
+		"zion": {
+			"type": "parks",
+			"id": "zion",
+			"attributes": {
+				"id": "zion",
+				"name": "Zion National Park",
+				"location": "Utah",
+				"established": 1919,
+				"bestSeason": "spring",
+				"description": "Famous for towering sandstone cliffs and narrow slot canyons"
+			},
+			"relationships": {
+				"activities": [
+					{ "type": "activities", "id": "angels-landing" },
+					{ "type": "activities", "id": "narrows-hike" }
+				],
+				"lodging": [{ "type": "lodging", "id": "zion-lodge" }],
+				"nearbyPark": { "type": "parks", "id": "bryce-canyon" },
+				"closestNeighbor": null
+			}
+		},
+		"bryce-canyon": {
+			"type": "parks",
+			"id": "bryce-canyon",
+			"attributes": {
+				"id": "bryce-canyon",
+				"name": "Bryce Canyon National Park",
+				"location": "Utah",
+				"established": 1928,
+				"bestSeason": "fall",
+				"description": "Known for distinctive red rock hoodoos and amphitheaters"
+			},
+			"relationships": {
+				"activities": [
+					{ "type": "activities", "id": "navajo-loop" },
+					{ "type": "activities", "id": "sunrise-point" }
+				],
+				"lodging": [{ "type": "lodging", "id": "bryce-lodge" }],
+				"nearbyPark": null,
+				"closestNeighbor": { "type": "parks", "id": "zion" }
+			}
+		}
+	},
+	"activities": {
+		"angels-landing": {
+			"type": "activities",
+			"id": "angels-landing",
+			"attributes": {
+				"id": "angels-landing",
+				"name": "Angels Landing",
+				"difficulty": "strenuous",
+				"duration": 240,
+				"description": "Iconic hike with chains and exposed sections leading to panoramic views",
+				"seasonAvailable": ["spring", "summer", "fall"]
+			},
+			"relationships": {
+				"park": { "type": "parks", "id": "zion" },
+				"type": { "type": "activityTypes", "id": "hiking" }
+			}
+		},
+		"narrows-hike": {
+			"type": "activities",
+			"id": "narrows-hike",
+			"attributes": {
+				"id": "narrows-hike",
+				"name": "The Narrows",
+				"difficulty": "moderate",
+				"duration": 180,
+				"description": "Wade through the Virgin River in a stunning slot canyon",
+				"seasonAvailable": ["summer", "fall"]
+			},
+			"relationships": {
+				"park": { "type": "parks", "id": "zion" },
+				"type": { "type": "activityTypes", "id": "hiking" }
+			}
+		},
+		"navajo-loop": {
+			"type": "activities",
+			"id": "navajo-loop",
+			"attributes": {
+				"id": "navajo-loop",
+				"name": "Navajo Loop Trail",
+				"difficulty": "moderate",
+				"duration": 90,
+				"description": "Walk among towering hoodoos and through narrow wall slots",
+				"seasonAvailable": ["spring", "summer", "fall"]
+			},
+			"relationships": {
+				"park": { "type": "parks", "id": "bryce-canyon" },
+				"type": { "type": "activityTypes", "id": "hiking" }
+			}
+		},
+		"sunrise-point": {
+			"type": "activities",
+			"id": "sunrise-point",
+			"attributes": {
+				"id": "sunrise-point",
+				"name": "Sunrise Point Viewing",
+				"difficulty": "easy",
+				"duration": 30,
+				"description": "Watch the sunrise illuminate the hoodoos in brilliant colors",
+				"seasonAvailable": ["spring", "summer", "fall", "winter"]
+			},
+			"relationships": {
+				"park": { "type": "parks", "id": "bryce-canyon" },
+				"type": { "type": "activityTypes", "id": "viewing" }
+			}
+		}
+	},
+	"activityTypes": {
+		"hiking": {
+			"type": "activityTypes",
+			"id": "hiking",
+			"attributes": {
+				"id": "hiking",
+				"name": "Hiking",
+				"category": "physical",
+				"requiresPermit": true
+			},
+			"relationships": {
+				"activities": [
+					{ "type": "activities", "id": "angels-landing" },
+					{ "type": "activities", "id": "narrows-hike" },
+					{ "type": "activities", "id": "navajo-loop" }
+				]
+			}
+		},
+		"viewing": {
+			"type": "activityTypes",
+			"id": "viewing",
+			"attributes": {
+				"id": "viewing",
+				"name": "Scenic Viewing",
+				"category": "passive",
+				"requiresPermit": false
+			},
+			"relationships": {
+				"activities": [{ "type": "activities", "id": "sunrise-point" }]
+			}
+		}
+	},
+	"lodging": {
+		"zion-lodge": {
+			"type": "lodging",
+			"id": "zion-lodge",
+			"attributes": {
+				"id": "zion-lodge",
+				"name": "Zion Lodge",
+				"type": "hotel",
+				"pricePerNight": 250,
+				"amenities": ["restaurant", "wifi", "parking"]
+			},
+			"relationships": {
+				"nearbyPark": { "type": "parks", "id": "zion" }
+			}
+		},
+		"bryce-lodge": {
+			"type": "lodging",
+			"id": "bryce-lodge",
+			"attributes": {
+				"id": "bryce-lodge",
+				"name": "Bryce Canyon Lodge",
+				"type": "hotel",
+				"pricePerNight": 220,
+				"amenities": ["restaurant", "gift-shop", "parking"]
+			},
+			"relationships": {
+				"nearbyPark": { "type": "parks", "id": "bryce-canyon" }
+			}
+		}
+	}
+}

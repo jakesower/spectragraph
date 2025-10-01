@@ -1,7 +1,7 @@
 import { expect, it, describe, vi } from "vitest";
 import { auth } from "../../src/middleware/auth-middleware.js";
 import { createMultiApiStore } from "../../src/multi-api-store.js";
-import skepticismSchema from "../fixtures/skepticism.schema.json";
+import utahParksSchema from "../fixtures/utah-parks.schema.json";
 
 describe("auth.bearerToken middleware", () => {
 	describe("in isolation", () => {
@@ -79,22 +79,22 @@ describe("auth.bearerToken middleware", () => {
 	});
 
 	describe("in examples", () => {
-		it("queries skeptics with auth token", async () => {
+		it("queries parks with auth token", async () => {
 			const mockQuery = vi.fn().mockResolvedValue([
 				{
-					id: "1",
-					name: "James Randi",
-					specialty: "Magic debunking",
-					yearsActive: 50,
-					famousQuote: "No amount of belief makes something a fact.",
+					id: "zion",
+					name: "Zion National Park",
+					location: "Utah",
+					established: 1919,
+					bestSeason: "spring",
 				},
 			]);
 
 			const config = {
 				specialHandlers: [],
-				middleware: [auth.bearerToken(() => "ralphie voice: I'm a middleware")],
+				middleware: [auth.bearerToken(() => "test-nps-api-key")],
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: mockQuery,
 						},
@@ -102,11 +102,11 @@ describe("auth.bearerToken middleware", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			const result = await store.query({
-				type: "skeptics",
-				select: ["name", "specialty"],
+				type: "parks",
+				select: ["name", "location"],
 			});
 
 			// Verify the Authorization header was added by the middleware
@@ -114,7 +114,7 @@ describe("auth.bearerToken middleware", () => {
 				expect.objectContaining({
 					request: expect.objectContaining({
 						headers: expect.objectContaining({
-							Authorization: "Bearer ralphie voice: I'm a middleware",
+							Authorization: "Bearer test-nps-api-key",
 						}),
 					}),
 				}),
@@ -122,8 +122,8 @@ describe("auth.bearerToken middleware", () => {
 
 			expect(result).toEqual([
 				{
-					name: "James Randi",
-					specialty: "Magic debunking",
+					name: "Zion National Park",
+					location: "Utah",
 				},
 			]);
 		});
@@ -197,22 +197,22 @@ describe("auth.queryParam middleware", () => {
 	});
 
 	describe("in examples", () => {
-		it("queries skeptics with auth query param", async () => {
+		it("queries parks with auth query param", async () => {
 			const mockQuery = vi.fn().mockResolvedValue([
 				{
-					id: "1",
-					name: "James Randi",
-					specialty: "Magic debunking",
-					yearsActive: 50,
-					famousQuote: "No amount of belief makes something a fact.",
+					id: "zion",
+					name: "Zion National Park",
+					location: "Utah",
+					established: 1919,
+					bestSeason: "spring",
 				},
 			]);
 
 			const config = {
 				specialHandlers: [],
-				middleware: [auth.queryParam(() => "secret-api-key", "access_token")],
+				middleware: [auth.queryParam(() => "secret-nps-key", "api_key")],
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: mockQuery,
 						},
@@ -220,25 +220,25 @@ describe("auth.queryParam middleware", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			const result = await store.query({
-				type: "skeptics",
-				select: ["name", "specialty"],
+				type: "parks",
+				select: ["name", "location"],
 			});
 
 			expect(mockQuery).toHaveBeenCalledWith(
 				expect.objectContaining({
 					request: expect.objectContaining({
-						queryParamsStr: "?access_token=secret-api-key",
+						queryParamsStr: "?api_key=secret-nps-key",
 					}),
 				}),
 			);
 
 			expect(result).toEqual([
 				{
-					name: "James Randi",
-					specialty: "Magic debunking",
+					name: "Zion National Park",
+					location: "Utah",
 				},
 			]);
 		});
