@@ -1,7 +1,7 @@
 import { expect, it, describe, vi } from "vitest";
 import { retry } from "../../src/middleware/retry-middleware.js";
 import { createMultiApiStore } from "../../src/multi-api-store.js";
-import skepticismSchema from "../fixtures/skepticism.schema.json";
+import utahParksSchema from "../fixtures/utah-parks.schema.json";
 
 describe("retry.exponential middleware", () => {
 	const backoffFn = () => 1;
@@ -106,7 +106,7 @@ describe("retry.exponential middleware", () => {
 	});
 
 	describe("in examples", () => {
-		it("retries failed skeptics query and eventually succeeds", async () => {
+		it("retries failed parks query and eventually succeeds", async () => {
 			const gatewayTimeout = new Error("Gateway Timeout", {
 				cause: {
 					response: { status: 504 },
@@ -120,11 +120,11 @@ describe("retry.exponential middleware", () => {
 				.mockRejectedValueOnce(gatewayTimeout)
 				.mockResolvedValueOnce([
 					{
-						id: "1",
-						name: "James Randi",
-						specialty: "Magic debunking",
-						yearsActive: 50,
-						famousQuote: "No amount of belief makes something a fact.",
+						id: "zion",
+						name: "Zion National Park",
+						location: "Utah",
+						established: 1919,
+						bestSeason: "spring",
 					},
 				]);
 
@@ -132,7 +132,7 @@ describe("retry.exponential middleware", () => {
 				specialHandlers: [],
 				middleware: [retry.exponential({ backoffFn })],
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: mockQuery,
 						},
@@ -140,18 +140,18 @@ describe("retry.exponential middleware", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			const result = await store.query({
-				type: "skeptics",
-				select: ["name", "specialty"],
+				type: "parks",
+				select: ["name", "location"],
 			});
 
 			expect(mockQuery).toHaveBeenCalledTimes(3);
 			expect(result).toEqual([
 				{
-					name: "James Randi",
-					specialty: "Magic debunking",
+					name: "Zion National Park",
+					location: "Utah",
 				},
 			]);
 		});
@@ -170,7 +170,7 @@ describe("retry.exponential middleware", () => {
 				specialHandlers: [],
 				middleware: [retry.exponential({ backoffFn })],
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: mockQuery,
 						},
@@ -178,12 +178,12 @@ describe("retry.exponential middleware", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			await expect(
 				store.query({
-					type: "skeptics",
-					select: ["name", "specialty"],
+					type: "parks",
+					select: ["name", "location"],
 				}),
 			).rejects.toThrow();
 

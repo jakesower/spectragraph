@@ -1,6 +1,6 @@
 import { expect, it, describe, vi, beforeEach, afterEach } from "vitest";
 import { createMultiApiStore } from "../src/multi-api-store.js";
-import skepticismSchema from "./fixtures/skepticism.schema.json";
+import utahParksSchema from "./fixtures/utah-parks.schema.json";
 
 describe("createMultiApiStore", () => {
 	it("supports forceRefresh to clear cache and fetch fresh data", async () => {
@@ -12,26 +12,26 @@ describe("createMultiApiStore", () => {
 		const config = {
 			cache: { enabled: true, ttl: 60000 },
 			resources: {
-				skeptics: { query: { fetch: mockQuery } },
+				parks: { query: { fetch: mockQuery } },
 			},
 		};
 
-		const store = createMultiApiStore(skepticismSchema, config);
+		const store = createMultiApiStore(utahParksSchema, config);
 
 		// Call 1: Normal caching
-		const result1 = await store.query({ type: "skeptics", select: ["name"] });
+		const result1 = await store.query({ type: "parks", select: ["name"] });
 
 		// Call 2: Should use cache (normal behavior)
-		const result2 = await store.query({ type: "skeptics", select: ["name"] });
+		const result2 = await store.query({ type: "parks", select: ["name"] });
 
 		// Call 3: With forceRefresh, should clear cache and fetch fresh
 		const result3 = await store.query(
-			{ type: "skeptics", select: ["name"] },
+			{ type: "parks", select: ["name"] },
 			{ forceRefresh: true },
 		);
 
 		// Call 4: Should now use the refreshed cache
-		const result4 = await store.query({ type: "skeptics", select: ["name"] });
+		const result4 = await store.query({ type: "parks", select: ["name"] });
 
 		expect(mockQuery).toHaveBeenCalledTimes(2); // Call 1 + call 3 (force refresh)
 		expect(result1[0].name).toBe("First Call");
@@ -40,21 +40,21 @@ describe("createMultiApiStore", () => {
 		expect(result4[0].name).toBe("Second Call"); // Uses refreshed cache
 	});
 
-	it("queries skeptics with mocked get handler", async () => {
+	it("queries parks with mocked get handler", async () => {
 		const mockQuery = vi.fn().mockResolvedValue([
 			{
 				id: "1",
-				name: "James Randi",
-				specialty: "Magic debunking",
-				yearsActive: 50,
-				famousQuote: "No amount of belief makes something a fact.",
+				name: "Zion National Park",
+				location: "Utah",
+				established: 1919,
+				bestSeason: "spring",
 			},
 		]);
 
 		const config = {
 			specialHandlers: [],
 			resources: {
-				skeptics: {
+				parks: {
 					query: {
 						fetch: mockQuery,
 					},
@@ -62,239 +62,239 @@ describe("createMultiApiStore", () => {
 			},
 		};
 
-		const store = createMultiApiStore(skepticismSchema, config);
+		const store = createMultiApiStore(utahParksSchema, config);
 
 		const result = await store.query({
-			type: "skeptics",
-			select: ["name", "specialty"],
+			type: "parks",
+			select: ["name", "location"],
 		});
 
 		expect(mockQuery).toHaveBeenCalledWith(
 			expect.objectContaining({
 				query: {
-					type: "skeptics",
-					select: { name: "name", specialty: "specialty" },
+					type: "parks",
+					select: { name: "name", location: "location" },
 				},
-				schema: skepticismSchema,
+				schema: utahParksSchema,
 			}),
 		);
 
 		expect(result).toEqual([
 			{
-				name: "James Randi",
-				specialty: "Magic debunking",
+				name: "Zion National Park",
+				location: "Utah",
 			},
 		]);
 	});
 
-	it("queries skeptics with mappers", async () => {
+	it("queries parks with mappers", async () => {
 		const mockQuery = vi.fn().mockResolvedValue([
 			{
-				id: "1",
-				moniker: "James Randi",
-				specialty: "Magic debunking",
-				decadesActive: 5,
-				famousQuote: "No amount of belief makes something a fact.",
+				id: "zion",
+				parkName: "Zion National Park",
+				state: "Utah",
+				yearEstablished: 1919,
+				description: "Famous for towering sandstone cliffs",
 			},
 		]);
 
 		const config = {
 			specialHandlers: [],
 			resources: {
-				skeptics: {
+				parks: {
 					query: {
 						fetch: mockQuery,
 						mappers: {
-							name: "moniker",
-							yearsActive: (res) => Math.round(res.decadesActive / 10),
+							name: "parkName",
+							location: "state",
 						},
 					},
 				},
 			},
 		};
 
-		const store = createMultiApiStore(skepticismSchema, config);
+		const store = createMultiApiStore(utahParksSchema, config);
 
 		const result = await store.query({
-			type: "skeptics",
-			select: ["name", "specialty"],
+			type: "parks",
+			select: ["name", "location"],
 		});
 
 		expect(mockQuery).toHaveBeenCalledWith(
 			expect.objectContaining({
 				query: {
-					type: "skeptics",
-					select: { name: "name", specialty: "specialty" },
+					type: "parks",
+					select: { name: "name", location: "location" },
 				},
-				schema: skepticismSchema,
+				schema: utahParksSchema,
 			}),
 		);
 
 		expect(result).toEqual([
 			{
-				name: "James Randi",
-				specialty: "Magic debunking",
+				name: "Zion National Park",
+				location: "Utah",
 			},
 		]);
 	});
 
-	it("queries skeptics with related investigations", async () => {
-		const mockSkepticsGet = vi.fn().mockResolvedValue([
+	it("queries parks with related activities", async () => {
+		const mockParksGet = vi.fn().mockResolvedValue([
 			{
-				id: "1",
-				name: "James Randi",
-				specialty: "Magic debunking",
-				yearsActive: 50,
-				famousQuote: "No amount of belief makes something a fact.",
+				id: "zion",
+				name: "Zion National Park",
+				location: "Utah",
+				established: 1919,
+				bestSeason: "spring",
+				activities: ["angels-landing"],
 			},
 		]);
 
-		const mockInvestigationsGet = vi.fn().mockResolvedValue([
+		const mockActivitiesGet = vi.fn().mockResolvedValue([
 			{
-				id: "inv1",
-				title: "Testing Uri Geller's Spoon Bending",
-				claimTested: "Psychokinetic metal bending",
-				methodsUsed: ["Controlled environment", "Video recording"],
-				conclusion: "No paranormal activity detected",
-				publicationYear: 1973,
-				investigator: "1",
+				id: "angels-landing",
+				name: "Angels Landing",
+				difficulty: "strenuous",
+				duration: 240,
+				description: "Iconic hike with chains",
+				seasonAvailable: ["spring", "summer", "fall"],
+				park: "zion",
 			},
 		]);
 
 		const config = {
 			specialHandlers: [],
 			resources: {
-				skeptics: {
+				parks: {
 					query: {
-						fetch: mockSkepticsGet,
+						fetch: mockParksGet,
 					},
 				},
-				investigations: {
+				activities: {
 					query: {
-						fetch: mockInvestigationsGet,
+						fetch: mockActivitiesGet,
 					},
 				},
 			},
 		};
 
-		const store = createMultiApiStore(skepticismSchema, config);
+		const store = createMultiApiStore(utahParksSchema, config);
 
 		const result = await store.query({
-			type: "skeptics",
-			select: ["name", { investigations: { select: ["title", "conclusion"] } }],
+			type: "parks",
+			select: ["name", { activities: { select: ["name", "difficulty"] } }],
 		});
 
-		expect(mockSkepticsGet).toHaveBeenCalledWith(
+		expect(mockParksGet).toHaveBeenCalledWith(
 			expect.objectContaining({
-				schema: skepticismSchema,
+				schema: utahParksSchema,
 				query: {
-					type: "skeptics",
-					select: { name: "name", investigations: expect.any(Object) },
+					type: "parks",
+					select: { name: "name", activities: expect.any(Object) },
 				},
 			}),
 		);
 
-		expect(mockInvestigationsGet).toHaveBeenCalledWith(
+		expect(mockActivitiesGet).toHaveBeenCalledWith(
 			expect.objectContaining({
-				schema: skepticismSchema,
+				schema: utahParksSchema,
 				parentQuery: expect.any(Object),
 				query: {
-					type: "investigations",
-					select: { title: "title", conclusion: "conclusion" },
+					type: "activities",
+					select: { name: "name", difficulty: "difficulty" },
 				},
 			}),
 		);
 
 		expect(result).toEqual([
 			{
-				name: "James Randi",
-				investigations: [
+				name: "Zion National Park",
+				activities: [
 					{
-						title: "Testing Uri Geller's Spoon Bending",
-						conclusion: "No paranormal activity detected",
+						name: "Angels Landing",
+						difficulty: "strenuous",
 					},
 				],
 			},
 		]);
 	});
 
-	it("queries skeptics with related investigations with a configured relationship field", async () => {
-		const mockSkepticsGet = vi.fn().mockResolvedValue([
+	it("queries parks with related activities with a configured relationship field", async () => {
+		const mockParksGet = vi.fn().mockResolvedValue([
 			{
-				id: "1",
-				name: "James Randi",
-				specialty: "Magic debunking",
-				yearsActive: 50,
-				famousQuote: "No amount of belief makes something a fact.",
+				id: "zion",
+				name: "Zion National Park",
+				location: "Utah",
+				established: 1919,
+				bestSeason: "spring",
+				activities: ["angels-landing"],
 			},
 		]);
 
-		const mockInvestigationsGet = vi.fn().mockResolvedValue([
+		const mockActivitiesGet = vi.fn().mockResolvedValue([
 			{
-				id: "inv1",
-				title: "Testing Uri Geller's Spoon Bending",
-				claimTested: "Psychokinetic metal bending",
-				methodsUsed: ["Controlled environment", "Video recording"],
-				conclusion: "No paranormal activity detected",
-				publicationYear: 1973,
-				investigator_id: "1",
+				id: "angels-landing",
+				name: "Angels Landing",
+				difficulty: "strenuous",
+				duration: 240,
+				park_id: "zion",
 			},
 		]);
 
 		const config = {
 			specialHandlers: [],
 			resources: {
-				skeptics: {
+				parks: {
 					query: {
-						fetch: mockSkepticsGet,
+						fetch: mockParksGet,
 					},
 				},
-				investigations: {
+				activities: {
 					query: {
-						fetch: mockInvestigationsGet,
+						fetch: mockActivitiesGet,
 						mappers: {
-							investigator: "investigator_id",
+							park: "park_id",
 						},
 					},
 				},
 			},
 		};
 
-		const store = createMultiApiStore(skepticismSchema, config);
+		const store = createMultiApiStore(utahParksSchema, config);
 
 		const result = await store.query({
-			type: "skeptics",
-			select: ["name", { investigations: { select: ["title", "conclusion"] } }],
+			type: "parks",
+			select: ["name", { activities: { select: ["name", "difficulty"] } }],
 		});
 
-		expect(mockSkepticsGet).toHaveBeenCalledWith(
+		expect(mockParksGet).toHaveBeenCalledWith(
 			expect.objectContaining({
-				schema: skepticismSchema,
+				schema: utahParksSchema,
 				query: {
-					type: "skeptics",
-					select: { name: "name", investigations: expect.any(Object) },
+					type: "parks",
+					select: { name: "name", activities: expect.any(Object) },
 				},
 			}),
 		);
 
-		expect(mockInvestigationsGet).toHaveBeenCalledWith(
+		expect(mockActivitiesGet).toHaveBeenCalledWith(
 			expect.objectContaining({
-				schema: skepticismSchema,
+				schema: utahParksSchema,
 				parentQuery: expect.any(Object),
 				query: {
-					type: "investigations",
-					select: { title: "title", conclusion: "conclusion" },
+					type: "activities",
+					select: { name: "name", difficulty: "difficulty" },
 				},
 			}),
 		);
 
 		expect(result).toEqual([
 			{
-				name: "James Randi",
-				investigations: [
+				name: "Zion National Park",
+				activities: [
 					{
-						title: "Testing Uri Geller's Spoon Bending",
-						conclusion: "No paranormal activity detected",
+						name: "Angels Landing",
+						difficulty: "strenuous",
 					},
 				],
 			},
@@ -302,31 +302,32 @@ describe("createMultiApiStore", () => {
 	});
 
 	it("uses special handlers to customize data loading", async () => {
-		const mockSkepticsGet = vi.fn().mockResolvedValue([
+		const mockParksGet = vi.fn().mockResolvedValue([
 			{
-				id: "1",
-				name: "James Randi",
-				specialty: "Magic debunking",
-				yearsActive: 50,
-				famousQuote: "No amount of belief makes something a fact.",
+				id: "zion",
+				name: "Zion National Park",
+				location: "Utah",
+				established: 1919,
+				bestSeason: "spring",
+				activities: ["angels-landing"],
 			},
 		]);
 
-		const mockInvestigationsGet = vi.fn().mockResolvedValue([
+		const mockActivitiesGet = vi.fn().mockResolvedValue([
 			{
-				id: "inv1",
-				title: "Standard Investigation",
-				conclusion: "From general endpoint",
-				investigator: "1",
+				id: "angels-landing",
+				name: "Standard Activity",
+				difficulty: "moderate",
+				park: "zion",
 			},
 		]);
 
 		const mockSpecialInvestigationsHandler = vi.fn().mockResolvedValue([
 			{
-				id: "inv1",
-				title: "Special Investigation from Skeptics Endpoint",
-				conclusion: "From specialized skeptics-investigations endpoint",
-				investigator: "1",
+				id: "angels-landing",
+				name: "Special Activity from Parks Endpoint",
+				difficulty: "strenuous",
+				park: "zion",
 			},
 		]);
 
@@ -334,52 +335,52 @@ describe("createMultiApiStore", () => {
 			specialHandlers: [
 				{
 					test: (query, context) =>
-						query.type === "investigations" &&
-						context.parentQuery?.type === "skeptics",
+						query.type === "activities" &&
+						context.parentQuery?.type === "parks",
 					query: mockSpecialInvestigationsHandler,
 				},
 			],
 			resources: {
-				skeptics: {
+				parks: {
 					query: {
-						fetch: mockSkepticsGet,
+						fetch: mockParksGet,
 					},
 				},
-				investigations: {
+				activities: {
 					query: {
-						fetch: mockInvestigationsGet,
+						fetch: mockActivitiesGet,
 					},
 				},
 			},
 		};
 
-		const store = createMultiApiStore(skepticismSchema, config);
+		const store = createMultiApiStore(utahParksSchema, config);
 
 		const result = await store.query({
-			type: "skeptics",
-			select: ["name", { investigations: { select: ["title", "conclusion"] } }],
+			type: "parks",
+			select: ["name", { activities: { select: ["name", "difficulty"] } }],
 		});
 
-		// Should use special handler, not regular investigations get
-		expect(mockInvestigationsGet).not.toHaveBeenCalled();
+		// Should use special handler, not regular activities get
+		expect(mockActivitiesGet).not.toHaveBeenCalled();
 		expect(mockSpecialInvestigationsHandler).toHaveBeenCalledWith(
 			expect.objectContaining({
-				schema: skepticismSchema,
-				parentQuery: expect.objectContaining({ type: "skeptics" }),
+				schema: utahParksSchema,
+				parentQuery: expect.objectContaining({ type: "parks" }),
 				query: {
-					type: "investigations",
-					select: { title: "title", conclusion: "conclusion" },
+					type: "activities",
+					select: { name: "name", difficulty: "difficulty" },
 				},
 			}),
 		);
 
 		expect(result).toEqual([
 			{
-				name: "James Randi",
-				investigations: [
+				name: "Zion National Park",
+				activities: [
 					{
-						title: "Special Investigation from Skeptics Endpoint",
-						conclusion: "From specialized skeptics-investigations endpoint",
+						name: "Special Activity from Parks Endpoint",
+						difficulty: "strenuous",
 					},
 				],
 			},
@@ -389,15 +390,15 @@ describe("createMultiApiStore", () => {
 	describe("CUD Operations", () => {
 		it("creates a resource when create handler is available", async () => {
 			const mockCreate = vi.fn().mockResolvedValue({
-				id: "new-skeptic",
-				name: "New Skeptic",
-				specialty: "Critical Thinking",
-				yearsActive: 1,
+				id: "arches",
+				name: "Arches National Park",
+				location: "Utah",
+				established: 1971,
 			});
 
 			const config = {
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: vi.fn(),
 						},
@@ -408,30 +409,30 @@ describe("createMultiApiStore", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
-			const newSkeptic = {
-				type: "skeptics",
+			const newPark = {
+				type: "parks",
 				attributes: {
-					name: "New Skeptic",
-					specialty: "Critical Thinking",
-					yearsActive: 1,
+					name: "Arches National Park",
+					location: "Utah",
+					established: 1971,
 				},
 			};
 
-			const result = await store.create(newSkeptic);
+			const result = await store.create(newPark);
 
 			expect(mockCreate).toHaveBeenCalledWith(
-				newSkeptic,
+				newPark,
 				expect.objectContaining({
-					schema: skepticismSchema,
+					schema: utahParksSchema,
 				}),
 			);
 			expect(result).toEqual({
-				id: "new-skeptic",
-				name: "New Skeptic",
-				specialty: "Critical Thinking",
-				yearsActive: 1,
+				id: "arches",
+				name: "Arches National Park",
+				location: "Utah",
+				established: 1971,
 			});
 		});
 
@@ -439,47 +440,47 @@ describe("createMultiApiStore", () => {
 			const config = {
 				// No baseURL - should default to empty string
 				resources: {
-					skeptics: {
+					parks: {
 						query: vi.fn(),
 						// no create handler - should use standard handler
 					},
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
-			const newSkeptic = {
-				type: "skeptics",
+			const newPark = {
+				type: "parks",
 				attributes: { name: "New Skeptic" },
 			};
 
 			global.fetch = vi.fn().mockResolvedValue({
 				ok: true,
-				json: async () => ({ id: "new-id", ...newSkeptic }),
+				json: async () => ({ id: "new-id", ...newPark }),
 			});
 
-			await store.create(newSkeptic);
+			await store.create(newPark);
 
-			expect(global.fetch).toHaveBeenCalledWith("/skeptics", {
+			expect(global.fetch).toHaveBeenCalledWith("/parks", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify(newSkeptic),
+				body: JSON.stringify(newPark),
 			});
 		});
 
 		it("updates a resource when update handler is available", async () => {
 			const mockUpdate = vi.fn().mockResolvedValue({
-				id: "1",
-				name: "Updated Skeptic",
-				specialty: "Updated Specialty",
-				yearsActive: 25,
+				id: "zion",
+				name: "Zion National Park",
+				location: "Utah",
+				bestSeason: "fall",
 			});
 
 			const config = {
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: vi.fn(),
 						},
@@ -490,42 +491,41 @@ describe("createMultiApiStore", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
-			const updateSkeptic = {
-				type: "skeptics",
-				id: "1",
+			const updatePark = {
+				type: "parks",
+				id: "zion",
 				attributes: {
-					name: "Updated Skeptic",
-					specialty: "Updated Specialty",
+					bestSeason: "fall",
 				},
 			};
 
-			const result = await store.update(updateSkeptic);
+			const result = await store.update(updatePark);
 
 			expect(mockUpdate).toHaveBeenCalledWith(
-				updateSkeptic,
+				updatePark,
 				expect.objectContaining({
-					schema: skepticismSchema,
+					schema: utahParksSchema,
 				}),
 			);
 			expect(result).toEqual({
-				id: "1",
-				name: "Updated Skeptic",
-				specialty: "Updated Specialty",
-				yearsActive: 25,
+				id: "zion",
+				name: "Zion National Park",
+				location: "Utah",
+				bestSeason: "fall",
 			});
 		});
 
 		it("deletes a resource when delete handler is available", async () => {
 			const mockDelete = vi.fn().mockResolvedValue({
-				type: "skeptics",
+				type: "parks",
 				id: "1",
 			});
 
 			const config = {
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: vi.fn(),
 						},
@@ -536,23 +536,23 @@ describe("createMultiApiStore", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
-			const deleteSkeptic = {
-				type: "skeptics",
+			const deletePark = {
+				type: "parks",
 				id: "1",
 			};
 
-			const result = await store.delete(deleteSkeptic);
+			const result = await store.delete(deletePark);
 
 			expect(mockDelete).toHaveBeenCalledWith(
-				deleteSkeptic,
+				deletePark,
 				expect.objectContaining({
-					schema: skepticismSchema,
+					schema: utahParksSchema,
 				}),
 			);
 			expect(result).toEqual({
-				type: "skeptics",
+				type: "parks",
 				id: "1",
 			});
 		});
@@ -567,7 +567,7 @@ describe("createMultiApiStore", () => {
 		it("caches query results when caching is enabled", async () => {
 			const mockQuery = vi
 				.fn()
-				.mockResolvedValueOnce([{ id: "1", name: "James Randi" }])
+				.mockResolvedValueOnce([{ id: "1", name: "Zion National Park" }])
 				.mockResolvedValueOnce([{ id: "2", name: "Different Data" }]);
 
 			const config = {
@@ -576,7 +576,7 @@ describe("createMultiApiStore", () => {
 					ttl: 1000, // 1 second
 				},
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: mockQuery,
 						},
@@ -584,36 +584,36 @@ describe("createMultiApiStore", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			const query = {
-				type: "skeptics",
+				type: "parks",
 				select: ["name"],
 			};
 
 			// First call should hit the API
 			const result1 = await store.query(query);
 			expect(mockQuery).toHaveBeenCalledTimes(1);
-			expect(result1).toEqual([{ name: "James Randi" }]);
+			expect(result1).toEqual([{ name: "Zion National Park" }]);
 
 			// Second call should use cache
 			const result2 = await store.query(query);
 			expect(mockQuery).toHaveBeenCalledTimes(1); // Still 1, not called again
-			expect(result2).toEqual([{ name: "James Randi" }]);
+			expect(result2).toEqual([{ name: "Zion National Park" }]);
 		});
 
 		it("does not cache when caching is disabled", async () => {
 			const mockQuery = vi
 				.fn()
-				.mockResolvedValueOnce([{ id: "1", name: "James Randi" }])
-				.mockResolvedValueOnce([{ id: "1", name: "James Randi" }]);
+				.mockResolvedValueOnce([{ id: "1", name: "Zion National Park" }])
+				.mockResolvedValueOnce([{ id: "1", name: "Zion National Park" }]);
 
 			const config = {
 				cache: {
 					enabled: false,
 				},
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: mockQuery,
 						},
@@ -621,10 +621,10 @@ describe("createMultiApiStore", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			const query = {
-				type: "skeptics",
+				type: "parks",
 				select: ["name"],
 			};
 
@@ -640,10 +640,11 @@ describe("createMultiApiStore", () => {
 		it("clears cache when creating a resource", async () => {
 			const mockQuery = vi
 				.fn()
-				.mockResolvedValue([{ id: "1", name: "James Randi" }]);
+				.mockResolvedValue([{ id: "1", name: "Zion National Park" }]);
 			const mockCreate = vi.fn().mockResolvedValue({
-				id: "2",
-				name: "New Skeptic",
+				id: "capitol-reef",
+				name: "Capitol Reef National Park",
+				location: "Utah",
 			});
 
 			const config = {
@@ -652,7 +653,7 @@ describe("createMultiApiStore", () => {
 					ttl: 60000, // 1 minute
 				},
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: mockQuery,
 						},
@@ -663,10 +664,10 @@ describe("createMultiApiStore", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			const query = {
-				type: "skeptics",
+				type: "parks",
 				select: ["name"],
 			};
 
@@ -680,8 +681,12 @@ describe("createMultiApiStore", () => {
 
 			// Create a resource (should clear cache)
 			await store.create({
-				type: "skeptics",
-				attributes: { name: "New Skeptic", specialty: "Test", yearsActive: 1 },
+				type: "parks",
+				attributes: {
+					name: "Capitol Reef National Park",
+					location: "Utah",
+					established: 1971,
+				},
 			});
 
 			// Query again should hit API (cache was cleared)
@@ -700,84 +705,84 @@ describe("handler tests", () => {
 		vi.restoreAllMocks();
 	});
 
-	it("queries skeptics with real handler and mocked fetch", async () => {
-		// Mock fetch to return skeptic data
+	it("queries parks with real handler and mocked fetch", async () => {
+		// Mock fetch to return park data
 		global.fetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => [
 				{
-					id: "1",
-					name: "James Randi",
-					specialty: "Magic debunking",
-					yearsActive: 50,
-					famousQuote: "No amount of belief makes something a fact.",
+					id: "zion",
+					name: "Zion National Park",
+					location: "Utah",
+					established: 1919,
+					bestSeason: "spring",
 				},
 			],
 		});
 
 		const config = {
 			request: {
-				baseURL: "https://api.skepticism.example.org",
+				baseURL: "https://api.nps.example.org",
 			},
 			resources: {
-				skeptics: {},
+				parks: {},
 			},
 		};
 
-		const store = createMultiApiStore(skepticismSchema, config);
+		const store = createMultiApiStore(utahParksSchema, config);
 
 		const result = await store.query({
-			type: "skeptics",
-			select: ["name", "specialty"],
+			type: "parks",
+			select: ["name", "location"],
 		});
 
 		expect(global.fetch).toHaveBeenCalledWith(
-			"https://api.skepticism.example.org/skeptics",
+			"https://api.nps.example.org/parks",
 		);
 		expect(result).toEqual([
 			{
-				name: "James Randi",
-				specialty: "Magic debunking",
+				name: "Zion National Park",
+				location: "Utah",
 			},
 		]);
 	});
 
-	it("queries single skeptic with real handler and mocked fetch", async () => {
-		// Mock fetch to return single skeptic data
+	it("queries single park with real handler and mocked fetch", async () => {
+		// Mock fetch to return single park data
 		global.fetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => ({
-				id: "randi",
-				name: "James Randi",
-				specialty: "Magic debunking",
-				yearsActive: 50,
-				famousQuote: "No amount of belief makes something a fact.",
+				id: "zion",
+				name: "Zion National Park",
+				location: "Utah",
+				established: 1919,
+				bestSeason: "spring",
 			}),
 		});
 
 		const config = {
 			request: {
-				baseURL: "https://api.skepticism.example.org",
+				baseURL: "https://api.nps.example.org",
 			},
 			resources: {
-				skeptics: {},
+				parks: {},
 			},
 		};
 
-		const store = createMultiApiStore(skepticismSchema, config);
+		const store = createMultiApiStore(utahParksSchema, config);
 
 		const result = await store.query({
-			type: "skeptics",
-			id: "randi",
-			select: ["name", "specialty"],
+			type: "parks",
+			id: "zion",
+			select: ["name", "location"],
 		});
 
 		expect(global.fetch).toHaveBeenCalledWith(
-			"https://api.skepticism.example.org/skeptics/randi",
+			"https://api.nps.example.org/parks/zion",
 		);
 		expect(result).toEqual({
-			name: "James Randi",
-			specialty: "Magic debunking",
+			name: "Zion National Park",
+			location: "Utah",
 		});
 	});
 
@@ -787,32 +792,32 @@ describe("handler tests", () => {
 			ok: false,
 			status: 404,
 			statusText: "Not Found",
-			url: "https://api.skepticism.example.org/skeptics/nonexistent",
+			url: "https://api.nps.example.org/parks/nonexistent",
 			headers: new Map([["content-type", "application/json"]]),
-			json: () => Promise.resolve({ message: "Skeptic not found" }),
+			json: () => Promise.resolve({ message: "Park not found" }),
 		});
 
 		const config = {
 			request: {
-				baseURL: "https://api.skepticism.example.org",
+				baseURL: "https://api.nps.example.org",
 			},
 			resources: {
-				skeptics: {},
+				parks: {},
 			},
 		};
 
-		const store = createMultiApiStore(skepticismSchema, config);
+		const store = createMultiApiStore(utahParksSchema, config);
 
 		await expect(
 			store.query({
-				type: "skeptics",
+				type: "parks",
 				id: "nonexistent",
 				select: ["name"],
 			}),
-		).rejects.toThrow("Skeptic not found");
+		).rejects.toThrow("Park not found");
 
 		expect(global.fetch).toHaveBeenCalledWith(
-			"https://api.skepticism.example.org/skeptics/nonexistent",
+			"https://api.nps.example.org/parks/nonexistent",
 		);
 	});
 
@@ -821,50 +826,50 @@ describe("handler tests", () => {
 		global.fetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => ({
-				id: "new-skeptic",
-				name: "New Skeptic",
-				specialty: "Critical Thinking",
-				yearsActive: 1,
+				id: "canyonlands",
+				name: "Canyonlands National Park",
+				location: "Utah",
+				established: 1964,
 			}),
 		});
 
 		const config = {
 			request: {
-				baseURL: "https://api.skepticism.example.org",
+				baseURL: "https://api.nps.example.org",
 			},
 			resources: {
-				skeptics: {}, // No custom create handler
+				parks: {}, // No custom create handler
 			},
 		};
 
-		const store = createMultiApiStore(skepticismSchema, config);
+		const store = createMultiApiStore(utahParksSchema, config);
 
-		const newSkeptic = {
-			type: "skeptics",
+		const newPark = {
+			type: "parks",
 			attributes: {
-				name: "New Skeptic",
-				specialty: "Critical Thinking",
-				yearsActive: 1,
+				name: "Canyonlands National Park",
+				location: "Utah",
+				established: 1964,
 			},
 		};
 
-		const result = await store.create(newSkeptic);
+		const result = await store.create(newPark);
 
 		expect(global.fetch).toHaveBeenCalledWith(
-			"https://api.skepticism.example.org/skeptics",
+			"https://api.nps.example.org/parks",
 			{
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify(newSkeptic),
+				body: JSON.stringify(newPark),
 			},
 		);
 		expect(result).toEqual({
-			id: "new-skeptic",
-			name: "New Skeptic",
-			specialty: "Critical Thinking",
-			yearsActive: 1,
+			id: "canyonlands",
+			name: "Canyonlands National Park",
+			location: "Utah",
+			established: 1964,
 		});
 	});
 
@@ -873,50 +878,49 @@ describe("handler tests", () => {
 		global.fetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => ({
-				id: "randi",
-				name: "James Randi",
-				specialty: "Updated Specialty",
-				yearsActive: 51,
+				id: "zion",
+				name: "Zion National Park",
+				location: "Utah",
+				bestSeason: "winter",
 			}),
 		});
 
 		const config = {
 			request: {
-				baseURL: "https://api.skepticism.example.org",
+				baseURL: "https://api.nps.example.org",
 			},
 			resources: {
-				skeptics: {}, // No custom update handler
+				parks: {}, // No custom update handler
 			},
 		};
 
-		const store = createMultiApiStore(skepticismSchema, config);
+		const store = createMultiApiStore(utahParksSchema, config);
 
-		const updatedSkeptic = {
-			type: "skeptics",
-			id: "randi",
+		const updatedPark = {
+			type: "parks",
+			id: "zion",
 			attributes: {
-				specialty: "Updated Specialty",
-				yearsActive: 51,
+				bestSeason: "winter",
 			},
 		};
 
-		const result = await store.update(updatedSkeptic);
+		const result = await store.update(updatedPark);
 
 		expect(global.fetch).toHaveBeenCalledWith(
-			"https://api.skepticism.example.org/skeptics/randi",
+			"https://api.nps.example.org/parks/zion",
 			{
 				method: "PATCH",
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify(updatedSkeptic),
+				body: JSON.stringify(updatedPark),
 			},
 		);
 		expect(result).toEqual({
-			id: "randi",
-			name: "James Randi",
-			specialty: "Updated Specialty",
-			yearsActive: 51,
+			id: "zion",
+			name: "Zion National Park",
+			location: "Utah",
+			bestSeason: "winter",
 		});
 	});
 
@@ -929,30 +933,30 @@ describe("handler tests", () => {
 
 		const config = {
 			request: {
-				baseURL: "https://api.skepticism.example.org",
+				baseURL: "https://api.nps.example.org",
 			},
 			resources: {
-				skeptics: {}, // No custom delete handler
+				parks: {}, // No custom delete handler
 			},
 		};
 
-		const store = createMultiApiStore(skepticismSchema, config);
+		const store = createMultiApiStore(utahParksSchema, config);
 
-		const deleteSkeptic = {
-			type: "skeptics",
-			id: "randi",
+		const deletePark = {
+			type: "parks",
+			id: "zion",
 		};
 
-		const result = await store.delete(deleteSkeptic);
+		const result = await store.delete(deletePark);
 
 		expect(global.fetch).toHaveBeenCalledWith(
-			"https://api.skepticism.example.org/skeptics/randi",
+			"https://api.nps.example.org/parks/zion",
 			{
 				method: "DELETE",
 			},
 		);
 		// Should return original resource when API returns empty response
-		expect(result).toEqual(deleteSkeptic);
+		expect(result).toEqual(deletePark);
 	});
 
 	it("uses standard handler when no custom create handler provided", async () => {
@@ -960,9 +964,9 @@ describe("handler tests", () => {
 		global.fetch.mockResolvedValueOnce({
 			ok: true,
 			json: async () => ({
-				id: "new-skeptic",
-				name: "New Skeptic",
-				specialty: "Critical Thinking",
+				id: "arches",
+				name: "Arches National Park",
+				location: "Utah",
 			}),
 		});
 
@@ -971,35 +975,32 @@ describe("handler tests", () => {
 				baseURL: "https://api.example.org",
 			},
 			resources: {
-				skeptics: {
+				parks: {
 					// no create handler - should use standard handler
 				},
 			},
 		};
 
-		const store = createMultiApiStore(skepticismSchema, config);
+		const store = createMultiApiStore(utahParksSchema, config);
 
-		const newSkeptic = {
-			type: "skeptics",
-			attributes: { name: "New Skeptic" },
+		const newPark = {
+			type: "parks",
+			attributes: { name: "Arches National Park" },
 		};
 
-		const result = await store.create(newSkeptic);
+		const result = await store.create(newPark);
 
-		expect(global.fetch).toHaveBeenCalledWith(
-			"https://api.example.org/skeptics",
-			{
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(newSkeptic),
+		expect(global.fetch).toHaveBeenCalledWith("https://api.example.org/parks", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
 			},
-		);
+			body: JSON.stringify(newPark),
+		});
 		expect(result).toEqual({
-			id: "new-skeptic",
-			name: "New Skeptic",
-			specialty: "Critical Thinking",
+			id: "arches",
+			name: "Arches National Park",
+			location: "Utah",
 		});
 	});
 
@@ -1012,7 +1013,7 @@ describe("handler tests", () => {
 			const config = {
 				middleware: [badMiddleware],
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
 						},
@@ -1020,10 +1021,10 @@ describe("handler tests", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			await expect(
-				store.query({ type: "skeptics", select: ["name"] }),
+				store.query({ type: "parks", select: ["name"] }),
 			).rejects.toThrow("Middleware async error");
 		});
 
@@ -1041,7 +1042,7 @@ describe("handler tests", () => {
 			const config = {
 				middleware: [badMiddleware],
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
 						},
@@ -1049,10 +1050,10 @@ describe("handler tests", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			await expect(
-				store.query({ type: "skeptics", select: ["name"] }),
+				store.query({ type: "parks", select: ["name"] }),
 			).rejects.toThrow("HTTP Error");
 		});
 
@@ -1070,7 +1071,7 @@ describe("handler tests", () => {
 			const config = {
 				middleware: [badMiddleware],
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
 						},
@@ -1078,16 +1079,16 @@ describe("handler tests", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			await expect(
-				store.query({ type: "skeptics", select: ["name"] }),
+				store.query({ type: "parks", select: ["name"] }),
 			).rejects.toThrow("HTTP Error");
 		});
 
 		it("handles network errors (no response received)", async () => {
 			const networkError = new Error("Network timeout");
-			networkError.request = { url: "https://api.example.com/skeptics" };
+			networkError.request = { url: "https://api.example.com/parks" };
 
 			const badMiddleware = async () => {
 				throw networkError;
@@ -1096,7 +1097,7 @@ describe("handler tests", () => {
 			const config = {
 				middleware: [badMiddleware],
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: vi.fn().mockResolvedValue([{ id: "1", name: "Test" }]),
 						},
@@ -1104,10 +1105,10 @@ describe("handler tests", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			await expect(
-				store.query({ type: "skeptics", select: ["name"] }),
+				store.query({ type: "parks", select: ["name"] }),
 			).rejects.toThrow("Network timeout");
 		});
 
@@ -1116,7 +1117,7 @@ describe("handler tests", () => {
 
 			const config = {
 				resources: {
-					skeptics: {
+					parks: {
 						query: {
 							fetch: vi.fn().mockRejectedValue(resourceError),
 						},
@@ -1124,10 +1125,10 @@ describe("handler tests", () => {
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			await expect(
-				store.query({ type: "skeptics", select: ["name"] }),
+				store.query({ type: "parks", select: ["name"] }),
 			).rejects.toThrow("Resource handler error");
 		});
 
@@ -1135,7 +1136,7 @@ describe("handler tests", () => {
 			// Mock fetch to throw a network error
 			global.fetch = vi.fn().mockImplementation(() => {
 				const networkError = new Error("fetch failed");
-				networkError.request = { url: "https://api.example.com/skeptics" };
+				networkError.request = { url: "https://api.example.com/parks" };
 				return Promise.reject(networkError);
 			});
 
@@ -1144,16 +1145,16 @@ describe("handler tests", () => {
 					baseURL: "https://api.example.com",
 				},
 				resources: {
-					skeptics: {
+					parks: {
 						// No get handler - should use standard handler
 					},
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			await expect(
-				store.query({ type: "skeptics", select: ["name"] }),
+				store.query({ type: "parks", select: ["name"] }),
 			).rejects.toThrow("fetch failed");
 		});
 
@@ -1163,7 +1164,7 @@ describe("handler tests", () => {
 				ok: false,
 				status: 404,
 				statusText: "Not Found",
-				url: "https://api.example.com/skeptics",
+				url: "https://api.example.com/parks",
 				headers: new Map([["content-type", "application/json"]]),
 				json: () => Promise.resolve({ message: "Resource not found" }),
 			});
@@ -1173,16 +1174,16 @@ describe("handler tests", () => {
 					baseURL: "https://api.example.com",
 				},
 				resources: {
-					skeptics: {
+					parks: {
 						// No get handler - should use standard handler
 					},
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			await expect(
-				store.query({ type: "skeptics", select: ["name"] }),
+				store.query({ type: "parks", select: ["name"] }),
 			).rejects.toThrow("Resource not found");
 		});
 
@@ -1192,7 +1193,7 @@ describe("handler tests", () => {
 				ok: false,
 				status: 500,
 				statusText: "Internal Server Error",
-				url: "https://api.example.com/skeptics",
+				url: "https://api.example.com/parks",
 				headers: new Map([["content-type", "application/json"]]),
 				json: () => Promise.resolve({ message: "Database connection failed" }),
 			});
@@ -1202,16 +1203,16 @@ describe("handler tests", () => {
 					baseURL: "https://api.example.com",
 				},
 				resources: {
-					skeptics: {
+					parks: {
 						// No get handler - should use standard handler
 					},
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			await expect(
-				store.query({ type: "skeptics", select: ["name"] }),
+				store.query({ type: "parks", select: ["name"] }),
 			).rejects.toThrow("Database connection failed");
 		});
 
@@ -1221,7 +1222,7 @@ describe("handler tests", () => {
 				ok: false,
 				status: 403,
 				statusText: "Forbidden",
-				url: "https://api.example.com/skeptics",
+				url: "https://api.example.com/parks",
 				headers: new Map([["content-type", "text/html"]]),
 				json: () => Promise.reject(new Error("Not JSON")),
 			});
@@ -1231,16 +1232,16 @@ describe("handler tests", () => {
 					baseURL: "https://api.example.com",
 				},
 				resources: {
-					skeptics: {
+					parks: {
 						// No get handler - should use standard handler
 					},
 				},
 			};
 
-			const store = createMultiApiStore(skepticismSchema, config);
+			const store = createMultiApiStore(utahParksSchema, config);
 
 			await expect(
-				store.query({ type: "skeptics", select: ["name"] }),
+				store.query({ type: "parks", select: ["name"] }),
 			).rejects.toThrow("Forbidden");
 		});
 	});
