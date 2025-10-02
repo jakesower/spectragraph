@@ -40,7 +40,7 @@ export function assembleSqlQuery(composedClauses, context) {
  * @returns {any[]} Array of SQL parameters
  */
 export function extractSqlVariables(composedClauses, context) {
-	return createVarsExpressionEngine(context).evaluate(
+	return createVarsExpressionEngine(context).apply(
 		{
 			$and: composedClauses.vars,
 		},

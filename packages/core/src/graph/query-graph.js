@@ -86,6 +86,7 @@ function runQuery(rootQuery, data, options = {}) {
 		selectEngine = defaultSelectEngine,
 		whereEngine = defaultWhereEngine,
 	} = options;
+
 	const go = (query) => {
 		if (query.id && !data[query.type][query.id]) return null;
 
@@ -151,7 +152,7 @@ function runQuery(rootQuery, data, options = {}) {
 
 					// expression
 					if (selectEngine.isExpression(propQuery)) {
-						return createExpressionProjector(propQuery, selectEngine);
+						return (result) => selectEngine.apply(propQuery, result);
 					}
 
 					// subquery

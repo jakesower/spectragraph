@@ -7,7 +7,6 @@ import { DEFAULT_WHERE_EXPRESSIONS } from "../../../sql-helpers/src/where-expres
  * @property {string} name - Human readable name for the expression
  * @property {(operand: any[]) => string} where - Function to generate WHERE clause SQL
  * @property {(operand: any[]) => any} vars - Function to extract variables for SQL operand
- * @property {boolean} [controlsEvaluation] - Whether this expression controls evaluation
  */
 
 /**
@@ -17,7 +16,6 @@ import { DEFAULT_WHERE_EXPRESSIONS } from "../../../sql-helpers/src/where-expres
 const sqlExpressions = {
 	...DEFAULT_WHERE_EXPRESSIONS,
 	$matchesLike: {
-		name: "$matchesLike",
 		where: () => " LIKE ?",
 		vars: (operand) => operand,
 	},
@@ -74,7 +72,6 @@ const sqlExpressions = {
 		},
 	},
 	$matchesGlob: {
-		name: "$matchesGlob",
 		where: () => " ILIKE ?", // PostgreSQL case-insensitive equivalent to GLOB
 		vars: (operand) => {
 			// Convert GLOB pattern to PostgreSQL LIKE pattern
@@ -90,18 +87,14 @@ const sqlExpressions = {
  * Expression engine for generating WHERE clause SQL
  */
 export const whereExpressionEngine = createExpressionEngine({
-	custom: mapValues(sqlExpressions, (expr) => ({
-		...expr,
-		evaluate: expr.where,
-	})),
+	custom: mapValues(sqlExpressions, (expr) => expr.where),
+	includeBase: false,
 });
 
 /**
  * Expression engine for extracting SQL variables/parameters
  */
 export const varsExpressionEngine = createExpressionEngine({
-	custom: mapValues(sqlExpressions, (expr) => ({
-		...expr,
-		evaluate: expr.vars,
-	})),
+	custom: mapValues(sqlExpressions, (expr) => expr.vars),
+	includeBase: false,
 });

@@ -37,7 +37,7 @@
 		"ajv-formats": "^3.0.1",
 		"axios": "^1.12.2",
 		"express": "^5.1.0",
-		"rollup": "^4.52.2",
+		"rollup": "^4.52.3",
 		"start-server-and-test": "^2.1.2",
 		"vite": "7.1.7",
 		"vitest": "^3.2.4"
@@ -56,6 +56,6 @@
 		"@spectragraph/query-helpers": "*",
 		"@spectragraph/utils": "*",
 		"es-toolkit": "^1.39.10",
-		"json-expressions": "^0.8.3"
+		"json-expressions": "^0.10.2"
 	}
 }

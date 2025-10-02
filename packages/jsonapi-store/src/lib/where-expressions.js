@@ -7,8 +7,7 @@ import { ExpressionNotSupportedError } from "@spectragraph/core";
  * @typedef {Object} JsonApiExpression
  * @property {string} name - Human readable name for the expression
  * @property {(operand: any[]) => string} filter - Function to generate JSON:API filter parameter value
- * @property {boolean} [controlsEvaluation] - Whether this expression controls evaluation
- */
+ * @property {boolean} [ */
 
 /**
  * JSON:API expression definitions for building filter query parameters
@@ -68,8 +67,7 @@ const jsonApiExpressions = {
 
 	// Override specific expressions for JSON:API
 	$pipe: {
-		controlsEvaluation: true,
-		filter: (operand, { evaluate }) => {
+				filter: (operand, { evaluate }) => {
 			// For $pipe operations like [$get: "field", $eq: "value"],
 			// we need to extract the field name and the operation
 			if (operand.length === 2) {
@@ -120,16 +118,14 @@ const jsonApiExpressions = {
 		},
 	},
 	$and: {
-		controlsEvaluation: true,
-		filter: (operand, { evaluate }) => {
+				filter: (operand, { evaluate }) => {
 			// For $and operations, merge all the filter objects
 			const results = operand.map(evaluate);
 			return Object.assign({}, ...results);
 		},
 	},
 	$or: {
-		controlsEvaluation: true,
-		filter: () => {
+				filter: () => {
 			throw new ExpressionNotSupportedError(
 				"$or",
 				"jsonapi-store",
@@ -138,8 +134,7 @@ const jsonApiExpressions = {
 		},
 	},
 	$not: {
-		controlsEvaluation: true,
-		filter: () => {
+				filter: () => {
 			throw new ExpressionNotSupportedError(
 				"$not",
 				"jsonapi-store",
@@ -148,8 +143,7 @@ const jsonApiExpressions = {
 		},
 	},
 	$if: {
-		controlsEvaluation: true,
-		filter: () => {
+				filter: () => {
 			throw new ExpressionNotSupportedError(
 				"$if",
 				"jsonapi-store",
@@ -158,8 +152,7 @@ const jsonApiExpressions = {
 		},
 	},
 	$case: {
-		controlsEvaluation: true,
-		filter: () => {
+				filter: () => {
 			throw new ExpressionNotSupportedError(
 				"$case",
 				"jsonapi-store",

@@ -1,8 +1,8 @@
 import {
-	aggregation,
+	aggregationPack,
 	createExpressionEngine,
-	filtering,
-	projection,
+	filteringPack,
+	projectionPack,
 } from "json-expressions";
 
 /**
@@ -17,7 +17,12 @@ import {
  * @returns {import('json-expressions').ExpressionEngine} Expression engine for SELECT operations
  */
 export function createSelectEngine(config = {}) {
-	const packs = [filtering, projection, aggregation, ...(config.packs ?? [])];
+	const packs = [
+		filteringPack,
+		projectionPack,
+		aggregationPack,
+		...(config.packs ?? []),
+	];
 	const { custom } = config;
 
 	return createExpressionEngine({ packs, custom });
@@ -35,7 +40,7 @@ export function createSelectEngine(config = {}) {
  * @returns {import('json-expressions').ExpressionEngine} Expression engine for WHERE operations
  */
 export function createWhereEngine(config = {}) {
-	const packs = [filtering, ...(config.packs ?? [])];
+	const packs = [filteringPack, ...(config.packs ?? [])];
 	const { custom } = config;
 
 	return createExpressionEngine({ packs, custom });
