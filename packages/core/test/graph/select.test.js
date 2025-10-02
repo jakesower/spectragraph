@@ -25,7 +25,7 @@ describe("select expressions", () => {
 			type: "homes",
 			select: {
 				name: "name",
-				numberOfResidents: { $count: "residents" },
+				numberOfResidents: { $pipe: [{ $get: "residents" }, { $count: null }] },
 			},
 		};
 		const result = queryGraph(careBearSchema, query, careBearData);
@@ -60,15 +60,15 @@ describe("select expressions", () => {
 			type: "homes",
 			select: {
 				name: "name",
-				minYear: { $min: "residents.$.yearIntroduced" },
+				minYear: { $min: { $get: "residents.$.yearIntroduced" } },
 			},
 		};
 		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual([
 			{ name: "Care-a-Lot", minYear: 1982 },
-			{ name: "Forest of Feelings", minYear: undefined },
-			{ name: "Earth", minYear: undefined },
+			{ name: "Forest of Feelings", minYear: null },
+			{ name: "Earth", minYear: null },
 		]);
 	});
 
@@ -77,7 +77,7 @@ describe("select expressions", () => {
 			type: "powers",
 			select: {
 				name: "name",
-				minYear: { $min: "wielders.$.yearIntroduced" },
+				minYear: { $min: { $get: "wielders.$.yearIntroduced" } },
 			},
 		};
 		const result = queryGraph(careBearSchema, query, careBearData);
@@ -85,7 +85,7 @@ describe("select expressions", () => {
 		expect(result).toEqual([
 			{ name: "Care Bear Stare", minYear: 1982 },
 			{ name: "Make a Wish", minYear: 1982 },
-			{ name: "Transform", minYear: undefined },
+			{ name: "Transform", minYear: null },
 		]);
 	});
 
@@ -94,7 +94,7 @@ describe("select expressions", () => {
 			type: "powers",
 			select: {
 				name: "name",
-				caring: { $sum: "wielders.$.home.caringMeter" },
+				caring: { $sum: { $get: "wielders.$.home.caringMeter" } },
 			},
 		};
 		const result = queryGraph(careBearSchema, query, careBearData);

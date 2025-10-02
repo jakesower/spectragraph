@@ -30,8 +30,8 @@
 		"@rollup/plugin-commonjs": "^28.0.6",
 		"@rollup/plugin-json": "^6.1.0",
 		"@rollup/plugin-node-resolve": "^16.0.1",
-		"rollup": "^4.52.2",
-		"testcontainers": "^11.6.0",
+		"rollup": "^4.52.3",
+		"testcontainers": "^11.7.0",
 		"vite": "7.1.7",
 		"vitest": "^3.2.4"
 	},
@@ -45,7 +45,7 @@
 		"@spectragraph/utils": "*",
 		"ajv": "^8.17.1",
 		"es-toolkit": "^1.39.10",
-		"json-expressions": "^0.8.3",
+		"json-expressions": "^0.10.2",
 		"pg": "^8.16.3"
 	}
 }

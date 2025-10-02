@@ -1,7 +1,6 @@
 export const DEFAULT_SELECT_EXPRESSIONS = {
 	$if: {
-		controlsEvaluation: true,
-		where: (operand, { evaluate, isExpression }) => {
+				where: (operand, { evaluate, isExpression }) => {
 			const condition = evaluate(operand.if);
 			const thenClause = isExpression(operand.then)
 				? evaluate(operand.then)

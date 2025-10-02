@@ -32,7 +32,6 @@ function hasRegexSupport(db) {
  * @property {string} name - Human readable name for the expression
  * @property {(operand: any[]) => string} where - Function to generate WHERE clause SQL
  * @property {(operand: any[]) => any} vars - Function to extract variables for SQL operand
- * @property {boolean} [controlsEvaluation] - Whether this expression controls evaluation
  */
 
 /**
@@ -80,10 +79,7 @@ const createSQLExpressions = (db) => ({
  */
 export const createWhereExpressionEngine = ({ db }) =>
 	createExpressionEngine({
-		custom: mapValues(createSQLExpressions(db), (expr) => ({
-			...expr,
-			evaluate: expr.where,
-		})),
+		custom: mapValues(createSQLExpressions(db), (expr) => expr.where),
 	});
 
 /**
@@ -91,8 +87,5 @@ export const createWhereExpressionEngine = ({ db }) =>
  */
 export const createVarsExpressionEngine = ({ db }) =>
 	createExpressionEngine({
-		custom: mapValues(createSQLExpressions(db), (expr) => ({
-			...expr,
-			evaluate: expr.vars,
-		})),
+		custom: mapValues(createSQLExpressions(db), (expr) => expr.vars),
 	});

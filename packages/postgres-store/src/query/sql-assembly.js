@@ -41,7 +41,7 @@ export function assembleSqlQuery(composedClauses) {
  * @returns {any[]} Array of SQL parameters
  */
 export function extractSqlVariables(composedClauses) {
-	return varsExpressionEngine.evaluate({
+	return varsExpressionEngine.apply({
 		$and: composedClauses.vars,
 	});
 }

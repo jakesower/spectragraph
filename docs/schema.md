@@ -35,7 +35,7 @@ const schema = {
         words: { type: "integer", minimum: 1 },
       },
       relationships: {
-        author: { type: "users", cardinality: "belongsTo" },
+        author: { type: "users", cardinality: "one" },
       },
     },
   },
@@ -389,7 +389,7 @@ const ecommerceSchema = {
       },
       requiredAttributes: ["orderNumber"],
       relationships: {
-        customer: { type: "customers", cardinality: "belongsTo" },
+        customer: { type: "customers", cardinality: "one" },
         items: { type: "orderItems", cardinality: "many" },
       },
     },
@@ -403,7 +403,7 @@ const ecommerceSchema = {
       },
       requiredAttributes: ["name"],
       relationships: {
-        category: { type: "categories", cardinality: "belongsTo" },
+        category: { type: "categories", cardinality: "one" },
         orderItems: { type: "orderItems", cardinality: "many" },
       },
     },
@@ -414,8 +414,8 @@ const ecommerceSchema = {
         unitPrice: { type: "number", minimum: 0 },
       },
       relationships: {
-        order: { type: "orders", cardinality: "belongsTo" },
-        product: { type: "products", cardinality: "belongsTo" },
+        order: { type: "orders", cardinality: "one" },
+        product: { type: "products", cardinality: "one" },
       },
     },
 
@@ -426,7 +426,7 @@ const ecommerceSchema = {
       },
       relationships: {
         products: { type: "products", cardinality: "many" },
-        parent: { type: "categories", cardinality: "belongsTo" },
+        parent: { type: "categories", cardinality: "one" },
         children: {
           type: "categories",
           cardinality: "many",
@@ -470,8 +470,8 @@ const cmsSchema = {
       },
       requiredAttributes: ["title", "slug"],
       relationships: {
-        author: { type: "users", cardinality: "belongsTo" },
-        category: { type: "categories", cardinality: "belongsTo" },
+        author: { type: "users", cardinality: "one" },
+        category: { type: "categories", cardinality: "one" },
         tags: { type: "tags", cardinality: "many" },
         comments: { type: "comments", cardinality: "many" },
       },
@@ -539,7 +539,7 @@ const cmsSchema = {
           cardinality: "one",
           inverse: "comments",
         },
-        parent: { type: "comments", cardinality: "belongsTo" },
+        parent: { type: "comments", cardinality: "one" },
         replies: {
           type: "comments",
           cardinality: "many",

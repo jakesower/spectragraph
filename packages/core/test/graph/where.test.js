@@ -1,8 +1,8 @@
 import { expect, it, describe } from "vitest";
+import { mathPack } from "json-expressions";
 import { queryGraph } from "../../src/graph.js";
 import { careBearSchema, careBearData } from "../interface-tests/src/index.js";
-import { createExpressionEngine } from "json-expressions";
-import { createWhereEngine, normalizeQuery } from "../../src/index.js";
+import { createWhereEngine } from "../../src/index.js";
 
 describe("where clauses", () => {
 	it("filters on an implicit property equality constraint", async () => {
@@ -234,7 +234,7 @@ describe("where clauses", () => {
 			expect(result).toEqual([{ id: "1" }, { id: "3" }]);
 		});
 
-		it("filters using $match", () => {
+		it("filters using $matches", () => {
 			const query = {
 				type: "bears",
 				select: ["name"],
@@ -250,12 +250,31 @@ describe("where clauses", () => {
 			expect(result).toEqual([{ name: "Wish Bear" }]);
 		});
 
+		it("filters with an expression from a pack", () => {
+			const whereEngine = createWhereEngine({
+				packs: [mathPack],
+			});
+
+			const query = {
+				type: "bears",
+				select: ["name"],
+				where: {
+					$matches: {
+						yearIntroduced: { $eq: [{ $modulo: 2 }, 1] },
+					},
+				},
+			};
+			const result = queryGraph(careBearSchema, query, careBearData, {
+				whereEngine,
+			});
+
+			expect(result).toEqual([{ name: "Smart Heart Bear" }]);
+		});
+
 		it("filters with a custom expression", () => {
 			const whereEngine = createWhereEngine({
 				custom: {
-					$isOdd: {
-						apply: (operand, inputData) => inputData % 2 === 1,
-					},
+					$isOdd: (operand, inputData) => inputData % 2 === 1,
 				},
 			});
 
