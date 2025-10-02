@@ -16,6 +16,18 @@ describe("validateQuery", () => {
 			expect(result).toEqual([]);
 		});
 
+		it("should validate a query with ids", () => {
+			const query = { type: "bears", ids: ["1", "2"], select: "*" };
+			const result = validateQuery(careBearSchema, query);
+			expect(result).toEqual([]);
+		});
+
+		it("should not validate a query with both id and ids", () => {
+			const query = { type: "bears", id: "1", ids: ["2"], select: "*" };
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toBeGreaterThan(0);
+		});
+
 		it("should validate a valid query in mixed array/object form", () => {
 			const query = {
 				type: "bears",

@@ -96,9 +96,13 @@ function getResourceStructureValidator(schema, resourceType, expressionEngine) {
 			fullQuery: {
 				type: "object",
 				required: ["select"],
+				not: {
+					required: ["id", "ids"],
+				},
 				properties: {
 					type: { type: "string", const: resourceType },
 					id: { type: "string" },
+					ids: { type: "array", items: { type: "string" } },
 					select: {}, // validated programatically
 					limit: { type: "integer", minimum: 1 },
 					offset: { type: "integer", minimum: 0 },

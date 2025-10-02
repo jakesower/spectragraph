@@ -91,6 +91,10 @@ function runQuery(rootQuery, data, options = {}) {
 
 		// these are in order of execution
 		const operationDefinitions = {
+			ids(results) {
+				const idsSet = new Set(query.ids);
+				return results.filter((result) => idsSet.has(result[ID]));
+			},
 			where(results) {
 				if (Object.keys(query.where).length === 0) return results;
 

@@ -85,6 +85,33 @@ describe("queryTree core", () => {
 		});
 	});
 
+	it("fetches multiple resources by ids", async () => {
+		const query = {
+			type: "bears",
+			ids: ["1", "2"],
+			select: ["id", "name"],
+		};
+
+		const result = queryGraph(careBearSchema, query, careBearData);
+
+		expect(result).toEqual([
+			{ id: "1", name: "Tenderheart Bear" },
+			{ id: "2", name: "Cheer Bear" },
+		]);
+	});
+
+	it("fetches resources by ids, filtering out non-existent ids", async () => {
+		const query = {
+			type: "bears",
+			ids: ["1", "999"],
+			select: ["id", "name"],
+		};
+
+		const result = queryGraph(careBearSchema, query, careBearData);
+
+		expect(result).toEqual([{ id: "1", name: "Tenderheart Bear" }]);
+	});
+
 	it("fetches a single resource without its id", async () => {
 		const query = {
 			type: "bears",
