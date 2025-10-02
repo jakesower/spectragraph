@@ -2,7 +2,6 @@ import { mapValues, orderBy } from "es-toolkit";
 import { applyOrMap } from "@spectragraph/utils";
 import { normalizeQuery } from "../query.js";
 import { defaultSelectEngine, defaultWhereEngine } from "../lib/defaults.js";
-import { createExpressionProjector } from "./select-helpers.js";
 
 /**
  * @typedef {Object<string, unknown>} Result
@@ -130,24 +129,10 @@ function runQuery(rootQuery, data, options = {}) {
 					// possibilities: (1) property (2) expression (3) subquery
 					if (typeof propQuery === "string") {
 						// nested / shallow property
-						const extractPath = (curValue, path) => {
-							if (curValue === null) return null;
-							if (path.length === 0) return curValue;
-
-							const [head, ...tail] = path;
-
-							if (head === "$") {
-								return curValue.map((v) => extractPath(v, tail));
-							}
-							if (!(head in curValue)) return undefined;
-
-							return extractPath(curValue?.[head], tail);
-						};
-
 						return (result) =>
 							propQuery in result[RAW].relationships
 								? result[RAW].relationships[propQuery]
-								: extractPath(result, propQuery.split("."));
+								: selectEngine.apply({ $get: propQuery }, result);
 					}
 
 					// expression
@@ -158,7 +143,6 @@ function runQuery(rootQuery, data, options = {}) {
 					// subquery
 					return (result) => {
 						if (result[propName] === undefined) {
-							if (options.allowMissingRefs) return null;
 							throw new Error(
 								`The "${propName}" relationship is undefined on a resource of type "${query.type}". You probably have an invalid schema or constructed your graph wrong. Try linking the inverses (via "linkInverses"), check your schema to make sure all inverses have been defined correctly there, and make sure all resources have been loaded into the graph.`,
 							);
@@ -168,8 +152,6 @@ function runQuery(rootQuery, data, options = {}) {
 							return result[propName]
 								.map((r) => {
 									if (r === undefined) {
-										if (options.allowMissingRefs) return null;
-
 										throw new Error(
 											`A related resource was not found on resource ${
 												query.type
@@ -185,8 +167,6 @@ function runQuery(rootQuery, data, options = {}) {
 						}
 
 						if (result[propName] === undefined) {
-							if (options.allowMissingRefs) return null;
-
 							throw new Error(
 								`A related resource was not found on resource ${query.type}.${
 									query.id

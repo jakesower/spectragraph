@@ -140,8 +140,26 @@ SpectraGraph supports multiple ways to specify which fields to select:
   type: "users",
   select: ["name"],
   where: {
-    role: { $in: ["admin", "editor"] },     // In list
+    role: ["admin", "editor"],              // Array shorthand for $in
     status: { $nin: ["banned", "deleted"] } // Not in list
+  }
+}
+
+// Explicit $in (same as array shorthand)
+{
+  type: "users",
+  select: ["name"],
+  where: {
+    role: { $in: ["admin", "editor"] }
+  }
+}
+
+// For exact array equality (rare), use $literal
+{
+  type: "users",
+  select: ["name"],
+  where: {
+    tags: { $literal: ["javascript", "node"] } // Exact array match
   }
 }
 ```

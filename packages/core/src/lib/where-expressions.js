@@ -82,7 +82,7 @@ export function normalizeWhereClause(where) {
 	handleAttribute = (attribute, value) => {
 		return typeof value === "object" && value !== null
 			? Array.isArray(value)
-				? { $pipe: [{ $get: attribute }, { $eq: { $literal: value } }] }
+				? { $pipe: [{ $get: attribute }, { $in: value }] }
 				: resolve(value, attribute)
 			: { $pipe: [{ $get: attribute }, { $eq: value }] };
 	};

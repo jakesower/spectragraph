@@ -161,6 +161,22 @@ describe("where clauses", () => {
 		expect(result).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
 	});
 
+	it("filters using array shorthand for $in", async () => {
+		const query = {
+			type: "bears",
+			select: ["id", "name"],
+			where: {
+				furColor: ["tan", "turquoise"],
+			},
+		};
+		const result = queryGraph(careBearSchema, query, careBearData);
+
+		expect(result).toEqual([
+			{ id: "1", name: "Tenderheart Bear" },
+			{ id: "3", name: "Wish Bear" },
+		]);
+	});
+
 	it("filters related resources", async () => {
 		const query = {
 			type: "powers",
