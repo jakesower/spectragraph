@@ -107,6 +107,7 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 		const subqueryContext = {
 			...context,
 			parentQuery: query,
+			parentResponsePromise: queryPromise,
 		};
 		const relatedGraphPromises = Object.keys(
 			schema.resources[query.type].relationships,
