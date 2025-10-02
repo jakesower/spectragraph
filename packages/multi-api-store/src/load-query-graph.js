@@ -71,10 +71,9 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 							? data
 							: [data];
 				const mapper = stepConfig.query?.map;
-				const mapped = mapper
+				return mapper
 					? asArray.map((resource) => mapper(resource, finishedCtx))
 					: asArray;
-				return createGraphFromResources(schema, query.type, mapped);
 			};
 
 			if (stepConfig.cache.manual) return fetcher();
@@ -102,12 +101,15 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 					...options,
 				}),
 		};
-		const queryPromise = pipe(middlewareCtx);
+		const queryTreePromise = pipe(middlewareCtx);
+		const queryGraphPromise = queryTreePromise.then((tree) =>
+			createGraphFromResources(schema, query.type, tree),
+		);
 
 		const subqueryContext = {
 			...context,
 			parentQuery: query,
-			parentResponsePromise: queryPromise,
+			parentResultPromise: queryTreePromise,
 		};
 		const relatedGraphPromises = Object.keys(
 			schema.resources[query.type].relationships,
@@ -116,7 +118,7 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 			.map((relName) => step(query.select[relName], subqueryContext));
 
 		// intentionally do not catch -- errors from inside here are already high quality
-		const graphs = await Promise.all([queryPromise, ...relatedGraphPromises]);
+		const graphs = await Promise.all([queryGraphPromise, ...relatedGraphPromises]);
 		return graphs.reduce(mergeGraphsDeep);
 	};
 
