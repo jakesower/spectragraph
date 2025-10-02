@@ -165,5 +165,28 @@ describe("normalizeWhereClause", () => {
 				$debug: { $pipe: [{ $get: "age" }, { $lt: 3 }] },
 			});
 		});
+
+		it("handles arrays as $in shorthand", () => {
+			const normalized = normalizeWhereClause({
+				furColor: ["tan", "pink", "yellow"],
+			});
+
+			expect(normalized).toEqual({
+				$pipe: [{ $get: "furColor" }, { $in: ["tan", "pink", "yellow"] }],
+			});
+		});
+
+		it("handles array equality with explicit $literal", () => {
+			const normalized = normalizeWhereClause({
+				badges: { $literal: ["rainbow", "heart"] },
+			});
+
+			expect(normalized).toEqual({
+				$pipe: [
+					{ $get: "badges" },
+					{ $eq: { $literal: ["rainbow", "heart"] } },
+				],
+			});
+		});
 	});
 });
