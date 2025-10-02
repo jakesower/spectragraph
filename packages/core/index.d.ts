@@ -155,8 +155,7 @@ export type SelectClause =
 	| { [k: string]: string | Query | Expression | SelectClause }
 	| "*";
 
-export interface Query {
-	id?: string;
+interface BaseQuery {
 	limit?: number;
 	offset?: number;
 	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
@@ -165,16 +164,25 @@ export interface Query {
 	where?: { [k: string]: unknown };
 }
 
+export type Query =
+	| (BaseQuery & { id: string; ids?: never })
+	| (BaseQuery & { id?: never; ids: string[] })
+	| (BaseQuery & { id?: never; ids?: never });
+
 export type QueryOrSelect = Query | SelectClause;
 
-export interface RootQuery extends Query {
+export interface RootQuery extends Omit<BaseQuery, "type"> {
 	type: string;
+	id?: string;
+	ids?: string[];
 }
 
-export interface NormalQuery extends Query {
+export interface NormalQuery extends Omit<BaseQuery, "select" | "type"> {
 	select: { [k: string]: string | NormalQuery | Expression };
 	order?: { [k: string]: "asc" | "desc" }[];
 	type: string;
+	id?: string;
+	ids?: string[];
 }
 
 // === RESOURCE TYPES ===

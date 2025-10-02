@@ -427,6 +427,14 @@ Executes a query against a graph directly (convenience function).
 
 **Returns:** Query results matching the query structure
 
+**Query Options:**
+
+- `id` - Fetch a single resource by ID (returns single object or null)
+- `ids` - Fetch multiple specific resources by IDs (returns array, mutually exclusive with `id`)
+- `where` - Filter resources by conditions
+- `order` - Sort results
+- `limit`/`offset` - Paginate results
+
 ```javascript
 import { queryGraph } from "@spectragraph/core";
 
