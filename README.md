@@ -412,3 +412,24 @@ const result = await store.query({
 ## License
 
 AGPL-3.0 © [Jake Sower](https://github.com/jakesower)
+
+### Using SpectraGraph in Commercial/Proprietary Software
+
+SpectraGraph is designed for **maximum extensibility without modification**. The AGPL-3.0 copyleft is triggered **only if you modify and distribute the core/store packages themselves**.
+
+✅ **These DO NOT trigger copyleft:**
+
+- Writing custom stores that import `@spectragraph/core`
+- Using SpectraGraph as a dependency in proprietary applications
+- Wrapping SpectraGraph in internal company APIs
+- Building commercial SaaS products on top of SpectraGraph
+
+❌ **These DO trigger copyleft:**
+
+- Forking, modifying, and distributing `@spectragraph/core` internals
+- Patching store implementations and distributing them
+- Bundling modified SpectraGraph code without source disclosure
+
+**For organizations requiring alternative licensing** (indemnification, warranty, legal CYA), commercial licenses are available. Contact: jake@jakesower.com
+
+See [LICENSING.md](./LICENSING.md) for detailed scenarios and FAQs.
