@@ -148,18 +148,18 @@ Understanding execution order explains query behavior:
 
 ```javascript
 {
-  type: "users",
-  ids: ["1", "2", "3", "4", "5"],      // 1. Start with 5 specific users
-  where: { active: true },             // 2. Filter to active users only
-  order: { name: "asc" },              // 3. Sort by name
-  offset: 1,                           // 4. Skip first result
-  limit: 2,                            // 5. Take next 2 results
-  select: ["name", "email"]            // 6. Return only name and email
+  type: "patrons",
+  ids: ["p1", "p2", "p3", "p4", "p5"],    // 1. Start with 5 specific patrons
+  where: { membershipActive: true },      // 2. Filter to active patrons only
+  order: { name: "asc" },                 // 3. Sort by name
+  offset: 1,                              // 4. Skip first result
+  limit: 2,                               // 5. Take next 2 results
+  select: ["name", "email"]               // 6. Return only name and email
 }
 
 // Execution flow:
-// Users [1,2,3,4,5] → Filter active → Sort → Skip 1 → Take 2 → Project fields
-// Result: 2 users, sorted by name, with only name/email fields
+// Patrons [p1,p2,p3,p4,p5] → Filter active → Sort → Skip 1 → Take 2 → Project fields
+// Result: 2 patrons, sorted by name, with only name/email fields
 ```
 
 ### Combining ids and where
@@ -168,12 +168,12 @@ You can filter a specific set of IDs:
 
 ```javascript
 {
-  type: "users",
-  ids: ["123", "456", "789", "999"],
-  where: { active: true }
+  type: "patrons",
+  ids: ["p1", "p2", "p3", "p4"],
+  where: { membershipActive: true }
 }
-// Returns: Only the active users from the specified IDs
-// (Not all active users)
+// Returns: Only the active patrons from the specified IDs
+// (Not all active patrons)
 ```
 
 ---
@@ -229,7 +229,7 @@ Select specific attributes and relationships:
 {
   type: "patrons",
   select: [
-    "*",                                    // All attributes
+    "*",                                   // All attributes
     { loans: { select: ["dueDate"] } }     // Plus loans
   ]
 }
@@ -293,22 +293,23 @@ The most powerful form, supporting aliases, expressions, and computed fields:
 
 ```javascript
 {
-  type: "users",
+  type: "patrons",
   select: {
     "*": "*",                           // Include all attributes
-    postCount: { $count: "posts" }      // Plus computed field
+    loanCount: { $count: "loans" }      // Plus computed field
   }
 }
 
 // Equivalent to:
 {
-  type: "users",
+  type: "patrons",
   select: {
     id: "id",
     name: "name",
     email: "email",
+    libraryCard: "libraryCard",
     // ... all other attributes
-    postCount: { $count: "posts" }
+    loanCount: { $count: "loans" }
   }
 }
 ```
@@ -319,15 +320,15 @@ These queries are equivalent after normalization:
 
 ```javascript
 // Array form
-select: ["name", "email", { posts: ["title"] }]
+select: ["name", "email", { loans: ["dueDate"] }]
 
 // Object form
 select: {
   name: "name",
   email: "email",
-  posts: {
+  loans: {
     select: {
-      title: "title"
+      dueDate: "dueDate"
     }
   }
 }
@@ -344,13 +345,15 @@ SpectraGraph normalizes all forms to the object form internally.
 **Use array form when:**
 
 - Selecting specific attributes: `select: ["name", "email"]`
-- Simple relationship traversal: `select: ["name", { posts: ["title"] }]`
+- Simple relationship traversal: `select: ["name", { loans: ["dueDate"] }]`
+- A mix of things **most commonly used form**:
+  `select: ["name", { loanCount: { $count: "loans" }, loans: ["dueDate"] }]`
 
 **Use object form when:**
 
-- Aliasing fields: `userName: "name"`
-- Computing fields: `postCount: { $count: "posts" }`
-- Complex subqueries: `posts: { select: [...], where: {...}, limit: 5 }`
+- Aliasing fields: `patronName: "name"`
+- Computing fields: `loanCount: { $count: "loans" }`
+- Complex subqueries: `loans: { select: [...], where: {...}, limit: 5 }`
 
 ---
 
@@ -362,12 +365,12 @@ Filter resources based on attribute values and expressions.
 
 ```javascript
 // Single condition
-where: { status: "active" }
+where: { membershipActive: true }
 
 // Multiple conditions (implicit AND)
 where: {
-  status: "active",
-  role: "admin"
+  membershipActive: true,
+  membershipType: "premium"
 }
 ```
 
@@ -383,15 +386,15 @@ where: {
   }
 }
 where: {
-  price: {
-    $lt: 100;
+  renewalCount: {
+    $lt: 3;
   }
 }
 
 // String matching
 where: {
   name: {
-    $matchesRegex: "^John";
+    $matchesRegex: "^Kenji";
   }
 }
 where: {
@@ -402,19 +405,19 @@ where: {
 
 // Array membership
 where: {
-  status: {
-    $in: ["active", "pending"];
+  membershipType: {
+    $in: ["basic", "premium"];
   }
 }
 where: {
-  role: {
-    $nin: ["guest", "banned"];
+  status: {
+    $nin: ["suspended", "expired"];
   }
 }
 
 // Negation
 where: {
-  deleted: {
+  returned: {
     $ne: true;
   }
 }
@@ -427,12 +430,19 @@ Combine conditions with AND, OR, NOT:
 ```javascript
 // OR
 where: {
-  $or: [{ status: { $eq: "active" } }, { status: { $eq: "pending" } }];
+  $or: [{ status: { $eq: "active" } }, { age: { $lt: 18 } }];
 }
 
 // AND (explicit, though implicit AND works too)
 where: {
   $and: [{ age: { $gte: 18 } }, { age: { $lte: 65 } }];
+}
+
+// AND (alternative form, means same thing as above)
+where: {
+  age: {
+    $and: [{ $gte: 18 }, { $lte: 65 }];
+  }
 }
 
 // NOT
@@ -459,43 +469,55 @@ where: {
 
 The WHERE clause supports a **restricted set** of expression operators (filtering only, no aggregations):
 
-| Category             | Operators             | Description                         |
-| -------------------- | --------------------- | ----------------------------------- |
-| **Comparison**       | `$eq`, `$ne`          | Equal, not equal                    |
-|                      | `$gt`, `$gte`         | Greater than, greater than or equal |
-|                      | `$lt`, `$lte`         | Less than, less than or equal       |
-|                      | `$in`, `$nin`         | In array, not in array              |
-| **Logic**            | `$and`, `$or`, `$not` | Logical AND, OR, NOT                |
-| **Pattern Matching** | `$matchesRegex`       | Regular expression match            |
-|                      | `$matchesLike`        | SQL LIKE pattern                    |
-|                      | `$matchesGlob`        | Glob pattern (\*.txt)               |
-| **Existence**        | `$isPresent`          | Check if value exists/is truthy     |
+| Category             | Operators             | Description                                 |
+| -------------------- | --------------------- | ------------------------------------------- |
+| **Comparison**       | `$eq`, `$ne`          | Equal, not equal                            |
+|                      | `$gt`, `$gte`         | Greater than, greater than or equal         |
+|                      | `$lt`, `$lte`         | Less than, less than or equal               |
+|                      | `$in`, `$nin`         | In array, not in array                      |
+| **Logic**            | `$and`, `$or`, `$not` | Logical AND, OR, NOT                        |
+| **Pattern Matching** | `$matchesRegex`       | Regular expression match                    |
+| **Existence**        | `$isPresent`          | Check if value exists/is truthy             |
+| **Composition**      | `$pipe`               | Run expressions in sequence (USE CAERFULLY) |
+
+#### A Word on `$pipe`
+
+`$pipe` is a powerful composition expression that should be used with care in WHERE expressions. It's necessary for sequencing in some cases.
+
+**Feed "age" attribute to `isPresent`**
+`where: { $pipe: [{ $get: "age" }, { $isPresent: null } ] }`
+
+This pattern is discouraged, but should be kept in your back pocket for situations where.
+
+**Better expression for the above**
+
+`where { age: { $isPresent: true } }`
 
 ### WHERE vs SELECT Expressions
 
 **Not available in WHERE:**
 
-- Aggregations: `$count`, `$sum`, `$avg`, `$min`, `$max`
+- Aggregations: `$groupBy`, `$count`, `$sum`, `$avg`, `$min`, etc.
 - Transformations: `$map`, `$filter`, `$join`
 - Math operations: `$add`, `$multiply`, etc.
 
-**Why?** Performance and security. WHERE runs on potentially large datasets; expensive operations are disabled.
+**Why?** Performance and security. WHERE runs on potentially large datasets; expensive operations are disabled. This can be overridden by supplying a custom expression engine when needed, but this is advanced behavior and not recommended for most users.
 
 **Use aggregations in SELECT instead:**
 
 ```javascript
 // Don't do this
 where: {
-  posts: { $count: { $gt: 5 } }  // Error: $count not available in WHERE
+  loans: { $count: { $gt: 5 } }  // Error: $count not available in WHERE
 }
 
 // Do this instead
 {
-  type: "users",
+  type: "patrons",
   select: {
     name: "name",
-    postCount: { $count: "posts" }  // Compute in SELECT
-  }
+    loanCount: { $count: "loans" }  // Compute in SELECT
+  },
 }
 // Then filter results in application code
 ```
@@ -505,10 +527,10 @@ where: {
 Different stores handle WHERE clauses differently:
 
 - **Memory Store:** Full expression support, filters in JavaScript
-- **SQL Stores:** Translates to SQL `WHERE` clauses; some expressions may not translate
+- **SQL Stores:** Translates to SQL `WHERE` clauses; some expressions may not translate to SQL, causing a drop in performance, but still work due to post-processing
 - **API Stores:** May push filters to API or filter client-side
 
-Check your store's documentation for specific limitations.
+Check your store's documentation for specific limitations and best practices.
 
 ---
 
@@ -521,16 +543,16 @@ Sort results by one or more attributes.
 ```javascript
 // Ascending order
 {
-  type: "users",
+  type: "patrons",
   select: ["name"],
   order: { name: "asc" }
 }
 
 // Descending order
 {
-  type: "posts",
-  select: ["title", "createdAt"],
-  order: { createdAt: "desc" }
+  type: "loans",
+  select: ["dueDate", "renewalCount"],
+  order: { dueDate: "desc" }
 }
 ```
 
@@ -540,11 +562,11 @@ Use an array of objects when sorting by multiple fields. **Order matters:**
 
 ```javascript
 {
-  type: "users",
-  select: ["name", "createdAt"],
+  type: "patrons",
+  select: ["name", "memberSince"],
   order: [
-    { name: "asc" },        // Primary sort: by name A-Z
-    { createdAt: "desc" }   // Secondary sort: ties broken by newest first
+    { name: "asc" },           // Primary sort: by name A-Z
+    { memberSince: "desc" }    // Secondary sort: ties broken by newest first
   ]
 }
 ```
@@ -570,12 +592,12 @@ Use an array of objects when sorting by multiple fields. **Order matters:**
 ```javascript
 // This doesn't work
 {
-  type: "users",
+  type: "patrons",
   select: {
     name: "name",
-    postCount: { $count: "posts" }  // Computed field
+    loanCount: { $count: "loans" }  // Computed field
   },
-  order: { postCount: "desc" }      // Error: postCount is not an attribute
+  order: { loanCount: "desc" }      // Error: loanCount is not an attribute
 }
 ```
 
@@ -590,12 +612,12 @@ Order works in relationship subqueries:
 
 ```javascript
 {
-  type: "users",
+  type: "patrons",
   select: {
     name: "name",
-    recentPosts: {
-      select: ["title", "createdAt"],
-      order: { createdAt: "desc" },  // Order nested results
+    recentLoans: {
+      select: ["dueDate", "renewalCount"],
+      order: { dueDate: "desc" },  // Order nested results
       limit: 5
     }
   }
@@ -614,7 +636,7 @@ Restrict the number of results:
 
 ```javascript
 {
-  type: "posts",
+  type: "books",
   select: ["title"],
   limit: 10  // Return at most 10 results
 }
@@ -632,7 +654,7 @@ Skip a number of results:
 
 ```javascript
 {
-  type: "posts",
+  type: "books",
   select: ["title"],
   offset: 20  // Skip first 20 results
 }
@@ -651,27 +673,27 @@ Standard pagination pattern:
 ```javascript
 // Page 1 (items 0-9)
 {
-  type: "posts",
+  type: "books",
   select: ["title"],
-  order: { createdAt: "desc" },
+  order: { publishedYear: "desc" },
   limit: 10,
   offset: 0
 }
 
 // Page 2 (items 10-19)
 {
-  type: "posts",
+  type: "books",
   select: ["title"],
-  order: { createdAt: "desc" },
+  order: { publishedYear: "desc" },
   limit: 10,
   offset: 10
 }
 
 // Page N (items (N-1)*10 to N*10-1)
 {
-  type: "posts",
+  type: "books",
   select: ["title"],
-  order: { createdAt: "desc" },
+  order: { publishedYear: "desc" },
   limit: 10,
   offset: (page - 1) * 10
 }
@@ -683,11 +705,11 @@ Limit and offset work in relationship subqueries:
 
 ```javascript
 {
-  type: "users",
+  type: "patrons",
   select: {
     name: "name",
-    recentPosts: {
-      select: ["title"],
+    recentLoans: {
+      select: ["dueDate"],
       order: { createdAt: "desc" },
       limit: 5,        // Limit nested results
       offset: 0
@@ -706,17 +728,17 @@ Limit and offset work in relationship subqueries:
 
 ## Subqueries
 
-Any relationship can include a full query with all standard query operations.
+Any relationship can include a full query with almost all standard query operations. `id` and `ids` are not supported.
 
 ### Basic Relationship Traversal
 
 ```javascript
 {
-  type: "users",
+  type: "patrons",
   select: {
     name: "name",
-    posts: {
-      select: ["title", "body"]
+    loans: {
+      select: ["dueDate", "renewalCount"]
     }
   }
 }
@@ -724,10 +746,10 @@ Any relationship can include a full query with all standard query operations.
 // Returns:
 [
   {
-    name: "Alice",
-    posts: [
-      { title: "Post 1", body: "..." },
-      { title: "Post 2", body: "..." }
+    name: "Amara Okafor",
+    loans: [
+      { dueDate: "2024-02-15", renewalCount: 1 },
+      { dueDate: "2024-02-20", renewalCount: 0 }
     ]
   }
 ]
@@ -739,18 +761,18 @@ Every relationship subquery supports all query operations:
 
 ```javascript
 {
-  type: "users",
+  type: "patrons",
   select: {
     name: "name",
-    publishedPosts: {
-      where: { published: true },        // Filter
-      order: { createdAt: "desc" },      // Sort
+    currentLoans: {
+      where: { returned: false },        // Filter
+      order: { dueDate: "asc" },         // Sort
       limit: 10,                         // Limit
       offset: 0,                         // Offset
       select: {                          // Select
-        title: "title",
-        summary: { $get: "excerpt" },    // Expressions
-        commentCount: { $count: "comments" }
+        dueDate: "dueDate",
+        bookTitle: { $get: "book.title" },    // Expressions
+        renewalCount: "renewalCount"
       }
     }
   }
@@ -763,19 +785,19 @@ Queries can nest to arbitrary depth:
 
 ```javascript
 {
-  type: "users",
+  type: "patrons",
   select: {
     name: "name",
-    posts: {
+    loans: {
       select: {
-        title: "title",
-        comments: {
+        dueDate: "dueDate",
+        book: {
           select: {
-            body: "body",
+            title: "title",
             author: {
               select: {
                 name: "name",
-                avatar: "avatarUrl"
+                biography: "biography"
               }
             }
           }
@@ -801,25 +823,25 @@ Subquery results match relationship cardinality:
 ```javascript
 // One-to-many relationship
 {
-  type: "users",
+  type: "patrons",
   select: {
     name: "name",
-    posts: { select: ["title"] }  // Returns array
+    loans: { select: ["dueDate"] }  // Returns array
   }
 }
 // Result:
-{ name: "Alice", posts: [{ title: "..." }, { title: "..." }] }
+{ name: "Amara Okafor", loans: [{ dueDate: "..." }, { dueDate: "..." }] }
 
 // Many-to-one relationship
 {
-  type: "posts",
+  type: "loans",
   select: {
-    title: "title",
-    author: { select: ["name"] }  // Returns object or null
+    dueDate: "dueDate",
+    patron: { select: ["name"] }  // Returns object or null
   }
 }
 // Result:
-{ title: "My Post", author: { name: "Alice" } }
+{ dueDate: "2024-02-15", patron: { name: "Kenji Nakamura" } }
 ```
 
 ### The `type` Field in Subqueries
@@ -828,11 +850,11 @@ The `type` field is **optional** in subqueries—it's inferred from the relation
 
 ```javascript
 {
-  type: "users",
+  type: "patrons",
   select: {
-    posts: {
+    loans: {
       // No 'type' needed—inferred from schema relationship
-      select: ["title"]
+      select: ["dueDate"]
     }
   }
 }
@@ -1143,13 +1165,13 @@ When using `id`, returns **single object or null**:
 
 ```javascript
 {
-  type: "users",
-  id: "123",
+  type: "patrons",
+  id: "p1",
   select: ["name", "email"]
 }
 
 // Resource found:
-{ name: "Alice", email: "alice@example.com" }
+{ name: "Amara Okafor", email: "amara@example.com" }
 
 // Resource not found:
 null
@@ -1162,30 +1184,30 @@ When using `ids`, `where`, or neither, returns **array** (possibly empty):
 ```javascript
 // Multiple IDs
 {
-  type: "users",
-  ids: ["123", "456"],
+  type: "patrons",
+  ids: ["p1", "p2"],
   select: ["name"]
 }
-// Returns: [{ name: "Alice" }, { name: "Bob" }]
+// Returns: [{ name: "Amara Okafor" }, { name: "Kenji Nakamura" }]
 
 // With filter
 {
-  type: "users",
-  where: { active: true },
+  type: "patrons",
+  where: { membershipActive: true },
   select: ["name"]
 }
 // Returns: [{ name: "..." }, ...]
 
 // All resources
 {
-  type: "users",
+  type: "patrons",
   select: ["name"]
 }
 // Returns: [{ name: "..." }, ...]
 
 // No matches
 {
-  type: "users",
+  type: "patrons",
   where: { status: "nonexistent" },
   select: ["name"]
 }
@@ -1199,32 +1221,32 @@ Relationship fields match schema cardinality:
 ```javascript
 // One-to-many (always array)
 {
-  type: "users",
-  id: "123",
+  type: "patrons",
+  id: "p1",
   select: {
     name: "name",
-    posts: { select: ["title"] }
+    loans: { select: ["dueDate"] }
   }
 }
 // Result:
 {
-  name: "Alice",
-  posts: [{ title: "..." }, { title: "..." }]
+  name: "Amara Okafor",
+  loans: [{ dueDate: "..." }, { dueDate: "..." }]
 }
 
 // Many-to-one (single object or null)
 {
-  type: "posts",
-  id: "456",
+  type: "loans",
+  id: "l1",
   select: {
-    title: "title",
-    author: { select: ["name"] }
+    dueDate: "dueDate",
+    patron: { select: ["name"] }
   }
 }
 // Result:
 {
-  title: "My Post",
-  author: { name: "Alice" }  // or null if no author
+  dueDate: "2024-02-15",
+  patron: { name: "Kenji Nakamura" }  // or null if no patron
 }
 ```
 
@@ -1248,8 +1270,8 @@ function paginateQuery(baseQuery, page, perPage = 10) {
 
 // Page 1
 {
-  type: "posts",
-  select: ["title", "excerpt"],
+  type: "books",
+  select: ["title", "isbn"],
   order: { createdAt: "desc" },
   limit: 10,
   offset: 0
@@ -1257,9 +1279,9 @@ function paginateQuery(baseQuery, page, perPage = 10) {
 
 // Page 2
 {
-  type: "posts",
-  select: ["title", "excerpt"],
-  order: { createdAt: "desc" },
+  type: "books",
+  select: ["title", "isbn"],
+  order: { publishedYear: "desc" },
   limit: 10,
   offset: 10
 }
@@ -1270,45 +1292,45 @@ function paginateQuery(baseQuery, page, perPage = 10) {
 ```javascript
 // Text search (case-insensitive)
 {
-  type: "posts",
+  type: "books",
   where: {
-    title: { $matchesRegex: "(?i)graphql" }
+    title: { $matchesRegex: "(?i)design" }
   },
-  select: ["title", "excerpt"]
+  select: ["title", "isbn"]
 }
 
 // Multiple status values
 {
-  type: "orders",
+  type: "loans",
   where: {
-    status: { $in: ["pending", "processing", "shipped"] }
+    status: { $in: ["active", "overdue", "renewed"] }
   },
-  select: ["id", "status", "total"]
+  select: ["id", "dueDate", "status"]
 }
 
 // Date range
 {
-  type: "posts",
+  type: "loans",
   where: {
     $and: [
-      { createdAt: { $gte: "2024-01-01" } },
-      { createdAt: { $lt: "2024-02-01" } }
+      { dueDate: { $gte: "2024-01-01" } },
+      { dueDate: { $lt: "2024-02-01" } }
     ]
   },
-  select: ["title", "createdAt"]
+  select: ["dueDate", "renewalCount"]
 }
 
 // Combining filters
 {
-  type: "products",
+  type: "books",
   where: {
     $and: [
-      { price: { $lte: 100 } },
-      { inStock: { $eq: true } },
+      { publishedYear: { $gte: 2000 } },
+      { available: { $eq: true } },
       {
         $or: [
-          { category: { $eq: "electronics" } },
-          { category: { $eq: "computers" } }
+          { genre: { $eq: "science" } },
+          { genre: { $eq: "technology" } }
         ]
       }
     ]
@@ -1358,7 +1380,7 @@ function paginateQuery(baseQuery, page, perPage = 10) {
 ```javascript
 // String concatenation
 {
-  type: "users",
+  type: "patrons",
   select: {
     fullName: {
       $join: [
@@ -1373,27 +1395,34 @@ function paginateQuery(baseQuery, page, perPage = 10) {
 
 // Conditional fields
 {
-  type: "products",
+  type: "loans",
   select: {
-    name: "name",
-    price: "price",
-    displayPrice: {
+    dueDate: "dueDate",
+    renewalCount: "renewalCount",
+    status: {
       $if: {
-        if: { $get: "onSale" },
-        then: { $get: "salePrice" },
-        else: { $get: "price" }
+        if: { $get: "returned" },
+        then: "returned",
+        else: { $if: {
+          if: { $lt: [{ $get: "dueDate" }, { $nowLocal: null }] },
+          then: "overdue",
+          else: "active"
+        }}
       }
     },
-    savings: {
+    daysOverdue: {
       $if: {
-        if: { $get: "onSale" },
-        then: {
-          $subtract: [
-            { $get: "price" },
-            { $get: "salePrice" }
+        if: { $get: "returned" },
+        then: 0,
+        else: {
+          $max: [
+            0,
+            { $subtract: [
+              { $timestamp: { $nowLocal: null } },
+              { $timestamp: { $get: "dueDate" } }
+            ]}
           ]
-        },
-        else: 0
+        }
       }
     }
   }
@@ -1401,21 +1430,21 @@ function paginateQuery(baseQuery, page, perPage = 10) {
 
 // Math calculations
 {
-  type: "orders",
+  type: "patrons",
   select: {
-    subtotal: "subtotal",
-    tax: {
+    name: "name",
+    totalLoans: { $count: "loans" },
+    lateFeeBase: {
       $multiply: [
-        { $get: "subtotal" },
-        0.08
+        { $count: "overdueLoans" },
+        5.00
       ]
     },
-    shipping: "shipping",
-    total: {
+    processingFee: 2.50,
+    totalFees: {
       $add: [
-        { $get: "subtotal" },
-        { $multiply: [{ $get: "subtotal" }, 0.08] },
-        { $get: "shipping" }
+        { $multiply: [{ $count: "overdueLoans" }, 5.00] },
+        2.50
       ]
     }
   }
@@ -1522,31 +1551,31 @@ function paginateQuery(baseQuery, page, perPage = 10) {
 ```javascript
 // Limit nested results to avoid huge payloads
 {
-  type: "users",
+  type: "patrons",
   select: {
     name: "name",
-    posts: {
+    loans: {
       limit: 10,  // Limit nested results
-      select: ["title"]
+      select: ["dueDate"]
     }
   }
 }
 
 // Paginate at every level
 {
-  type: "forums",
+  type: "authors",
   limit: 20,
   select: {
     name: "name",
-    threads: {
+    books: {
       limit: 10,
-      order: { lastActivity: "desc" },
+      order: { publishedYear: "desc" },
       select: {
         title: "title",
-        replies: {
+        loans: {
           limit: 5,
           order: { createdAt: "desc" },
-          select: ["body", "author"]
+          select: ["dueDate", "patron"]
         }
       }
     }
@@ -1555,7 +1584,7 @@ function paginateQuery(baseQuery, page, perPage = 10) {
 
 // Select only needed fields
 {
-  type: "users",
+  type: "patrons",
   select: ["id", "name"],  // Not "select: '*'"
   limit: 100
 }
