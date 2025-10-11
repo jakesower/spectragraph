@@ -32,14 +32,14 @@
 		"@spectragraph/jsonapi-server": "*",
 		"@rollup/plugin-commonjs": "^28.0.6",
 		"@rollup/plugin-json": "^6.1.0",
-		"@rollup/plugin-node-resolve": "^16.0.1",
+		"@rollup/plugin-node-resolve": "^16.0.2",
 		"ajv": "^8.17.1",
 		"ajv-formats": "^3.0.1",
 		"axios": "^1.12.2",
 		"express": "^5.1.0",
-		"rollup": "^4.52.3",
+		"rollup": "^4.52.4",
 		"start-server-and-test": "^2.1.2",
-		"vite": "7.1.7",
+		"vite": "7.1.9",
 		"vitest": "^3.2.4"
 	},
 	"publishConfig": {
@@ -55,7 +55,7 @@
 	"dependencies": {
 		"@spectragraph/query-helpers": "*",
 		"@spectragraph/utils": "*",
-		"es-toolkit": "^1.39.10",
-		"json-expressions": "^0.10.2"
+		"es-toolkit": "^1.40.0",
+		"json-expressions": "^0.12.0"
 	}
 }

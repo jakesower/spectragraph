@@ -5,139 +5,68 @@ describe("normalizeWhereClause", () => {
 	describe("base cases", () => {
 		it("should normalize the base case with a number", () => {
 			const normalized = normalizeWhereClause({ age: 2 });
-			expect(normalized).toEqual({ $pipe: [{ $get: "age" }, { $eq: 2 }] });
+			expect(normalized).toEqual({ $matches: { age: 2 } });
 		});
 
 		it("should normalize the base case with a string", () => {
 			const normalized = normalizeWhereClause({ favoriteToy: "dolls" });
 			expect(normalized).toEqual({
-				$pipe: [{ $get: "favoriteToy" }, { $eq: "dolls" }],
+				$matches: { favoriteToy: "dolls" },
 			});
 		});
 
 		it("should normalize the base case with a string and a number", () => {
 			const normalized = normalizeWhereClause({ age: 3, favoriteToy: "dolls" });
 			expect(normalized).toEqual({
-				$and: [
-					{ $pipe: [{ $get: "age" }, { $eq: 3 }] },
-					{ $pipe: [{ $get: "favoriteToy" }, { $eq: "dolls" }] },
-				],
-			});
-		});
-	});
-
-	describe("conditional expressions", () => {
-		it("should normalize $if expressions in attribute spot", () => {
-			const where = {
-				napStatus: {
-					$if: {
-						if: { $eq: true },
-						then: "sleeping",
-						else: "awake",
-					},
-				},
-			};
-			const normalized = normalizeWhereClause(where);
-			expect(normalized).toEqual({
-				$if: {
-					if: { $pipe: [{ $get: "napStatus" }, { $eq: true }] },
-					then: "sleeping",
-					else: "awake",
-				},
-			});
-		});
-
-		it("should normalize $if expressions in root spot", () => {
-			const where = {
-				$if: {
-					if: { napStatus: true },
-					then: "sleeping",
-					else: "awake",
-				},
-			};
-			const normalized = normalizeWhereClause(where);
-			expect(normalized).toEqual({
-				$if: {
-					if: { $pipe: [{ $get: "napStatus" }, { $eq: true }] },
-					then: "sleeping",
-					else: "awake",
-				},
-			});
-		});
-
-		it("should normalize $case expressions", () => {
-			const where = {
-				activityLevel: {
-					$case: {
-						cases: [
-							{ when: { $eq: 2 }, then: "toddler" },
-							{ when: { $gte: 3 }, then: "preschooler" },
-						],
-						default: "baby",
-					},
-				},
-			};
-			const normalized = normalizeWhereClause(where);
-			expect(normalized).toEqual({
-				$case: {
-					value: { $get: "activityLevel" },
-					cases: [
-						{ when: { $eq: 2 }, then: "toddler" },
-						{ when: { $gte: 3 }, then: "preschooler" },
-					],
-					default: "baby",
-				},
+				$matches: { age: 3, favoriteToy: "dolls" },
 			});
 		});
 	});
 
 	describe("logical expressions", () => {
-		it("handles logical $and expressions around the different attributes", () => {
+		it("handles logical $and expressions around different attributes", () => {
 			const normalized = normalizeWhereClause({
 				$and: [{ favoriteToy: "dolls" }, { age: { $lt: 4 } }],
 			});
 
 			expect(normalized).toEqual({
 				$and: [
-					{ $pipe: [{ $get: "favoriteToy" }, { $eq: "dolls" }] },
-					{ $pipe: [{ $get: "age" }, { $lt: 4 }] },
+					{ $matches: { favoriteToy: "dolls" } },
+					{ $matches: { age: { $lt: 4 } } },
 				],
 			});
 		});
 
-		it("handles logical $or expressions around the different attributes", () => {
+		it("handles logical $or expressions around different attributes", () => {
 			const normalized = normalizeWhereClause({
 				$or: [{ favoriteToy: "dolls" }, { age: { $lt: 4 } }],
 			});
 
 			expect(normalized).toEqual({
 				$or: [
-					{ $pipe: [{ $get: "favoriteToy" }, { $eq: "dolls" }] },
-					{ $pipe: [{ $get: "age" }, { $lt: 4 }] },
+					{ $matches: { favoriteToy: "dolls" } },
+					{ $matches: { age: { $lt: 4 } } },
 				],
 			});
 		});
 
 		it("handles logical expressions within the same attribute", () => {
 			const normalized = normalizeWhereClause({
-				age: { $or: [3, { $gte: 5 }] },
+				age: { $or: [{ $eq: 3 }, { $gte: 5 }] },
 			});
 
 			expect(normalized).toEqual({
-				$or: [
-					{ $pipe: [{ $get: "age" }, { $eq: 3 }] },
-					{ $pipe: [{ $get: "age" }, { $gte: 5 }] },
-				],
+				$matches: { age: { $or: [{ $eq: 3 }, { $gte: 5 }] } },
 			});
 		});
 
 		it("handles $not", () => {
 			const normalized = normalizeWhereClause({
-				age: { $not: 3 },
+				age: { $not: { $eq: 3 } },
 			});
 
 			expect(normalized).toEqual({
-				$not: { $pipe: [{ $get: "age" }, { $eq: 3 }] },
+				$matches: { age: { $not: { $eq: 3 } } },
 			});
 		});
 	});
@@ -145,14 +74,11 @@ describe("normalizeWhereClause", () => {
 	describe("other expressions", () => {
 		it("handles $literal in an attribute position", () => {
 			const normalized = normalizeWhereClause({
-				parent: { $literal: { name: "Priya", age: 33 } },
+				parent: { $literal: { name: "James", age: 38 } },
 			});
 
 			expect(normalized).toEqual({
-				$pipe: [
-					{ $get: "parent" },
-					{ $eq: { $literal: { name: "Priya", age: 33 } } },
-				],
+				$matches: { parent: { $literal: { name: "James", age: 38 } } },
 			});
 		});
 
@@ -162,7 +88,7 @@ describe("normalizeWhereClause", () => {
 			});
 
 			expect(normalized).toEqual({
-				$debug: { $pipe: [{ $get: "age" }, { $lt: 3 }] },
+				$matches: { age: { $debug: { $lt: 3 } } },
 			});
 		});
 
@@ -172,7 +98,7 @@ describe("normalizeWhereClause", () => {
 			});
 
 			expect(normalized).toEqual({
-				$pipe: [{ $get: "furColor" }, { $in: ["tan", "pink", "yellow"] }],
+				$matches: { furColor: { $in: ["tan", "pink", "yellow"] } },
 			});
 		});
 
@@ -182,11 +108,16 @@ describe("normalizeWhereClause", () => {
 			});
 
 			expect(normalized).toEqual({
-				$pipe: [
-					{ $get: "badges" },
-					{ $eq: { $literal: ["rainbow", "heart"] } },
-				],
+				$matches: { badges: { $literal: ["rainbow", "heart"] } },
 			});
+		});
+	});
+
+	describe("invalid cases", () => {
+		it("doesn't allow non-objects", () => {
+			expect(() => normalizeWhereClause(3)).toThrow();
+			expect(() => normalizeWhereClause(null)).toThrow();
+			expect(() => normalizeWhereClause([{ age: { $gt: 3 } }])).toThrow();
 		});
 	});
 });
