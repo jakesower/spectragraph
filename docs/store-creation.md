@@ -436,7 +436,7 @@ describe("My Custom Store", () => {
 
 ### Test Schema and Data
 
-Use the standard test schema for consistency:
+You can use the standard test schema for consistency, or create your own. If the Care Bears schema or data is lacking, please submit an issue. We want everyone to be able to get started with testing quickly.
 
 ```javascript
 import { careBearSchema, careBearData } from "@spectragraph/interface-tests";
