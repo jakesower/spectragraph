@@ -11,6 +11,9 @@ export default [
 		external: [
 			"es-toolkit",
 			"@spectragraph/utils",
+			"@spectragraph/sql-helpers",
+			"@spectragraph/core",
+			"@spectragraph/query-helpers",
 			"spectragraph",
 			"ajv",
 			"pg",
@@ -24,6 +27,9 @@ export default [
 		external: [
 			"es-toolkit",
 			"@spectragraph/utils",
+			"@spectragraph/sql-helpers",
+			"@spectragraph/core",
+			"@spectragraph/query-helpers",
 			"spectragraph",
 			"ajv",
 			"pg",

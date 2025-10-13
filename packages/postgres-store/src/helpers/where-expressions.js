@@ -1,3 +1,4 @@
+import { ExpressionNotSupportedError } from "@spectragraph/core";
 import { createExpressionEngine } from "json-expressions";
 import { mapValues } from "es-toolkit";
 import { DEFAULT_WHERE_EXPRESSIONS } from "../../../sql-helpers/src/where-expressions.js";
@@ -15,23 +16,55 @@ import { DEFAULT_WHERE_EXPRESSIONS } from "../../../sql-helpers/src/where-expres
  */
 const sqlExpressions = {
 	...DEFAULT_WHERE_EXPRESSIONS,
+	$case: {
+		where: () => {
+			throw new ExpressionNotSupportedError(
+				"$case",
+				"postgres-store",
+				"CASE casting not yet available",
+			);
+		},
+		vars: () => {
+			throw new ExpressionNotSupportedError(
+				"$case",
+				"postgres-store",
+				"CASE casting not yet available",
+			);
+		},
+	},
+	$if: {
+		where: () => {
+			throw new ExpressionNotSupportedError(
+				"$if",
+				"postgres-store",
+				"CASE casting not yet available",
+			);
+		},
+		vars: () => {
+			throw new ExpressionNotSupportedError(
+				"$if",
+				"postgres-store",
+				"CASE casting not yet available",
+			);
+		},
+	},
 	$matchesLike: {
 		where: () => " LIKE ?",
 		vars: (operand) => operand,
 	},
 	$matchesRegex: {
-		where: (operand) => {
+		where: (operand, inputData) => {
 			// Extract inline flags and clean pattern
 			const flagMatch = operand.match(/^\(\?([ims]*)\)(.*)/);
 			if (flagMatch) {
 				const [, flags] = flagMatch;
 				// Case-insensitive flag in PostgreSQL
 				if (flags.includes("i")) {
-					return " ~* ?";
+					return `${inputData ?? ""} ~* ?`;
 				}
 			}
 			// Default case-sensitive regex (PCRE defaults)
-			return " ~ ?";
+			return `${inputData ?? ""} ~ ?`;
 		},
 		vars: (operand) => {
 			// Extract inline flags and clean pattern
@@ -72,7 +105,7 @@ const sqlExpressions = {
 		},
 	},
 	$matchesGlob: {
-		where: () => " ILIKE ?", // PostgreSQL case-insensitive equivalent to GLOB
+		where: (operand, inputData) => `${inputData ?? ""} ILIKE ?`, // PostgreSQL case-insensitive equivalent to GLOB
 		vars: (operand) => {
 			// Convert GLOB pattern to PostgreSQL LIKE pattern
 			let pattern = operand
