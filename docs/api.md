@@ -114,6 +114,8 @@ await store.delete({ type: "users", id: "1" });
 
 ## Core Functions
 
+Core functions are primarily used during store building. They are all pure functions.
+
 ### ensureValidSchema(schema, options)
 
 Validate a schema and throw error if invalid.
@@ -354,7 +356,7 @@ Deep merge two graphs, merging resources by ID.
 **Parameters:**
 
 - `left` (`Graph`) - One graph
-- `right` (`Graph`) - The other graph
+- `right` (`Graph`) - The other graph (takes precedence)
 
 **Returns:** `Graph` - Deep merged graph
 
@@ -815,5 +817,5 @@ For practical usage examples, see:
 
 - [Query Guide](query.md) - Complete query language reference
 - [Schema Guide](schema.md) - Schema definition examples
-- [Expression Guide](https://github.com/jakesower/json-expressions/blob/main/docs/expressions.md) - Expression usage patterns (json-expressions)
+- [Expression Guide](https://github.com/jakesower/json-expressions) - Expression usage patterns (json-expressions)
 - [Store Creation](store-creation.md) - Building custom stores
