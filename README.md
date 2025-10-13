@@ -37,7 +37,7 @@ const result = await store.query({
 
 ## Start Building Today, Deploy Anywhere Tomorrow
 
-SpectraGraph lets you build with real data relationships from day one then deploy to any infrastructure without changing your queries.
+SpectraGraph lets you build with real data relationships from day one then deploy to multiple infrastructures (including your own custom stores) without changing your queries.
 
 ### Development to Production in 3 Steps
 
@@ -48,13 +48,13 @@ import { createMemoryStore } from "@spectragraph/memory-store";
 
 // Begin building features with realistic data
 const store = createMemoryStore(schema, {
-  data: {
+  initialData: {
     patrons: [{ id: "1", name: "Kenji Nakamura", libraryCard: "LIB001" }],
     books: [
       {
         id: "b1",
-        title: "The Design of Everyday Things",
-        isbn: "978-0465050659",
+        title: "The Golden Compass",
+        isbn: "0-590-54178-1",
       },
     ],
   },
@@ -68,6 +68,8 @@ import { createMultiApiStore } from "@spectragraph/postgres-store";
 
 // Zero code changes in your application as you build out your config
 const store = createMultiApiStore(schema, config);
+// Your team configures endpoints, debugs transport concerns, works out data
+// formats, etc.
 ```
 
 **3. Combine the two**
@@ -92,17 +94,17 @@ Your queries and application layer stay the same during the entire process, no m
 
 ### Why This Matters
 
-- **Unblock parallel development** - App and backend teams work independently
+- **Unblock parallel development** - App and transport/database teams work independently
 - **Validate architecture early** - Prove data model before infrastructure complexity
-- **Deploy flexibly** - Frontend aggregation today, backend service tomorrow
-- **Eliminate rewrites** - Investment compounds across environments
+- **Deploy flexibly** - Move your application over when ready with zero query changes
+- **Eliminate data layer rewrites** - Investment compounds across environments
 
 ## Performance by Design
 
 Each store optimizes queries using its native capabilities:
 
 - **PostgreSQL store** generates efficient SQL with proper indexes
-- **Multi-API store** batches requests and caches relationships
+- **Multi-API store** coordinates requests and caches relationships
 - **Memory store** uses JavaScript's native performance for prototyping
 
 ## Installation
@@ -126,6 +128,10 @@ const schema = {
         email: { type: "string" },
         libraryCard: { type: "string" },
         membershipActive: { type: "boolean" },
+        readingLevel: {
+          type: "string",
+          enum: ["beginner", "intermediate", "advanced"],
+        },
       },
       relationships: {
         loans: {
@@ -209,8 +215,8 @@ const store = createMemoryStore(schema, {
         id: "1",
         type: "authors",
         attributes: {
-          name: "Elena Rodriguez",
-          biography: "Award-winning novelist and professor",
+          name: "Philip Pullman",
+          biography: "Award-winning novelist",
         },
         relationships: { books: [{ type: "books", id: "1" }] },
       },
@@ -220,9 +226,9 @@ const store = createMemoryStore(schema, {
         id: "1",
         type: "books",
         attributes: {
-          title: "The Art of System Design",
+          title: "The Golden Compass",
           isbn: "978-1234567890",
-          publishedYear: 2023,
+          publishedYear: 1995,
         },
         relationships: {
           author: { type: "authors", id: "1" },
@@ -308,7 +314,7 @@ console.log(analytics);
 
 **Data Analysis**
 
-- **Expression-Powered Queries** - Built-in aggregations, computations, and transformations
+- **Expression-Powered Queries** - Built-in aggregations, computations, and custom expressions
 - **Cross-Store Analytics** - Same analytical queries work on any data source
 - **Dynamic Querying** - Build queries programmatically for dashboards and reports
 
@@ -336,7 +342,9 @@ console.log(analytics);
   type: "books",
   select: ["title", "publishedYear"],
   where: {
-    publishedYear: { $gte: 2020 }
+    active: true, // implicit $eq
+    readingLevel: ["intermediate", "advanced"], // implicit $in
+    publishedYear: { $gte: 2020 }, // expression
   },
   order: [{ publishedYear: "desc" }],
   limit: 5
@@ -346,7 +354,7 @@ console.log(analytics);
 ### Cross-Store Data Composition
 
 ```javascript
-// Same query pattern works across different store types
+// Same query works across different store types
 {
   type: "patrons",
   select: ["name", {
