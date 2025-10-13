@@ -409,7 +409,7 @@ export function runQueryTests(createStore) {
 				});
 			});
 
-			it("filters with an $if expression", async () => {
+			it("filters using $if to compute a comparison value", async () => {
 				await testExpressionOrSkip(async () => {
 					const store = createStore(careBearSchema, {
 						initialData: careBearData,
@@ -419,10 +419,14 @@ export function runQueryTests(createStore) {
 						type: "bears",
 						select: ["name"],
 						where: {
-							$if: {
-								if: { yearIntroduced: { $lt: 2000 } },
-								then: { bellyBadge: "rainbow" },
-								else: { furColor: "watermelon pink" },
+							yearIntroduced: {
+								$eq: {
+									$if: {
+										if: { $eq: [{ $get: "furColor" }, "carnation pink"] },
+										then: 1982,
+										else: 2005,
+									},
+								},
 							},
 						},
 					});

@@ -20,8 +20,8 @@
 		"lint": "eslint src/ test/",
 		"lint:fix": "eslint --fix src/ test/",
 		"prepublishOnly": "npm run lint && npm run test",
-		"test": "NODE_ENV=test vitest run --coverage",
-		"test:watch": "vitest"
+		"test": "NODE_ENV=development vitest run --coverage",
+		"test:watch": "NODE_ENV=development vitest"
 	},
 	"keywords": [],
 	"author": "Jake Sower",

@@ -1,7 +1,46 @@
 import { ExpressionNotSupportedError } from "@spectragraph/core";
 import { snakeCase } from "es-toolkit";
 
+const safeColumnName = (colName) => {
+	const snaked = snakeCase(colName);
+
+	// Valid SQL column name: alphanumeric, underscores, starts with letter or underscore
+	// Also allow JSON path operators like ->, ->>, #>, #>> followed by valid paths
+	const columnPattern = /^[a-z_][a-z0-9_]*$/i;
+	const jsonPattern =
+		/^[a-z_][a-z0-9_]*(->>?|#>>?)('[^']*'|\$[a-z_][a-z0-9_]*(\.\$[a-z_][a-z0-9_]*)*)$/i;
+
+	if (!columnPattern.test(snaked) && !jsonPattern.test(snaked)) {
+		throw new Error(`Invalid column name: ${colName}`);
+	}
+
+	return snaked;
+};
+
+const comparativeExpression = (symbol) => ({
+	where: (operand, inputData, { apply, isExpression }) => {
+		if (!Array.isArray(operand)) {
+			const first = inputData ?? "?";
+			const second = isExpression(operand) ? apply(operand) : "?";
+			return `${first} ${symbol} ${second}`;
+		}
+
+		const [first, second] = operand.map((o) =>
+			isExpression(o) ? apply(o) : "?",
+		);
+		return `${first} ${symbol} ${second}`;
+	},
+	vars: (operand, _, { apply, isExpression }) => {
+		if (Array.isArray(operand)) {
+			return operand.flatMap((o) => (isExpression(o) ? apply(o) : o));
+		}
+		const result = apply(operand);
+		return Array.isArray(result) ? result.flat() : [result];
+	},
+});
+
 export const DEFAULT_WHERE_EXPRESSIONS = {
+	// logical
 	$and: {
 		where: (operand, _, { apply }) => `(${operand.map(apply).join(" AND ")})`,
 		vars: (operand, _, { apply }) => operand.flatMap(apply),
@@ -14,60 +53,69 @@ export const DEFAULT_WHERE_EXPRESSIONS = {
 		where: (operand, _, { apply }) => `NOT (${apply(operand)})`,
 		vars: (operand, _, { apply }) => apply(operand),
 	},
-	$eq: {
-		where: () => " = ?",
-		vars: (operand) => operand,
-	},
-	$gt: {
-		where: () => " > ?",
-		vars: (operand) => operand,
-	},
-	$gte: {
-		where: () => " >= ?",
-		vars: (operand) => operand,
-	},
-	$lt: {
-		where: () => " < ?",
-		vars: (operand) => operand,
-	},
-	$lte: {
-		where: () => " <= ?",
-		vars: (operand) => operand,
-	},
-	$ne: {
-		where: () => " != ?",
-		vars: (operand) => operand,
-	},
+
+	// comparative
+	$eq: comparativeExpression("="),
+	$gt: comparativeExpression(">"),
+	$gte: comparativeExpression(">="),
+	$lt: comparativeExpression("<"),
+	$lte: comparativeExpression("<="),
+	$ne: comparativeExpression("!="),
 	$in: {
-		where: (operand) => ` IN (${operand.map(() => "?").join(",")})`,
-		vars: (operand) => operand,
+		where: (operand, inputData) =>
+			`${inputData ?? ""} IN (${operand.map(() => "?").join(",")})`,
+		vars: (operand) => operand.flat(),
 	},
 	$nin: {
-		where: (operand) => ` NOT IN (${operand.map(() => "?").join(",")})`,
+		where: (operand, inputData) =>
+			`${inputData ?? ""} NOT IN (${operand.map(() => "?").join(",")})`,
 		vars: (operand) => operand,
 	},
 	$get: {
-		where: (operand) => snakeCase(operand),
+		where: (operand) => safeColumnName(operand),
 		vars: () => [],
 	},
-	$pipe: {
-		where: (operand, _, { apply }) => operand.map(apply).join(""),
-		vars: (operand, _, { apply }) => operand.map(apply).flat(),
+
+	// predicate
+	$matches: {
+		where: (operand, _, { apply, isExpression }) => {
+			const items = Object.entries(operand).map(
+				([attribute, value]) =>
+					` ${isExpression(value) ? apply(value, safeColumnName(attribute)) : `${safeColumnName(attribute)} = ?`}`,
+			);
+			return ` (${items.join(" AND ")})`;
+		},
+		vars: (operand, _, { apply, isExpression }) => {
+			const items = Object.values(operand).map((value) =>
+				isExpression(value) ? apply(value) : value,
+			);
+			return items.flat();
+		},
 	},
-	$compose: {
-		where: (operand, _, { apply }) => operand.toReversed().map(apply).join(""),
-		vars: (operand, _, { apply }) => operand.toReversed().map(apply).flat(),
+	$matchesRegex: {
+		where: () => {
+			throw new ExpressionNotSupportedError(
+				"$matchesRegex",
+				"store",
+				"regex support is distinct to each SQL store",
+			);
+		},
+		vars: () => {
+			throw new ExpressionNotSupportedError(
+				"$matchesRegex",
+				"store",
+				"regex support is distinct to each SQL store",
+			);
+		},
 	},
-	$literal: {
-		where: (operand) => String(operand),
-		vars: () => [],
-	},
+
+	// comparative
 	$if: {
 		where: (operand, _, { apply, isExpression }) => {
 			const condition = apply(operand.if);
 			const thenClause = isExpression(operand.then) ? apply(operand.then) : "?";
 			const elseClause = isExpression(operand.else) ? apply(operand.else) : "?";
-			return `CASE WHEN ${condition} THEN ${thenClause} ELSE ${elseClause} END`;
+			return ` CASE WHEN ${condition} THEN ${thenClause} ELSE ${elseClause} END`;
 		},
 		vars: (operand, _, { apply, isExpression }) => {
 			const ifResult = apply(operand.if);
@@ -141,45 +189,15 @@ export const DEFAULT_WHERE_EXPRESSIONS = {
 			return vars.flat();
 		},
 	},
+
+	// util
 	$debug: {
 		where: (operand, _, { apply }) => apply(operand),
 		vars: (operand, _, { apply }) => apply(operand),
 	},
-	$matchesLike: {
-		name: "$matchesLike",
-		where: () => " LIKE ?",
-		vars: (operand) => operand,
-	},
-	$matchesGlob: {
-		where: () => {
-			throw new ExpressionNotSupportedError(
-				"$matchesGlob",
-				"store",
-				"glob support is distinct to each SQL store",
-			);
-		},
-		vars: () => {
-			throw new ExpressionNotSupportedError(
-				"$matchesGlob",
-				"store",
-				"glob support is distinct to each SQL store",
-			);
-		},
-	},
-	$matchesRegex: {
-		where: () => {
-			throw new ExpressionNotSupportedError(
-				"$matchesRegex",
-				"store",
-				"regex support is distinct to each SQL store",
-			);
-		},
-		vars: () => {
-			throw new ExpressionNotSupportedError(
-				"$matchesRegex",
-				"store",
-				"regex support is distinct to each SQL store",
-			);
-		},
+
+	$pipe: {
+		where: (operand, _, { apply }) => operand.map(apply).join(""),
+		vars: (operand, _, { apply }) => operand.map(apply).flat(),
 	},
 };
