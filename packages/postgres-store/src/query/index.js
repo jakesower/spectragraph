@@ -45,9 +45,6 @@ export async function query(query, context) {
 	const sql = assembleSqlQuery(composedClauses);
 	const vars = extractSqlVariables(composedClauses);
 
-	console.log("sql", sql)
-	console.log("vars", vars)
-
 	// Step 4: Execute the query
 	const rawResults =
 		(await db.query({ rowMode: "array", text: sql }, vars))?.rows ?? null;

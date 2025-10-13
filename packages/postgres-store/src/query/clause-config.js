@@ -13,9 +13,7 @@ const composeArrays = (acc, item) => uniq([...(acc ?? []), ...(item ?? [])]);
 
 // Complex SQL generation functions
 const generateWhereSql = (val) =>
-	val.length > 0
-		? `WHERE ${whereExpressionEngine.apply({ $and: val })}`
-		: "";
+	val.length > 0 ? `WHERE ${whereExpressionEngine.apply({ $and: val })}` : "";
 
 const generateOrderBySql = (val) => {
 	if (val.length === 0) return "";

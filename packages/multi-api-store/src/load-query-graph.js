@@ -118,7 +118,10 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 			.map((relName) => step(query.select[relName], subqueryContext));
 
 		// intentionally do not catch -- errors from inside here are already high quality
-		const graphs = await Promise.all([queryGraphPromise, ...relatedGraphPromises]);
+		const graphs = await Promise.all([
+			queryGraphPromise,
+			...relatedGraphPromises,
+		]);
 		return graphs.reduce(mergeGraphsDeep);
 	};
 
