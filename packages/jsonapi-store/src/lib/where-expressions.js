@@ -67,7 +67,7 @@ const jsonApiExpressions = {
 
 	// Override specific expressions for JSON:API
 	$pipe: {
-				filter: (operand, { evaluate }) => {
+		filter: (operand, { evaluate }) => {
 			// For $pipe operations like [$get: "field", $eq: "value"],
 			// we need to extract the field name and the operation
 			if (operand.length === 2) {
@@ -118,14 +118,14 @@ const jsonApiExpressions = {
 		},
 	},
 	$and: {
-				filter: (operand, { evaluate }) => {
+		filter: (operand, { evaluate }) => {
 			// For $and operations, merge all the filter objects
 			const results = operand.map(evaluate);
 			return Object.assign({}, ...results);
 		},
 	},
 	$or: {
-				filter: () => {
+		filter: () => {
 			throw new ExpressionNotSupportedError(
 				"$or",
 				"jsonapi-store",
@@ -134,7 +134,7 @@ const jsonApiExpressions = {
 		},
 	},
 	$not: {
-				filter: () => {
+		filter: () => {
 			throw new ExpressionNotSupportedError(
 				"$not",
 				"jsonapi-store",
@@ -143,7 +143,7 @@ const jsonApiExpressions = {
 		},
 	},
 	$if: {
-				filter: () => {
+		filter: () => {
 			throw new ExpressionNotSupportedError(
 				"$if",
 				"jsonapi-store",
@@ -152,7 +152,7 @@ const jsonApiExpressions = {
 		},
 	},
 	$case: {
-				filter: () => {
+		filter: () => {
 			throw new ExpressionNotSupportedError(
 				"$case",
 				"jsonapi-store",

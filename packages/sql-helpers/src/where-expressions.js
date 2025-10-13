@@ -113,24 +113,32 @@ export const DEFAULT_WHERE_EXPRESSIONS = {
 	$if: {
 		where: (operand, _, { apply, isExpression }) => {
 			const condition = apply(operand.if);
-			const thenClause = isExpression(operand.then) ? apply(operand.then) : "?";
-			const elseClause = isExpression(operand.else) ? apply(operand.else) : "?";
+			const thenClause =
+				isExpression(operand.then) || typeof operand.then === "object"
+					? apply(operand.then)
+					: "?";
+			const elseClause =
+				isExpression(operand.else) || typeof operand.else === "object"
+					? apply(operand.else)
+					: "?";
 			return ` CASE WHEN ${condition} THEN ${thenClause} ELSE ${elseClause} END`;
 		},
 		vars: (operand, _, { apply, isExpression }) => {
 			const ifResult = apply(operand.if);
 			const vars =
 				Array.isArray(ifResult) && ifResult.length > 0 ? ifResult : [];
-			if (isExpression(operand.then)) {
+			if (isExpression(operand.then) || typeof operand.then === "object") {
 				const thenResult = apply(operand.then);
 				vars.push(...(Array.isArray(thenResult) ? thenResult : [thenResult]));
-			} else {
+			} else if (operand.then !== null) {
+				// Only push primitive values
 				vars.push(operand.then);
 			}
-			if (isExpression(operand.else)) {
+			if (isExpression(operand.else) || typeof operand.else === "object") {
 				const elseResult = apply(operand.else);
 				vars.push(...(Array.isArray(elseResult) ? elseResult : [elseResult]));
-			} else {
+			} else if (operand.else !== null) {
+				// Only push primitive values
 				vars.push(operand.else);
 			}
 			return vars.flat();

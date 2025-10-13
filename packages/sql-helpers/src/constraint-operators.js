@@ -151,7 +151,7 @@ export const baseSqlExpressions = {
 		vars: (operand) => operand[1],
 	},
 	$or: {
-				where: (operand, { evaluate }) => {
+		where: (operand, { evaluate }) => {
 			const evaluated = operand.map(evaluate);
 			return `(${evaluated.join(") OR (")})`;
 		},

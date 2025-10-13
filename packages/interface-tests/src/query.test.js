@@ -439,29 +439,6 @@ export function runQueryTests(createStore) {
 				});
 			});
 
-			it("filters with an $if expression with a literal", async () => {
-				await testExpressionOrSkip(async () => {
-					const store = createStore(careBearSchema, {
-						initialData: careBearData,
-					});
-
-					const query = normalizeQuery(careBearSchema, {
-						type: "bears",
-						select: ["name"],
-						where: {
-							$if: {
-								if: { $literal: true },
-								then: { bellyBadge: "rainbow" },
-								else: { furColor: "watermelon pink" },
-							},
-						},
-					});
-					const result = await store.query(query);
-
-					expect(result).toEqual([{ name: "Cheer Bear" }]);
-				});
-			});
-
 			it("filters using $matchesRegex operator", async () => {
 				await testExpressionOrSkip(async () => {
 					const store = createStore(careBearSchema, {

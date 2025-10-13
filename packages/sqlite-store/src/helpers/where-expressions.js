@@ -41,7 +41,7 @@ function hasRegexSupport(db) {
 const createSQLExpressions = (db) => ({
 	...DEFAULT_WHERE_EXPRESSIONS,
 	$matchesRegex: {
-		where: () => {
+		where: (operand, inputData) => {
 			if (!hasRegexSupport(db)) {
 				throw new ExpressionNotSupportedError(
 					"$matchesRegex",
@@ -49,7 +49,7 @@ const createSQLExpressions = (db) => ({
 					"SQLite regex support requires custom REGEXP function configuration",
 				);
 			}
-			return " REGEXP ?";
+			return `${inputData ?? ""} REGEXP ?`;
 		},
 		vars: (operand) => {
 			if (!hasRegexSupport(db)) {
@@ -64,12 +64,12 @@ const createSQLExpressions = (db) => ({
 	},
 	$matchesLike: {
 		name: "$matchesLike",
-		where: () => " LIKE ?",
+		where: (operand, inputData) => `${inputData ?? ""} LIKE ?`,
 		vars: (operand) => operand,
 	},
 	$matchesGlob: {
 		name: "$matchesGlob",
-		where: () => " GLOB ?",
+		where: (operand, inputData) => `${inputData ?? ""} GLOB ?`,
 		vars: (operand) => operand,
 	},
 });

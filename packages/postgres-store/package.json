@@ -29,7 +29,7 @@
 		"@spectragraph/interface-tests": "*",
 		"@rollup/plugin-commonjs": "^28.0.6",
 		"@rollup/plugin-json": "^6.1.0",
-		"@rollup/plugin-node-resolve": "^16.0.2",
+		"@rollup/plugin-node-resolve": "^16.0.3",
 		"rollup": "^4.52.4",
 		"testcontainers": "^11.7.1",
 		"vite": "7.1.9",
@@ -45,7 +45,7 @@
 		"@spectragraph/utils": "*",
 		"ajv": "^8.17.1",
 		"es-toolkit": "^1.40.0",
-		"json-expressions": "^0.12.0",
+		"json-expressions": "^0.12.1",
 		"pg": "^8.16.3"
 	}
 }
