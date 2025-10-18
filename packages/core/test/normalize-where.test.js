@@ -5,20 +5,20 @@ describe("normalizeWhereClause", () => {
 	describe("base cases", () => {
 		it("should normalize the base case with a number", () => {
 			const normalized = normalizeWhereClause({ age: 2 });
-			expect(normalized).toEqual({ $matches: { age: 2 } });
+			expect(normalized).toEqual({ $matchesAll: { age: 2 } });
 		});
 
 		it("should normalize the base case with a string", () => {
 			const normalized = normalizeWhereClause({ favoriteToy: "dolls" });
 			expect(normalized).toEqual({
-				$matches: { favoriteToy: "dolls" },
+				$matchesAll: { favoriteToy: "dolls" },
 			});
 		});
 
 		it("should normalize the base case with a string and a number", () => {
 			const normalized = normalizeWhereClause({ age: 3, favoriteToy: "dolls" });
 			expect(normalized).toEqual({
-				$matches: { age: 3, favoriteToy: "dolls" },
+				$matchesAll: { age: 3, favoriteToy: "dolls" },
 			});
 		});
 	});
@@ -31,8 +31,8 @@ describe("normalizeWhereClause", () => {
 
 			expect(normalized).toEqual({
 				$and: [
-					{ $matches: { favoriteToy: "dolls" } },
-					{ $matches: { age: { $lt: 4 } } },
+					{ $matchesAll: { favoriteToy: "dolls" } },
+					{ $matchesAll: { age: { $lt: 4 } } },
 				],
 			});
 		});
@@ -44,8 +44,8 @@ describe("normalizeWhereClause", () => {
 
 			expect(normalized).toEqual({
 				$or: [
-					{ $matches: { favoriteToy: "dolls" } },
-					{ $matches: { age: { $lt: 4 } } },
+					{ $matchesAll: { favoriteToy: "dolls" } },
+					{ $matchesAll: { age: { $lt: 4 } } },
 				],
 			});
 		});
@@ -56,7 +56,7 @@ describe("normalizeWhereClause", () => {
 			});
 
 			expect(normalized).toEqual({
-				$matches: { age: { $or: [{ $eq: 3 }, { $gte: 5 }] } },
+				$matchesAll: { age: { $or: [{ $eq: 3 }, { $gte: 5 }] } },
 			});
 		});
 
@@ -66,7 +66,7 @@ describe("normalizeWhereClause", () => {
 			});
 
 			expect(normalized).toEqual({
-				$matches: { age: { $not: { $eq: 3 } } },
+				$matchesAll: { age: { $not: { $eq: 3 } } },
 			});
 		});
 	});
@@ -78,7 +78,7 @@ describe("normalizeWhereClause", () => {
 			});
 
 			expect(normalized).toEqual({
-				$matches: { parent: { $literal: { name: "James", age: 38 } } },
+				$matchesAll: { parent: { $literal: { name: "James", age: 38 } } },
 			});
 		});
 
@@ -88,7 +88,7 @@ describe("normalizeWhereClause", () => {
 			});
 
 			expect(normalized).toEqual({
-				$matches: { age: { $debug: { $lt: 3 } } },
+				$matchesAll: { age: { $debug: { $lt: 3 } } },
 			});
 		});
 
@@ -98,7 +98,7 @@ describe("normalizeWhereClause", () => {
 			});
 
 			expect(normalized).toEqual({
-				$matches: { furColor: { $in: ["tan", "pink", "yellow"] } },
+				$matchesAll: { furColor: { $in: ["tan", "pink", "yellow"] } },
 			});
 		});
 
@@ -108,7 +108,7 @@ describe("normalizeWhereClause", () => {
 			});
 
 			expect(normalized).toEqual({
-				$matches: { badges: { $literal: ["rainbow", "heart"] } },
+				$matchesAll: { badges: { $literal: ["rainbow", "heart"] } },
 			});
 		});
 	});

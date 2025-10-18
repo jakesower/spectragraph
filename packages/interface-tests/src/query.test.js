@@ -419,15 +419,16 @@ export function runQueryTests(createStore) {
 						type: "bears",
 						select: ["name"],
 						where: {
-							yearIntroduced: {
-								$eq: {
+							$eq: [
+								{ $get: "yearIntroduced" },
+								{
 									$if: {
 										if: { $eq: [{ $get: "furColor" }, "carnation pink"] },
 										then: 1982,
 										else: 2005,
 									},
 								},
-							},
+							],
 						},
 					});
 					const result = await store.query(query);
