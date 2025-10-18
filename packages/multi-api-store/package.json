@@ -28,12 +28,12 @@
 	"devDependencies": {
 		"@spectragraph/interface-tests": "*",
 		"@spectragraph/memory-store": "*",
-		"@rollup/plugin-commonjs": "^28.0.6",
+		"@rollup/plugin-commonjs": "^28.0.8",
 		"@rollup/plugin-json": "^6.1.0",
 		"@rollup/plugin-node-resolve": "^16.0.3",
 		"@vitest/coverage-istanbul": "^3.2.4",
 		"@vitest/coverage-v8": "^3.2.4",
-		"rollup": "^4.52.4",
+		"rollup": "^4.52.5",
 		"vitest": "^3.2.4"
 	},
 	"publishConfig": {
@@ -50,6 +50,6 @@
 		"@spectragraph/core": "*",
 		"@spectragraph/utils": "*",
 		"es-toolkit": "^1.40.0",
-		"json-expressions": "^0.12.1"
+		"json-expressions": "^0.13.0"
 	}
 }
