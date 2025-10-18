@@ -255,7 +255,7 @@ describe("where clauses", () => {
 				type: "bears",
 				select: ["name"],
 				where: {
-					$matches: {
+					$matchesAll: {
 						yearIntroduced: { $lte: 1982 },
 						bellyBadge: "shooting star",
 					},
@@ -275,7 +275,7 @@ describe("where clauses", () => {
 				type: "bears",
 				select: ["name"],
 				where: {
-					$matches: {
+					$matchesAll: {
 						yearIntroduced: { $eq: [{ $modulo: 2 }, 1] },
 					},
 				},
@@ -298,7 +298,7 @@ describe("where clauses", () => {
 				type: "bears",
 				select: ["name"],
 				where: {
-					$matches: {
+					$matchesAll: {
 						yearIntroduced: { $isOdd: null },
 					},
 				},

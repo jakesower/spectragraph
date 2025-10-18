@@ -77,7 +77,7 @@ export const DEFAULT_WHERE_EXPRESSIONS = {
 	},
 
 	// predicate
-	$matches: {
+	$matchesAll: {
 		where: (operand, _, { apply, isExpression }) => {
 			const items = Object.entries(operand).map(
 				([attribute, value]) =>
