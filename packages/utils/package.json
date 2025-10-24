@@ -42,5 +42,7 @@
 		"LICENSE"
 	],
 	"sideEffects": false,
-	"dependencies": {}
+	"dependencies": {
+		"json-expressions": "^0.13.1"
+	}
 }
