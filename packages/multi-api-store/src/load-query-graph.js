@@ -3,7 +3,7 @@ import {
 	linkInverses,
 	mergeGraphsDeep,
 } from "@spectragraph/core";
-import { toMerged } from "es-toolkit";
+import { mapValues, toMerged } from "es-toolkit";
 import {
 	buildAsyncMiddlewarePipe,
 	handleResponseData,
@@ -49,13 +49,24 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 		].reduce(toMerged);
 
 		const fetchWithCache = async (ctx) => {
+			const pushdownClauseParams = mapValues(
+				ctx.config.pushdown ?? {},
+				(engine, clause) =>
+					clause in query ? engine.apply(query[clause]) : {},
+			);
+			const pushdownQueryParams = Object.values(pushdownClauseParams).reduce(
+				toMerged,
+				{},
+			);
+
 			const finishedCtx = {
 				...ctx,
 				request: {
 					...ctx.request,
-					queryParamsStr: stepConfig.stringifyQueryParams(
-						ctx.request.queryParams,
-					),
+					queryParamsStr: stepConfig.stringifyQueryParams({
+						...ctx.request.queryParams,
+						...pushdownQueryParams,
+					}),
 				},
 			};
 

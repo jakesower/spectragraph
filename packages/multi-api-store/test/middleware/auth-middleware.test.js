@@ -140,7 +140,7 @@ describe("auth.queryParam middleware", () => {
 			const ctx = {
 				query: { type: "test" },
 				request: {
-					queryParams: [{ existing: "param" }],
+					queryParams: { existing: "param" },
 				},
 			};
 
@@ -150,7 +150,7 @@ describe("auth.queryParam middleware", () => {
 			expect(mockNext).toHaveBeenCalledWith({
 				...ctx,
 				request: {
-					queryParams: [{ existing: "param" }, { token: "test-token-123" }],
+					queryParams: { existing: "param", token: "test-token-123" },
 				},
 			});
 		});
@@ -163,7 +163,7 @@ describe("auth.queryParam middleware", () => {
 			const ctx = {
 				query: { type: "test" },
 				request: {
-					queryParams: [],
+					queryParams: {},
 				},
 			};
 
@@ -172,7 +172,7 @@ describe("auth.queryParam middleware", () => {
 			expect(mockNext).toHaveBeenCalledWith({
 				...ctx,
 				request: {
-					queryParams: [{ api_key: "custom-token-456" }],
+					queryParams: { api_key: "custom-token-456" },
 				},
 			});
 		});
@@ -187,7 +187,7 @@ describe("auth.queryParam middleware", () => {
 			const ctx = {
 				query: { type: "test" },
 				request: {
-					queryParams: [],
+					queryParams: {},
 				},
 			};
 

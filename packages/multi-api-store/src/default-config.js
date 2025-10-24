@@ -1,4 +1,4 @@
-import { mapValues } from "es-toolkit";
+import { mapValues, pickBy } from "es-toolkit";
 
 /**
  * @typedef {Object} CacheConfig
@@ -89,8 +89,8 @@ export const standardHandlers = {
 		const { request, query } = context;
 
 		const url = query.id
-			? `${request.baseURL}/${query.type}/${query.id}`
-			: `${request.baseURL}/${query.type}`;
+			? `${request.baseURL}/${query.type}/${query.id}${request.queryParamsStr}`
+			: `${request.baseURL}/${query.type}${request.queryParamsStr}`;
 
 		return fetch(url);
 	},
@@ -157,18 +157,16 @@ export const defaultConfig = {
 		fetch: h,
 		map: (x) => x,
 	})),
+	pushdown: {},
 	request: {
 		baseURL: "",
 		headers: { Accept: "application/json" },
-		queryParams: [],
+		queryParams: {},
 	},
 	stringifyQueryParams: (queryParams) => {
-		const qpStrings = (queryParams ?? []).flatMap((qpObj) =>
-			Object.entries(qpObj)
-				.filter(([, v]) => v != null)
-				.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`),
-		);
+		const qpObj = pickBy(queryParams ?? {}, ([, v]) => v != null);
+		const qpString = new URLSearchParams(qpObj).toString();
 
-		return qpStrings.length === 0 ? "" : `?${qpStrings.join("&")}`;
+		return qpString === "" ? "" : `?${qpString}`;
 	},
 };
