@@ -1,4 +1,5 @@
 import { mapValues } from "es-toolkit";
+import { handleFetchResponse } from "./helpers/helpers.js";
 
 /**
  * @typedef {Object} CacheConfig
@@ -85,14 +86,14 @@ import { mapValues } from "es-toolkit";
  * @property {Function} delete - DELETE handler for removing resources
  */
 export const standardHandlers = {
-	query: async (context) => {
+	query: async (context, finalize) => {
 		const { request, query } = context;
 
 		const url = query.id
 			? `${request.baseURL}/${query.type}/${query.id}`
 			: `${request.baseURL}/${query.type}`;
 
-		return fetch(url);
+		return fetch(url).then(handleFetchResponse).then(finalize);
 	},
 
 	create: async (resource, { config }) => {
@@ -156,6 +157,7 @@ export const defaultConfig = {
 	...mapValues(standardHandlers, (h) => ({
 		fetch: h,
 		map: (x) => x,
+		handles: {},
 	})),
 	request: {
 		baseURL: "",

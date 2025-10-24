@@ -1,6 +1,7 @@
 import { expect, it, describe, vi, beforeEach, afterEach } from "vitest";
 import { createMultiApiStore } from "../src/multi-api-store.js";
 import utahParksSchema from "./fixtures/utah-parks.schema.json";
+import { mergeGraphs } from "@spectragraph/core";
 
 describe("handler tests", () => {
 	beforeEach(() => {
@@ -436,6 +437,202 @@ describe("handler tests", () => {
 					],
 				},
 			]);
+		});
+	});
+
+	describe("handles", () => {
+		describe("handled relationships", () => {
+			it("allows a handler to handle a relationship", async () => {
+				// Mock fetch for parks endpoint that includes activities inline
+				const mockParksGet = vi.fn().mockResolvedValue([
+					{
+						id: "zion",
+						name: "Zion National Park",
+						location: "Utah",
+						established: 1919,
+						activities: [
+							{
+								id: "angels-landing",
+								name: "Angels Landing",
+								difficulty: "strenuous",
+								duration: 240,
+								park: "zion",
+							},
+							{
+								id: "riverside-walk",
+								name: "Riverside Walk",
+								difficulty: "easy",
+								duration: 60,
+								park: "zion",
+							},
+						],
+					},
+				]);
+
+				// This should NOT be called because parks handler claims to handle activities
+				const mockActivitiesGet = vi.fn().mockResolvedValue([]);
+
+				const config = {
+					resources: {
+						parks: {
+							query: {
+								fetch: mockParksGet,
+								handles: {
+									relationships: {
+										activities: true, // Claiming we include activities in response
+									},
+								},
+							},
+						},
+						activities: {
+							query: {
+								fetch: mockActivitiesGet,
+							},
+						},
+					},
+				};
+
+				const store = createMultiApiStore(utahParksSchema, config);
+
+				const result = await store.query({
+					type: "parks",
+					select: ["name", { activities: { select: ["name", "difficulty"] } }],
+				});
+
+				// Parks handler should be called
+				expect(mockParksGet).toHaveBeenCalledWith(
+					expect.objectContaining({
+						schema: utahParksSchema,
+						query: {
+							type: "parks",
+							select: { name: "name", activities: expect.any(Object) },
+						},
+					}),
+				);
+
+				// Activities handler should NOT be called
+				expect(mockActivitiesGet).not.toHaveBeenCalled();
+
+				// Result should include activities from the parks response
+				expect(result).toEqual([
+					{
+						name: "Zion National Park",
+						activities: [
+							{
+								name: "Angels Landing",
+								difficulty: "strenuous",
+							},
+							{
+								name: "Riverside Walk",
+								difficulty: "easy",
+							},
+						],
+					},
+				]);
+			});
+
+			it.only("allows a handler to delegate unhandled relationships using step", async () => {
+				// Mock parks fetch that includes activities but NOT lodging
+				const mockParksGet = vi.fn(async (context) => {
+					// Handler uses step to load lodging, which it doesn't handle specially
+					const lodgingQuery = context.query.select.lodging;
+					const lodgingResult = lodgingQuery
+						? await context.step(lodgingQuery, context)
+						: {};
+
+					return mergeGraphs(
+						[
+							{
+								id: "zion",
+								name: "Zion National Park",
+								location: "Utah",
+								activities: [
+									{
+										id: "angels-landing",
+										name: "Angels Landing",
+										difficulty: "strenuous",
+										park: "zion",
+									},
+								],
+							},
+						],
+						lodgingResult,
+					);
+				});
+
+				const mockActivitiesGet = vi.fn().mockResolvedValue([]);
+				const mockLodgingGet = vi.fn().mockResolvedValue([
+					{
+						id: "lodge-1",
+						name: "Zion Lodge",
+						park: "zion",
+						pricePerNight: 300,
+					},
+				]);
+
+				const config = {
+					resources: {
+						parks: {
+							query: {
+								fetch: mockParksGet,
+								handles: {
+									relationships: {
+										activities: true, // Handled inline
+										// lodging NOT listed - handler will use step to delegate
+									},
+								},
+							},
+						},
+						activities: {
+							query: {
+								fetch: mockActivitiesGet,
+							},
+						},
+						lodging: {
+							query: {
+								fetch: mockLodgingGet,
+							},
+						},
+					},
+				};
+
+				const store = createMultiApiStore(utahParksSchema, config);
+
+				const result = await store.query({
+					type: "parks",
+					select: [
+						"name",
+						{ activities: { select: ["name"] } },
+						{ lodging: { select: ["name", "pricePerNight"] } },
+					],
+				});
+
+				// Parks handler called
+				expect(mockParksGet).toHaveBeenCalled();
+
+				// Activities handler NOT called (handled by parks)
+				expect(mockActivitiesGet).not.toHaveBeenCalled();
+
+				// Lodging handler SHOULD be called (not in handles, delegated via step)
+				expect(mockLodgingGet).toHaveBeenCalled();
+
+				expect(result).toEqual([
+					{
+						name: "Zion National Park",
+						activities: [
+							{
+								name: "Angels Landing",
+							},
+						],
+						lodging: [
+							{
+								name: "Zion Lodge",
+								pricePerNight: 300,
+							},
+						],
+					},
+				]);
+			});
 		});
 	});
 });

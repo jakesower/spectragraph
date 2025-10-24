@@ -126,6 +126,33 @@ export function buildAsyncMiddlewarePipe(middleware) {
 /**
  * Handles Response objects from handlers, extracting data with error handling.
  *
+ * @param {Response} response - Fetch response
+ * @param {*} [fallbackValue] - Value to return for empty successful responses
+ * @returns {Promise<*>} Parsed data or original value
+ * @throws {Error} When response indicates an error status
+ */
+export async function handleFetchResponse(response, fallbackValue) {
+	if (!response.ok) {
+		const errorData = await response.json().catch(() => ({
+			message: response.statusText,
+		}));
+		throw new Error(errorData.message || `HTTP ${response.status}`, {
+			cause: { data: errorData, originalError: response },
+		});
+	}
+
+	// Handle empty responses with fallback
+	if (fallbackValue !== undefined) {
+		const text = await response.text();
+		return text ? JSON.parse(text) : fallbackValue;
+	}
+
+	return await response.json();
+}
+
+/**
+ * Handles Response objects from handlers, extracting data with error handling.
+ *
  * @param {Response|*} response - Response object or direct data
  * @param {*} [fallbackValue] - Value to return for empty successful responses
  * @returns {Promise<*>} Parsed data or original value

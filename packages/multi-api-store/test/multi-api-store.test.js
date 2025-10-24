@@ -3,43 +3,6 @@ import { createMultiApiStore } from "../src/multi-api-store.js";
 import utahParksSchema from "./fixtures/utah-parks.schema.json";
 
 describe("createMultiApiStore", () => {
-	it("supports forceRefresh to clear cache and fetch fresh data", async () => {
-		const mockQuery = vi
-			.fn()
-			.mockResolvedValueOnce([{ id: "1", name: "First Call" }])
-			.mockResolvedValueOnce([{ id: "1", name: "Second Call" }]);
-
-		const config = {
-			cache: { enabled: true, ttl: 60000 },
-			resources: {
-				parks: { query: { fetch: mockQuery } },
-			},
-		};
-
-		const store = createMultiApiStore(utahParksSchema, config);
-
-		// Call 1: Normal caching
-		const result1 = await store.query({ type: "parks", select: ["name"] });
-
-		// Call 2: Should use cache (normal behavior)
-		const result2 = await store.query({ type: "parks", select: ["name"] });
-
-		// Call 3: With forceRefresh, should clear cache and fetch fresh
-		const result3 = await store.query(
-			{ type: "parks", select: ["name"] },
-			{ forceRefresh: true },
-		);
-
-		// Call 4: Should now use the refreshed cache
-		const result4 = await store.query({ type: "parks", select: ["name"] });
-
-		expect(mockQuery).toHaveBeenCalledTimes(2); // Call 1 + call 3 (force refresh)
-		expect(result1[0].name).toBe("First Call");
-		expect(result2[0].name).toBe("First Call"); // Cached from call 1
-		expect(result3[0].name).toBe("Second Call"); // Fresh fetch due to force refresh
-		expect(result4[0].name).toBe("Second Call"); // Uses refreshed cache
-	});
-
 	it("queries parks with mocked get handler", async () => {
 		const mockQuery = vi.fn().mockResolvedValue([
 			{
@@ -385,6 +348,43 @@ describe("createMultiApiStore", () => {
 				],
 			},
 		]);
+
+		it("supports forceRefresh to clear cache and fetch fresh data", async () => {
+			const mockQuery = vi
+				.fn()
+				.mockResolvedValueOnce([{ id: "1", name: "First Call" }])
+				.mockResolvedValueOnce([{ id: "1", name: "Second Call" }]);
+
+			const config = {
+				cache: { enabled: true, ttl: 60000 },
+				resources: {
+					parks: { query: { fetch: mockQuery } },
+				},
+			};
+
+			const store = createMultiApiStore(utahParksSchema, config);
+
+			// Call 1: Normal caching
+			const result1 = await store.query({ type: "parks", select: ["name"] });
+
+			// Call 2: Should use cache (normal behavior)
+			const result2 = await store.query({ type: "parks", select: ["name"] });
+
+			// Call 3: With forceRefresh, should clear cache and fetch fresh
+			const result3 = await store.query(
+				{ type: "parks", select: ["name"] },
+				{ forceRefresh: true },
+			);
+
+			// Call 4: Should now use the refreshed cache
+			const result4 = await store.query({ type: "parks", select: ["name"] });
+
+			expect(mockQuery).toHaveBeenCalledTimes(2); // Call 1 + call 3 (force refresh)
+			expect(result1[0].name).toBe("First Call");
+			expect(result2[0].name).toBe("First Call"); // Cached from call 1
+			expect(result3[0].name).toBe("Second Call"); // Fresh fetch due to force refresh
+			expect(result4[0].name).toBe("Second Call"); // Uses refreshed cache
+		});
 	});
 
 	describe("CUD Operations", () => {
