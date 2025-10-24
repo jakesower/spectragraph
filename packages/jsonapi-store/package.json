@@ -27,12 +27,12 @@
 	"keywords": [],
 	"author": "Jake Sower",
 	"devDependencies": {
-		"@spectragraph/core": "*",
-		"@spectragraph/interface-tests": "*",
-		"@spectragraph/jsonapi-server": "*",
 		"@rollup/plugin-commonjs": "^28.0.8",
 		"@rollup/plugin-json": "^6.1.0",
 		"@rollup/plugin-node-resolve": "^16.0.3",
+		"@spectragraph/core": "*",
+		"@spectragraph/interface-tests": "*",
+		"@spectragraph/jsonapi-server": "*",
 		"ajv": "^8.17.1",
 		"ajv-formats": "^3.0.1",
 		"axios": "^1.12.2",
@@ -56,6 +56,6 @@
 		"@spectragraph/query-helpers": "*",
 		"@spectragraph/utils": "*",
 		"es-toolkit": "^1.40.0",
-		"json-expressions": "^0.13.0"
+		"json-expressions": "^0.13.1"
 	}
 }

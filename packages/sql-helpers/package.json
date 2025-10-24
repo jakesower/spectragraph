@@ -23,7 +23,12 @@
 		"test": "NODE_ENV=test vitest run --coverage",
 		"test:watch": "vitest"
 	},
-	"keywords": ["sql", "query", "helpers", "spectragraph"],
+	"keywords": [
+		"sql",
+		"query",
+		"helpers",
+		"spectragraph"
+	],
 	"author": "Jake Sower",
 	"devDependencies": {
 		"@rollup/plugin-commonjs": "^28.0.8",
@@ -48,6 +53,6 @@
 		"@spectragraph/query-helpers": "*",
 		"@spectragraph/utils": "*",
 		"es-toolkit": "^1.40.0",
-		"json-expressions": "^0.13.0"
+		"json-expressions": "^0.13.1"
 	}
 }

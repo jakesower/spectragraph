@@ -24,5 +24,8 @@
 	"sideEffects": false,
 	"devDependencies": {
 		"vitest": "^3.2.4"
+	},
+	"dependencies": {
+		"json-expressions": "^0.13.1"
 	}
 }
