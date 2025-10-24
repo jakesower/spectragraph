@@ -1,5 +1,4 @@
 // TypeScript definitions for @spectragraph/core
-// Generated from JSDoc annotations
 
 import type { Ajv, DefinedError } from "ajv";
 

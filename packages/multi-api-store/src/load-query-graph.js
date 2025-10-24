@@ -3,7 +3,7 @@ import {
 	linkInverses,
 	mergeGraphsDeep,
 } from "@spectragraph/core";
-import { toMerged } from "es-toolkit";
+import { mapValues, toMerged } from "es-toolkit";
 import {
 	buildAsyncMiddlewarePipe,
 	handleResponseData,
@@ -17,6 +17,7 @@ import { defaultConfig } from "./default-config.js";
  * @property {import('./default-config.js').RequestConfig} request - Request configuration for this step
  * @property {import('@spectragraph/core').NormalQuery|null} parentQuery - Parent query in the hierarchy
  * @property {import('./default-config.js').FullConfig} config - Full merged configuration for this step
+ * @property {Function} step - The step function to walk a query and its subqueries
  * @property {Function} withCache - Cache wrapper function with pre-bound config and query
  */
 
@@ -32,21 +33,29 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 	const { config, schema, withCache } = storeContext;
 	const baseConfig = toMerged(defaultConfig, config);
 
-	const step = async (query, queryContext) => {
-		const context = { ...storeContext, ...queryContext };
-
-		// Check for special handlers first
+	/**
+	 *
+	 * @param {import('@spectragraph/core').Query} query
+	 * @param {import('./default-config.js').Config} context
+	 * @returns {import('./default-config.js').FullConfig}
+	 */
+	const buildConfig = (query, context) => {
 		const specialHandler = config.specialHandlers.find((h) =>
 			h.test(query, context),
 		);
 
 		// Build out the context relevant to this step (rightmost args take priority)
 		/** @type {import('./default-config.js').FullConfig} */
-		const stepConfig = [
+		return [
 			baseConfig,
 			context.config.resources[query.type] ?? {},
 			specialHandler ?? {},
 		].reduce(toMerged);
+	};
+
+	const step = async (query, queryContext) => {
+		const context = { ...storeContext, ...queryContext };
+		const stepConfig = buildConfig(query, context);
 
 		const fetchWithCache = async (ctx) => {
 			const finishedCtx = {
@@ -58,6 +67,40 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 					),
 				},
 			};
+
+			// // IN: flatResources, child outputs by relationship
+			// // OUT: { graph, unhandledQuery }
+			// const finalize = (resources, related = {}) => {
+			// 	const map = stepConfig.query?.map;
+			// 	const mapped = Array.isArray(resources)
+			// 		? map
+			// 			? resources.map(map)
+			// 			: resources
+			// 		: [map ? map(resources) : resources];
+
+			// 	const baseGraph = createGraphFromResources(schema, query.type, mapped);
+			// 	const graph = Object.values(related).reduce(
+			// 		(acc, r) => mergeGraphsDeep(acc, r.graph),
+			// 		baseGraph,
+			// 	);
+
+			// 	const select = {
+			// 		...query.select,
+			// 		...mapValues(related, (r) => r.unhandledQuery),
+			// 	};
+
+			// 	const handles = stepConfig.query?.handles ?? {};
+			// 	const unhandledQuery = {
+			// 		type: query.type,
+			// 		select,
+			// 		...(!handles.where && query.where ? { where: query.where } : {}),
+			// 		...(!handles.limit && query.limit ? { limit: query.limit } : {}),
+			// 		...(!handles.offset && query.offset ? { offset: query.offset } : {}),
+			// 		...(!handles.order && query.order ? { order: query.order } : {}),
+			// 	};
+
+			// 	return { graph, unhandledQuery };
+			// };
 
 			const fetcher = async () => {
 				// Use special handler if available, otherwise use regular handler
@@ -86,9 +129,11 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 			...stepConfig.middleware,
 			fetchWithCache,
 		]);
+
 		/** @type {MiddlewareContext} */
 		const middlewareCtx = {
 			...context,
+			step,
 			query,
 			request: stepConfig.request,
 			parentQuery: context.parentQuery,
@@ -101,20 +146,22 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 					...options,
 				}),
 		};
+
 		const queryTreePromise = pipe(middlewareCtx);
 		const queryGraphPromise = queryTreePromise.then((tree) =>
 			createGraphFromResources(schema, query.type, tree),
 		);
 
 		const subqueryContext = {
-			...context,
 			parentQuery: query,
 			parentResultPromise: queryTreePromise,
 		};
+
 		const relatedGraphPromises = Object.keys(
 			schema.resources[query.type].relationships,
 		)
 			.filter((relName) => query.select[relName])
+			.filter((relName) => !stepConfig.query?.handles?.relationships?.[relName])
 			.map((relName) => step(query.select[relName], subqueryContext));
 
 		// intentionally do not catch -- errors from inside here are already high quality

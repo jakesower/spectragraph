@@ -2,7 +2,6 @@ import {
 	ensureValidSchema,
 	normalizeQuery,
 	createEmptyGraph,
-	linkInverses,
 	mergeGraphsDeep,
 	queryGraph,
 	ensureValidCreateResource,
@@ -104,13 +103,7 @@ export function createMemoryStore(schema, config = {}) {
 		return deleteAction(resource, { schema, storeGraph });
 	};
 
-	// WARNING: MUTATES storeGraph
-	const linkStoreInverses = () => {
-		storeGraph = linkInverses(schema, storeGraph);
-	};
-
 	return {
-		linkInverses: linkStoreInverses,
 		async create(resource) {
 			return Promise.resolve(create(resource));
 		},
