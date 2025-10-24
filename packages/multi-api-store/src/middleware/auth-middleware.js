@@ -26,7 +26,7 @@ export const auth = {
 				...ctx,
 				request: {
 					...ctx.request,
-					queryParams: [...ctx.request.queryParams, { [param]: getToken() }],
+					queryParams: { ...ctx.request.queryParams, [param]: getToken() },
 				},
 			});
 	},
