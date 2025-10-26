@@ -341,7 +341,7 @@ describe("validateQuery", () => {
 	});
 
 	describe("real world issues", () => {
-		it("moo", () => {
+		it('can "double normalize" queries', () => {
 			const selectEngine = defaultSelectEngine;
 			const whereEngine = defaultWhereEngine;
 
@@ -355,6 +355,7 @@ describe("validateQuery", () => {
 				selectEngine,
 				whereEngine,
 			});
+
 			ensureValidQuery(careBearSchema, normalQuery, {
 				selectEngine,
 				whereEngine,
@@ -379,7 +380,14 @@ describe("normalizeQuery", () => {
 			select: { home: ["id"] },
 		});
 
-		expect(normal.select.home).toEqual({ type: "homes", select: { id: "id" } });
+		expect(normal.select.home).toEqual({
+			type: "homes",
+			select: { id: "id" },
+			relationships: {},
+			values: {
+				id: "id",
+			},
+		});
 	});
 
 	it("normalizes select object shorthand in subqueries", () => {
@@ -388,7 +396,14 @@ describe("normalizeQuery", () => {
 			select: { home: { id: "id" } },
 		});
 
-		expect(normal.select.home).toEqual({ type: "homes", select: { id: "id" } });
+		expect(normal.select.home).toEqual({
+			type: "homes",
+			select: { id: "id" },
+			relationships: {},
+			values: {
+				id: "id",
+			},
+		});
 	});
 
 	it("normalizes select object with * as subquery", () => {
@@ -400,6 +415,14 @@ describe("normalizeQuery", () => {
 		expect(normal.select.home).toEqual({
 			type: "homes",
 			select: {
+				id: "id",
+				name: "name",
+				location: "location",
+				caringMeter: "caringMeter",
+				isInClouds: "isInClouds",
+			},
+			relationships: {},
+			values: {
 				id: "id",
 				name: "name",
 				location: "location",
@@ -418,6 +441,14 @@ describe("normalizeQuery", () => {
 		expect(normal.select.home).toEqual({
 			type: "homes",
 			select: {
+				id: "id",
+				name: "name",
+				location: "location",
+				caringMeter: "caringMeter",
+				isInClouds: "isInClouds",
+			},
+			relationships: {},
+			values: {
 				id: "id",
 				name: "name",
 				location: "location",

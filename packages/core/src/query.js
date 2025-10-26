@@ -1,4 +1,4 @@
-import { mapValues, omit } from "es-toolkit";
+import { mapValues, omit, pick } from "es-toolkit";
 import {
 	defaultValidator,
 	defaultSelectEngine,
@@ -7,6 +7,8 @@ import {
 import { createDeepCache, ensure, translateAjvErrors } from "./lib/helpers.js";
 import baseQuerySchema from "./fixtures/query.schema.json";
 import { normalizeWhereClause } from "./lib/where-expressions.js";
+
+const NORMALIZED = Symbol("normalized");
 
 /**
  * @typedef {Object} Expression
@@ -202,6 +204,7 @@ export function validateQuery(schema, rootQuery, options = {}) {
 		whereEngine = defaultWhereEngine,
 	} = options;
 
+	if (rootQuery[NORMALIZED]) return []; // already validated
 	if (typeof schema !== "object") {
 		return [
 			{ message: "Invalid schema: expected object, got " + typeof schema },
@@ -430,6 +433,10 @@ export function normalizeQuery(schema, rootQuery, options = {}) {
 			return sel;
 		});
 
+		const relKeys = Object.keys(schema.resources[type].relationships);
+		const relationships = pick(selectWithSubqueries, relKeys);
+		const values = omit(selectWithSubqueries, relKeys);
+
 		const orderObj = query.order
 			? { order: !Array.isArray(query.order) ? [query.order] : query.order }
 			: {};
@@ -438,16 +445,27 @@ export function normalizeQuery(schema, rootQuery, options = {}) {
 			? { where: normalizeWhereClause(query.where) }
 			: {};
 
-		return query.select
+		const normalQuery = query.select
 			? {
 					...query,
 					select: selectWithSubqueries,
+					relationships,
+					values,
 					type,
 					...orderObj,
 					...whereObj,
 				}
-			: { type, select: selectWithSubqueries };
+			: { type, select: selectWithSubqueries, relationships, values };
+
+		Object.defineProperty(normalQuery, NORMALIZED, {
+			value: true,
+			enumerable: false,
+			writable: false,
+			configurable: false,
+		});
+
+		return normalQuery;
 	};
 
-	return go(rootQuery, rootQuery.type);
+	return rootQuery[NORMALIZED] ? rootQuery : go(rootQuery, rootQuery.type);
 }
