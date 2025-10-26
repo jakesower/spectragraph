@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+- Schema normalization now produces `relationship` and `values` keys which are split up from `select` for ease of use
+
 ## [Pre-Log]
 
 - Schema-driven graph query system with a powerful query language that mirrors desired output structure
