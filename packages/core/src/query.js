@@ -23,6 +23,7 @@ import { normalizeWhereClause } from "./lib/where-expressions.js";
  * @property {Array|Object|string} select - Select clause: array, object, or "*"
  * @property {string} [type]
  * @property {Object} [where] - Where conditions
+ * @property {*} [meta] - User information about the query ignored by SpectraGraph
  */
 
 /**
@@ -35,6 +36,8 @@ import { normalizeWhereClause } from "./lib/where-expressions.js";
  * @property {Object} select - Normalized select object
  * @property {Object[]} [order] - Array of order objects
  * @property {string} type - Required type
+ * @property {Object} relationships - The selected relationships
+ * @property {Object} values - Selected scalar values (non relationships)
  */
 
 const getResourceSchemaCache = createDeepCache();
@@ -52,9 +55,9 @@ const createErrorReporter =
 		value,
 	});
 
-function getResourceStructureValidator(schema, resourceType, expressionEngine) {
-	let resourceSchemaCache = expressionEngine
-		? getResourceSchemaEECache(schema, expressionEngine)
+function getResourceStructureValidator(schema, resourceType, whereEngine) {
+	let resourceSchemaCache = whereEngine
+		? getResourceSchemaEECache(schema, whereEngine)
 		: getResourceSchemaCache(schema);
 
 	let resourceSchemasByType;
@@ -67,10 +70,10 @@ function getResourceStructureValidator(schema, resourceType, expressionEngine) {
 		if (resourceSchema) return resourceSchema;
 	}
 
-	const extraExpressionRules = expressionEngine
+	const extraExpressionRules = whereEngine
 		? {
 				additionalProperties: false,
-				properties: expressionEngine.expressionNames.reduce(
+				properties: whereEngine.expressionNames.reduce(
 					(acc, n) => ({ ...acc, [n]: {} }),
 					{},
 				),
@@ -165,13 +168,9 @@ function getResourceStructureValidator(schema, resourceType, expressionEngine) {
 	return compiled;
 }
 
-function validateStructure(schema, query, type, expressionEngine) {
+function validateStructure(schema, query, type, whereEngine) {
 	const errors = [];
-	const validator = getResourceStructureValidator(
-		schema,
-		type,
-		expressionEngine,
-	);
+	const validator = getResourceStructureValidator(schema, type, whereEngine);
 
 	// Structure validation first
 	const structureIsValid = validator(query);
@@ -180,6 +179,9 @@ function validateStructure(schema, query, type, expressionEngine) {
 			errors.push(err),
 		);
 	}
+
+	const expressionErrors = whereEngine.validateExpression(query.where ?? {});
+	errors.push(...expressionErrors);
 
 	return errors;
 }
