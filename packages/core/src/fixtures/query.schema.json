@@ -14,9 +14,17 @@
 		"query": {
 			"type": "object",
 			"required": ["select"],
+			"additionalProperties": false,
 			"properties": {
 				"type": { "type": "string" },
-				"select": { "anyOf": [{ "$ref": "#/definitions/select" }, {}] }
+				"select": { "anyOf": [{ "$ref": "#/definitions/select" }, {}] },
+				"id": {},
+				"ids": {},
+				"where": {},
+				"order": {},
+				"limit": {},
+				"offset": {},
+				"meta": {}
 			}
 		},
 		"selectObject": {
