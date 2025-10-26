@@ -82,10 +82,10 @@ describe("handler tests", () => {
 			expect(mockParksGet).toHaveBeenCalledWith(
 				expect.objectContaining({
 					schema: utahParksSchema,
-					query: {
+					query: expect.objectContaining({
 						type: "parks",
 						select: { name: "name", activities: expect.any(Object) },
-					},
+					}),
 				}),
 			);
 

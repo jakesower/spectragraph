@@ -164,7 +164,7 @@ export const defaultConfig = {
 		queryParams: {},
 	},
 	stringifyQueryParams: (queryParams) => {
-		const qpObj = pickBy(queryParams ?? {}, ([, v]) => v != null);
+		const qpObj = pickBy(queryParams ?? {}, (v) => v != null);
 		const qpString = new URLSearchParams(qpObj).toString();
 
 		return qpString === "" ? "" : `?${qpString}`;

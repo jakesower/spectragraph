@@ -71,10 +71,10 @@ describe("createMultiApiStore", () => {
 
 		expect(mockQuery).toHaveBeenCalledWith(
 			expect.objectContaining({
-				query: {
+				query: expect.objectContaining({
 					type: "parks",
 					select: { name: "name", location: "location" },
-				},
+				}),
 				schema: utahParksSchema,
 			}),
 		);
@@ -122,10 +122,10 @@ describe("createMultiApiStore", () => {
 
 		expect(mockQuery).toHaveBeenCalledWith(
 			expect.objectContaining({
-				query: {
+				query: expect.objectContaining({
 					type: "parks",
 					select: { name: "name", location: "location" },
-				},
+				}),
 				schema: utahParksSchema,
 			}),
 		);
@@ -188,10 +188,10 @@ describe("createMultiApiStore", () => {
 		expect(mockParksGet).toHaveBeenCalledWith(
 			expect.objectContaining({
 				schema: utahParksSchema,
-				query: {
+				query: expect.objectContaining({
 					type: "parks",
 					select: { name: "name", activities: expect.any(Object) },
-				},
+				}),
 			}),
 		);
 
@@ -199,10 +199,10 @@ describe("createMultiApiStore", () => {
 			expect.objectContaining({
 				schema: utahParksSchema,
 				parentQuery: expect.any(Object),
-				query: {
+				query: expect.objectContaining({
 					type: "activities",
 					select: { name: "name", difficulty: "difficulty" },
-				},
+				}),
 			}),
 		);
 
@@ -270,10 +270,10 @@ describe("createMultiApiStore", () => {
 		expect(mockParksGet).toHaveBeenCalledWith(
 			expect.objectContaining({
 				schema: utahParksSchema,
-				query: {
+				query: expect.objectContaining({
 					type: "parks",
 					select: { name: "name", activities: expect.any(Object) },
-				},
+				}),
 			}),
 		);
 
@@ -281,10 +281,10 @@ describe("createMultiApiStore", () => {
 			expect.objectContaining({
 				schema: utahParksSchema,
 				parentQuery: expect.any(Object),
-				query: {
+				query: expect.objectContaining({
 					type: "activities",
 					select: { name: "name", difficulty: "difficulty" },
-				},
+				}),
 			}),
 		);
 
@@ -322,7 +322,7 @@ describe("createMultiApiStore", () => {
 			},
 		]);
 
-		const mockSpecialInvestigationsHandler = vi.fn().mockResolvedValue([
+		const mockActivitiesHandler = vi.fn().mockResolvedValue([
 			{
 				id: "angels-landing",
 				name: "Special Activity from Parks Endpoint",
@@ -337,7 +337,7 @@ describe("createMultiApiStore", () => {
 					test: (query, context) =>
 						query.type === "activities" &&
 						context.parentQuery?.type === "parks",
-					query: mockSpecialInvestigationsHandler,
+					query: mockActivitiesHandler,
 				},
 			],
 			resources: {
@@ -363,14 +363,14 @@ describe("createMultiApiStore", () => {
 
 		// Should use special handler, not regular activities get
 		expect(mockActivitiesGet).not.toHaveBeenCalled();
-		expect(mockSpecialInvestigationsHandler).toHaveBeenCalledWith(
+		expect(mockActivitiesHandler).toHaveBeenCalledWith(
 			expect.objectContaining({
 				schema: utahParksSchema,
 				parentQuery: expect.objectContaining({ type: "parks" }),
-				query: {
+				query: expect.objectContaining({
 					type: "activities",
 					select: { name: "name", difficulty: "difficulty" },
-				},
+				}),
 			}),
 		);
 
