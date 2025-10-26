@@ -1,7 +1,7 @@
 import { expect, it, describe, vi, beforeEach, afterEach } from "vitest";
-import { createMultiApiStore } from "../../src/multi-api-store.js";
-import { createWherePushdownEngine } from "../../src/helpers/where-expressions.js";
-import utahParksSchema from "../fixtures/utah-parks.schema.json";
+import { createMultiApiStore } from "../../../src/multi-api-store.js";
+import { createWherePushdownEngine } from "../../../src/helpers/where-expressions.js";
+import utahParksSchema from "../../fixtures/utah-parks.schema.json";
 
 describe("handler tests", () => {
 	beforeEach(() => {
