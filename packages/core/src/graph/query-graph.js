@@ -80,7 +80,7 @@ function prepGraph(graph) {
  * @param {import('../lib/defaults.js').WhereExpressionEngine} [options.whereEngine] - Expression engine for WHERE clauses
  * @returns {Result}
  */
-function runQuery(rootQuery, data, options = {}) {
+function runQuery(schema, rootQuery, data, options = {}) {
 	const {
 		selectEngine = defaultSelectEngine,
 		whereEngine = defaultWhereEngine,
@@ -128,7 +128,7 @@ function runQuery(rootQuery, data, options = {}) {
 				return query.limit ? results : results.slice(query.offset);
 			},
 			select(results) {
-				const { select } = query;
+				const { relationships, select } = query;
 				const projectors = mapValues(select, (propQuery, propName) => {
 					// possibilities: (1) property (2) expression (3) subquery
 					if (typeof propQuery === "string") {
@@ -145,50 +145,69 @@ function runQuery(rootQuery, data, options = {}) {
 					}
 
 					// subquery
+					if (!(propName in relationships)) {
+						throw new Error(
+							`The "${propName}" relationship is undefined on a resource of type "${query.type}". You probably have an invalid schema or constructed your graph wrong. Try linking the inverses (via "linkInverses"), check your schema to make sure all inverses have been defined correctly there, and make sure all resources have been loaded into the graph.`,
+						);
+					}
+
+					const relSchema =
+						schema.resources[query.type].relationships[propName];
+
+					// to-one relationship
+					if (relSchema.cardinality === "one") {
+						return (result) => {
+							if (Array.isArray(result[propName])) {
+								throw new Error(
+									`${query.type}.${query.id} contains an array for the to-one relationship "${propName}" which should be an object instead`,
+								);
+							}
+
+							if (result[propName] === undefined) {
+								throw new Error(
+									`A related resource was not found on resource ${query.type}.${
+										query.id
+									}. ${propName}: ${JSON.stringify(
+										result[RAW].relationships[propName],
+									)}. Check that all of the relationship refs in ${query.type}.${
+										query.id
+									} are valid.`,
+								);
+							}
+
+							if (result[propName] === null) return null;
+
+							return go({
+								...propQuery,
+								type: result[propName][TYPE],
+								id: result[propName][ID],
+							});
+						};
+					}
+
+					// to-many relationship
 					return (result) => {
-						if (result[propName] === undefined) {
+						if (!Array.isArray(result[propName])) {
 							throw new Error(
-								`The "${propName}" relationship is undefined on a resource of type "${query.type}". You probably have an invalid schema or constructed your graph wrong. Try linking the inverses (via "linkInverses"), check your schema to make sure all inverses have been defined correctly there, and make sure all resources have been loaded into the graph.`,
+								`${query.type}.${query.id} does not contain array for the to-many relationship "${propName}". This should be an array of objects.`,
 							);
 						}
 
-						if (Array.isArray(result[propName])) {
-							return result[propName]
-								.map((r) => {
-									if (r === undefined) {
-										throw new Error(
-											`A related resource was not found on resource ${
-												query.type
-											}.${query.id}.${propName}. Check that all of the relationship refs in ${
-												query.type
-											}.${query.id} are valid.`,
-										);
-									}
+						return result[propName]
+							.map((r) => {
+								if (r === undefined) {
+									throw new Error(
+										`A related resource was not found on resource ${
+											query.type
+										}.${query.id}.${propName}. Check that all of the relationship refs in ${
+											query.type
+										}.${query.id} are valid.`,
+									);
+								}
 
-									return go({ ...propQuery, type: r[TYPE], id: r[ID] });
-								})
-								.filter(Boolean);
-						}
-
-						if (result[propName] === undefined) {
-							throw new Error(
-								`A related resource was not found on resource ${query.type}.${
-									query.id
-								}. ${propName}: ${JSON.stringify(
-									result[RAW].relationships[propName],
-								)}. Check that all of the relationship refs in ${query.type}.${
-									query.id
-								} are valid.`,
-							);
-						}
-
-						if (result[propName] === null) return null;
-
-						return go({
-							...propQuery,
-							type: result[propName][TYPE],
-							id: result[propName][ID],
-						});
+								return go({ ...propQuery, type: r[TYPE], id: r[ID] });
+							})
+							.filter(Boolean);
 					};
 				});
 
@@ -226,5 +245,5 @@ export function queryGraph(schema, query, graph, options = {}) {
 	const preppedGraph = prepGraph(graph);
 	const normalQuery = normalizeQuery(schema, query, options);
 
-	return runQuery(normalQuery, preppedGraph, options);
+	return runQuery(schema, normalQuery, preppedGraph, options);
 }
