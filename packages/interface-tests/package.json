@@ -23,9 +23,9 @@
 	"private": true,
 	"sideEffects": false,
 	"devDependencies": {
-		"vitest": "^3.2.4"
+		"vitest": "^4.0.3"
 	},
 	"dependencies": {
-		"json-expressions": "^0.13.1"
+		"json-expressions": "^0.13.2"
 	}
 }

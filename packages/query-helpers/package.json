@@ -26,13 +26,13 @@
 	"keywords": [],
 	"author": "Jake Sower",
 	"devDependencies": {
-		"@rollup/plugin-commonjs": "^28.0.8",
+		"@rollup/plugin-commonjs": "^28.0.9",
 		"@rollup/plugin-json": "^6.1.0",
 		"@rollup/plugin-node-resolve": "^16.0.3",
-		"@vitest/coverage-istanbul": "^3.2.4",
-		"@vitest/coverage-v8": "^3.2.4",
+		"@vitest/coverage-istanbul": "^4.0.3",
+		"@vitest/coverage-v8": "^4.0.3",
 		"rollup": "^4.52.5",
-		"vitest": "^3.2.4"
+		"vitest": "^4.0.3"
 	},
 	"publishConfig": {
 		"access": "public"
@@ -46,7 +46,7 @@
 	"sideEffects": false,
 	"dependencies": {
 		"@spectragraph/utils": "*",
-		"es-toolkit": "^1.40.0",
-		"json-expressions": "^0.13.1"
+		"es-toolkit": "^1.41.0",
+		"json-expressions": "^0.13.2"
 	}
 }

@@ -26,14 +26,14 @@
 	"keywords": [],
 	"author": "Jake Sower",
 	"devDependencies": {
-		"@rollup/plugin-commonjs": "^28.0.8",
+		"@rollup/plugin-commonjs": "^28.0.9",
 		"@rollup/plugin-json": "^6.1.0",
 		"@rollup/plugin-node-resolve": "^16.0.3",
 		"@spectragraph/interface-tests": "*",
 		"rollup": "^4.52.5",
-		"testcontainers": "^11.7.1",
-		"vite": "7.1.10",
-		"vitest": "^3.2.4"
+		"testcontainers": "^11.7.2",
+		"vite": "7.1.12",
+		"vitest": "^4.0.3"
 	},
 	"publishConfig": {
 		"access": "public"
@@ -44,8 +44,8 @@
 		"@spectragraph/sql-helpers": "*",
 		"@spectragraph/utils": "*",
 		"ajv": "^8.17.1",
-		"es-toolkit": "^1.40.0",
-		"json-expressions": "^0.13.1",
+		"es-toolkit": "^1.41.0",
+		"json-expressions": "^0.13.2",
 		"pg": "^8.16.3"
 	}
 }

@@ -250,7 +250,7 @@ describe("where clauses", () => {
 			expect(result).toEqual([{ id: "1" }, { id: "3" }]);
 		});
 
-		it.only("filters using $matches", () => {
+		it("filters using $matchesAll", () => {
 			const query = {
 				type: "bears",
 				select: ["name"],
