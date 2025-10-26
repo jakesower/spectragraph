@@ -469,3 +469,20 @@ export function normalizeQuery(schema, rootQuery, options = {}) {
 
 	return rootQuery[NORMALIZED] ? rootQuery : go(rootQuery, rootQuery.type);
 }
+
+export function partitionQuerySelect(schema, normalQuery) {
+	const { attributes, relationships } = schema[normalQuery.type];
+
+	const output = { attributes: {}, relationships: {}, expressions: {} };
+	normalQuery.select.forEach((val, key) => {
+		if (typeof val === "string" && val in Object.keys(attributes)) {
+			output.attributes[key] = val;
+		} else if (key in Object.keys(relationships)) {
+			output.relationships[key] = val;
+		} else {
+			output.expressions[key] = val;
+		}
+	});
+
+	return output;
+}

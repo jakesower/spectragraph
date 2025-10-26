@@ -20,6 +20,7 @@ describe("handler tests - other clause pushdown", () => {
 						id: "zion",
 						name: "Zion National Park",
 						location: "Utah",
+						expr: { $literal: 3 },
 					},
 				],
 			});
@@ -34,10 +35,10 @@ describe("handler tests - other clause pushdown", () => {
 				pushdown: {
 					select: {
 						apply: (selectClause) => {
-							const fields = Object.keys(selectClause).filter(
-								(f) => f !== "*" && typeof selectClause[f] === "boolean",
+							const selectedAttributes = Object.values(selectClause).filter(
+								(f) => typeof f === "string",
 							);
-							return fields.length > 0 ? { fields: fields.join(",") } : {};
+							return { fields: selectedAttributes.join(",") };
 						},
 					},
 				},
@@ -46,52 +47,11 @@ describe("handler tests - other clause pushdown", () => {
 			const store = createMultiApiStore(utahParksSchema, config);
 			await store.query({
 				type: "parks",
-				select: { id: true, name: true, location: true },
+				select: ["id", "name", "location"],
 			});
 
 			expect(global.fetch).toHaveBeenCalledWith(
 				"https://api.nps.example.org/parks?fields=id%2Cname%2Clocation",
-			);
-		});
-
-		it("handles select all (*) without pushdown", async () => {
-			global.fetch.mockResolvedValueOnce({
-				ok: true,
-				json: async () => [
-					{
-						id: "zion",
-						name: "Zion National Park",
-						location: "Utah",
-						established: 1919,
-					},
-				],
-			});
-
-			const config = {
-				request: {
-					baseURL: "https://api.nps.example.org",
-				},
-				resources: {
-					parks: {},
-				},
-				pushdown: {
-					select: {
-						apply: (selectClause) => {
-							if (selectClause["*"]) return {};
-							const fields = Object.keys(selectClause).filter(
-								(f) => typeof selectClause[f] === "boolean",
-							);
-							return fields.length > 0 ? { fields: fields.join(",") } : {};
-						},
-					},
-				},
-			};
-
-			const store = createMultiApiStore(utahParksSchema, config);
-			await store.query({ type: "parks", select: "*" });
-
-			expect(global.fetch).toHaveBeenCalledWith(
-				"https://api.nps.example.org/parks",
 			);
 		});
 	});
@@ -123,7 +83,7 @@ describe("handler tests - other clause pushdown", () => {
 				},
 				pushdown: {
 					limit: {
-						apply: (limitValue) => ({ limit: limitValue }),
+						apply: (limit) => ({ limit }),
 					},
 				},
 			};
@@ -151,7 +111,7 @@ describe("handler tests - other clause pushdown", () => {
 				},
 				pushdown: {
 					limit: {
-						apply: (limitValue) => ({ limit: limitValue }),
+						apply: (limit) => ({ limit: limit }),
 					},
 				},
 			};
@@ -524,11 +484,10 @@ describe("handler tests - other clause pushdown", () => {
 				pushdown: {
 					select: {
 						apply: (selectClause) => {
-							if (selectClause["*"]) return {};
-							const fields = Object.keys(selectClause).filter(
-								(f) => typeof selectClause[f] === "boolean",
+							const selectedAttributes = Object.values(selectClause).filter(
+								(f) => typeof f === "string",
 							);
-							return fields.length > 0 ? { fields: fields.join(",") } : {};
+							return { fields: selectedAttributes.join(",") };
 						},
 					},
 					limit: {
@@ -553,14 +512,14 @@ describe("handler tests - other clause pushdown", () => {
 			const store = createMultiApiStore(utahParksSchema, config);
 			await store.query({
 				type: "parks",
-				select: { id: true, name: true, location: true },
+				select: ["id", "name", "location"],
 				limit: 5,
 				offset: 10,
-				order: { established: "desc" },
+				order: { name: "desc" },
 			});
 
 			expect(global.fetch).toHaveBeenCalledWith(
-				"https://api.nps.example.org/parks?fields=id%2Cname%2Clocation&limit=5&offset=10&sort=-established",
+				"https://api.nps.example.org/parks?fields=id%2Cname%2Clocation&limit=5&offset=10&sort=-name",
 			);
 		});
 	});
