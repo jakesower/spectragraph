@@ -1,4 +1,4 @@
-import { mapValues, omit } from "es-toolkit";
+import { mapValues, omit, pick } from "es-toolkit";
 import {
 	defaultValidator,
 	defaultSelectEngine,
@@ -7,6 +7,8 @@ import {
 import { createDeepCache, ensure, translateAjvErrors } from "./lib/helpers.js";
 import baseQuerySchema from "./fixtures/query.schema.json";
 import { normalizeWhereClause } from "./lib/where-expressions.js";
+
+const NORMALIZED = Symbol("normalized");
 
 /**
  * @typedef {Object} Expression
@@ -23,6 +25,7 @@ import { normalizeWhereClause } from "./lib/where-expressions.js";
  * @property {Array|Object|string} select - Select clause: array, object, or "*"
  * @property {string} [type]
  * @property {Object} [where] - Where conditions
+ * @property {*} [meta] - User information about the query ignored by SpectraGraph
  */
 
 /**
@@ -35,6 +38,8 @@ import { normalizeWhereClause } from "./lib/where-expressions.js";
  * @property {Object} select - Normalized select object
  * @property {Object[]} [order] - Array of order objects
  * @property {string} type - Required type
+ * @property {Object} relationships - The selected relationships
+ * @property {Object} values - Selected scalar values (non relationships)
  */
 
 const getResourceSchemaCache = createDeepCache();
@@ -52,9 +57,9 @@ const createErrorReporter =
 		value,
 	});
 
-function getResourceStructureValidator(schema, resourceType, expressionEngine) {
-	let resourceSchemaCache = expressionEngine
-		? getResourceSchemaEECache(schema, expressionEngine)
+function getResourceStructureValidator(schema, resourceType, whereEngine) {
+	let resourceSchemaCache = whereEngine
+		? getResourceSchemaEECache(schema, whereEngine)
 		: getResourceSchemaCache(schema);
 
 	let resourceSchemasByType;
@@ -67,10 +72,10 @@ function getResourceStructureValidator(schema, resourceType, expressionEngine) {
 		if (resourceSchema) return resourceSchema;
 	}
 
-	const extraExpressionRules = expressionEngine
+	const extraExpressionRules = whereEngine
 		? {
 				additionalProperties: false,
-				properties: expressionEngine.expressionNames.reduce(
+				properties: whereEngine.expressionNames.reduce(
 					(acc, n) => ({ ...acc, [n]: {} }),
 					{},
 				),
@@ -165,13 +170,9 @@ function getResourceStructureValidator(schema, resourceType, expressionEngine) {
 	return compiled;
 }
 
-function validateStructure(schema, query, type, expressionEngine) {
+function validateStructure(schema, query, type, whereEngine) {
 	const errors = [];
-	const validator = getResourceStructureValidator(
-		schema,
-		type,
-		expressionEngine,
-	);
+	const validator = getResourceStructureValidator(schema, type, whereEngine);
 
 	// Structure validation first
 	const structureIsValid = validator(query);
@@ -180,6 +181,9 @@ function validateStructure(schema, query, type, expressionEngine) {
 			errors.push(err),
 		);
 	}
+
+	const expressionErrors = whereEngine.validateExpression(query.where ?? {});
+	errors.push(...expressionErrors);
 
 	return errors;
 }
@@ -200,6 +204,7 @@ export function validateQuery(schema, rootQuery, options = {}) {
 		whereEngine = defaultWhereEngine,
 	} = options;
 
+	if (rootQuery[NORMALIZED]) return []; // already validated
 	if (typeof schema !== "object") {
 		return [
 			{ message: "Invalid schema: expected object, got " + typeof schema },
@@ -428,6 +433,10 @@ export function normalizeQuery(schema, rootQuery, options = {}) {
 			return sel;
 		});
 
+		const relKeys = Object.keys(schema.resources[type].relationships);
+		const relationships = pick(selectWithSubqueries, relKeys);
+		const values = omit(selectWithSubqueries, relKeys);
+
 		const orderObj = query.order
 			? { order: !Array.isArray(query.order) ? [query.order] : query.order }
 			: {};
@@ -436,16 +445,27 @@ export function normalizeQuery(schema, rootQuery, options = {}) {
 			? { where: normalizeWhereClause(query.where) }
 			: {};
 
-		return query.select
+		const normalQuery = query.select
 			? {
 					...query,
 					select: selectWithSubqueries,
+					relationships,
+					values,
 					type,
 					...orderObj,
 					...whereObj,
 				}
-			: { type, select: selectWithSubqueries };
+			: { type, select: selectWithSubqueries, relationships, values };
+
+		Object.defineProperty(normalQuery, NORMALIZED, {
+			value: true,
+			enumerable: false,
+			writable: false,
+			configurable: false,
+		});
+
+		return normalQuery;
 	};
 
-	return go(rootQuery, rootQuery.type);
+	return rootQuery[NORMALIZED] ? rootQuery : go(rootQuery, rootQuery.type);
 }
