@@ -383,10 +383,6 @@ describe("normalizeQuery", () => {
 		expect(normal.select.home).toEqual({
 			type: "homes",
 			select: { id: "id" },
-			relationships: {},
-			values: {
-				id: "id",
-			},
 		});
 	});
 
@@ -399,10 +395,6 @@ describe("normalizeQuery", () => {
 		expect(normal.select.home).toEqual({
 			type: "homes",
 			select: { id: "id" },
-			relationships: {},
-			values: {
-				id: "id",
-			},
 		});
 	});
 
@@ -421,14 +413,6 @@ describe("normalizeQuery", () => {
 				caringMeter: "caringMeter",
 				isInClouds: "isInClouds",
 			},
-			relationships: {},
-			values: {
-				id: "id",
-				name: "name",
-				location: "location",
-				caringMeter: "caringMeter",
-				isInClouds: "isInClouds",
-			},
 		});
 	});
 
@@ -441,14 +425,6 @@ describe("normalizeQuery", () => {
 		expect(normal.select.home).toEqual({
 			type: "homes",
 			select: {
-				id: "id",
-				name: "name",
-				location: "location",
-				caringMeter: "caringMeter",
-				isInClouds: "isInClouds",
-			},
-			relationships: {},
-			values: {
 				id: "id",
 				name: "name",
 				location: "location",
