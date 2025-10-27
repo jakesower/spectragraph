@@ -433,10 +433,6 @@ export function normalizeQuery(schema, rootQuery, options = {}) {
 			return sel;
 		});
 
-		const relKeys = Object.keys(schema.resources[type].relationships);
-		const relationships = pick(selectWithSubqueries, relKeys);
-		const values = omit(selectWithSubqueries, relKeys);
-
 		const orderObj = query.order
 			? { order: !Array.isArray(query.order) ? [query.order] : query.order }
 			: {};
@@ -449,13 +445,11 @@ export function normalizeQuery(schema, rootQuery, options = {}) {
 			? {
 					...query,
 					select: selectWithSubqueries,
-					relationships,
-					values,
 					type,
 					...orderObj,
 					...whereObj,
 				}
-			: { type, select: selectWithSubqueries, relationships, values };
+			: { type, select: selectWithSubqueries };
 
 		Object.defineProperty(normalQuery, NORMALIZED, {
 			value: true,
