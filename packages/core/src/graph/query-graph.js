@@ -88,6 +88,7 @@ function runQuery(schema, rootQuery, data, options = {}) {
 
 	const go = (query) => {
 		if (query.id && !data[query.type][query.id]) return null;
+		const resSchema = schema.resources[query.type];
 
 		// these are in order of execution
 		const operationDefinitions = {
@@ -128,7 +129,7 @@ function runQuery(schema, rootQuery, data, options = {}) {
 				return query.limit ? results : results.slice(query.offset);
 			},
 			select(results) {
-				const { relationships, select } = query;
+				const { select } = query;
 				const projectors = mapValues(select, (propQuery, propName) => {
 					// possibilities: (1) property (2) expression (3) subquery
 					if (typeof propQuery === "string") {
@@ -145,14 +146,13 @@ function runQuery(schema, rootQuery, data, options = {}) {
 					}
 
 					// subquery
-					if (!(propName in relationships)) {
+					if (!(propName in resSchema.relationships)) {
 						throw new Error(
 							`The "${propName}" relationship is undefined on a resource of type "${query.type}". You probably have an invalid schema or constructed your graph wrong. Try linking the inverses (via "linkInverses"), check your schema to make sure all inverses have been defined correctly there, and make sure all resources have been loaded into the graph.`,
 						);
 					}
 
-					const relSchema =
-						schema.resources[query.type].relationships[propName];
+					const relSchema = resSchema.relationships[propName];
 
 					// to-one relationship
 					if (relSchema.cardinality === "one") {
