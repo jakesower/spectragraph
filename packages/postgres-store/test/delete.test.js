@@ -1,10 +1,8 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import { createPostgresStore } from "../src/postgres-store.js";
 import { careBearSchema } from "../../interface-tests/src/index.js";
-import { careBearData } from "../../interface-tests/src/index.js";
-import { reset } from "../scripts/seed.js";
 import { careBearConfig } from "./fixtures/care-bear-config.js";
-import { getClient } from "./get-client.js";
+import { getClient, initializeClient } from "./get-client.js";
 
 // Most delete tests are covered by interface-tests via interface.test.js
 // This file contains PostgreSQL-specific database-level verification tests
@@ -13,15 +11,19 @@ describe("PostgreSQL-Specific Delete Tests", () => {
 	let store;
 	let db;
 
-	beforeEach(async () => {
+	beforeAll(async () => {
+		await initializeClient();
+	});
+
+	beforeEach(() => {
 		db = getClient();
-		await reset(db, careBearSchema, careBearConfig, careBearData);
 
 		store = createPostgresStore(careBearSchema, {
 			...careBearConfig,
 			db,
 		});
 	});
+
 
 	it("verifies foreign key nullification at database level", async () => {
 		const createdBear = await store.create({

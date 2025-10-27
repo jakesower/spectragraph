@@ -15,6 +15,10 @@ export default defineConfig({
 				singleFork: true,
 			},
 		},
+		sequence: {
+			hooks: "list", // Run hooks in order
+		},
+		fileParallelism: false, // Run test files sequentially to avoid database conflicts
 		coverage: {
 			exclude: [
 				"node_modules/**",

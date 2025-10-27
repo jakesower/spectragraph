@@ -193,3 +193,29 @@ export async function reset(db, schema, config, seedData) {
 
 	await seed(db, schema, config, seedData);
 }
+
+/**
+ * Truncates all tables and re-seeds data without dropping/recreating schema
+ * This is faster and safer for test cleanup than full reset
+ */
+export async function reseed(db, schema, config, seedData) {
+	// Get all table names
+	const tables = Object.values(config.resources).flatMap((resConfig) => {
+		const table = resConfig.table;
+		const joinTables = Object.values(resConfig.joins ?? {})
+			.map((j) => j.joinTable)
+			.filter(Boolean);
+		return [table, ...joinTables];
+	});
+
+	// Truncate all tables in a single command (faster and avoids FK issues)
+	const uniqueTables = [...new Set(tables)];
+	if (uniqueTables.length > 0) {
+		await db.query(
+			`TRUNCATE TABLE ${uniqueTables.join(", ")} RESTART IDENTITY CASCADE`,
+		);
+	}
+
+	// Re-seed data
+	await seed(db, schema, config, seedData);
+}
