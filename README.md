@@ -33,6 +33,7 @@ const result = await store.query({
 
 // Works with: PostgreSQL, SQLite, in-memory data, REST APIs
 // Handles relationships automatically with request optimization
+// Full toolkit for creating custom stores to meet exact needs
 ```
 
 ## Start Building Today, Deploy Anywhere Tomorrow

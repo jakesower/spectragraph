@@ -36,7 +36,9 @@ export function normalizeWhereClause(where) {
 
 		if (typeof node === "object" && node !== null && !Array.isArray(node)) {
 			return {
-				$matchesAll: mapValues(node, (n) => (Array.isArray(n) ? { $in: n } : n)),
+				$matchesAll: mapValues(node, (n) =>
+					Array.isArray(n) ? { $in: n } : n,
+				),
 			};
 		}
 
