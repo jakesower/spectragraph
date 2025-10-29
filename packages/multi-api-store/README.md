@@ -281,7 +281,7 @@ const store = createMultiApiStore(schema, {
 
 ### Production-Ready Middleware
 
-Multi-API Store's middleware architecture handles common production concerns: authentication, request retry, timeout handling, and observability. Rather than forcing these concerns into your application code or baking them into an inflexible core, the middleware pipeline lets you compose exactly the behavior you need.
+Multi-API Store's middleware architecture handles common production concerns: authentication, request retry, and observability. Rather than forcing these concerns into your application code or baking them into an inflexible core, the middleware pipeline lets you compose exactly the behavior you need.
 
 ```javascript
 // Production-grade API aggregation
@@ -289,9 +289,6 @@ const store = createMultiApiStore(schema, {
   middleware: [
     // Authentication
     auth.bearerToken(() => getToken()),
-
-    // Request timeout
-    timeout(5000), // 5 second max per request
 
     // Automatic retry with exponential backoff
     retry.exponential({ maxRetries: 3 }),
@@ -311,12 +308,6 @@ const store = createMultiApiStore(schema, {
 
 - `auth.bearerToken(getToken)` - Adds Bearer token to Authorization header
 - `auth.queryParam(getToken, paramName)` - Adds token as query parameter
-
-**Timeout (`timeout`)**
-
-- `timeout(ms)` - Abort requests that exceed time limit
-  - Uses AbortController for clean cancellation
-  - Prevents hanging requests from blocking UI
 
 **Retry (`retry`)**
 

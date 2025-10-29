@@ -13,6 +13,7 @@ export default [
 			ecmaVersion: "latest",
 			sourceType: "module",
 			globals: {
+				clearTimeout: "readonly",
 				console: "readonly",
 				crypto: "readonly",
 				process: "readonly",
