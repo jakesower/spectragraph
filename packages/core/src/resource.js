@@ -16,6 +16,10 @@ import { defaultSelectEngine, defaultValidator } from "./lib/defaults.js";
  */
 
 /**
+ * @typedef {Object} FlatResource
+ */
+
+/**
  * @typedef {Object} BaseResource
  * @property {string} type
  */
@@ -37,27 +41,29 @@ import { defaultSelectEngine, defaultValidator } from "./lib/defaults.js";
  */
 
 /**
- * @typedef {BaseResource & {
- *   id?: number|string,
- *   new?: true,
- *   attributes?: Object<string, *>,
- *   relationships?: Object<string, Ref|Ref[]|null>,
- * }} CreateResource
+ * @typedef {Object} CreateResource - A partial normalized resource for creation (without required id)
+ * @property {string} type - The resource type
+ * @property {number|string} [id] - Optional ID for creation
+ * @property {true} [new] - Flag indicating this is a new resource
+ * @property {Object<string, *>} [attributes] - Optional attributes
+ * @property {Object<string, Ref|Ref[]|null>} [relationships] - Optional relationships
  */
 
 /**
- * @typedef {BaseResource & {
- *   id: number|string,
- *   new?: false,
- *   attributes?: Object<string, *>,
- *   relationships?: Object<string, Ref|Ref[]|null>,
- * }} UpdateResource
+ * @typedef {Object} UpdateResource - A normalized resource for updates (requires id)
+ * @property {string} type - The resource type
+ * @property {number|string} id - Required ID for updates
+ * @property {false} [new] - Flag indicating this is an existing resource
+ * @property {Object<string, *>} [attributes] - Optional attributes to update
+ * @property {Object<string, Ref|Ref[]|null>} [relationships] - Optional relationships to update
+ */
 
 /**
- * @typedef {Ref & {
- *   attributes?: Object<string, *>,
- *   relationships?: Object<string, Ref|Ref[]|null>,
- * }} DeleteResource
+ * @typedef {Object} DeleteResource - A resource reference for deletion
+ * @property {string} type - The resource type
+ * @property {string} id - The resource ID
+ * @property {Object<string, *>} [attributes] - Optional attributes (for optimistic deletion)
+ * @property {Object<string, Ref|Ref[]|null>} [relationships] - Optional relationships (for optimistic deletion)
  */
 
 /**
@@ -216,16 +222,16 @@ export const validateNormalResource = (schema, resource, options = {}) => {
 };
 
 /**
- * Converts a resource object to normal form.
+ * Converts a flat resource object to normalized form with type/id/attributes/relationships structure.
  *
- * @param {string} resourceType
- * @param {Object<string, unknown>} resource
- * @param {import('./schema.js').Schema} schema
- * @param {Object} [options={}]
- * @param {boolean} [options.allowExtraAttributes=false]
- * @param {boolean} [options.skipValidation=false]
- * @param {Ajv} [options.validator] - The validator instance to use
- * @returns {NormalResource}
+ * Flat resources have attributes and relationship IDs mixed at the root level.
+ * Normalized resources separate them into explicit attributes and relationships objects,
+ * with relationships converted to {type, id} reference objects.
+ *
+ * @param {import('./schema.js').Schema} schema - The schema defining the resource structure
+ * @param {string} resourceType - The type of resource to normalize
+ * @param {FlatResource} resource - The flat resource with mixed attributes and relationships
+ * @returns {NormalResource} Normalized resource with separated attributes and relationships
  */
 export function normalizeResource(schema, resourceType, resource) {
 	const resSchema = schema.resources[resourceType];
@@ -262,37 +268,36 @@ export function normalizeResource(schema, resourceType, resource) {
 /**
  * Creates a normalized resource with schema defaults applied
  * @param {import('./schema.js').Schema} schema - The schema to use for defaults
- * @param {CreateResource} [partialResource] - The partial resource to create from
+ * @param {string} resourceType - The type of resource to create
+ * @param {FlatResource} [partialResource] - The partial resource to create from
  * @returns {NormalResource} A complete normalized resource with defaults applied
  */
-export function createResource(schema, partialResource = {}) {
-	const { type, attributes = {}, relationships = {} } = partialResource;
-	const resSchema = schema.resources[type];
-
-	const id =
-		partialResource.id ?? partialResource[resSchema.idAttribute ?? "id"];
+export function createResource(schema, resourceType, partialResource = {}) {
+	const resSchema = schema.resources[resourceType];
 
 	const builtAttributes = mapValues(
 		resSchema.attributes,
-		(attrSchema, attrName) => buildAttribute(attrSchema, attributes[attrName]),
+		(attrSchema, attrName) =>
+			buildAttribute(attrSchema, partialResource[attrName]),
 	);
 
-	const builtRelationships = mapValues(
+	const defaultRelationships = mapValues(
 		resSchema.relationships,
 		(relSchema, relName) =>
-			relationships[relName] === undefined
+			partialResource[relName] === undefined
 				? relSchema.cardinality === "one"
 					? null
 					: []
-				: relationships[relName],
+				: partialResource[relName],
 	);
 
-	return {
-		id: attributes[resSchema.idAttribute ?? "id"],
+	const flat = {
+		...defaultRelationships,
 		...partialResource,
-		attributes: { ...builtAttributes, [resSchema.idAttribute ?? "id"]: id },
-		relationships: builtRelationships,
+		...builtAttributes,
 	};
+
+	return normalizeResource(schema, resourceType, flat);
 }
 
 /**

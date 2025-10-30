@@ -12,6 +12,7 @@ export {
 export {
 	linkInverses,
 	createEmptyGraph,
+	createGraphFromNormalResources,
 	createGraphFromResources,
 	mergeGraphs,
 	mergeGraphsDeep,

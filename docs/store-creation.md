@@ -19,9 +19,9 @@ All SpectraGraph stores must implement the following async methods:
 /**
  * @typedef {Object} Store
  * @property {function(Query): Promise<any[]>} query - Execute a query and return results
- * @property {function(NormalResourceTree): Promise<NormalResource>} create - Create a new resource
- * @property {function(NormalResourceTree): Promise<NormalResource>} update - Update an existing resource
- * @property {function(NormalResourceTree): Promise<NormalResource>} upsert - Create or update a resource
+ * @property {function(CreateResource): Promise<NormalResource>} create - Create a new resource (normalized format)
+ * @property {function(UpdateResource): Promise<NormalResource>} update - Update an existing resource (normalized format)
+ * @property {function(CreateResource | UpdateResource): Promise<NormalResource>} upsert - Create or update a resource (normalized format)
  * @property {function(ResourceRef): Promise<void>} delete - Delete a resource
  */
 ```
@@ -131,18 +131,18 @@ export function createCustomStore(schema, config = {}) {
     async create(resource) {
       ensureValidCreateResource(schema, resource, validator);
       // TODO: Implement resource creation
-      return createResource(connection, resource);
+      return createResourceInDataSource(connection, resource);
     },
 
     async update(resource) {
       ensureValidUpdateResource(schema, resource, validator);
       // TODO: Implement resource updating
-      return updateResource(connection, resource);
+      return updateResourceInDataSource(connection, resource);
     },
 
     async upsert(resource) {
-      // Common upsert implementation
-      const exists = await resourceExists(connection, resource);
+      // Common upsert implementation - check if ID exists
+      const exists = resource.id && await resourceExists(connection, resource.type, resource.id);
       return exists ? this.update(resource) : this.create(resource);
     },
 

@@ -43,7 +43,7 @@ Create a new resource.
 
 **Parameters:**
 
-- `resource` (`CreateResource`) - Resource to create
+- `resource` (`CreateResource`) - Resource to create (normalized format with type)
 
 **Returns:** `Promise<NormalResource>` - Created resource with ID
 
@@ -82,9 +82,9 @@ Create or update a resource (create if no ID, update if ID exists).
 
 **Parameters:**
 
-- `resource` (`CreateResource | UpdateResource`) - Resource to upsert
+- `resource` (`CreateResource | UpdateResource`) - Resource to upsert (normalized format)
 
-**Returns:** `Promise<NormalResourceTree>` - Created or updated resource
+**Returns:** `Promise<NormalResource>` - Created or updated resource
 
 **Example:**
 
@@ -269,27 +269,67 @@ Validate resource reference for deletion.
 
 **Throws:** `Error` if resource reference is invalid
 
-### normalizeResource(schema, resource)
+### normalizeResource(schema, resourceType, resource)
 
-Normalize a resource to standard form.
+Convert a flat resource to normalized form with type/id/attributes/relationships structure.
 
-**Parameters:**
-
-- `schema` (`Schema`) - Schema definition
-- `resource` (`ResourceTree`) - Resource to normalize
-
-**Returns:** `NormalResourceTree` - Normalized resource
-
-### createResource(schema, resourceData)
-
-Create a resource object from flat data. This also adds in defaults defined in the schema, so calling it without a second param can still be useful.
+Flat resources have attributes and relationship IDs mixed at the root level.
+Normalized resources separate them into explicit attributes and relationships objects,
+with relationships converted to {type, id} reference objects.
 
 **Parameters:**
 
 - `schema` (`Schema`) - Schema definition
-- `resourceData` (`Object`) - Resource data
+- `resourceType` (`string`) - The type of resource to normalize
+- `resource` (`FlatResource`) - Flat resource with mixed attributes and relationships
 
-**Returns:** `NormalResourceTree` - Created resource with ID
+**Returns:** `NormalResource` - Normalized resource with separated attributes and relationships
+
+**Example:**
+
+```javascript
+const flatUser = { id: "1", name: "Alice", email: "alice@example.com", company: "acme" };
+const normalized = normalizeResource(schema, "users", flatUser);
+// Returns:
+// {
+//   type: "users",
+//   id: "1",
+//   attributes: { id: "1", name: "Alice", email: "alice@example.com" },
+//   relationships: { company: { type: "companies", id: "acme" } }
+// }
+```
+
+### createResource(schema, resourceType, partialResource)
+
+Create a normalized resource with schema defaults applied. Takes flat resource format and returns normalized format.
+
+This function applies schema defaults to any missing attributes and relationships, then normalizes the result.
+Calling it with an empty partial resource is useful to get a resource with all defaults applied.
+
+**Parameters:**
+
+- `schema` (`Schema`) - Schema definition
+- `resourceType` (`string`) - The type of resource to create
+- `partialResource` (`FlatResource`) - Partial flat resource (defaults will be applied for missing fields)
+
+**Returns:** `NormalResource` - Normalized resource with defaults applied
+
+**Example:**
+
+```javascript
+// Create with partial data - defaults will fill in missing fields
+const user = createResource(schema, "users", { name: "Alice" });
+// If schema defines default email: "user@example.com", result will be:
+// {
+//   type: "users",
+//   id: undefined,
+//   attributes: { name: "Alice", email: "user@example.com" },
+//   relationships: {}
+// }
+
+// Create with all defaults
+const emptyUser = createResource(schema, "users", {});
+```
 
 ### mergeResources(left, right)
 
@@ -368,15 +408,43 @@ const mergedGraph = mergeGraphsDeep(existingGraph, newData);
 
 ### createGraphFromResources(schema, rootResourceType, resources)
 
-Create a graph from an array of flat resources.
+Create a graph from an array of flat resources, normalizing them and extracting nested resources.
+
+This function walks through flat resources (which may have nested flat resources in relationships),
+normalizes everything, and creates a graph structure with all resources organized by type and ID.
 
 **Parameters:**
 
 - `schema` (`Schema`) - Schema with relationship definitions
 - `rootResourceType` (`string`) - The type of resource at the top level
-- `resources` (`NormalResourceTree[]`) - Array of resources; these may contain nested resources
+- `resources` (`FlatResource[]`) - Array of flat resources; these may contain nested flat resources
 
-**Returns:** `Graph` - Graph containing the resources and their nested resources
+**Returns:** `Graph` - Graph containing normalized resources and their nested resources
+
+**Example:**
+
+```javascript
+const flatUsers = [
+  {
+    id: "1",
+    name: "Alice",
+    company: { id: "acme", name: "ACME Corp" }, // Nested flat resource
+  },
+  { id: "2", name: "Bob", company: "acme" }, // Reference by ID
+];
+
+const graph = createGraphFromResources(schema, "users", flatUsers);
+// Returns:
+// {
+//   users: {
+//     "1": { type: "users", id: "1", attributes: {...}, relationships: {...} },
+//     "2": { type: "users", id: "2", attributes: {...}, relationships: {...} }
+//   },
+//   companies: {
+//     "acme": { type: "companies", id: "acme", attributes: {...}, relationships: {} }
+//   }
+// }
+```
 
 ## Expression Engines
 
