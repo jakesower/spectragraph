@@ -131,7 +131,7 @@ export function createCustomStore(schema, config = {}) {
     async create(resource) {
       ensureValidCreateResource(schema, resource, validator);
       // TODO: Implement resource creation
-      return createResourceInDataSource(connection, resource);
+      return buildResourceInDataSource(connection, resource);
     },
 
     async update(resource) {

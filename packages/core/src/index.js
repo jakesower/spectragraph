@@ -20,7 +20,7 @@ export {
 export { queryGraph } from "./graph/query-graph.js";
 export {
 	createValidator,
-	createResource,
+	buildResource,
 	mergeResources,
 	normalizeResource,
 	validateCreateResource,

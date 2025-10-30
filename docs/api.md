@@ -304,7 +304,7 @@ const normalized = normalizeResource(schema, "users", flatUser);
 // }
 ```
 
-### createResource(schema, resourceType, partialResource)
+### buildResource(schema, resourceType, partialResource)
 
 Create a normalized resource with schema defaults applied. Takes flat resource format and returns normalized format.
 
@@ -323,7 +323,7 @@ Calling it with an empty partial resource is useful to get a resource with all d
 
 ```javascript
 // Create with partial data - defaults will fill in missing fields
-const user = createResource(schema, "users", { name: "Alice" });
+const user = buildResource(schema, "users", { name: "Alice" });
 // If schema defines default email: "user@example.com", result will be:
 // {
 //   type: "users",
@@ -333,7 +333,7 @@ const user = createResource(schema, "users", { name: "Alice" });
 // }
 
 // Create with all defaults
-const emptyUser = createResource(schema, "users", {});
+const emptyUser = buildResource(schema, "users", {});
 ```
 
 ### mergeResources(left, right)

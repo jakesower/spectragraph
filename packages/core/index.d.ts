@@ -467,7 +467,7 @@ export function createValidator(options?: { ajvSchemas?: unknown[] }): Ajv;
  * @param partialResource - The partial resource data
  * @returns Complete normalized resource
  */
-export function createResource(
+export function buildResource(
 	schema: Schema,
 	partialResource: PartialNormalResource,
 ): NormalResource;

@@ -272,7 +272,7 @@ export function normalizeResource(schema, resourceType, resource) {
  * @param {FlatResource} [partialResource] - The partial resource to create from
  * @returns {NormalResource} A complete normalized resource with defaults applied
  */
-export function createResource(schema, resourceType, partialResource = {}) {
+export function buildResource(schema, resourceType, partialResource = {}) {
 	const resSchema = schema.resources[resourceType];
 
 	const builtAttributes = mapValues(

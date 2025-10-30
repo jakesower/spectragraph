@@ -6,9 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-### Changed
+### Added
 
-- **BREAKING**: `createResource(schema, resourceType, partialResource)` signature changed from `createResource(schema, partialResource)`. Now takes `resourceType` as second parameter and accepts flat resource format instead of normalized format. The function applies schema defaults and normalizes the resource in one step. The new signature reflects what users were actually trying to use the function for. This is a breaking change with almost no impact.
+- `buildResource(schema, resourceType, partialResource)`. The function applies schema defaults and normalizes the resource in one step.
+
+### Removed
+
+- `createResource` was removed because it was barely used and had a confusing name.
 
 ## [0.3.1] - 2025-10-29
 
