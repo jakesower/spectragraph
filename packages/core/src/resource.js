@@ -16,7 +16,7 @@ import { defaultSelectEngine, defaultValidator } from "./lib/defaults.js";
  */
 
 /**
- * @typedef {Object} FlatResource
+ * @typedef {Object} FlatResource - An object with combined attributes and relationships. Relationships should be IDs or Refs.
  */
 
 /**
@@ -242,9 +242,7 @@ export function normalizeResource(schema, resourceType, resource) {
 	);
 
 	const relationships = mapValues(resSchema.relationships, (relSchema, rel) => {
-		const relResSchema = schema.resources[relSchema.type];
 		const emptyRel = relSchema.cardinality === "many" ? [] : null;
-		const relIdField = relResSchema.idAttribute ?? "id";
 
 		if (resource[rel] === undefined) {
 			return undefined;
@@ -252,7 +250,7 @@ export function normalizeResource(schema, resourceType, resource) {
 
 		return applyOrMap(resource[rel] ?? emptyRel, (relRes) =>
 			typeof relRes === "object"
-				? { type: relSchema.type, id: relRes[relIdField] }
+				? relRes
 				: { type: relSchema.type, id: relRes },
 		);
 	});
@@ -308,7 +306,7 @@ export function buildResource(schema, resourceType, partialResource = {}) {
  * @param {PartialNormalResource} right - The other resource to merge
  * @returns {PartialNormalResource} A partial normalized resource with the id, attributes, and relationships from left and right merged
  */
-export function mergeResources(left, right) {
+export function mergeNormalResources(left, right) {
 	if (left.type !== right.type) {
 		throw new Error("only resources of the same type can be merged");
 	}

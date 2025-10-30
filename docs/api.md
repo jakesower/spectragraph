@@ -336,7 +336,7 @@ const user = buildResource(schema, "users", { name: "Alice" });
 const emptyUser = buildResource(schema, "users", {});
 ```
 
-### mergeResources(left, right)
+### mergeNormalResources(left, right)
 
 Merge two resources, with right taking precedence.
 

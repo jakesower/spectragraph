@@ -79,6 +79,17 @@ function addOrSetRef(resource, ref, relName, context) {
 	}
 }
 
+/**
+ * Sets inverse relationships based on the delta of an old resource and new.
+ *
+ * WARNING: MUTATES storeGraph
+ *
+ * @param {import('@spectragraph/core').NormalResource} resource - The existing resource
+ * @param {import('@spectragraph/core').Ref|import('@spectragraph/core').Ref[]} newRefOrRefs - New ref(s) to set
+ * @param {string} relationshipName
+ * @param {Object} context
+ * @returns {void}
+ */
 export function setInversesOnRelationship(
 	resource,
 	newRefOrRefs,

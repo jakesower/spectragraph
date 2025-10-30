@@ -224,6 +224,14 @@ export interface UpdateResource extends BaseResource {
 
 export type DeleteResource = Ref;
 
+/**
+ * Flat resource format where attributes and relationships are at the root level.
+ * Relationships can be specified as ID strings, Ref objects, or arrays thereof.
+ */
+export interface FlatResource {
+	[k: string]: unknown;
+}
+
 // === GRAPH TYPES ===
 
 export interface Graph {
@@ -245,12 +253,20 @@ export type QueryResult = { [k: string]: unknown } | { [k: string]: unknown }[];
  */
 export interface Store {
 	/**
-	 * Creates a new resource
+	 * Creates a new resource using flat format (attributes/relationships at root)
+	 */
+	create(resourceType: string, resource: FlatResource): Promise<NormalResource>;
+	/**
+	 * Creates a new resource using normalized format
 	 */
 	create(resource: CreateResource): Promise<NormalResource>;
 
 	/**
-	 * Updates an existing resource
+	 * Updates an existing resource using flat format (attributes/relationships at root)
+	 */
+	update(resourceType: string, resource: FlatResource): Promise<NormalResource>;
+	/**
+	 * Updates an existing resource using normalized format
 	 */
 	update(resource: UpdateResource): Promise<NormalResource>;
 
@@ -260,7 +276,11 @@ export interface Store {
 	delete(resource: DeleteResource): Promise<DeleteResource>;
 
 	/**
-	 * Creates or updates a resource
+	 * Creates or updates a resource using flat format (attributes/relationships at root)
+	 */
+	upsert(resourceType: string, resource: FlatResource): Promise<NormalResource>;
+	/**
+	 * Creates or updates a resource using normalized format
 	 */
 	upsert(resource: CreateResource | UpdateResource): Promise<NormalResource>;
 
@@ -381,7 +401,7 @@ export function mergeGraphs(left: Graph, right: Graph): Graph;
  * Merges two graphs together, merging individual resources with matching IDs
  * @param left - The left graph
  * @param right - The right graph
- * @returns Merged graph with resources merged using mergeResources
+ * @returns Merged graph with resources merged using mergeNormalResources
  */
 export function mergeGraphsDeep(left: Graph, right: Graph): Graph;
 
@@ -448,7 +468,7 @@ export function normalizeResource(
  * @returns Merged resource with combined attributes and relationships
  * @throws Error if resources are of different types or have conflicting IDs
  */
-export function mergeResources(
+export function mergeNormalResources(
 	left: PartialNormalResource,
 	right: PartialNormalResource,
 ): PartialNormalResource;
@@ -462,13 +482,15 @@ export function mergeResources(
 export function createValidator(options?: { ajvSchemas?: unknown[] }): Ajv;
 
 /**
- * Creates a complete resource from a partial resource and schema
+ * Creates a normal resource from a partial resource and schema
  * @param schema - The schema defining the resource structure
+ * @param resourceType - The type of resource to build
  * @param partialResource - The partial resource data
  * @returns Complete normalized resource
  */
 export function buildResource(
 	schema: Schema,
+	resourceType: string,
 	partialResource: PartialNormalResource,
 ): NormalResource;
 

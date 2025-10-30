@@ -103,7 +103,7 @@ export function mergeGraphs(left, right) {
 }
 
 /**
- * Merges two graphs together, merging individual resources with matching IDs using mergeResources().
+ * Merges two graphs together, merging individual resources with matching IDs using mergeNormalResources().
  *
  * @param {Graph} left - The left graph
  * @param {Graph} right - The right graph
@@ -133,7 +133,7 @@ export function mergeGraphsDeep(left, right) {
 
 		const nextResources = {};
 		allIds.forEach((id) => {
-			nextResources[id] = mergeResources(
+			nextResources[id] = mergeNormalResources(
 				leftResources[id] ?? { type, id },
 				rightResources[id] ?? { type, id },
 			);
@@ -145,7 +145,7 @@ export function mergeGraphsDeep(left, right) {
 	return output;
 }
 
-function mergeResources(left, right = { attributes: {}, relationships: {} }) {
+function mergeNormalResources(left, right = { attributes: {}, relationships: {} }) {
 	return {
 		...left,
 		attributes: { ...left.attributes, ...right.attributes },
@@ -174,7 +174,7 @@ export function createGraphFromResources(
 		const idAttribute = resourceSchema.idAttribute ?? "id";
 		const resourceId = resource[idAttribute];
 
-		output[resourceType][resourceId] = mergeResources(
+		output[resourceType][resourceId] = mergeNormalResources(
 			normalizeResource(schema, resourceType, resource),
 			output[resourceType][resourceId],
 		);

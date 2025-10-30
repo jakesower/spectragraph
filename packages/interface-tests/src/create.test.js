@@ -327,5 +327,262 @@ export function runCreateTests(createStore) {
 				wielders: [{ name: "Always There Bear" }, { name: "Harmony Bear" }],
 			});
 		});
+
+		describe("Flat Resource Format (overloaded signature)", () => {
+			it("creates a resource with flat format (attributes at root)", async () => {
+				if (!storeSupportsCreate) return;
+
+				const store = createStore(careBearSchema);
+				const created = await store.create("bears", {
+					name: "Tenderheart Bear",
+					yearIntroduced: 1982,
+					bellyBadge: "red heart with pink outline",
+					furColor: "brown",
+				});
+
+				expect(created.type).toBe("bears");
+				expect(created.id).toBeDefined();
+				expect(created.attributes.name).toBe("Tenderheart Bear");
+
+				const result = await store.query({
+					type: "bears",
+					id: created.id,
+					select: ["name", "furColor"],
+				});
+
+				expect(result).toEqual({
+					name: "Tenderheart Bear",
+					furColor: "brown",
+				});
+			});
+
+			it("creates a resource with flat format and relationship as ID string", async () => {
+				if (!storeSupportsCreate) return;
+
+				const store = createStore(careBearSchema);
+
+				// Create home first
+				const createdHome = await store.create("homes", {
+					name: "Care-a-Lot",
+					caringMeter: 0.99,
+					isInClouds: true,
+				});
+
+				// Create bear with relationship as just an ID string
+				const created = await store.create("bears", {
+					name: "Cheer Bear",
+					yearIntroduced: 1982,
+					bellyBadge: "rainbow",
+					furColor: "pink",
+					home: createdHome.id, // Just the ID string
+				});
+
+				const result = await store.query({
+					type: "bears",
+					id: created.id,
+					select: ["name", { home: ["name"] }],
+				});
+
+				expect(result).toEqual({
+					name: "Cheer Bear",
+					home: { name: "Care-a-Lot" },
+				});
+			});
+
+			it("creates a resource with flat format and relationship as ref object", async () => {
+				if (!storeSupportsCreate) return;
+
+				const store = createStore(careBearSchema);
+
+				const createdHome = await store.create("homes", {
+					name: "Forest of Feelings",
+					caringMeter: 0.88,
+					isInClouds: false,
+				});
+
+				// Create bear with relationship as {type, id} object
+				const created = await store.create("bears", {
+					name: "Funshine Bear",
+					yearIntroduced: 1982,
+					bellyBadge: "yellow smiling sun",
+					furColor: "yellow",
+					home: { type: "homes", id: createdHome.id },
+				});
+
+				const result = await store.query({
+					type: "bears",
+					id: created.id,
+					select: ["name", { home: ["name"] }],
+				});
+
+				expect(result).toEqual({
+					name: "Funshine Bear",
+					home: { name: "Forest of Feelings" },
+				});
+			});
+
+			it("creates a resource with flat format and to-many relationship", async () => {
+				if (!storeSupportsCreate) return;
+
+				const store = createStore(careBearSchema);
+
+				const power1 = await store.create("powers", {
+					name: "Belly Badge Beam",
+					description: "Projects caring energy",
+					type: "offensive",
+				});
+
+				const power2 = await store.create("powers", {
+					name: "Care Bear Stare",
+					description: "Ultimate team attack",
+					type: "offensive",
+				});
+
+				// Create bear with multiple powers
+				const created = await store.create("bears", {
+					name: "Brave Heart Lion",
+					yearIntroduced: 1986,
+					bellyBadge: "red heart with crown",
+					furColor: "orange",
+					powers: [power1.id, power2.id], // Array of ID strings
+				});
+
+				const result = await store.query({
+					type: "bears",
+					id: created.id,
+					select: ["name", { powers: { select: ["name"] } }],
+				});
+
+				expect({
+					...result,
+					powers: result.powers.sort((a, b) => a.name.localeCompare(b.name)),
+				}).toEqual({
+					name: "Brave Heart Lion",
+					powers: [{ name: "Belly Badge Beam" }, { name: "Care Bear Stare" }],
+				});
+			});
+
+			it("creates a resource with flat format and mixed relationship formats", async () => {
+				if (!storeSupportsCreate) return;
+
+				const store = createStore(careBearSchema);
+
+				const home = await store.create("homes", {
+					name: "Kingdom of Caring",
+					caringMeter: 1.0,
+					isInClouds: true,
+				});
+
+				const power = await store.create("powers", {
+					name: "True Heart Symbol",
+					description: "Symbol of pure caring",
+					type: "passive",
+				});
+
+				// Mix ID string for home and ref object for powers
+				const created = await store.create("bears", {
+					name: "True Heart Bear",
+					yearIntroduced: 1986,
+					bellyBadge: "two interlocking hearts",
+					furColor: "brown",
+					home: home.id, // ID string
+					powers: [{ type: "powers", id: power.id }], // Array of ref objects
+				});
+
+				const result = await store.query({
+					type: "bears",
+					id: created.id,
+					select: [
+						"name",
+						{ home: ["name"] },
+						{ powers: { select: ["name"] } },
+					],
+				});
+
+				expect(result).toEqual({
+					name: "True Heart Bear",
+					home: { name: "Kingdom of Caring" },
+					powers: [{ name: "True Heart Symbol" }],
+				});
+			});
+
+			it("creates a resource with flat format with null relationship", async () => {
+				if (!storeSupportsCreate) return;
+
+				const store = createStore(careBearSchema);
+
+				const created = await store.create("bears", {
+					name: "Wish Bear",
+					yearIntroduced: 1982,
+					bellyBadge: "shooting star",
+					furColor: "teal",
+					home: null, // Explicitly null
+				});
+
+				const result = await store.query({
+					type: "bears",
+					id: created.id,
+					select: ["name", { home: "*" }],
+				});
+
+				expect(result).toEqual({
+					name: "Wish Bear",
+					home: null,
+				});
+			});
+
+			it("creates a resource with flat format with empty to-many relationship", async () => {
+				if (!storeSupportsCreate) return;
+
+				const store = createStore(careBearSchema);
+
+				const created = await store.create("bears", {
+					name: "Friend Bear",
+					yearIntroduced: 1983,
+					bellyBadge: "two daisies",
+					furColor: "orange",
+					powers: [], // Explicitly empty array
+				});
+
+				const result = await store.query({
+					type: "bears",
+					id: created.id,
+					select: ["name", { powers: { select: ["name"] } }],
+				});
+
+				expect(result).toEqual({
+					name: "Friend Bear",
+					powers: [],
+				});
+			});
+
+			it("continues to work with normalized format (backward compatibility)", async () => {
+				if (!storeSupportsCreate) return;
+
+				const store = createStore(careBearSchema);
+
+				// Old normalized format should still work
+				const created = await store.create({
+					type: "bears",
+					attributes: {
+						name: "Bedtime Bear",
+						yearIntroduced: 1983,
+						bellyBadge: "crescent moon with star",
+						furColor: "blue",
+					},
+				});
+
+				const result = await store.query({
+					type: "bears",
+					id: created.id,
+					select: ["name", "bellyBadge"],
+				});
+
+				expect(result).toEqual({
+					name: "Bedtime Bear",
+					bellyBadge: "crescent moon with star",
+				});
+			});
+		});
 	});
 }
