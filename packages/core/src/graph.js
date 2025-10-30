@@ -12,15 +12,7 @@ export { createQueryGraph, queryGraph } from "./graph/query-graph.js";
  */
 
 /**
- * @typedef {Object} NormalResource
- * @property {string} id
- * @property {string} type
- * @property {Object<string, *>} attributes
- * @property {Object<string, Ref|Ref[]|null>} relationships
- */
-
-/**
- * @typedef {Object<string, Object<string, NormalResource>>} Graph
+ * @typedef {Object<string, Object<string, import('./resource.js').NormalResource>>} Graph
  */
 
 /**
@@ -167,7 +159,7 @@ function mergeResources(left, right = { attributes: {}, relationships: {} }) {
  *
  * @param {import('./schema.js').Schema} schema
  * @param {string} resourceType
- * @param {Object[]} resources
+ * @param {import('./resource.js').FlatResource[]} resources
  * @returns {Graph}
  */
 export function createGraphFromResources(
@@ -199,6 +191,22 @@ export function createGraphFromResources(
 
 	rootResources.forEach((r) => {
 		go(rootResourceType, r);
+	});
+
+	return output;
+}
+
+/**
+ * Takes an array of normal resources and creates a graph from them
+ *
+ * @param {import('./schema.js').Schema} schema
+ * @param {import('./resource.js').NormalResource[]} normalResources
+ * @returns {Graph}
+ */
+export function createGraphFromNormalResources(schema, normalResources) {
+	const output = createEmptyGraph(schema);
+	normalResources.forEach((resource) => {
+		output[resource.type][resource.id] = resource;
 	});
 
 	return output;

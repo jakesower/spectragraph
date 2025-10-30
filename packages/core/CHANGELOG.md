@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING**: `createResource(schema, resourceType, partialResource)` signature changed from `createResource(schema, partialResource)`. Now takes `resourceType` as second parameter and accepts flat resource format instead of normalized format. The function applies schema defaults and normalizes the resource in one step.
+
 ## [Pre-Log]
 
 - Schema-driven graph query system with a powerful query language that mirrors desired output structure
