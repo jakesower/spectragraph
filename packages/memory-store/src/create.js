@@ -1,4 +1,4 @@
-import { buildResource, mergeResources } from "@spectragraph/core";
+import { buildResource, mergeNormalResources } from "@spectragraph/core";
 import { setInverseRelationships } from "./lib/store-helpers.js";
 
 /**
@@ -13,13 +13,16 @@ import { setInverseRelationships } from "./lib/store-helpers.js";
  */
 export function create(resource, context) {
 	const { schema, storeGraph } = context;
-	const { type, id } = resource;
+	const resSchema = schema.resources[resource.type];
 
-	const base = buildResource(schema, { type, id: id ?? crypto.randomUUID() });
-	const normalRes = mergeResources(base, resource);
+	const id = crypto.randomUUID();
+	const blankWithId = buildResource(schema, resource.type, {
+		[resSchema.idAttribute ?? "id"]: id,
+	});
+	const merged = mergeNormalResources(blankWithId, resource);
 
-	setInverseRelationships(base, normalRes, context);
+	setInverseRelationships(blankWithId, merged, context);
 
-	storeGraph[normalRes.type][normalRes.id] = normalRes;
-	return normalRes;
+	storeGraph[merged.type][merged.id] = merged;
+	return merged;
 }

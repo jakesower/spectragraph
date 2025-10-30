@@ -1,14 +1,15 @@
 // TypeScript definitions for @spectragraph/memory-store
 // Generated from JSDoc annotations
 
-import type { 
-  Schema, 
-  RootQuery, 
-  Store, 
-  CreateResource, 
-  UpdateResource, 
-  DeleteResource, 
+import type {
+  Schema,
+  RootQuery,
+  Store,
+  CreateResource,
+  UpdateResource,
+  DeleteResource,
   NormalResource,
+  FlatResource,
   QueryResult,
   SelectExpressionEngine,
   WhereExpressionEngine
@@ -38,10 +39,37 @@ export interface MemoryStoreConfig {
  */
 export interface MemoryStore extends Store {
   /**
+   * Creates a new resource using flat format (attributes/relationships at root)
+   */
+  create(resourceType: string, resource: FlatResource): Promise<NormalResource>;
+  /**
+   * Creates a new resource using normalized format
+   */
+  create(resource: CreateResource): Promise<NormalResource>;
+
+  /**
+   * Updates an existing resource using flat format (attributes/relationships at root)
+   */
+  update(resourceType: string, resource: FlatResource): Promise<NormalResource>;
+  /**
+   * Updates an existing resource using normalized format
+   */
+  update(resource: UpdateResource): Promise<NormalResource>;
+
+  /**
+   * Creates or updates a resource using flat format (attributes/relationships at root)
+   */
+  upsert(resourceType: string, resource: FlatResource): Promise<NormalResource>;
+  /**
+   * Creates or updates a resource using normalized format
+   */
+  upsert(resource: CreateResource | UpdateResource): Promise<NormalResource>;
+
+  /**
    * Links inverse relationships in the store
    */
   linkInverses(): void;
-  
+
   /**
    * Merges a resource tree into the store
    */

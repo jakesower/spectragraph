@@ -355,7 +355,7 @@ const combined = mergeGraphs(graph1, graph2);
 
 #### `mergeGraphsDeep(left, right)`
 
-Merges two graphs together, merging individual resources with matching IDs using `mergeResources()`.
+Merges two graphs together, merging individual resources with matching IDs using `mergeNormalResources()`.
 
 **Parameters:**
 
@@ -481,7 +481,7 @@ const normalized = normalizeResource(schema, "teams", flatTeam);
 // Returns normalized resource with attributes and relationships separated
 ```
 
-#### `mergeResources(left, right)`
+#### `mergeNormalResources(left, right)`
 
 Merges two partial resources of the same type, combining their attributes and relationships. The right resource takes precedence for conflicting attribute keys.
 
@@ -495,7 +495,7 @@ Merges two partial resources of the same type, combining their attributes and re
 **Throws:** Error if resources are of different types or have conflicting IDs
 
 ```javascript
-import { mergeResources } from "@spectragraph/core";
+import { mergeNormalResources } from "@spectragraph/core";
 
 const existing = {
   type: "teams",
@@ -510,7 +510,7 @@ const update = {
   attributes: { name: "New Name", active: true }, // name will override
 };
 
-const merged = mergeResources(existing, update);
+const merged = mergeNormalResources(existing, update);
 // Returns:
 // {
 //   type: "teams",

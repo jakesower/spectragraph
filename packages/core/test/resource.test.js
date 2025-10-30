@@ -7,7 +7,7 @@ import {
 	validateMergeResource,
 	validateUpdateResource,
 	buildResource,
-	mergeResources,
+	mergeNormalResources,
 } from "../src/resource.js";
 import { soccerSchema, geojsonSchema } from "../interface-tests/src/index.js";
 
@@ -1063,7 +1063,7 @@ describe("buildResource", () => {
 	});
 });
 
-describe("mergeResources", () => {
+describe("mergeNormalResources", () => {
 	describe("basic functionality", () => {
 		it("merges two resources of the same type with different attributes", () => {
 			const left = {
@@ -1079,7 +1079,7 @@ describe("mergeResources", () => {
 				relationships: {},
 			};
 
-			const result = mergeResources(left, right);
+			const result = mergeNormalResources(left, right);
 
 			expect(result).toEqual({
 				type: "fields",
@@ -1108,7 +1108,7 @@ describe("mergeResources", () => {
 				relationships: {},
 			};
 
-			const result = mergeResources(left, right);
+			const result = mergeNormalResources(left, right);
 
 			expect(result).toEqual({
 				type: "teams",
@@ -1138,7 +1138,7 @@ describe("mergeResources", () => {
 				},
 			};
 
-			const result = mergeResources(left, right);
+			const result = mergeNormalResources(left, right);
 
 			expect(result).toEqual({
 				type: "games",
@@ -1167,7 +1167,7 @@ describe("mergeResources", () => {
 				},
 			};
 
-			const result = mergeResources(left, right);
+			const result = mergeNormalResources(left, right);
 
 			expect(result).toEqual({
 				type: "teams",
@@ -1185,7 +1185,7 @@ describe("mergeResources", () => {
 			const left = { type: "fields", id: "left-id", attributes: {} };
 			const right = { type: "fields", attributes: {} };
 
-			const result = mergeResources(left, right);
+			const result = mergeNormalResources(left, right);
 
 			expect(result.id).toBe("left-id");
 		});
@@ -1194,7 +1194,7 @@ describe("mergeResources", () => {
 			const left = { type: "fields", attributes: {} };
 			const right = { type: "fields", id: "right-id", attributes: {} };
 
-			const result = mergeResources(left, right);
+			const result = mergeNormalResources(left, right);
 
 			expect(result.id).toBe("right-id");
 		});
@@ -1203,7 +1203,7 @@ describe("mergeResources", () => {
 			const left = { type: "fields", id: "same-id", attributes: {} };
 			const right = { type: "fields", id: "same-id", attributes: {} };
 
-			const result = mergeResources(left, right);
+			const result = mergeNormalResources(left, right);
 
 			expect(result.id).toBe("same-id");
 		});
@@ -1212,7 +1212,7 @@ describe("mergeResources", () => {
 			const left = { type: "fields", attributes: {} };
 			const right = { type: "fields", attributes: {} };
 
-			const result = mergeResources(left, right);
+			const result = mergeNormalResources(left, right);
 
 			expect(result.id).toBeUndefined();
 		});
@@ -1223,7 +1223,7 @@ describe("mergeResources", () => {
 			const left = { type: "fields", id: "1" };
 			const right = { type: "fields", attributes: { name: "Test" } };
 
-			const result = mergeResources(left, right);
+			const result = mergeNormalResources(left, right);
 
 			expect(result.attributes).toEqual({ name: "Test" });
 		});
@@ -1235,7 +1235,7 @@ describe("mergeResources", () => {
 				relationships: { teams: [] },
 			};
 
-			const result = mergeResources(left, right);
+			const result = mergeNormalResources(left, right);
 
 			expect(result.relationships).toEqual({ teams: [] });
 		});
@@ -1244,7 +1244,7 @@ describe("mergeResources", () => {
 			const left = { type: "fields", id: "1" };
 			const right = { type: "fields" };
 
-			const result = mergeResources(left, right);
+			const result = mergeNormalResources(left, right);
 
 			expect(result).toEqual({
 				type: "fields",
@@ -1260,28 +1260,28 @@ describe("mergeResources", () => {
 			const left = { type: "fields", attributes: {} };
 			const right = { type: "teams", attributes: {} };
 
-			expect(() => mergeResources(left, right)).toThrow();
+			expect(() => mergeNormalResources(left, right)).toThrow();
 		});
 
 		it("throws error when IDs are different and both are present", () => {
 			const left = { type: "fields", id: "field-1", attributes: {} };
 			const right = { type: "fields", id: "field-2", attributes: {} };
 
-			expect(() => mergeResources(left, right)).toThrow();
+			expect(() => mergeNormalResources(left, right)).toThrow();
 		});
 
 		it("includes error message for type mismatch", () => {
 			const left = { type: "fields", attributes: {} };
 			const right = { type: "teams", attributes: {} };
 
-			expect(() => mergeResources(left, right)).toThrow();
+			expect(() => mergeNormalResources(left, right)).toThrow();
 		});
 
 		it("includes error message for ID mismatch", () => {
 			const left = { type: "fields", id: "field-1", attributes: {} };
 			const right = { type: "fields", id: "field-2", attributes: {} };
 
-			expect(() => mergeResources(left, right)).toThrow();
+			expect(() => mergeNormalResources(left, right)).toThrow();
 		});
 	});
 
@@ -1304,7 +1304,7 @@ describe("mergeResources", () => {
 				},
 			};
 
-			const result = mergeResources(left, right);
+			const result = mergeNormalResources(left, right);
 
 			expect(result.attributes.bookings).toEqual({
 				awayTeam: [{ card: "red", playerNumber: 5 }],
@@ -1328,7 +1328,7 @@ describe("mergeResources", () => {
 				},
 			};
 
-			const result = mergeResources(left, right);
+			const result = mergeNormalResources(left, right);
 
 			expect(result.relationships.teams).toEqual([
 				{ type: "teams", id: "team-2" },
@@ -1346,7 +1346,7 @@ describe("mergeResources", () => {
 				attributes: { status: "completed", attendance: 1000 },
 			};
 
-			const result = mergeResources(left, right);
+			const result = mergeNormalResources(left, right);
 
 			expect(result.attributes).toEqual({
 				status: "completed",
@@ -1368,7 +1368,7 @@ describe("mergeResources", () => {
 				relationships: { awayTeam: { type: "teams", id: "team-2" } },
 			};
 
-			const result = mergeResources(left, right);
+			const result = mergeNormalResources(left, right);
 
 			expect(result.relationships).toEqual({
 				homeTeam: null,
@@ -1403,7 +1403,7 @@ describe("mergeResources", () => {
 				},
 			};
 
-			const result = mergeResources(existing, update);
+			const result = mergeNormalResources(existing, update);
 
 			expect(result).toEqual({
 				type: "teams",
@@ -1442,7 +1442,7 @@ describe("mergeResources", () => {
 				},
 			};
 
-			const result = mergeResources(defaults, userInput);
+			const result = mergeNormalResources(defaults, userInput);
 
 			expect(result).toEqual({
 				type: "fields",
