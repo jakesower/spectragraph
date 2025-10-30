@@ -24,7 +24,6 @@ describe("PostgreSQL-Specific Query Tests", () => {
 		});
 	});
 
-
 	it("uses explicitly set id fields", async () => {
 		const result = await store.query({
 			type: "powers",

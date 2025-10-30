@@ -25,7 +25,6 @@ describe("PostgreSQL-Specific Create Tests", () => {
 		});
 	});
 
-
 	it("creates a resource with generated ID", async () => {
 		const created = await store.create({
 			type: "bears",

@@ -288,7 +288,12 @@ with relationships converted to {type, id} reference objects.
 **Example:**
 
 ```javascript
-const flatUser = { id: "1", name: "Alice", email: "alice@example.com", company: "acme" };
+const flatUser = {
+  id: "1",
+  name: "Alice",
+  email: "alice@example.com",
+  company: "acme",
+};
 const normalized = normalizeResource(schema, "users", flatUser);
 // Returns:
 // {

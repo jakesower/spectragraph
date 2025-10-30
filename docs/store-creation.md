@@ -142,7 +142,9 @@ export function createCustomStore(schema, config = {}) {
 
     async upsert(resource) {
       // Common upsert implementation - check if ID exists
-      const exists = resource.id && await resourceExists(connection, resource.type, resource.id);
+      const exists =
+        resource.id &&
+        (await resourceExists(connection, resource.type, resource.id));
       return exists ? this.update(resource) : this.create(resource);
     },
 
