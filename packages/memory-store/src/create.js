@@ -1,4 +1,4 @@
-import { createResource, mergeResources } from "@spectragraph/core";
+import { buildResource, mergeResources } from "@spectragraph/core";
 import { setInverseRelationships } from "./lib/store-helpers.js";
 
 /**
@@ -15,7 +15,7 @@ export function create(resource, context) {
 	const { schema, storeGraph } = context;
 	const { type, id } = resource;
 
-	const base = createResource(schema, { type, id: id ?? crypto.randomUUID() });
+	const base = buildResource(schema, { type, id: id ?? crypto.randomUUID() });
 	const normalRes = mergeResources(base, resource);
 
 	setInverseRelationships(base, normalRes, context);
