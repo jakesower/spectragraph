@@ -24,7 +24,6 @@ describe("PostgreSQL-Specific Delete Tests", () => {
 		});
 	});
 
-
 	it("verifies foreign key nullification at database level", async () => {
 		const createdBear = await store.create({
 			type: "bears",
