@@ -2,17 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). This project is still in v0.x versioning and will not follow semantic versioning until v1.0. Instead, expect minor dot changes to sometimes introduce breaking changes. Patch versions will not break anything.
 
 ## [Unreleased]
 
 ### Added
 
 - `buildResource(schema, resourceType, partialResource)`. The function applies schema defaults and normalizes the resource in one step.
+- `create`, `update`, and `upsert` now support `mutation(resourceType, flatResource)` and `mutation(normalResource)` forms as part of the Store interface.
+- `storeMutation`. This wraps store handlers to support the new `mutation(resourceType, flatResource)` and `mutation(normalResource)` forms.
+- `createGraphFromNormalResources`.
 
 ### Removed
 
 - `createResource` was removed because it was barely used and had a confusing name.
+
+### Changed
+
+- **Breaking:** `mergeResources` renamed to `mergeNormalResources` to better communicate when flat and normal resources are expected.
+
+### Fixed
+
+- `normalizeResource` can now take in refs for relationship values and normalize them properly.
 
 ## [0.3.1] - 2025-10-29
 
