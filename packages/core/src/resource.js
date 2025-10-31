@@ -251,7 +251,10 @@ export function normalizeResource(schema, resourceType, resource) {
 
 		return applyOrMap(resource[rel] ?? emptyRel, (relRes) =>
 			typeof relRes === "object"
-				? { type: relSchema.type, id: relRes[relResSchema.idAttribute ?? "id"] }
+				? {
+						type: relSchema.type,
+						id: relRes[relResSchema.idAttribute] ?? relRes.id,
+					}
 				: { type: relSchema.type, id: relRes },
 		);
 	});

@@ -11,7 +11,6 @@ import {
 	defaultValidator,
 	defaultSelectEngine,
 	defaultWhereEngine,
-	normalizeResource,
 	storeMutation,
 } from "@spectragraph/core";
 import { create as createAction } from "./create.js";
