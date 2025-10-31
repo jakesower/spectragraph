@@ -148,7 +148,7 @@ function runQuery(schema, rootQuery, data, options = {}) {
 					// subquery
 					if (!(propName in resSchema.relationships)) {
 						throw new Error(
-							`The "${propName}" relationship is undefined on a resource of type "${query.type}". You probably have an invalid schema or constructed your graph wrong. Try linking the inverses (via "linkInverses"), check your schema to make sure all inverses have been defined correctly there, and make sure all resources have been loaded into the graph.`,
+							`The "${propName}" relationship is undefined on a resource of type "${query.type}". You probably have an invalid schema or constructed your graph wrong. Check that the resources have "inverse" set in the schema try linking the inverses (via "linkInverses"), check your schema to make sure all inverses have been defined correctly there, and make sure all resources have been loaded into the graph.`,
 						);
 					}
 
@@ -189,7 +189,7 @@ function runQuery(schema, rootQuery, data, options = {}) {
 					return (result) => {
 						if (!Array.isArray(result[propName])) {
 							throw new Error(
-								`${query.type}.${query.id} does not contain array for the to-many relationship "${propName}". This should be an array of objects.`,
+								`${query.type}.${query.id} does not contain array for the to-many relationship "${propName}". This should be an array of objects. A common reason for this is that an inverse hasn't been set in the schema or "linkInverses" was not called.`,
 							);
 						}
 

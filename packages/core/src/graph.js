@@ -145,7 +145,10 @@ export function mergeGraphsDeep(left, right) {
 	return output;
 }
 
-function mergeNormalResources(left, right = { attributes: {}, relationships: {} }) {
+function mergeNormalResources(
+	left,
+	right = { attributes: {}, relationships: {} },
+) {
 	return {
 		...left,
 		attributes: { ...left.attributes, ...right.attributes },

@@ -6,6 +6,7 @@ import {
 	ensureValidSchema,
 	ensureValidUpdateResource,
 	normalizeQuery,
+	storeMutation,
 } from "@spectragraph/core";
 import { applyOrMap } from "@spectragraph/utils";
 import { query as getQuery } from "./query/index.js";
@@ -125,22 +126,24 @@ export function createPostgresStore(schema, config) {
 	const context = { config, schema };
 
 	return {
-		async create(resource) {
+		create: storeMutation(schema, "create", (resource) => {
 			ensureValidCreateResource(schema, resource, { validator });
 			return withTransaction(config.db, (client) =>
 				create(resource, { ...context, client }),
 			);
-		},
+		}),
 
-		async update(resource) {
+		update: storeMutation(schema, "update", (resource) => {
 			ensureValidUpdateResource(schema, resource, { validator });
 			return withTransaction(config.db, (client) =>
 				update(resource, { ...context, client }),
 			);
-		},
+		}),
 
-		async upsert(resource) {
-			return resource.id ? this.update(resource) : this.create(resource);
+		async upsert(...args) {
+			return storeMutation(schema, "upsert", (resource) =>
+				resource.id ? this.update(resource) : this.create(resource),
+			)(...args);
 		},
 
 		async delete(resource) {
