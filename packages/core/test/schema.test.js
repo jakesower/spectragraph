@@ -132,7 +132,7 @@ describe("relationships", () => {
 				buildings: {
 					attributes: { id: { type: "string" } },
 					relationships: {
-						builder: { cardinality: "many", type: "builders" },
+						builder: { cardinality: "many", type: "builders", inverse: null },
 					},
 				},
 				builders: {
@@ -162,6 +162,44 @@ describe("relationships", () => {
 		expect(result2.length).toBeGreaterThan(0);
 	});
 
+	it("should not validate a schema with a missing relationship inverse", () => {
+		const schema = {
+			resources: {
+				buildings: {
+					attributes: { id: { type: "string" } },
+					relationships: {
+						builder: { cardinality: "many", type: "builders" },
+					},
+				},
+				builders: {
+					attributes: { id: { type: "string" } },
+					relationships: {},
+				},
+			},
+		};
+		const result = validateSchema(schema);
+		expect(result.length).toBeGreaterThan(0);
+	});
+
+	it("should validate a schema with a null relationship inverse", () => {
+		const schema = {
+			resources: {
+				buildings: {
+					attributes: { id: { type: "string" } },
+					relationships: {
+						builder: { cardinality: "many", type: "builders", inverse: null },
+					},
+				},
+				builders: {
+					attributes: { id: { type: "string" } },
+					relationships: {},
+				},
+			},
+		};
+		const result = validateSchema(schema);
+		expect(result.length).toEqual(0);
+	});
+
 	it("should not validate a schema with an invalid relationship type", () => {
 		const schema = {
 			resources: {
@@ -185,7 +223,9 @@ describe("relationships", () => {
 				buildings: {
 					attributes: { id: { type: "number" } },
 					requiredRelationships: ["rel"],
-					relationships: { rel: { type: "buildings", cardinality: "one" } },
+					relationships: {
+						rel: { type: "buildings", cardinality: "one", inverse: "rel" },
+					},
 				},
 			},
 		};

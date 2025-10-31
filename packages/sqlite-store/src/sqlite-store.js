@@ -5,6 +5,7 @@ import {
 	ensureValidMergeResource,
 	ensureValidUpdateResource,
 	normalizeQuery,
+	storeMutation,
 } from "@spectragraph/core";
 import { applyOrMap } from "@spectragraph/utils";
 import { query as getQuery } from "./query/index.js";
@@ -123,18 +124,20 @@ export function sqliteStore(schema, config) {
 	const context = { config, db: config.db, schema };
 
 	return {
-		async create(resource) {
+		create: storeMutation(schema, "create", (resource) => {
 			ensureValidCreateResource(schema, resource, { validator });
 			return withTransaction(config.db, () => create(resource, context));
-		},
+		}),
 
-		async update(resource) {
+		update: storeMutation(schema, "update", (resource) => {
 			ensureValidUpdateResource(schema, resource, { validator });
 			return withTransaction(config.db, () => update(resource, context));
-		},
+		}),
 
-		async upsert(resource) {
-			return resource.id ? this.update(resource) : this.create(resource);
+		async upsert(...args) {
+			return storeMutation(schema, "upsert", (resource) =>
+				resource.id ? this.update(resource) : this.create(resource),
+			)(...args);
 		},
 
 		async delete(resource) {

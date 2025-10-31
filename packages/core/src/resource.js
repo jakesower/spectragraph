@@ -243,6 +243,7 @@ export function normalizeResource(schema, resourceType, resource) {
 
 	const relationships = mapValues(resSchema.relationships, (relSchema, rel) => {
 		const emptyRel = relSchema.cardinality === "many" ? [] : null;
+		const relResSchema = schema.resources[relSchema.type];
 
 		if (resource[rel] === undefined) {
 			return undefined;
@@ -250,7 +251,7 @@ export function normalizeResource(schema, resourceType, resource) {
 
 		return applyOrMap(resource[rel] ?? emptyRel, (relRes) =>
 			typeof relRes === "object"
-				? relRes
+				? { type: relSchema.type, id: relRes[relResSchema.idAttribute ?? "id"] }
 				: { type: relSchema.type, id: relRes },
 		);
 	});

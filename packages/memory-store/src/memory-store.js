@@ -12,6 +12,7 @@ import {
 	defaultSelectEngine,
 	defaultWhereEngine,
 	normalizeResource,
+	storeMutation,
 } from "@spectragraph/core";
 import { create as createAction } from "./create.js";
 import { deleteAction } from "./delete.js";
@@ -50,21 +51,6 @@ import { merge } from "./merge.js";
  * }} MemoryStore
  */
 
-function ensureValidCUDParams(
-	resourceTypeOrNormalResource,
-	flatResource,
-	method,
-) {
-	if (
-		!resourceTypeOrNormalResource ||
-		(typeof resourceTypeOrNormalResource === "string" && !flatResource)
-	) {
-		throw new Error(
-			`${method} must be of the form ${method}("resourceType", flatResource) or ${method}(normalResource)`,
-		);
-	}
-}
-
 /**
  * Creates a new in-memory store instance that implements the spectragraph store interface.
  * Provides CRUD operations, querying, and relationship management for graph data.
@@ -98,44 +84,22 @@ export function createMemoryStore(schema, config = {}) {
 	};
 
 	// WARNING: MUTATES storeGraph
-	const create = (resourceTypeOrNormalResource, flatResource) => {
-		ensureValidCUDParams(resourceTypeOrNormalResource, flatResource, "create");
-
-		const normalResource =
-			typeof resourceTypeOrNormalResource === "string"
-				? normalizeResource(schema, resourceTypeOrNormalResource, flatResource)
-				: resourceTypeOrNormalResource;
-
+	const create = storeMutation(schema, "create", (normalResource) => {
 		ensureValidCreateResource(schema, normalResource, validator);
 		return createAction(normalResource, { schema, storeGraph });
-	};
+	});
 
 	// WARNING: MUTATES storeGraph
-	const update = (resourceTypeOrNormalResource, flatResource) => {
-		ensureValidCUDParams(resourceTypeOrNormalResource, flatResource, "update");
-
-		const normalResource =
-			typeof resourceTypeOrNormalResource === "string"
-				? normalizeResource(schema, resourceTypeOrNormalResource, flatResource)
-				: resourceTypeOrNormalResource;
-
+	const update = storeMutation(schema, "update", (normalResource) => {
 		ensureValidUpdateResource(schema, normalResource, validator);
 		return updateAction(normalResource, { schema, storeGraph });
-	};
+	});
 
-	const upsert = (resourceTypeOrNormalResource, flatResource) => {
-		ensureValidCUDParams(resourceTypeOrNormalResource, flatResource, "upsert");
-
-		const normalResource =
-			typeof resourceTypeOrNormalResource === "string"
-				? normalizeResource(schema, resourceTypeOrNormalResource, flatResource)
-				: resourceTypeOrNormalResource;
-
-		return "id" in normalResource &&
-			storeGraph[normalResource.type][normalResource.id]
+	const upsert = storeMutation(schema, "upsert", (normalResource) =>
+		"id" in normalResource && storeGraph[normalResource.type][normalResource.id]
 			? update(normalResource)
-			: create(normalResource);
-	};
+			: create(normalResource),
+	);
 
 	const delete_ = (resource) => {
 		ensureValidDeleteResource(schema, resource, validator);

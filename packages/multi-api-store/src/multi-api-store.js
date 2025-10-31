@@ -9,6 +9,7 @@ import {
 	defaultValidator,
 	defaultSelectEngine,
 	defaultWhereEngine,
+	storeMutation,
 } from "@spectragraph/core";
 import { mapValues } from "es-toolkit";
 import { loadQueryGraph } from "./load-query-graph.js";
@@ -84,7 +85,7 @@ export function createMultiApiStore(schema, config = {}) {
 		return queryGraph(schema, rootQuery, graph, { selectEngine, whereEngine });
 	};
 
-	const create = async (resource) => {
+	const create = storeMutation(schema, "create", async (resource) => {
 		const { type } = resource;
 
 		ensureValidCreateResource(schema, resource, validator);
@@ -101,9 +102,9 @@ export function createMultiApiStore(schema, config = {}) {
 		});
 
 		return handleResponseData(result);
-	};
+	});
 
-	const update = async (resource) => {
+	const update = storeMutation(schema, "update", async (resource) => {
 		const { type } = resource;
 
 		ensureValidUpdateResource(schema, resource, validator);
@@ -120,7 +121,7 @@ export function createMultiApiStore(schema, config = {}) {
 		});
 
 		return handleResponseData(result);
-	};
+	});
 
 	const deleteResource = async (resource) => {
 		const { type } = resource;
@@ -145,8 +146,10 @@ export function createMultiApiStore(schema, config = {}) {
 		query: runQuery,
 		create,
 		update,
-		async upsert(resource) {
-			return resource.id ? this.update(resource) : this.create(resource);
+		async upsert(...args) {
+			return storeMutation(schema, "upsert", (resource) =>
+				resource.id ? this.update(resource) : this.create(resource),
+			)(...args);
 		},
 		delete: deleteResource,
 		merge: () => {

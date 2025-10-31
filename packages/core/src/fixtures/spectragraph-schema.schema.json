@@ -24,11 +24,11 @@
 		},
 		"relationship": {
 			"type": "object",
-			"required": ["type", "cardinality"],
+			"required": ["type", "cardinality", "inverse"],
 			"properties": {
 				"type": { "type": "string" },
 				"cardinality": { "type": "string", "enum": ["one", "many"] },
-				"inverse": { "type": "string" }
+				"inverse": { "type": ["string", "null"] }
 			}
 		},
 		"resource": {

@@ -44,6 +44,7 @@ import {
 	validateMergeResource,
 	validateUpdateResource,
 } from "./resource.js";
+export { storeMutation } from "./store.js";
 
 export const ensureValidSchema = ensure(validateSchema);
 export const ensureValidQuery = ensure(validateQuery);
