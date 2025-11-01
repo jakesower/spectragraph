@@ -1,0 +1,12 @@
+{
+	"resources": {
+		"matches": {
+			"attributes": {
+				"id": { "type": "string" },
+				"goals": { "type": "integer" },
+				"ageGroup": { "type": "integer" }
+			},
+			"relationships": {}
+		}
+	}
+}

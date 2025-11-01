@@ -1,12 +1,14 @@
 import { expect, it, describe } from "vitest";
+import { careBearSchema } from "../interface-tests/src/index.js";
 import {
 	defaultSelectEngine,
 	defaultWhereEngine,
-	ensureValidQuery,
-	normalizeQuery,
-	validateQuery,
-} from "../src/index.js";
-import { careBearSchema } from "../interface-tests/src/index.js";
+} from "../src/lib/defaults.js";
+import { normalizeQuery } from "../src/query/normalize-query.js";
+import { validateQuery } from "../src/query.js";
+import { ensure } from "../src/lib/helpers.js";
+
+const ensureValidQuery = ensure(validateQuery);
 
 describe("validateQuery", () => {
 	describe("structure", () => {

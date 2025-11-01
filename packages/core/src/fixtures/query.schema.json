@@ -2,7 +2,15 @@
 	"$schema": "http://json-schema.org/draft-07/schema#",
 	"type": "object",
 	"required": ["type"],
-	"$ref": "#/definitions/query",
+	"allOf": [
+		{ "$ref": "#/definitions/query" },
+		{
+			"oneOf": [
+				{ "type": "object", "required": ["select"] },
+				{ "type": "object", "required": ["group"] }
+			]
+		}
+	],
 	"definitions": {
 		"subquery": {
 			"type": "object",
@@ -12,12 +20,60 @@
 			]
 		},
 		"query": {
+			"oneOf": [
+				{ "$ref": "#/definitions/groupQuery" },
+				{ "$ref": "#/definitions/selectQuery" }
+			]
+		},
+		"groupQuery": {
 			"type": "object",
-			"required": ["select"],
+			"required": ["group"],
 			"additionalProperties": false,
 			"properties": {
 				"type": { "type": "string" },
-				"select": { "anyOf": [{ "$ref": "#/definitions/select" }, {}] },
+				"ids": {},
+				"where": {},
+				"order": {},
+				"limit": {},
+				"offset": {},
+				"meta": {},
+				"group": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["by"],
+					"properties": {
+						"by": { "type": "array", "items": { "type": "string" } },
+						"select": {
+							"oneOf": [
+								{ "type": "string", "const": "*" },
+								{ "$ref": "#/definitions/aggregationSelectClauseObject" },
+								{
+									"type": "array",
+									"items": {
+										"oneOf": [
+											{ "type": "string" },
+											{ "$ref": "#/definitions/aggregationSelectClauseObject" }
+										]
+									}
+								}
+							]
+						},
+						"aggregates": { "type": "object" },
+						"where": {},
+						"order": {},
+						"limit": {},
+						"offset": {},
+						"meta": {}
+					}
+				}
+			}
+		},
+		"selectQuery": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"type": { "type": "string" },
+				"select": { "anyOf": [{ "$ref": "#/definitions/selectClause" }, {}] },
 				"id": {},
 				"ids": {},
 				"where": {},
@@ -33,10 +89,15 @@
 				"*": {}
 			},
 			"additionalProperties": {
-				"anyOf": [{ "type": "string" }, { "$ref": "#/definitions/subquery" }]
+				"anyOf": [
+					{ "type": "string" },
+					{ "$ref": "#/definitions/selectObject" },
+					{ "$ref": "#/definitions/subquery" },
+					{ "$ref": "#/definitions/expression" }
+				]
 			}
 		},
-		"select": {
+		"selectClause": {
 			"oneOf": [
 				{ "type": "string" },
 				{
@@ -50,6 +111,18 @@
 				},
 				{ "$ref": "#/definitions/selectObject" }
 			]
+		},
+		"expression": {
+			"type": "object",
+			"minProperties": 1,
+			"maxProperties": 1,
+			"patternProperties": { "^\\$.*": {} }
+		},
+		"aggregationSelectClauseObject": {
+			"type": "object",
+			"additionalProperties": {
+				"anyOf": [{ "type": "string" }, { "$ref": "#/definitions/expression" }]
+			}
 		}
 	}
 }
