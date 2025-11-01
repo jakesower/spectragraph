@@ -76,7 +76,7 @@ describe("group queries", () => {
 		expect(result).toEqual([{ ageGroup: 11 }, { ageGroup: 12 }]);
 	});
 
-	test.skip("select can include computed fields", () => {
+	test("select can include computed fields", () => {
 		const query = {
 			type: "matches",
 			group: {
@@ -86,7 +86,7 @@ describe("group queries", () => {
 					{
 						tier: {
 							$if: {
-								if: { ageGroup: { $gte: 12 } },
+								if: { $gte: [{ $get: "ageGroup" }, 12] },
 								then: "senior",
 								else: "junior",
 							},
