@@ -3,7 +3,7 @@ import addFormats from "ajv-formats";
 import addErrors from "ajv-errors";
 import { applyOrMap } from "@spectragraph/utils";
 import { mapValues, omit, pickBy } from "es-toolkit";
-import { normalizeQuery } from "./query.js";
+import { normalizeQuery } from "./query/normalize-query.js";
 import { createDeepCache, ensure, translateAjvErrors } from "./lib/helpers.js";
 import { validateSchema } from "./schema.js";
 import { buildAttribute } from "./resource-helpers.js";

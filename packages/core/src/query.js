@@ -1,14 +1,12 @@
-import { mapValues, omit } from "es-toolkit";
+import { mapValues } from "es-toolkit";
 import {
 	defaultValidator,
 	defaultSelectEngine,
 	defaultWhereEngine,
 } from "./lib/defaults.js";
-import { createDeepCache, ensure, translateAjvErrors } from "./lib/helpers.js";
+import { createDeepCache, translateAjvErrors } from "./lib/helpers.js";
 import baseQuerySchema from "./fixtures/query.schema.json";
-import { normalizeWhereClause } from "./lib/where-expressions.js";
-
-const NORMALIZED = Symbol("normalized");
+import { NORMALIZED } from "./query/normalize-query.js";
 
 /**
  * @typedef {Object} Expression
@@ -90,7 +88,7 @@ function getResourceStructureValidator(schema, resourceType, whereEngine) {
 				type: "object",
 				not: { required: ["select"] },
 			},
-			{ $ref: "#/definitions/fullQuery" },
+			{ $ref: "#/definitions/fullSelectQuery" },
 		],
 		definitions: {
 			expression: {
@@ -100,6 +98,42 @@ function getResourceStructureValidator(schema, resourceType, whereEngine) {
 				...extraExpressionRules,
 			},
 			fullQuery: {
+				oneOf: [
+					{ $ref: "#/definitions/fullGroupQuery" },
+					{ $ref: "#/definitions/fullSelectQuery" },
+				],
+			},
+			fullGroupQuery: {
+				required: ["group"],
+				not: {
+					required: ["id", "select"],
+				},
+				properties: {
+					type: { type: "string", const: resourceType },
+					ids: { type: "array", items: { type: "string" } },
+					limit: { type: "integer", minimum: 1 },
+					offset: { type: "integer", minimum: 0 },
+					where: {
+						anyOf: [
+							{ $ref: "#/definitions/expression" },
+							{
+								type: "object",
+								properties: mapValues(
+									schema.resources[resourceType].attributes,
+									() => ({}),
+								),
+								additionalProperties: {
+									not: true,
+									errorMessage:
+										"is neither be an expression nor an object that uses valid attributes as keys",
+								},
+							},
+						],
+					},
+					group: {}, // TODO
+				},
+			},
+			fullSelectQuery: {
 				type: "object",
 				required: ["select"],
 				not: {
@@ -110,6 +144,7 @@ function getResourceStructureValidator(schema, resourceType, whereEngine) {
 					id: { type: "string" },
 					ids: { type: "array", items: { type: "string" } },
 					select: {}, // validated programatically
+					group: {}, // TODO
 					limit: { type: "integer", minimum: 1 },
 					offset: { type: "integer", minimum: 0 },
 					where: {
@@ -353,113 +388,27 @@ export function validateQuery(schema, rootQuery, options = {}) {
 			});
 		};
 
-		const select = query.select ?? query;
+		const validateGroupObject = () => {};
 
-		if (Array.isArray(select)) validateSelectArray(select);
-		else if (typeof select === "object") {
-			validateSelectObject(select, [...path, "select"]);
-		} else if (select !== "*") {
-			addError(
-				'Invalid select value: must be "*", an object, or an array.',
-				[...path, "select"],
-				select,
-			);
+		if ("group" in query) {
+			validateGroupObject(query.group);
+		} else {
+			const select = query.select ?? query;
+
+			if (Array.isArray(select)) validateSelectArray(select);
+			else if (typeof select === "object") {
+				validateSelectObject(select, [...path, "select"]);
+			} else if (select !== "*") {
+				addError(
+					'Invalid select value: must be "*", an object, or an array.',
+					[...path, "select"],
+					select,
+				);
+			}
 		}
 
 		return errors;
 	};
 
 	return go(rootQuery, rootQuery.type, []);
-}
-
-/**
- * Normalizes a query by expanding shorthand syntax and ensuring consistent structure
- *
- * @param {Object} schema - The schema object
- * @param {RootQuery} rootQuery - The query to normalize
- * @param {Object} [options]
- * @param {import('../lib/defaults.js').SelectExpressionEngine} [options.selectEngine] - Expression engine for SELECT clauses
- * @param {import('../lib/defaults.js').WhereExpressionEngine} [options.whereEngine] - Expression engine for WHERE clauses
- * @returns {NormalQuery} The normalized query
- */
-export function normalizeQuery(schema, rootQuery, options = {}) {
-	const {
-		selectEngine = defaultSelectEngine,
-		whereEngine = defaultWhereEngine,
-	} = options;
-
-	ensure(validateQuery)(schema, rootQuery, { selectEngine, whereEngine });
-
-	const go = (query, type) => {
-		const select = query.select ?? query;
-		const resSchema = schema.resources[type];
-
-		const selectWithExpandedStar =
-			select === "*" ? Object.keys(resSchema.attributes) : select;
-
-		const selectObj = Array.isArray(selectWithExpandedStar)
-			? (() => {
-					const result = {};
-					for (const item of selectWithExpandedStar) {
-						if (typeof item === "string") {
-							result[item] = item;
-						} else {
-							Object.assign(result, item);
-						}
-					}
-					return result;
-				})()
-			: select;
-
-		const selectWithStar = selectObj["*"]
-			? (() => {
-					const result = {};
-					for (const attr of Object.keys(resSchema.attributes)) {
-						result[attr] = attr;
-					}
-					Object.assign(result, omit(selectObj, ["*"]));
-					return result;
-				})()
-			: selectObj;
-
-		const selectWithSubqueries = mapValues(selectWithStar, (sel, key) => {
-			if (
-				key in schema.resources[type].relationships &&
-				(typeof sel === "object" || sel === "*")
-			) {
-				const relType = schema.resources[type].relationships[key].type;
-				return go(sel, relType);
-			}
-			return sel;
-		});
-
-		const orderObj = query.order
-			? { order: !Array.isArray(query.order) ? [query.order] : query.order }
-			: {};
-
-		const whereObj = query.where
-			? { where: normalizeWhereClause(query.where) }
-			: {};
-
-		const normalQuery = query.select
-			? {
-					...query,
-					select: selectWithSubqueries,
-					type,
-					...orderObj,
-					...whereObj,
-				}
-			: { type, select: selectWithSubqueries };
-
-		Object.defineProperty(normalQuery, NORMALIZED, {
-			value: true,
-			enumerable: false,
-			writable: false,
-			configurable: false,
-		});
-
-		return normalQuery;
-	};
-
-	return rootQuery[NORMALIZED] ? rootQuery : go(rootQuery, rootQuery.type);
 }

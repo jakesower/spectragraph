@@ -1,0 +1,22 @@
+{
+	"matches": {
+		"match-1": {
+			"type": "matches",
+			"id": "match-1",
+			"attributes": { "goals": 3, "ageGroup": 11 },
+			"relationships": {}
+		},
+		"match-2": {
+			"type": "matches",
+			"id": "match-2",
+			"attributes": { "goals": 1, "ageGroup": 11 },
+			"relationships": {}
+		},
+		"match-3": {
+			"type": "matches",
+			"id": "match-3",
+			"attributes": { "goals": 2, "ageGroup": 12 },
+			"relationships": {}
+		}
+	}
+}
