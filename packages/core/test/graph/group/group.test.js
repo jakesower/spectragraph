@@ -178,4 +178,72 @@ describe("group queries", () => {
 			]);
 		});
 	});
+
+	describe("top-level clauses on grouped queries", () => {
+		it("orders groups", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: "ageGroup",
+					aggregates: { total: { $sum: { $pluck: "goals" } } },
+					order: { total: "desc" },
+				},
+			};
+
+			const result = queryGraph(schema, query, graph);
+
+			expect(result).toEqual([
+				{ ageGroup: 11, total: 4 },
+				{ ageGroup: 12, total: 2 },
+			]);
+
+			const query2 = {
+				type: "matches",
+				group: {
+					by: "ageGroup",
+					aggregates: { total: { $sum: { $pluck: "goals" } } },
+					order: { total: "asc" },
+				},
+			};
+
+			const result2 = queryGraph(schema, query2, graph);
+
+			expect(result2).toEqual([
+				{ ageGroup: 12, total: 2 },
+				{ ageGroup: 11, total: 4 },
+			]);
+		});
+
+		it.skip("filters groups with where (HAVING)", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: "ageGroup",
+					aggregates: { total: { $sum: { $pluck: "goals" } } },
+					where: { $gt: [{ $get: "total" }, 2] },
+				},
+			};
+
+			const result = queryGraph(schema, query, graph);
+
+			expect(result).toEqual([{ ageGroup: 11, total: 4 }]);
+		});
+
+		it.skip("limits and offsets groups", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: "ageGroup",
+					aggregates: { count: { $count: null } },
+					order: { ageGroup: "asc" },
+					limit: 1,
+					offset: 1,
+				},
+			};
+
+			const result = queryGraph(schema, query, graph);
+
+			expect(result).toEqual([{ ageGroup: 12, count: 1 }]);
+		});
+	});
 });

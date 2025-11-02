@@ -4,6 +4,39 @@ import { ID, RAW, TYPE } from "./query-graph.js";
 
 const ITEMS = Symbol("group items");
 
+function createGroupQueryGraphClauses(query, options = {}) {
+	const {
+		selectEngine = defaultSelectEngine,
+		whereEngine = defaultWhereEngine,
+	} = options;
+
+	const { group } = query;
+	const columns = [
+		...Object.keys(group.select ?? {}),
+		...Object.keys(group.aggregates ?? {}),
+	];
+	const columnsSet = new Set(columns);
+
+	const clauses = {
+		order(results) {
+			const { order } = group;
+			const properties = order.flatMap((o) => Object.keys(o));
+			const dirs = order.flatMap((o) => Object.values(o));
+
+			const invalidProp = properties.find((p) => !columnsSet.has(p));
+			if (invalidProp) {
+				throw new Error(
+					`invalid group "order" clause: '${invalidProp}' is not a valid field from "groups.select" or "groups.aggregates"`,
+				);
+			}
+
+			return orderBy(results, properties, dirs);
+		},
+	};
+
+	return clauses;
+}
+
 export function createQueryGraphClauses(
 	schema,
 	query,
@@ -24,7 +57,6 @@ export function createQueryGraphClauses(
 		},
 
 		where(results) {
-			if (Object.keys(query.where).length === 0) return results;
 			return results.filter((result) => whereEngine.apply(query.where, result));
 		},
 
@@ -33,11 +65,11 @@ export function createQueryGraphClauses(
 			const properties = order.flatMap((o) => Object.keys(o));
 			const dirs = order.flatMap((o) => Object.values(o));
 
-			const first = results[0];
-			if (first && properties.some((p) => !(p in first))) {
-				const missing = properties.find((p) => !(p in first));
+			// Validate against schema
+			const invalidProp = properties.find((p) => !(p in resSchema.attributes));
+			if (invalidProp) {
 				throw new Error(
-					`invalid "order" clause: '${missing} is not a valid attribute`,
+					`invalid "order" clause: '${invalidProp}' is not a valid attribute`,
 				);
 			}
 
@@ -157,7 +189,7 @@ export function createQueryGraphClauses(
 			// Group the results
 			for (const result of results) {
 				// Create group key from groupBy fields
-				const groupKey = by.map((field) => result[field]).join("\0");
+				const groupKey = JSON.stringify(by.map((field) => result[field]));
 
 				if (!groupMap.has(groupKey)) {
 					// Create group entry with key values and empty collection
@@ -197,7 +229,13 @@ export function createQueryGraphClauses(
 				mapValues(extractors, (x) => x(group)),
 			);
 
-			return extracted;
+			const groupClauses = createGroupQueryGraphClauses(query, options);
+			const processed = Object.entries(groupClauses).reduce(
+				(acc, [opName, fn]) => (opName in query.group ? fn(acc) : acc),
+				extracted,
+			);
+
+			return processed;
 		},
 	};
 
