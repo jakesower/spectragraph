@@ -42,7 +42,16 @@
 					"additionalProperties": false,
 					"required": ["by"],
 					"properties": {
-						"by": { "type": "array", "items": { "type": "string" } },
+						"by": {
+							"oneOf": [
+								{
+									"type": "array",
+									"minItems": 1,
+									"items": { "type": "string" }
+								},
+								{ "type": "string" }
+							]
+						},
 						"select": {
 							"oneOf": [
 								{ "type": "string", "const": "*" },
@@ -58,7 +67,10 @@
 								}
 							]
 						},
-						"aggregates": { "type": "object" },
+						"aggregates": {
+							"type": "object",
+							"additionalProperties": { "$ref": "#/definitions/expression" }
+						},
 						"where": {},
 						"order": {},
 						"limit": {},
@@ -71,6 +83,7 @@
 		"selectQuery": {
 			"type": "object",
 			"additionalProperties": false,
+			"not": { "required": ["id", "ids"] },
 			"properties": {
 				"type": { "type": "string" },
 				"select": { "anyOf": [{ "$ref": "#/definitions/selectClause" }, {}] },

@@ -17,19 +17,6 @@ export function createQueryGraphClauses(
 
 	const resSchema = schema.resources[query.type];
 
-	const groupClauses = {
-		select(groups) {
-			const { select } = query.group;
-			const extractors = mapValues(select, (attrOrExpr, fieldName) =>
-				typeof attrOrExpr === "string"
-					? (group) => group[attrOrExpr]
-					: (group) => selectEngine.apply(attrOrExpr, group),
-			);
-
-			return groups.map((group) => mapValues(extractors, (x) => x(group)));
-		},
-	};
-
 	const clauses = {
 		ids(results) {
 			const idsSet = new Set(query.ids);
@@ -164,7 +151,7 @@ export function createQueryGraphClauses(
 		},
 
 		group(results) {
-			const { by } = query.group;
+			const { aggregates, by, select } = query.group;
 			const groupMap = new Map();
 
 			// Group the results
@@ -193,12 +180,24 @@ export function createQueryGraphClauses(
 			// Convert to array
 			const groups = Array.from(groupMap.values());
 
-			// Apply each group clause
-			return Object.entries(groupClauses).reduce(
-				(result, [clauseName, fn]) =>
-					clauseName in query.group ? fn(result) : result,
-				groups,
+			// Build extractors, then execute them
+			const selectExtractors = mapValues(select ?? {}, (attrOrExpr) =>
+				typeof attrOrExpr === "string"
+					? (group) => group[attrOrExpr]
+					: (group) => selectEngine.apply(attrOrExpr, group),
 			);
+
+			const aggregateExtractors = mapValues(
+				aggregates ?? {},
+				(expr) => (group) => selectEngine.apply(expr, group[ITEMS]),
+			);
+
+			const extractors = { ...selectExtractors, ...aggregateExtractors };
+			const extracted = groups.map((group) =>
+				mapValues(extractors, (x) => x(group)),
+			);
+
+			return extracted;
 		},
 	};
 

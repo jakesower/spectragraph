@@ -342,6 +342,94 @@ describe("validateQuery", () => {
 		});
 	});
 
+	describe("group", () => {
+		it("validates with a simple valid group string", () => {
+			const query = {
+				type: "bears",
+				group: { by: "yearIntroduced" },
+			};
+
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toEqual(0);
+		});
+
+		it("validates with a simple valid group array", () => {
+			const query = {
+				type: "bears",
+				group: { by: ["yearIntroduced"] },
+			};
+
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toEqual(0);
+		});
+
+		it('does not validate with a group with no "by" clause', () => {
+			const query = {
+				type: "matches",
+				group: {},
+			};
+
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toBeGreaterThan(0);
+		});
+
+		it('does not validate with an empty array "by" clause', () => {
+			const query = {
+				type: "matches",
+				group: { by: [] },
+			};
+
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toBeGreaterThan(0);
+		});
+
+		it("does not validate with an array aggregates clause", () => {
+			const query = {
+				type: "matches",
+				group: { by: [], aggregates: [] },
+			};
+
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toBeGreaterThan(0);
+		});
+
+		it("does not validate with a string aggregates clause", () => {
+			const query = {
+				type: "bears",
+				group: { by: "yearIntroduced", aggregates: "invalid" },
+			};
+
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toBeGreaterThan(0);
+		});
+
+		it("does not validate with non-expression aggregates values", () => {
+			const query = {
+				type: "bears",
+				group: {
+					by: "yearIntroduced",
+					aggregates: { total: "notAnExpression" },
+				},
+			};
+
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toBeGreaterThan(0);
+		});
+
+		it("validates with valid aggregates", () => {
+			const query = {
+				type: "bears",
+				group: {
+					by: "yearIntroduced",
+					aggregates: { count: { $count: {} } },
+				},
+			};
+
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toEqual(0);
+		});
+	});
+
 	describe("real world issues", () => {
 		it('can "double normalize" queries', () => {
 			const selectEngine = defaultSelectEngine;
