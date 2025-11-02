@@ -56,6 +56,24 @@ function expandSelectObject(schema, select, type) {
 		: selectObj;
 }
 
+const groupNormalizers = {
+	by(schema, groupQuery) {
+		return Array.isArray(groupQuery.by) ? groupQuery.by : [groupQuery.by];
+	},
+	select(schema, groupQuery, type) {
+		return expandSelectObject(
+			schema,
+			groupQuery.select ?? this.by(schema, groupQuery),
+			type,
+		);
+	},
+	order(schema, groupQuery) {
+		return Array.isArray(groupQuery.order)
+			? groupQuery.order
+			: [groupQuery.order];
+	},
+};
+
 const normalizers = {
 	select(schema, query, type, normalizeSubquery) {
 		const { select } = query;
@@ -73,16 +91,16 @@ const normalizers = {
 		});
 	},
 	group(schema, query, type) {
-		const by = Array.isArray(query.group.by)
-			? query.group.by
-			: [query.group.by];
-		const groupSelect = query.group.select ?? by;
-
-		return {
+		const groupQuery = {
 			...query.group,
-			by,
-			select: expandSelectObject(schema, groupSelect, type),
+			select: query.group.select ?? query.group.by,
 		};
+
+		return mapValues(groupQuery, (val, clauseName) =>
+			clauseName in groupNormalizers
+				? groupNormalizers[clauseName](schema, query.group, type)
+				: val,
+		);
 	},
 	where(schema, query) {
 		const resolve = (node, attribute) => {
@@ -127,6 +145,8 @@ const normalizers = {
  * @returns {NormalQuery} The normalized query
  */
 export function normalizeQuery(schema, rootQuery, options = {}) {
+	if (rootQuery[NORMALIZED]) return rootQuery;
+
 	const {
 		selectEngine = defaultSelectEngine,
 		whereEngine = defaultWhereEngine,
@@ -147,10 +167,7 @@ export function normalizeQuery(schema, rootQuery, options = {}) {
 		);
 	};
 
-	const normalQuery = rootQuery[NORMALIZED]
-		? rootQuery
-		: normalizeSubquery(rootQuery, rootQuery.type);
-
+	const normalQuery = normalizeSubquery(rootQuery, rootQuery.type);
 	Object.defineProperty(normalQuery, NORMALIZED, {
 		value: true,
 		enumerable: false,
