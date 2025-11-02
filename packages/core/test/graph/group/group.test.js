@@ -229,7 +229,7 @@ describe("group queries", () => {
 			expect(result).toEqual([{ ageGroup: 11, total: 4 }]);
 		});
 
-		it.skip("limits and offsets groups", () => {
+		it("limits and offsets groups", () => {
 			const query = {
 				type: "matches",
 				group: {
@@ -244,6 +244,20 @@ describe("group queries", () => {
 			const result = queryGraph(schema, query, graph);
 
 			expect(result).toEqual([{ ageGroup: 12, count: 1 }]);
+
+			const query2 = {
+				type: "matches",
+				group: {
+					by: "ageGroup",
+					aggregates: { count: { $count: null } },
+					order: { ageGroup: "asc" },
+					limit: 1,
+				},
+			};
+
+			const result2 = queryGraph(schema, query2, graph);
+
+			expect(result2).toEqual([{ ageGroup: 11, count: 2 }]);
 		});
 	});
 });

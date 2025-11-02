@@ -4,6 +4,9 @@ import { ID, RAW, TYPE } from "./query-graph.js";
 
 const ITEMS = Symbol("group items");
 
+// NOTE: The order of definition of clauses is CRITICAL for proper functioning.
+// For example, if limit/offset were switched it would break.
+
 function createGroupQueryGraphClauses(query, options = {}) {
 	const {
 		selectEngine = defaultSelectEngine,
@@ -11,6 +14,8 @@ function createGroupQueryGraphClauses(query, options = {}) {
 	} = options;
 
 	const { group } = query;
+	const { limit, offset, order } = group;
+
 	const columns = [
 		...Object.keys(group.select ?? {}),
 		...Object.keys(group.aggregates ?? {}),
@@ -19,7 +24,6 @@ function createGroupQueryGraphClauses(query, options = {}) {
 
 	const clauses = {
 		order(results) {
-			const { order } = group;
 			const properties = order.flatMap((o) => Object.keys(o));
 			const dirs = order.flatMap((o) => Object.values(o));
 
@@ -31,6 +35,12 @@ function createGroupQueryGraphClauses(query, options = {}) {
 			}
 
 			return orderBy(results, properties, dirs);
+		},
+		offset(result) {
+			return result.slice(offset);
+		},
+		limit(result) {
+			return result.slice(0, limit);
 		},
 	};
 
@@ -49,6 +59,7 @@ export function createQueryGraphClauses(
 	} = options;
 
 	const resSchema = schema.resources[query.type];
+	const { limit, offset } = query;
 
 	const clauses = {
 		ids(results) {
@@ -76,16 +87,12 @@ export function createQueryGraphClauses(
 			return orderBy(results, properties, dirs);
 		},
 
-		limit(results) {
-			const { limit, offset = 0 } = query;
-			if (limit < 1) throw new Error("`limit` must be at least 1");
-
-			return results.slice(offset, limit + offset);
+		offset(result) {
+			return result.slice(offset);
 		},
 
-		offset(results) {
-			if (query.offset < 0) throw new Error("`offset` must be at least 0");
-			return query.limit ? results : results.slice(query.offset);
+		limit(result) {
+			return result.slice(0, limit);
 		},
 
 		select(results) {
