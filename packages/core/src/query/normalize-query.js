@@ -78,7 +78,11 @@ const normalizers = {
 			: [query.group.by];
 		const groupSelect = query.group.select ?? by;
 
-		return { by, select: expandSelectObject(schema, groupSelect, type) };
+		return {
+			...query.group,
+			by,
+			select: expandSelectObject(schema, groupSelect, type),
+		};
 	},
 	where(schema, query) {
 		const resolve = (node, attribute) => {

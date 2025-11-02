@@ -1,124 +1,181 @@
-import { describe, test, expect } from "vitest";
+import { describe, it, expect } from "vitest";
 import { queryGraph } from "../../../src/graph/query-graph.js";
 import schema from "../../fixtures/soccer-schema.json" with { type: "json" };
 import graph from "../../fixtures/soccer-fixtures.json" with { type: "json" };
 
 describe("group queries", () => {
-	test("groups by a single field with explicit select", () => {
-		const query = {
-			type: "matches",
-			group: {
-				by: ["ageGroup"],
-				select: ["ageGroup"],
-			},
-		};
+	describe("select", () => {
+		it("groups by a single field with explicit select", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: ["ageGroup"],
+					select: ["ageGroup"],
+				},
+			};
 
-		const result = queryGraph(schema, query, graph);
+			const result = queryGraph(schema, query, graph);
 
-		expect(result).toEqual([{ ageGroup: 11 }, { ageGroup: 12 }]);
-	});
+			expect(result).toEqual([{ ageGroup: 11 }, { ageGroup: 12 }]);
+		});
 
-	test("empty select defaults to by fields", () => {
-		const query = {
-			type: "matches",
-			group: {
-				by: ["ageGroup"],
-			},
-		};
+		it("empty select defaults to by fields", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: ["ageGroup"],
+				},
+			};
 
-		const result = queryGraph(schema, query, graph);
+			const result = queryGraph(schema, query, graph);
 
-		expect(result).toEqual([{ ageGroup: 11 }, { ageGroup: 12 }]);
-	});
+			expect(result).toEqual([{ ageGroup: 11 }, { ageGroup: 12 }]);
+		});
 
-	test("select can override/rename group fields", () => {
-		const query = {
-			type: "matches",
-			group: {
-				by: ["ageGroup"],
-				select: { age: "ageGroup" },
-			},
-		};
+		it("select can override/rename group fields", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: ["ageGroup"],
+					select: { age: "ageGroup" },
+				},
+			};
 
-		const result = queryGraph(schema, query, graph);
+			const result = queryGraph(schema, query, graph);
 
-		expect(result).toEqual([{ age: 11 }, { age: 12 }]);
-	});
+			expect(result).toEqual([{ age: 11 }, { age: 12 }]);
+		});
 
-	test("groups by multiple fields", () => {
-		const query = {
-			type: "matches",
-			group: {
-				by: ["ageGroup", "goals"],
-			},
-		};
+		it("groups by multiple fields", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: ["ageGroup", "goals"],
+				},
+			};
 
-		const result = queryGraph(schema, query, graph);
+			const result = queryGraph(schema, query, graph);
 
-		expect(result).toEqual([
-			{ ageGroup: 11, goals: 3 },
-			{ ageGroup: 11, goals: 1 },
-			{ ageGroup: 12, goals: 2 },
-		]);
-	});
+			expect(result).toEqual([
+				{ ageGroup: 11, goals: 3 },
+				{ ageGroup: 11, goals: 1 },
+				{ ageGroup: 12, goals: 2 },
+			]);
+		});
 
-	test("select with wildcard includes all by fields", () => {
-		const query = {
-			type: "matches",
-			group: {
-				by: ["ageGroup"],
-				select: ["*"],
-			},
-		};
+		it("select with wildcard includes all by fields", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: ["ageGroup"],
+					select: ["*"],
+				},
+			};
 
-		const result = queryGraph(schema, query, graph);
+			const result = queryGraph(schema, query, graph);
 
-		expect(result).toEqual([{ ageGroup: 11 }, { ageGroup: 12 }]);
-	});
+			expect(result).toEqual([{ ageGroup: 11 }, { ageGroup: 12 }]);
+		});
 
-	test("select can include computed fields", () => {
-		const query = {
-			type: "matches",
-			group: {
-				by: ["ageGroup"],
-				select: [
-					"ageGroup",
-					{
-						tier: {
-							$if: {
-								if: { $gte: [{ $get: "ageGroup" }, 12] },
-								then: "senior",
-								else: "junior",
+		it("select can include computed fields", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: ["ageGroup"],
+					select: [
+						"ageGroup",
+						{
+							tier: {
+								$if: {
+									if: { $gte: [{ $get: "ageGroup" }, 12] },
+									then: "senior",
+									else: "junior",
+								},
 							},
 						},
-					},
-				],
-			},
-		};
+					],
+				},
+			};
 
-		const result = queryGraph(schema, query, graph);
+			const result = queryGraph(schema, query, graph);
 
-		expect(result).toEqual([
-			{ ageGroup: 11, tier: "junior" },
-			{ ageGroup: 12, tier: "senior" },
-		]);
+			expect(result).toEqual([
+				{ ageGroup: 11, tier: "junior" },
+				{ ageGroup: 12, tier: "senior" },
+			]);
+		});
+
+		it("select can omit some by fields", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: ["ageGroup", "goals"],
+					select: ["ageGroup"],
+				},
+			};
+
+			const result = queryGraph(schema, query, graph);
+
+			expect(result).toEqual([
+				{ ageGroup: 11 },
+				{ ageGroup: 11 },
+				{ ageGroup: 12 },
+			]);
+		});
 	});
 
-	test("select can omit some by fields", () => {
-		const query = {
-			type: "matches",
-			group: {
-				by: ["ageGroup", "goals"],
-				select: ["ageGroup"],
-			},
-		};
+	describe("aggregates", () => {
+		it("does a simple count aggregate", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: "ageGroup",
+					select: ["ageGroup"],
+					aggregates: { total: { $count: null } },
+				},
+			};
 
-		const result = queryGraph(schema, query, graph);
+			const result = queryGraph(schema, query, graph);
 
-		expect(result).toEqual([
-			{ ageGroup: 11 },
-			{ ageGroup: 11 },
-			{ ageGroup: 12 },
-		]);
+			expect(result).toEqual([
+				{ ageGroup: 11, total: 2 },
+				{ ageGroup: 12, total: 1 },
+			]);
+		});
+
+		it("aggregates over attribute values", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: "ageGroup",
+					aggregates: { totalGoals: { $sum: { $pluck: "goals" } } },
+				},
+			};
+
+			const result = queryGraph(schema, query, graph);
+
+			expect(result).toEqual([
+				{ ageGroup: 11, totalGoals: 4 },
+				{ ageGroup: 12, totalGoals: 2 },
+			]);
+		});
+
+		it("combines select and aggregates", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: ["ageGroup"],
+					select: { age: "ageGroup" },
+					aggregates: { count: { $count: null } },
+				},
+			};
+
+			const result = queryGraph(schema, query, graph);
+
+			expect(result).toEqual([
+				{ age: 11, count: 2 },
+				{ age: 12, count: 1 },
+			]);
+		});
 	});
 });

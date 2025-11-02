@@ -105,9 +105,6 @@ function getResourceStructureValidator(schema, resourceType, whereEngine) {
 			},
 			fullGroupQuery: {
 				required: ["group"],
-				not: {
-					required: ["id", "select"],
-				},
 				properties: {
 					type: { type: "string", const: resourceType },
 					ids: { type: "array", items: { type: "string" } },
@@ -130,21 +127,20 @@ function getResourceStructureValidator(schema, resourceType, whereEngine) {
 							},
 						],
 					},
-					group: {}, // TODO
+					group: {},
 				},
 			},
 			fullSelectQuery: {
 				type: "object",
 				required: ["select"],
 				not: {
-					required: ["id", "ids"],
+					required: ["id", "ids", "group"],
 				},
 				properties: {
 					type: { type: "string", const: resourceType },
 					id: { type: "string" },
 					ids: { type: "array", items: { type: "string" } },
 					select: {}, // validated programatically
-					group: {}, // TODO
 					limit: { type: "integer", minimum: 1 },
 					offset: { type: "integer", minimum: 0 },
 					where: {
