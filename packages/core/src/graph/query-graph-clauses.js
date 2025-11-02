@@ -8,13 +8,10 @@ const ITEMS = Symbol("group items");
 // For example, if limit/offset were switched it would break.
 
 function createGroupQueryGraphClauses(query, options = {}) {
-	const {
-		selectEngine = defaultSelectEngine,
-		whereEngine = defaultWhereEngine,
-	} = options;
+	const { whereEngine = defaultWhereEngine } = options;
 
 	const { group } = query;
-	const { limit, offset, order } = group;
+	const { limit, offset, order, where } = group;
 
 	const columns = [
 		...Object.keys(group.select ?? {}),
@@ -23,6 +20,9 @@ function createGroupQueryGraphClauses(query, options = {}) {
 	const columnsSet = new Set(columns);
 
 	const clauses = {
+		where(results) {
+			return results.filter((result) => whereEngine.apply(where, result));
+		},
 		order(results) {
 			const properties = order.flatMap((o) => Object.keys(o));
 			const dirs = order.flatMap((o) => Object.values(o));
