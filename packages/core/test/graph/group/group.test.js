@@ -214,7 +214,7 @@ describe("group queries", () => {
 			]);
 		});
 
-		it.skip("filters groups with where (HAVING)", () => {
+		it("filters groups with where (HAVING)", () => {
 			const query = {
 				type: "matches",
 				group: {
