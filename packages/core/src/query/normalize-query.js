@@ -91,16 +91,21 @@ const normalizers = {
 		});
 	},
 	group(schema, query, type) {
-		const groupQuery = {
-			...query.group,
-			select: query.group.select ?? query.group.by,
+		const applyGroup = (groupQuery) => {
+			const defaultedGroupQuery = {
+				...groupQuery,
+				select: groupQuery.select ?? groupQuery.by,
+				...(groupQuery.group ? { group: applyGroup(groupQuery.group) } : {}),
+			};
+
+			return mapValues(defaultedGroupQuery, (val, clauseName) =>
+				clauseName in groupNormalizers
+					? groupNormalizers[clauseName](schema, groupQuery, type)
+					: val,
+			);
 		};
 
-		return mapValues(groupQuery, (val, clauseName) =>
-			clauseName in groupNormalizers
-				? groupNormalizers[clauseName](schema, query.group, type)
-				: val,
-		);
+		return applyGroup(query.group);
 	},
 	where(schema, query) {
 		const resolve = (node, attribute) => {

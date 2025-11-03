@@ -7,15 +7,13 @@ const ITEMS = Symbol("group items");
 // NOTE: The order of definition of clauses is CRITICAL for proper functioning.
 // For example, if limit/offset were switched it would break.
 
-function createGroupQueryGraphClauses(query, options = {}) {
+function createGroupQueryGraphClauses(groupQuery, options = {}) {
 	const { whereEngine = defaultWhereEngine } = options;
 
-	const { group } = query;
-	const { limit, offset, order, where } = group;
-
+	const { limit, offset, order, where } = groupQuery;
 	const columns = [
-		...Object.keys(group.select ?? {}),
-		...Object.keys(group.aggregates ?? {}),
+		...Object.keys(groupQuery.select ?? {}),
+		...Object.keys(groupQuery.aggregates ?? {}),
 	];
 	const columnsSet = new Set(columns);
 
@@ -190,59 +188,67 @@ export function createQueryGraphClauses(
 		},
 
 		group(results) {
-			const { aggregates, by, select } = query.group;
-			const groupMap = new Map();
+			const applyGroup = (groupQuery, groupResults) => {
+				const { aggregates, by, select } = groupQuery;
+				const groupMap = new Map();
 
-			// Group the results
-			for (const result of results) {
-				// Create group key from groupBy fields
-				const groupKey = JSON.stringify(by.map((field) => result[field]));
+				// Group the results
+				for (const result of groupResults) {
+					// Create group key from groupBy fields
+					const groupKey = JSON.stringify(by.map((field) => result[field]));
 
-				if (!groupMap.has(groupKey)) {
-					// Create group entry with key values and empty collection
-					const groupEntry = {};
-					by.forEach((field) => {
-						groupEntry[field] = result[field];
-					});
-					Object.defineProperty(groupEntry, ITEMS, {
-						value: [],
-						enumerable: false,
-						writable: false,
-						configurable: false,
-					});
-					groupMap.set(groupKey, groupEntry);
+					if (!groupMap.has(groupKey)) {
+						// Create group entry with key values and empty collection
+						const groupEntry = {};
+						by.forEach((field) => {
+							groupEntry[field] = result[field];
+						});
+						Object.defineProperty(groupEntry, ITEMS, {
+							value: [],
+							enumerable: false,
+							writable: false,
+							configurable: false,
+						});
+						groupMap.set(groupKey, groupEntry);
+					}
+
+					groupMap.get(groupKey)[ITEMS].push(result);
 				}
 
-				groupMap.get(groupKey)[ITEMS].push(result);
-			}
+				// Convert to array
+				const groups = Array.from(groupMap.values());
 
-			// Convert to array
-			const groups = Array.from(groupMap.values());
+				// Build extractors, then execute them
+				const selectExtractors = mapValues(select ?? {}, (attrOrExpr) =>
+					typeof attrOrExpr === "string"
+						? (group) => group[attrOrExpr]
+						: (group) => selectEngine.apply(attrOrExpr, group),
+				);
 
-			// Build extractors, then execute them
-			const selectExtractors = mapValues(select ?? {}, (attrOrExpr) =>
-				typeof attrOrExpr === "string"
-					? (group) => group[attrOrExpr]
-					: (group) => selectEngine.apply(attrOrExpr, group),
-			);
+				const aggregateExtractors = mapValues(
+					aggregates ?? {},
+					(expr) => (group) => selectEngine.apply(expr, group[ITEMS]),
+				);
 
-			const aggregateExtractors = mapValues(
-				aggregates ?? {},
-				(expr) => (group) => selectEngine.apply(expr, group[ITEMS]),
-			);
+				const extractors = { ...selectExtractors, ...aggregateExtractors };
+				const extracted = groups.map((group) =>
+					mapValues(extractors, (x) => x(group)),
+				);
 
-			const extractors = { ...selectExtractors, ...aggregateExtractors };
-			const extracted = groups.map((group) =>
-				mapValues(extractors, (x) => x(group)),
-			);
+				const groupClauses = createGroupQueryGraphClauses(groupQuery, options);
+				const processed = Object.entries(groupClauses).reduce(
+					(acc, [opName, fn]) => (opName in groupQuery ? fn(acc) : acc),
+					extracted,
+				);
 
-			const groupClauses = createGroupQueryGraphClauses(query, options);
-			const processed = Object.entries(groupClauses).reduce(
-				(acc, [opName, fn]) => (opName in query.group ? fn(acc) : acc),
-				extracted,
-			);
+				if (groupQuery.group) {
+					return applyGroup(groupQuery.group, processed);
+				}
 
-			return processed;
+				return processed;
+			};
+
+			return applyGroup(query.group, results);
 		},
 	};
 

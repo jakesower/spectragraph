@@ -528,59 +528,123 @@ export function validateQuery(schema, rootQuery, options = {}) {
 			});
 		};
 
+		const extractValidGroupByKeys = (selectClause, parentByKeys) => {
+			if (selectClause === "*") return parentByKeys;
+			if (Array.isArray(selectClause)) {
+				return selectClause.flatMap((v) =>
+					extractValidGroupByKeys(v, parentByKeys),
+				);
+			}
+			if (typeof selectClause === "object") {
+				return Object.keys(selectClause).flatMap((v) =>
+					extractValidGroupByKeys(v, parentByKeys),
+				);
+			}
+
+			return selectClause;
+		};
+
 		if ("group" in query) {
-			const { aggregates, by, order, select, where } = query.group;
+			const validateGroupQuery = (
+				groupQuery,
+				parentGroupQuery,
+				groupPath = [],
+			) => {
+				const { aggregates, by, group, order, select, where } = groupQuery;
 
-			const byClauseArray = Array.isArray(by) ? by : [by];
-			const orderClauseArray = Array.isArray(order) ? order : [order];
+				const byClauseArray = Array.isArray(by) ? by : [by];
+				const orderClauseArray = Array.isArray(order) ? order : [order];
 
-			const selectedKeys = new Set([
-				...byClauseArray,
-				...Object.keys(select ?? {}),
-				...Object.keys(aggregates ?? {}),
-			]);
-
-			if (select) {
-				if (Array.isArray(select)) {
-					validateGroupSelectArray(select, byClauseArray);
-				} else if (typeof select === "object") {
-					validateGroupSelectObject(select, byClauseArray, [
-						...path,
-						"group",
-						"select",
-					]);
-				} else if (select !== "*") {
-					addError(
-						'Invalid select value: must be "*", an object, or an array.',
-						[...path, "select"],
-						select,
+				if (parentGroupQuery) {
+					const parentByClauseArray = Array.isArray(parentGroupQuery.by)
+						? parentGroupQuery.by
+						: [parentGroupQuery.by];
+					const parentColumns = new Set(
+						parentGroupQuery.select
+							? [
+									...extractValidGroupByKeys(
+										parentGroupQuery.select,
+										parentByClauseArray,
+									),
+									...Object.keys(parentGroupQuery.aggregates ?? {}),
+								]
+							: [
+									...parentByClauseArray,
+									...Object.keys(parentGroupQuery.aggregates ?? {}),
+								],
 					);
-				}
-			}
 
-			if (where && !whereEngine.isExpression(where)) {
-				Object.entries(where).forEach(([key, val]) => {
-					if (!byClauseArray.includes(key) && !whereEngine.isExpression(val)) {
-						addError(
-							`Invalid where value: ${key} must either be in the "by" clause or be an expression`,
-							[...path, "group", "where", key],
-						);
-					}
-				});
-			}
-
-			if (order) {
-				orderClauseArray.forEach((orderItem) => {
-					Object.keys(orderItem).forEach((key) => {
-						if (!selectedKeys.has(key)) {
+					byClauseArray.forEach((byClause) => {
+						if (!parentColumns.has(byClause)) {
 							addError(
-								`Invalid order value: ${key} must either be in the "by", "select", or "aggregates" clause`,
-								[...path, "group", "order", key],
+								`Invalid by clause value "${byClause}". It must be a value in the parent's "select" clause or the key of an aggregate field. Valid: "${[...parentColumns].join('", "')}"`,
+								[...path, "group", ...groupPath],
+								select,
 							);
 						}
 					});
-				});
-			}
+				}
+
+				const selectedKeys = new Set([
+					...byClauseArray,
+					...Object.keys(select ?? {}),
+					...Object.keys(aggregates ?? {}),
+				]);
+
+				if (select) {
+					if (Array.isArray(select)) {
+						validateGroupSelectArray(select, byClauseArray);
+					} else if (typeof select === "object") {
+						validateGroupSelectObject(select, byClauseArray, [
+							...path,
+							"group",
+							"select",
+						]);
+					} else if (select !== "*") {
+						addError(
+							'Invalid select value: must be "*", an object, or an array.',
+							[...path, "select"],
+							select,
+						);
+					}
+				}
+
+				if (where && !whereEngine.isExpression(where)) {
+					Object.entries(where).forEach(([key, val]) => {
+						if (
+							!byClauseArray.includes(key) &&
+							!whereEngine.isExpression(val)
+						) {
+							addError(
+								`Invalid where value: ${key} must either be in the "by" clause or be an expression`,
+								[...path, "group", "where", key],
+							);
+						}
+					});
+				}
+
+				if (order) {
+					orderClauseArray.forEach((orderItem) => {
+						Object.keys(orderItem).forEach((key) => {
+							if (!selectedKeys.has(key)) {
+								addError(
+									`Invalid order value: ${key} must either be in the "by", "select", or "aggregates" clause`,
+									[...path, "group", "order", key],
+								);
+							}
+						});
+					});
+				}
+
+				if (group) {
+					validateGroupQuery(groupQuery.group, groupQuery, [
+						...groupPath,
+						"group",
+					]);
+				}
+			};
+
+			validateGroupQuery(query.group);
 		} else {
 			const select = query.select ?? query;
 

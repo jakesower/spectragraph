@@ -17,6 +17,12 @@
 			"id": "match-3",
 			"attributes": { "goals": 2, "ageGroup": 12 },
 			"relationships": {}
+		},
+		"match-4": {
+			"type": "matches",
+			"id": "match-4",
+			"attributes": { "goals": 3, "ageGroup": 13 },
+			"relationships": {}
 		}
 	}
 }
