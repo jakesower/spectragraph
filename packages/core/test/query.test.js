@@ -421,12 +421,190 @@ describe("validateQuery", () => {
 				type: "bears",
 				group: {
 					by: "yearIntroduced",
-					aggregates: { count: { $count: {} } },
+					aggregates: { count: { $count: null } },
 				},
 			};
 
 			const result = validateQuery(careBearSchema, query);
 			expect(result.length).toEqual(0);
+		});
+
+		describe("group.select", () => {
+			it("fails validation when grouping by an invalid attribute", () => {
+				const query = {
+					type: "bears",
+					group: { by: "notAnAttribute" },
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it("fails validation when selecting an invalid attribute", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: ["notAnAttribute"],
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it("fails validation when selecting a relationship", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: ["home"],
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it.skip("passes validation when selecting valid expressions", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: { computed: { $add: [1, 2] } },
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it.skip("fails validation when selecting invalid expressions", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: { computed: { $notAnExpression: [1, 2] } },
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+		});
+
+		describe("group.where (HAVING)", () => {
+			it.skip("passes validation with valid expression", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: { count: { $count: {} } },
+						where: { $gt: [{ $get: "count" }, 5] },
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it.skip("fails validation with invalid expression", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						where: { $notAnExpression: 2 },
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+		});
+
+		describe("group.order", () => {
+			it.skip("passes validation when ordering by select field", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: ["yearIntroduced"],
+						order: { yearIntroduced: "asc" },
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it.skip("passes validation when ordering by aggregate field", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: { count: { $count: {} } },
+						order: { count: "desc" },
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it.skip("fails validation when ordering by field not in select or aggregates", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: ["yearIntroduced"],
+						order: { notAField: "asc" },
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it.skip("fails validation with order object containing multiple keys", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						order: { yearIntroduced: "asc", name: "desc" },
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+		});
+
+		describe("group.limit/offset", () => {
+			it.skip("fails validation when limit is less than 1", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						limit: 0,
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it.skip("fails validation when offset is negative", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						offset: -1,
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
 		});
 	});
 
