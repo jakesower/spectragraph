@@ -4,12 +4,7 @@
 	"required": ["type"],
 	"allOf": [
 		{ "$ref": "#/definitions/query" },
-		{
-			"oneOf": [
-				{ "type": "object", "required": ["select"] },
-				{ "type": "object", "required": ["group"] }
-			]
-		}
+		{ "oneOf": [{ "required": ["select"] }, { "required": ["group"] }] }
 	],
 	"definitions": {
 		"subquery": {
@@ -32,7 +27,7 @@
 			"properties": {
 				"type": { "type": "string" },
 				"ids": { "type": "array", "items": { "type": ["string", "number"] } },
-				"where": {},
+				"where": { "type": "object" },
 				"order": { "$ref": "#/definitions/orderClause" },
 				"limit": { "$ref": "#/definitions/limitClause" },
 				"offset": { "$ref": "#/definitions/offsetClause" },
@@ -71,7 +66,7 @@
 							"type": "object",
 							"additionalProperties": { "$ref": "#/definitions/expression" }
 						},
-						"where": {},
+						"where": { "type": "object" },
 						"order": { "$ref": "#/definitions/orderClause" },
 						"limit": { "$ref": "#/definitions/limitClause" },
 						"offset": { "$ref": "#/definitions/offsetClause" },
@@ -89,7 +84,7 @@
 				"select": { "anyOf": [{ "$ref": "#/definitions/selectClause" }, {}] },
 				"id": { "type": ["string", "number"] },
 				"ids": { "type": "array", "items": { "type": ["string", "number"] } },
-				"where": {},
+				"where": { "type": "object" },
 				"order": { "$ref": "#/definitions/orderClause" },
 				"limit": { "$ref": "#/definitions/limitClause" },
 				"offset": { "$ref": "#/definitions/offsetClause" },
@@ -145,7 +140,7 @@
 		},
 		"selectClause": {
 			"oneOf": [
-				{ "type": "string" },
+				{ "type": "string", "const": "*" },
 				{
 					"type": "array",
 					"items": {
