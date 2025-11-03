@@ -3,6 +3,7 @@ import {
 	createExpressionEngine,
 	filteringPack,
 	projectionPack,
+	mathPack,
 } from "json-expressions";
 
 /**
@@ -21,6 +22,7 @@ export function createSelectEngine(config = {}) {
 		filteringPack,
 		projectionPack,
 		aggregationPack,
+		mathPack,
 		...(config.packs ?? []),
 	];
 	const { custom } = config;

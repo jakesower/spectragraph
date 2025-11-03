@@ -31,11 +31,11 @@
 			"additionalProperties": false,
 			"properties": {
 				"type": { "type": "string" },
-				"ids": {},
+				"ids": { "type": "array", "items": { "type": ["string", "number"] } },
 				"where": {},
-				"order": {},
-				"limit": {},
-				"offset": {},
+				"order": { "$ref": "#/definitions/orderClause" },
+				"limit": { "$ref": "#/definitions/limitClause" },
+				"offset": { "$ref": "#/definitions/offsetClause" },
 				"meta": {},
 				"group": {
 					"type": "object",
@@ -72,9 +72,9 @@
 							"additionalProperties": { "$ref": "#/definitions/expression" }
 						},
 						"where": {},
-						"order": {},
-						"limit": {},
-						"offset": {},
+						"order": { "$ref": "#/definitions/orderClause" },
+						"limit": { "$ref": "#/definitions/limitClause" },
+						"offset": { "$ref": "#/definitions/offsetClause" },
 						"meta": {}
 					}
 				}
@@ -87,12 +87,12 @@
 			"properties": {
 				"type": { "type": "string" },
 				"select": { "anyOf": [{ "$ref": "#/definitions/selectClause" }, {}] },
-				"id": {},
-				"ids": {},
+				"id": { "type": ["string", "number"] },
+				"ids": { "type": "array", "items": { "type": ["string", "number"] } },
 				"where": {},
-				"order": {},
-				"limit": {},
-				"offset": {},
+				"order": { "$ref": "#/definitions/orderClause" },
+				"limit": { "$ref": "#/definitions/limitClause" },
+				"offset": { "$ref": "#/definitions/offsetClause" },
 				"meta": {}
 			}
 		},
@@ -110,6 +110,39 @@
 				]
 			}
 		},
+		"expression": {
+			"type": "object",
+			"minProperties": 1,
+			"maxProperties": 1,
+			"patternProperties": { "^\\$.*": {} }
+		},
+		"aggregationSelectClauseObject": {
+			"type": "object",
+			"additionalProperties": {
+				"anyOf": [{ "type": "string" }, { "$ref": "#/definitions/expression" }]
+			}
+		},
+		"limitClause": { "type": "number", "minimum": 1 },
+		"offsetClause": { "type": "number", "minimum": 0 },
+		"orderClauseObject": {
+			"type": "object",
+			"minProperties": 1,
+			"maxProperties": 1,
+			"additionalProperties": {
+				"type": "string",
+				"enum": ["asc", "desc"]
+			}
+		},
+		"orderClauseArray": {
+			"type": "array",
+			"items": { "$ref": "#/definitions/orderClauseObject" }
+		},
+		"orderClause": {
+			"oneOf": [
+				{ "$ref": "#/definitions/orderClauseArray" },
+				{ "$ref": "#/definitions/orderClauseObject" }
+			]
+		},
 		"selectClause": {
 			"oneOf": [
 				{ "type": "string" },
@@ -124,18 +157,6 @@
 				},
 				{ "$ref": "#/definitions/selectObject" }
 			]
-		},
-		"expression": {
-			"type": "object",
-			"minProperties": 1,
-			"maxProperties": 1,
-			"patternProperties": { "^\\$.*": {} }
-		},
-		"aggregationSelectClauseObject": {
-			"type": "object",
-			"additionalProperties": {
-				"anyOf": [{ "type": "string" }, { "$ref": "#/definitions/expression" }]
-			}
 		}
 	}
 }

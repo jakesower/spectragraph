@@ -129,32 +129,15 @@ function getResourceStructureValidator(schema, resourceType, engines) {
 			fullGroupQuery: {
 				type: "object",
 				required: ["group"],
-				additionalProperties: false,
 				properties: {
 					type: { type: "string", const: resourceType },
 					ids: { type: "array", items: { type: "string" } },
 					limit: { type: "integer", minimum: 1 },
 					offset: { type: "integer", minimum: 0 },
-					where: {
-						anyOf: [
-							{ $ref: "#/definitions/whereExpression" },
-							{
-								type: "object",
-								properties: mapValues(
-									schema.resources[resourceType].attributes,
-									() => ({}),
-								),
-								additionalProperties: {
-									not: true,
-									errorMessage:
-										"is neither be an expression nor an object that uses valid attributes as keys",
-								},
-							},
-						],
-					},
+					where: { $ref: "#/definitions/whereClause" },
+					order: { $ref: "#/definitions/orderClause" },
 					group: {
 						type: "object",
-						additionalProperties: false,
 						properties: {
 							by: {
 								oneOf: [
@@ -168,7 +151,7 @@ function getResourceStructureValidator(schema, resourceType, engines) {
 									},
 								],
 							},
-							select: {}, // validate programatically
+							select: {}, // validated programatically
 							aggregates: {
 								type: "object",
 								additionalProperties: {
@@ -176,6 +159,25 @@ function getResourceStructureValidator(schema, resourceType, engines) {
 									$ref: "#/definitions/selectExpression",
 								},
 							},
+							where: {
+								anyOf: [
+									{ $ref: "#/definitions/whereExpression" },
+									{
+										type: "object",
+										properties: mapValues(
+											schema.resources[resourceType].attributes,
+											() => ({}),
+										),
+										additionalProperties: {
+											not: true,
+											errorMessage:
+												"is neither an expression nor an object that uses valid attributes as keys",
+										},
+									},
+								],
+							},
+							order: {}, // validated programatically
+
 							// group: {}, // For later? could be too ambitious
 						},
 					},
@@ -188,7 +190,6 @@ function getResourceStructureValidator(schema, resourceType, engines) {
 					{ not: { required: ["id", "ids"] } },
 					{ not: { required: ["group"] } },
 				],
-				additionalProperties: false,
 				properties: {
 					type: { type: "string", const: resourceType },
 					id: { type: "string" },
@@ -196,48 +197,14 @@ function getResourceStructureValidator(schema, resourceType, engines) {
 					select: {}, // validated programatically
 					limit: { type: "integer", minimum: 1 },
 					offset: { type: "integer", minimum: 0 },
-					where: {
-						anyOf: [
-							{ $ref: "#/definitions/whereExpression" },
-							{
-								type: "object",
-								properties: mapValues(
-									schema.resources[resourceType].attributes,
-									() => ({}),
-								),
-								additionalProperties: {
-									not: true,
-									errorMessage:
-										"is neither be an expression nor an object that uses valid attributes as keys",
-								},
-							},
-						],
-					},
-					order: {
-						oneOf: [
-							{
-								$ref: "#/definitions/orderItem",
-							},
-							{
-								type: "array",
-								items: {
-									$ref: "#/definitions/orderItem",
-								},
-							},
-						],
-						errorMessage:
-							'must be a value or array of values of the form { "attribute": "asc/desc" }',
-					},
+					where: { $ref: "#/definitions/whereClause" },
+					order: { $ref: "#/definitions/orderClause" },
 				},
 			},
 			orderItem: {
 				type: "object",
 				minProperties: 1,
 				maxProperties: 1,
-				properties: mapValues(
-					schema.resources[resourceType].attributes,
-					() => ({}),
-				),
 				additionalProperties: false,
 				errorMessage: {
 					maxProperties:
@@ -245,6 +212,49 @@ function getResourceStructureValidator(schema, resourceType, engines) {
 					minProperties:
 						'must have exactly one key with the name of an attribute and a value of "asc" or "desc"',
 				},
+			},
+			orderClauseObject: {
+				type: "object",
+				minProperties: 1,
+				maxProperties: 1,
+				additionalProperties: false,
+				properties: mapValues(
+					schema.resources[resourceType].attributes,
+					() => ({ type: "string", enum: ["asc", "desc"] }),
+				),
+				errorMessage: {
+					maxProperties:
+						'must have exactly one key with the name of an attribute and a value of "asc" or "desc"',
+					minProperties:
+						'must have exactly one key with the name of an attribute and a value of "asc" or "desc"',
+				},
+			},
+			orderClauseArray: {
+				type: "array",
+				items: { $ref: "#/definitions/orderClauseObject" },
+			},
+			orderClause: {
+				oneOf: [
+					{ $ref: "#/definitions/orderClauseObject" },
+					{ $ref: "#/definitions/orderClauseArray" },
+				],
+			},
+			whereClause: {
+				anyOf: [
+					{ $ref: "#/definitions/whereExpression" },
+					{
+						type: "object",
+						properties: mapValues(
+							schema.resources[resourceType].attributes,
+							() => ({}),
+						),
+						additionalProperties: {
+							not: true,
+							errorMessage:
+								"is neither an expression nor an object that uses valid attributes as keys",
+						},
+					},
+				],
 			},
 		},
 	};
@@ -452,7 +462,7 @@ export function validateQuery(schema, rootQuery, options = {}) {
 			prevPath,
 		) => {
 			Object.entries(groupSelectObj).forEach(([key, val]) => {
-				const currentPath = [...prevPath, key];
+				const currentPath = [...prevPath, "group", "select", key];
 
 				if (key === "*") return;
 
@@ -519,8 +529,16 @@ export function validateQuery(schema, rootQuery, options = {}) {
 		};
 
 		if ("group" in query) {
-			const { by, select } = query.group;
+			const { aggregates, by, order, select, where } = query.group;
+
 			const byClauseArray = Array.isArray(by) ? by : [by];
+			const orderClauseArray = Array.isArray(order) ? order : [order];
+
+			const selectedKeys = new Set([
+				...byClauseArray,
+				...Object.keys(select ?? {}),
+				...Object.keys(aggregates ?? {}),
+			]);
 
 			if (select) {
 				if (Array.isArray(select)) {
@@ -538,6 +556,30 @@ export function validateQuery(schema, rootQuery, options = {}) {
 						select,
 					);
 				}
+			}
+
+			if (where && !whereEngine.isExpression(where)) {
+				Object.entries(where).forEach(([key, val]) => {
+					if (!byClauseArray.includes(key) && !whereEngine.isExpression(val)) {
+						addError(
+							`Invalid where value: ${key} must either be in the "by" clause or be an expression`,
+							[...path, "group", "where", key],
+						);
+					}
+				});
+			}
+
+			if (order) {
+				orderClauseArray.forEach((orderItem) => {
+					Object.keys(orderItem).forEach((key) => {
+						if (!selectedKeys.has(key)) {
+							addError(
+								`Invalid order value: ${key} must either be in the "by", "select", or "aggregates" clause`,
+								[...path, "group", "order", key],
+							);
+						}
+					});
+				});
 			}
 		} else {
 			const select = query.select ?? query;
