@@ -55,7 +55,10 @@ const createErrorReporter =
 		value,
 	});
 
-function getResourceStructureValidator(schema, resourceType, whereEngine) {
+function getResourceStructureValidator(schema, resourceType, engines) {
+	const resSchema = schema.resources[resourceType];
+	const { selectEngine, whereEngine } = engines;
+
 	let resourceSchemaCache = whereEngine
 		? getResourceSchemaEECache(schema, whereEngine)
 		: getResourceSchemaCache(schema);
@@ -70,7 +73,17 @@ function getResourceStructureValidator(schema, resourceType, whereEngine) {
 		if (resourceSchema) return resourceSchema;
 	}
 
-	const extraExpressionRules = whereEngine
+	const extraSelectExpressionRules = whereEngine
+		? {
+				additionalProperties: false,
+				properties: selectEngine.expressionNames.reduce(
+					(acc, n) => ({ ...acc, [n]: {} }),
+					{},
+				),
+			}
+		: {};
+
+	const extraWhereExpressionRules = whereEngine
 		? {
 				additionalProperties: false,
 				properties: whereEngine.expressionNames.reduce(
@@ -84,18 +97,28 @@ function getResourceStructureValidator(schema, resourceType, whereEngine) {
 		oneOf: [
 			{ type: "string", const: "*" },
 			{ type: "array" },
-			{
-				type: "object",
-				not: { required: ["select"] },
-			},
-			{ $ref: "#/definitions/fullSelectQuery" },
+			{ $ref: "#/definitions/fullQuery" },
+			{ $ref: "#/definitions/selectClauseSubquery" },
 		],
 		definitions: {
-			expression: {
+			whereExpression: {
 				type: "object",
 				minProperties: 1,
 				maxProperties: 1,
-				...extraExpressionRules,
+				...extraWhereExpressionRules,
+			},
+			selectExpression: {
+				type: "object",
+				minProperties: 1,
+				maxProperties: 1,
+				...extraSelectExpressionRules,
+			},
+			selectClauseSubquery: {
+				type: "object",
+				allOf: [
+					{ not: { required: ["select"] } },
+					{ not: { required: ["group"] } },
+				],
 			},
 			fullQuery: {
 				oneOf: [
@@ -104,7 +127,9 @@ function getResourceStructureValidator(schema, resourceType, whereEngine) {
 				],
 			},
 			fullGroupQuery: {
+				type: "object",
 				required: ["group"],
+				additionalProperties: false,
 				properties: {
 					type: { type: "string", const: resourceType },
 					ids: { type: "array", items: { type: "string" } },
@@ -112,7 +137,7 @@ function getResourceStructureValidator(schema, resourceType, whereEngine) {
 					offset: { type: "integer", minimum: 0 },
 					where: {
 						anyOf: [
-							{ $ref: "#/definitions/expression" },
+							{ $ref: "#/definitions/whereExpression" },
 							{
 								type: "object",
 								properties: mapValues(
@@ -127,15 +152,43 @@ function getResourceStructureValidator(schema, resourceType, whereEngine) {
 							},
 						],
 					},
-					group: {},
+					group: {
+						type: "object",
+						additionalProperties: false,
+						properties: {
+							by: {
+								oneOf: [
+									{ type: "string", enum: Object.keys(resSchema.attributes) },
+									{
+										type: "array",
+										items: {
+											type: "string",
+											enum: Object.keys(resSchema.attributes),
+										},
+									},
+								],
+							},
+							select: {}, // validate programatically
+							aggregates: {
+								type: "object",
+								additionalProperties: {
+									type: "object",
+									$ref: "#/definitions/selectExpression",
+								},
+							},
+							// group: {}, // For later? could be too ambitious
+						},
+					},
 				},
 			},
 			fullSelectQuery: {
 				type: "object",
 				required: ["select"],
-				not: {
-					required: ["id", "ids", "group"],
-				},
+				allOf: [
+					{ not: { required: ["id", "ids"] } },
+					{ not: { required: ["group"] } },
+				],
+				additionalProperties: false,
 				properties: {
 					type: { type: "string", const: resourceType },
 					id: { type: "string" },
@@ -145,7 +198,7 @@ function getResourceStructureValidator(schema, resourceType, whereEngine) {
 					offset: { type: "integer", minimum: 0 },
 					where: {
 						anyOf: [
-							{ $ref: "#/definitions/expression" },
+							{ $ref: "#/definitions/whereExpression" },
 							{
 								type: "object",
 								properties: mapValues(
@@ -195,15 +248,18 @@ function getResourceStructureValidator(schema, resourceType, whereEngine) {
 			},
 		},
 	};
+
 	const compiled = defaultValidator.compile(ajvSchema);
 
 	resourceSchemasByType.set(resourceType, compiled);
 	return compiled;
 }
 
-function validateStructure(schema, query, type, whereEngine) {
+function validateStructure(schema, query, type, engines) {
+	const { selectEngine, whereEngine } = engines;
+
 	const errors = [];
-	const validator = getResourceStructureValidator(schema, type, whereEngine);
+	const validator = getResourceStructureValidator(schema, type, engines);
 
 	// Structure validation first
 	const structureIsValid = validator(query);
@@ -213,8 +269,15 @@ function validateStructure(schema, query, type, whereEngine) {
 		);
 	}
 
-	const expressionErrors = whereEngine.validateExpression(query.where ?? {});
-	errors.push(...expressionErrors);
+	const whereExpressionErrors = whereEngine.validateExpression(
+		query.where ?? {},
+	);
+	errors.push(...whereExpressionErrors);
+
+	Object.values(query.group?.aggregates ?? {}).forEach((expr) => {
+		const errs = selectEngine.validateExpression(expr);
+		errors.push(...errs);
+	});
 
 	return errors;
 }
@@ -270,12 +333,11 @@ export function validateQuery(schema, rootQuery, options = {}) {
 
 	const go = (query, type, path) => {
 		// validate the structure of the resource first
-		const structureErrors = validateStructure(
-			schema,
-			query,
-			type,
-			whereEngine, // WHERE expressions validated with whereEngine
-		);
+		const structureErrors = validateStructure(schema, query, type, {
+			selectEngine,
+			whereEngine,
+		});
+
 		if (structureErrors) {
 			errors.push(...structureErrors);
 			if (typeof query !== "object") return errors;
@@ -384,10 +446,99 @@ export function validateQuery(schema, rootQuery, options = {}) {
 			});
 		};
 
-		const validateGroupObject = () => {};
+		const validateGroupSelectObject = (
+			groupSelectObj,
+			byClauseArray,
+			prevPath,
+		) => {
+			Object.entries(groupSelectObj).forEach(([key, val]) => {
+				const currentPath = [...prevPath, key];
+
+				if (key === "*") return;
+
+				if (Array.isArray(val)) {
+					addError(
+						`Invalid selection "${key}": arrays not allowed in group object selects.`,
+						currentPath,
+					);
+					return;
+				}
+
+				if (typeof val === "object") {
+					if (!isValidSelectExpression(val)) {
+						addError(
+							`Invalid selection "${key}": not an expression.`,
+							currentPath,
+						);
+					}
+					return;
+				}
+
+				if (typeof val === "string") {
+					if (!byClauseArray.includes(val)) {
+						addError(
+							`Invalid attribute "${val}": not included in the "group.by" clause.`,
+							currentPath,
+							val,
+						);
+					}
+				}
+			});
+		};
+
+		const validateGroupSelectArray = (groupSelectArray, byClauseArray) => {
+			groupSelectArray.forEach((val, idx) => {
+				const currentPath = [...path, "group", "select", idx];
+
+				if (val === "*") return;
+
+				if (Array.isArray(val)) {
+					addError(
+						"Invalid selection: nested arrays not allowed.",
+						currentPath,
+						val,
+					);
+					return;
+				}
+
+				if (typeof val === "object") {
+					validateGroupSelectObject(val, byClauseArray, currentPath);
+					return;
+				}
+
+				if (typeof val === "string") {
+					if (!byClauseArray.includes(val)) {
+						addError(
+							`Invalid selection "${val}" in group select array: use "*" or an attribute picked in your "group.by" clause.`,
+							currentPath,
+							val,
+						);
+					}
+				}
+			});
+		};
 
 		if ("group" in query) {
-			validateGroupObject(query.group);
+			const { by, select } = query.group;
+			const byClauseArray = Array.isArray(by) ? by : [by];
+
+			if (select) {
+				if (Array.isArray(select)) {
+					validateGroupSelectArray(select, byClauseArray);
+				} else if (typeof select === "object") {
+					validateGroupSelectObject(select, byClauseArray, [
+						...path,
+						"group",
+						"select",
+					]);
+				} else if (select !== "*") {
+					addError(
+						'Invalid select value: must be "*", an object, or an array.',
+						[...path, "select"],
+						select,
+					);
+				}
+			}
 		} else {
 			const select = query.select ?? query;
 
