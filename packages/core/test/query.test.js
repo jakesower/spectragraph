@@ -605,6 +605,123 @@ describe("validateQuery", () => {
 				expect(result.length).toBeGreaterThan(0);
 			});
 		});
+
+		describe("group.group (nested grouping)", () => {
+			it("validates nested group with valid by field from parent select", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: ["yearIntroduced", "bellyBadge"],
+						select: ["yearIntroduced", "bellyBadge"],
+						group: {
+							by: "bellyBadge",
+							aggregates: { count: { $count: {} } },
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it("validates nested group with by field from parent aggregates", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: { total: { $count: {} } },
+						group: {
+							by: "total",
+							aggregates: { years: { $pluck: "yearIntroduced" } },
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it("validates nested group with computed field from parent select", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: {
+							year: "yearIntroduced",
+							era: {
+								$if: {
+									if: { $gte: [{ $get: "yearIntroduced" }, 1985] },
+									then: "modern",
+									else: "classic",
+								},
+							},
+						},
+						group: {
+							by: "era",
+							aggregates: { count: { $count: {} } },
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it("fails validation when nested by references field not in parent output", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: ["yearIntroduced"],
+						group: {
+							by: "bellyBadge",
+							aggregates: { count: { $count: {} } },
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it("fails validation when nested by references original resource attribute", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: { count: { $count: {} } },
+						group: {
+							by: "name", // 'name' is a resource attribute, not in parent output
+							aggregates: { total: { $sum: { $get: "count" } } },
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it("validates deeply nested grouping", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: ["yearIntroduced", "bellyBadge"],
+						select: ["yearIntroduced", "bellyBadge"],
+						group: {
+							by: "bellyBadge",
+							aggregates: { count: { $count: {} } },
+							group: {
+								by: "count",
+								aggregates: { badges: { $pluck: "bellyBadge" } },
+							},
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+		});
 	});
 
 	describe("real world issues", () => {
