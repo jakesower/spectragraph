@@ -680,4 +680,230 @@ export function runQueryTests(createStore) {
 			});
 		});
 	});
+
+	describe("grouping and aggregation", () => {
+		describe("basic grouping", () => {
+			it("groups by a single field with explicit select", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = {
+					type: "bears",
+					group: {
+						by: ["yearIntroduced"],
+						select: ["yearIntroduced"],
+					},
+				};
+
+				const result = await store.query(query);
+				expect(result).toEqual([
+					{ yearIntroduced: 1982 },
+					{ yearIntroduced: 2005 },
+				]);
+			});
+
+			it("empty select defaults to by fields", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = {
+					type: "bears",
+					group: {
+						by: ["yearIntroduced"],
+					},
+				};
+
+				const result = await store.query(query);
+				expect(result).toEqual([
+					{ yearIntroduced: 1982 },
+					{ yearIntroduced: 2005 },
+				]);
+			});
+
+			it("select can override/rename group fields", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = {
+					type: "bears",
+					group: {
+						by: ["yearIntroduced"],
+						select: { year: "yearIntroduced" },
+					},
+				};
+
+				const result = await store.query(query);
+				expect(result).toEqual([{ year: 1982 }, { year: 2005 }]);
+			});
+
+			it("groups by multiple fields", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = {
+					type: "bears",
+					group: {
+						by: ["yearIntroduced", "furColor"],
+					},
+				};
+
+				const result = await store.query(query);
+				expect(result).toEqual([
+					{ yearIntroduced: 1982, furColor: "tan" },
+					{ yearIntroduced: 1982, furColor: "carnation pink" },
+					{ yearIntroduced: 1982, furColor: "turquoise" },
+					{ yearIntroduced: 2005, furColor: "watermelon pink" },
+				]);
+			});
+		});
+
+		describe("aggregates", () => {
+			it("does a simple count aggregate", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: ["yearIntroduced"],
+						aggregates: { total: { $count: null } },
+					},
+				};
+
+				const result = await store.query(query);
+				expect(result).toEqual([
+					{ yearIntroduced: 1982, total: 3 },
+					{ yearIntroduced: 2005, total: 1 },
+				]);
+			});
+
+			it("combines select and aggregates", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = {
+					type: "bears",
+					group: {
+						by: ["yearIntroduced"],
+						select: { year: "yearIntroduced" },
+						aggregates: { count: { $count: null } },
+					},
+				};
+
+				const result = await store.query(query);
+				expect(result).toEqual([
+					{ year: 1982, count: 3 },
+					{ year: 2005, count: 1 },
+				]);
+			});
+		});
+
+		describe("group-level clauses", () => {
+			it("orders groups", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: ["yearIntroduced"],
+						aggregates: { total: { $count: null } },
+						order: { total: "desc" },
+					},
+				};
+
+				const result = await store.query(query);
+				expect(result).toEqual([
+					{ yearIntroduced: 1982, total: 3 },
+					{ yearIntroduced: 2005, total: 1 },
+				]);
+			});
+
+			it("filters groups with where", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: ["yearIntroduced"],
+						aggregates: { total: { $count: null } },
+						where: { $gt: [{ $get: "total" }, 1] },
+					},
+				};
+
+				const result = await store.query(query);
+				expect(result).toEqual([{ yearIntroduced: 1982, total: 3 }]);
+			});
+
+			it("limits and offsets groups", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: ["yearIntroduced"],
+						aggregates: { count: { $count: null } },
+						order: { yearIntroduced: "asc" },
+						limit: 1,
+						offset: 1,
+					},
+				};
+
+				const result = await store.query(query);
+				expect(result).toEqual([{ yearIntroduced: 2005, count: 1 }]);
+			});
+		});
+
+		describe("nested grouping", () => {
+			it("regroups based on a computed select", async () => {
+				const store = createStore(careBearSchema, {
+					initialData: careBearData,
+				});
+
+				const query = {
+					type: "bears",
+					group: {
+						by: ["yearIntroduced"],
+						select: [
+							"yearIntroduced",
+							{
+								era: {
+									$if: {
+										if: { $gte: [{ $get: "yearIntroduced" }, 2000] },
+										then: "modern",
+										else: "classic",
+									},
+								},
+							},
+						],
+						group: {
+							by: "era",
+							aggregates: { count: { $count: null } },
+						},
+					},
+				};
+
+				const result = await store.query(query);
+				expect(result).toEqual([
+					{ era: "classic", count: 1 },
+					{ era: "modern", count: 1 },
+				]);
+			});
+		});
+	});
 }

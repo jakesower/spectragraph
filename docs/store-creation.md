@@ -460,8 +460,8 @@ const result = await store.query({
 describe("Custom Store Features", () => {
   it("optimizes complex queries", async () => {
     const query = {
-      type: "users",
-      select: ["name", { posts: [{ comments: ["content"] }] }],
+      type: "patrons",
+      select: ["name", { loans: [{ reviews: ["content"] }] }],
     };
 
     const startTime = Date.now();

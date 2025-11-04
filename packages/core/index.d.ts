@@ -155,29 +155,59 @@ export type SelectClause =
 	| { [k: string]: string | Query | Expression | SelectClause }
 	| "*";
 
-interface BaseQuery {
+export interface GroupClause {
+	by: string | string[];
+	select?: SelectClause;
+	aggregates?: { [k: string]: Expression };
+	where?: { [k: string]: unknown };
+	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
+	limit?: number;
+	offset?: number;
+	group?: GroupClause;
+}
+
+interface BaseSelectQuery {
 	limit?: number;
 	offset?: number;
 	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
 	select: SelectClause;
 	type?: string;
 	where?: { [k: string]: unknown };
+	group?: never;
 }
 
+interface BaseGroupQuery {
+	limit?: number;
+	offset?: number;
+	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
+	group: GroupClause;
+	type?: string;
+	where?: { [k: string]: unknown };
+	select?: never;
+}
+
+type BaseQuery = BaseSelectQuery | BaseGroupQuery;
+
 export type Query =
-	| (BaseQuery & { id: string; ids?: never })
-	| (BaseQuery & { id?: never; ids: string[] })
-	| (BaseQuery & { id?: never; ids?: never });
+	| (BaseSelectQuery & { id: string; ids?: never })
+	| (BaseSelectQuery & { id?: never; ids: string[] })
+	| (BaseSelectQuery & { id?: never; ids?: never })
+	| (BaseGroupQuery & { id?: string; ids?: string[] });
 
 export type QueryOrSelect = Query | SelectClause;
 
-export interface RootQuery extends Omit<BaseQuery, "type"> {
-	type: string;
-	id?: string;
-	ids?: string[];
-}
+export type RootQuery =
+	| (Omit<BaseSelectQuery, "type"> & {
+			type: string;
+			id?: string;
+			ids?: string[];
+	  })
+	| (Omit<BaseGroupQuery, "type"> & {
+			type: string;
+			ids?: string[];
+	  });
 
-export interface NormalQuery extends Omit<BaseQuery, "select" | "type"> {
+export interface NormalQuery extends Omit<BaseSelectQuery, "select" | "type"> {
 	select: { [k: string]: string | NormalQuery | Expression };
 	order?: { [k: string]: "asc" | "desc" }[];
 	type: string;
