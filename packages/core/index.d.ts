@@ -159,11 +159,22 @@ export interface GroupClause {
 	by: string | string[];
 	select?: SelectClause;
 	aggregates?: { [k: string]: Expression };
-	where?: { [k: string]: unknown };
+	where?: Expression | { [k: string]: unknown };
 	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
 	limit?: number;
 	offset?: number;
 	group?: GroupClause;
+}
+
+export interface NormalGroupClause {
+	by: string | string[];
+	select?: { [k: string]: string | Expression };
+	aggregates?: { [k: string]: Expression };
+	where?: Expression | { [k: string]: unknown };
+	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
+	limit?: number;
+	offset?: number;
+	group?: NormalGroupClause;
 }
 
 interface BaseSelectQuery {
@@ -207,13 +218,24 @@ export type RootQuery =
 			ids?: string[];
 	  });
 
-export interface NormalQuery extends Omit<BaseSelectQuery, "select" | "type"> {
+export interface NormalSelectQuery
+	extends Omit<BaseSelectQuery, "select" | "type"> {
 	select: { [k: string]: string | NormalQuery | Expression };
 	order?: { [k: string]: "asc" | "desc" }[];
 	type: string;
 	id?: string;
 	ids?: string[];
 }
+
+export interface NormalGroupQuery
+	extends Omit<BaseGroupQuery, "group" | "type"> {
+	group: NormalGroupClause;
+	order?: { [k: string]: "asc" | "desc" }[];
+	type: string;
+	ids?: string[];
+}
+
+export type NormalQuery = NormalSelectQuery | NormalGroupQuery;
 
 // === RESOURCE TYPES ===
 
@@ -358,7 +380,7 @@ export interface Store {
 export function storeMutation<T>(
 	schema: Schema,
 	method: string,
-	fn: (normalResource: NormalResource) => T
+	fn: (normalResource: NormalResource) => T,
 ): {
 	(resourceType: string, flatResource: FlatResource): T;
 	(normalResource: CreateResource | UpdateResource): T;
