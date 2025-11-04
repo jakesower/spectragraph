@@ -119,6 +119,168 @@ const query = {
 };
 ```
 
+### Grouping and Aggregation
+
+SpectraGraph supports grouping and aggregation operations through the `group` clause, enabling analytics queries similar to SQL's GROUP BY functionality.
+
+#### Basic Grouping
+
+Group resources by one or more attributes:
+
+```javascript
+// Group matches by age group
+const query = {
+  type: "matches",
+  group: {
+    by: "ageGroup",
+  },
+};
+// Returns: [{ ageGroup: 11 }, { ageGroup: 12 }, { ageGroup: 13 }]
+
+// Group by multiple fields
+const query = {
+  type: "matches",
+  group: {
+    by: ["ageGroup", "field"],
+  },
+};
+```
+
+#### Aggregates
+
+Compute aggregate values for each group:
+
+```javascript
+// Count matches per age group
+const query = {
+  type: "matches",
+  group: {
+    by: "ageGroup",
+    aggregates: {
+      total: { $count: null },
+    },
+  },
+};
+// Returns: [
+//   { ageGroup: 11, total: 2 },
+//   { ageGroup: 12, total: 1 },
+//   { ageGroup: 13, total: 1 }
+// ]
+
+// Sum goals per age group
+const query = {
+  type: "matches",
+  group: {
+    by: "ageGroup",
+    aggregates: {
+      totalGoals: { $sum: { $pluck: "goals" } },
+    },
+  },
+};
+```
+
+#### Select in Groups
+
+Control which fields to include in results:
+
+```javascript
+// Rename fields
+const query = {
+  type: "matches",
+  group: {
+    by: "ageGroup",
+    select: { age: "ageGroup" }, // Rename ageGroup to age
+  },
+};
+
+// Compute derived fields
+const query = {
+  type: "matches",
+  group: {
+    by: "ageGroup",
+    select: [
+      "ageGroup",
+      {
+        tier: {
+          $if: {
+            if: { $gte: [{ $get: "ageGroup" }, 12] },
+            then: "senior",
+            else: "junior",
+          },
+        },
+      },
+    ],
+  },
+};
+```
+
+#### Filtering Within Groups
+
+Use `where` on a group clause to filter groups after aggregation (similar to SQL's HAVING):
+
+```javascript
+// Only show age groups with more than 2 total goals
+const query = {
+  type: "matches",
+  group: {
+    by: "ageGroup",
+    aggregates: { total: { $sum: { $pluck: "goals" } } },
+    where: { $gt: [{ $get: "total" }, 2] },
+  },
+};
+```
+
+#### Ordering, Limiting Groups
+
+Groups support the same query modifiers as regular queries:
+
+```javascript
+const query = {
+  type: "matches",
+  group: {
+    by: "ageGroup",
+    aggregates: { total: { $sum: { $pluck: "goals" } } },
+    order: { total: "desc" }, // Order by aggregate
+    limit: 5,
+    offset: 0,
+  },
+};
+```
+
+#### Nested Grouping
+
+Groups can be nested to create multi-level aggregations:
+
+```javascript
+// Group by age, compute tier, then regroup by tier
+const query = {
+  type: "matches",
+  group: {
+    by: "ageGroup",
+    select: [
+      "ageGroup",
+      {
+        tier: {
+          $if: {
+            if: { $gte: [{ $get: "ageGroup" }, 12] },
+            then: "senior",
+            else: "junior",
+          },
+        },
+      },
+    ],
+    group: {
+      by: "tier",
+      aggregates: { count: { $count: null } },
+    },
+  },
+};
+// Returns: [
+//   { tier: "junior", count: 1 },
+//   { tier: "senior", count: 2 }
+// ]
+```
+
 ### Expressions
 
 SpectraGraph queries support expressions for computed fields and conditional logic. These expressions are provided by the [json-expressions](https://github.com/jakesower/json-expressions) library, which offers a comprehensive set of operators for data transformation and filtering.

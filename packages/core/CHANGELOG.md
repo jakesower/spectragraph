@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Grouping and aggregation queries** via `group` clause with support for:
+  - Grouping by one or more attributes
+  - Aggregate functions (`$count`, `$sum`, `$pluck`, etc.) via `aggregates`
+  - Computed fields in `select` within groups
+  - Filtering groups with `where` (similar to SQL HAVING)
+  - Ordering, limiting, and offsetting groups
+  - Nested grouping for multi-level aggregations
+- Query validation and normalization support for group queries
+- Comprehensive test coverage for grouping functionality
+
+### Changed
+
+- Split `query.js` into separate `query/normalize-query.js` and `query/validate-query.js` modules for better separation of concerns
+- Query schema updated to support both `select` and `group` query types
+
 ## [0.4.0] - 2025-10-31
 
 ### Added

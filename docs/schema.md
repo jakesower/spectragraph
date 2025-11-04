@@ -458,40 +458,40 @@ const ecommerceSchema = {
 ```javascript
 const cmsSchema = {
   resources: {
-    articles: {
+    books: {
       attributes: {
         title: { type: "string" },
-        slug: { type: "string" },
+        isbn: { type: "string" },
         content: { type: "string" },
-        status: { type: "string", enum: ["draft", "published", "archived"] },
+        status: { type: "string", enum: ["available", "checked-out", "archived"] },
         publishedAt: { type: "string", format: "date-time" },
         createdAt: { type: "string", format: "date-time" },
         updatedAt: { type: "string", format: "date-time" },
       },
-      requiredAttributes: ["title", "slug"],
+      requiredAttributes: ["title", "isbn"],
       relationships: {
-        author: { type: "users", cardinality: "one" },
+        author: { type: "authors", cardinality: "one" },
         category: { type: "categories", cardinality: "one" },
         tags: { type: "tags", cardinality: "many" },
-        comments: { type: "comments", cardinality: "many" },
+        reviews: { type: "reviews", cardinality: "many" },
       },
     },
 
-    users: {
+    authors: {
       attributes: {
-        username: { type: "string" },
+        name: { type: "string" },
         email: { type: "string", format: "email" },
-        role: { type: "string", enum: ["admin", "editor", "author"] },
+        role: { type: "string", enum: ["primary", "contributor", "editor"] },
         active: { type: "boolean", default: true },
       },
       relationships: {
-        articles: {
-          type: "articles",
+        books: {
+          type: "books",
           cardinality: "many",
           inverse: "author",
         },
-        comments: {
-          type: "comments",
+        reviews: {
+          type: "reviews",
           cardinality: "many",
           inverse: "author",
         },
@@ -504,8 +504,8 @@ const cmsSchema = {
         description: { type: "string" },
       },
       relationships: {
-        articles: {
-          type: "articles",
+        books: {
+          type: "books",
           cardinality: "many",
           inverse: "category",
         },
@@ -518,30 +518,30 @@ const cmsSchema = {
         color: { type: "string" },
       },
       relationships: {
-        articles: { type: "articles", cardinality: "many" },
+        books: { type: "books", cardinality: "many" },
       },
     },
 
-    comments: {
+    reviews: {
       attributes: {
         content: { type: "string" },
         approved: { type: "boolean", default: false },
         createdAt: { type: "string", format: "date-time" },
       },
       relationships: {
-        article: {
-          type: "articles",
+        book: {
+          type: "books",
           cardinality: "one",
-          inverse: "comments",
+          inverse: "reviews",
         },
         author: {
-          type: "users",
+          type: "authors",
           cardinality: "one",
-          inverse: "comments",
+          inverse: "reviews",
         },
-        parent: { type: "comments", cardinality: "one" },
+        parent: { type: "reviews", cardinality: "one" },
         replies: {
-          type: "comments",
+          type: "reviews",
           cardinality: "many",
           inverse: "parent",
         },

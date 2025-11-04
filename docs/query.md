@@ -9,6 +9,7 @@ SpectraGraph queries are JSON objects that describe what data to fetch and how t
 - [Filtering with Where Clauses](#filtering-with-where-clauses)
 - [Sorting and Ordering](#sorting-and-ordering)
 - [Pagination](#pagination)
+- [Grouping and Aggregation](#grouping-and-aggregation)
 - [Expressions](#expressions)
 - [Relationship Traversal](#relationship-traversal)
 - [Advanced Patterns](#advanced-patterns)
@@ -19,7 +20,7 @@ Every query must specify a resource `type` and what fields to `select`:
 
 ```javascript
 {
-  type: "users",            // Required: resource type from schema
+  type: "patrons",            // Required: resource type from schema
   select: ["name", "email"] // Required: fields to return
 }
 ```
@@ -28,7 +29,7 @@ Optional query parameters:
 
 ```javascript
 {
-  type: "users",
+  type: "patrons",
   id: "123",               // Optional: fetch single resource by ID
   select: ["name"],
   where: { active: true }, // Optional: filtering conditions
@@ -47,7 +48,7 @@ SpectraGraph supports multiple ways to specify which fields to select:
 ```javascript
 // Select specific fields
 {
-  type: "users",
+  type: "patrons",
   select: ["name", "email", "createdAt"]
 }
 ```
@@ -57,10 +58,10 @@ SpectraGraph supports multiple ways to specify which fields to select:
 ```javascript
 // Field aliasing
 {
-  type: "users",
+  type: "patrons",
   select: {
-    userName: "name",        // Alias: key is output name, value is source field
-    userEmail: "email",
+    patronName: "name",        // Alias: key is output name, value is source field
+    patronEmail: "email",
     registered: "createdAt"
   }
 }
@@ -71,13 +72,13 @@ SpectraGraph supports multiple ways to specify which fields to select:
 ```javascript
 // Combine arrays and objects
 {
-  type: "users",
+  type: "patrons",
   select: [
     "name",                // Direct fields
     "email",
     {
-      fullName: { $concat: ["firstName", " ", "lastName"] }, // Expression
-      posts:  {
+      fullName: { $concat: [{ $get: "firstName" }, " ", { $get: "lastName" }] }, // Expression
+      loans:  {
         select: ["title"], // Relationship with sub-selection, requires explicit select since it also uses limit
         limit: 10,
       }
@@ -90,14 +91,14 @@ SpectraGraph supports multiple ways to specify which fields to select:
 
 ```javascript
 // Select all attributes
-{ type: "users", select: "*" }
+{ type: "patrons", select: "*" }
 
 // Select all attributes plus computed fields
 {
-  type: "users",
+  type: "patrons",
   select: [
     "*",
-    { postCount: { $count: "posts" } }
+    { loanCount: { $count: { $get: "loans" } } }
   ]
 }
 ```
@@ -108,11 +109,11 @@ SpectraGraph supports multiple ways to specify which fields to select:
 
 ```javascript
 {
-  type: "users",
+  type: "patrons",
   select: ["name"],
   where: {
     active: true, // default to equality
-    role: "admin"
+    membershipType: "premium"
   }
 }
 ```
@@ -121,7 +122,7 @@ SpectraGraph supports multiple ways to specify which fields to select:
 
 ```javascript
 {
-  type: "posts",
+  type: "loans",
   select: ["title"],
   where: {
     viewCount: { $gt: 100 },           // Greater than
@@ -137,26 +138,26 @@ SpectraGraph supports multiple ways to specify which fields to select:
 
 ```javascript
 {
-  type: "users",
+  type: "patrons",
   select: ["name"],
   where: {
-    role: ["admin", "editor"],              // Array shorthand for $in
+    membershipType: ["premium", "standard"],              // Array shorthand for $in
     status: { $nin: ["banned", "deleted"] } // Not in list
   }
 }
 
 // Explicit $in (same as array shorthand)
 {
-  type: "users",
+  type: "patrons",
   select: ["name"],
   where: {
-    role: { $in: ["admin", "editor"] }
+    membershipType: { $in: ["premium", "standard"] }
   }
 }
 
 // For exact array equality (rare), use $literal
 {
-  type: "users",
+  type: "patrons",
   select: ["name"],
   where: {
     tags: { $literal: ["javascript", "node"] } // Exact array match
@@ -168,26 +169,26 @@ SpectraGraph supports multiple ways to specify which fields to select:
 
 ```javascript
 {
-  type: "posts",
+  type: "loans",
   select: ["title"],
   where: {
     $or: [
       { published: true },
-      { author: "admin" }
+      { author: "premium" }
     ]
   }
 }
 
 // Complex logic
 {
-  type: "users",
+  type: "patrons",
   select: ["name"],
   where: {
     $and: [
       { active: true },
       {
         $or: [
-          { role: "admin" },
+          { membershipType: "premium" },
           { verified: true }
         ]
       }
@@ -197,7 +198,7 @@ SpectraGraph supports multiple ways to specify which fields to select:
 
 // Negation
 {
-  type: "posts",
+  type: "loans",
   select: ["title"],
   where: {
     $not: { status: "draft" }
@@ -211,7 +212,7 @@ SpectraGraph supports multiple ways to specify which fields to select:
 
 ```javascript
 {
-  type: "posts",
+  type: "loans",
   select: ["title"],
   order: { createdAt: "desc" }
 }
@@ -221,10 +222,10 @@ SpectraGraph supports multiple ways to specify which fields to select:
 
 ```javascript
 {
-  type: "users",
+  type: "patrons",
   select: ["name", "email"],
   order: [
-    { role: "asc" },      // Primary sort
+    { membershipType: "asc" },      // Primary sort
     { name: "asc" }       // Secondary sort
   ]
 }
@@ -234,13 +235,299 @@ SpectraGraph supports multiple ways to specify which fields to select:
 
 ```javascript
 {
-  type: "posts",
+  type: "loans",
   select: ["title"],
   order: { createdAt: "desc" },
   limit: 20,    // Max 20 results
   offset: 40    // Skip first 40 (page 3 if 20 per page)
 }
 ```
+
+## Grouping and Aggregation
+
+SpectraGraph supports grouping resources and computing aggregates, similar to SQL's GROUP BY functionality. Queries use either `select` (for regular queries) OR `group` (for aggregation queries), but not both at the top level.
+
+### Basic Grouping
+
+Group resources by one or more attributes:
+
+```javascript
+// Group by single field
+{
+  type: "books",
+  group: {
+    by: "genre"
+  }
+}
+// Returns: [{ genre: "fiction" }, { genre: "nonfiction" }, { genre: "science" }]
+
+// Group by multiple fields
+{
+  type: "books",
+  group: {
+    by: ["genre", "publishedYear"]
+  }
+}
+// Returns: [
+//   { genre: "fiction", publishedYear: 2020 },
+//   { genre: "fiction", publishedYear: 2021 },
+//   ...
+// ]
+```
+
+### Aggregates
+
+Compute aggregate values for each group:
+
+```javascript
+// Count records per group
+{
+  type: "books",
+  group: {
+    by: "genre",
+    aggregates: {
+      total: { $count: null }
+    }
+  }
+}
+// Returns: [
+//   { genre: "fiction", total: 150 },
+//   { genre: "nonfiction", total: 200 },
+//   ...
+// ]
+
+// Sum values
+{
+  type: "loans",
+  group: {
+    by: "status",
+    aggregates: {
+      totalFines: { $sum: { $pluck: "fineAmount" } }
+    }
+  }
+}
+
+// Multiple aggregates
+{
+  type: "books",
+  group: {
+    by: "genre",
+    aggregates: {
+      count: { $count: null },
+      avgPages: { $mean: { $pluck: "pageCount" } },
+      newestYear: { $max: { $pluck: "publishedYear" } },
+      oldestYear: { $min: { $pluck: "publishedYear" } }
+    }
+  }
+}
+```
+
+### Select in Groups
+
+Control output fields and add computed fields:
+
+```javascript
+// Rename fields
+{
+  type: "books",
+  group: {
+    by: "genre",
+    select: { category: "genre" }  // Rename genre to category
+  }
+}
+
+// Computed fields
+{
+  type: "books",
+  group: {
+    by: "pageCount",
+    select: [
+      "pageCount",
+      {
+        size: {
+          $if: {
+            if: { $gte: [{ $get: "pageCount" }, 400] },
+            then: "large",
+            else: "standard"
+          }
+        }
+      }
+    ]
+  }
+}
+
+// Mix of by fields, computed fields, and aggregates
+{
+  type: "loans",
+  group: {
+    by: ["status", "patronId"],
+    select: {
+      loanStatus: "status",
+      patron: "patronId"
+    },
+    aggregates: {
+      count: { $count: null },
+      totalFines: { $sum: { $pluck: "fineAmount" } }
+    }
+  }
+}
+```
+
+### Filtering Groups (HAVING)
+
+Use `where` on groups to filter after aggregation:
+
+```javascript
+// Only show genres with > 100 books
+{
+  type: "books",
+  group: {
+    by: "genre",
+    aggregates: {
+      count: { $count: null }
+    },
+    where: { $gt: [{ $get: "count" }, 100] }
+  }
+}
+
+// Complex filtering on aggregates
+{
+  type: "loans",
+  group: {
+    by: "patronId",
+    aggregates: {
+      totalFines: { $sum: { $pluck: "fineAmount" } },
+      loanCount: { $count: null }
+    },
+    where: {
+      $and: [
+        { $gt: [{ $get: "totalFines" }, 20] },
+        { $gte: [{ $get: "loanCount" }, 3] }
+      ]
+    }
+  }
+}
+```
+
+### Ordering, Limiting Groups
+
+Groups support the same ordering and pagination as regular queries:
+
+```javascript
+{
+  type: "books",
+  group: {
+    by: "genre",
+    aggregates: {
+      avgPages: { $mean: { $pluck: "pageCount" } }
+    },
+    order: { avgPages: "desc" },  // Order by aggregate
+    limit: 10,                     // Top 10 genres
+    offset: 0
+  }
+}
+
+// Sort by multiple fields
+{
+  type: "books",
+  group: {
+    by: ["genre", "publishedYear"],
+    aggregates: {
+      count: { $count: null }
+    },
+    order: [
+      { genre: "asc" },
+      { count: "desc" }
+    ]
+  }
+}
+```
+
+### Nested Grouping
+
+Create multi-level aggregations by nesting group clauses:
+
+```javascript
+// Group by genre, compute size category based on average pages, then regroup by size
+{
+  type: "books",
+  group: {
+    by: "genre",
+    aggregates: {
+      avgPages: { $mean: { $pluck: "pageCount" } }
+    },
+    select: [
+      "genre",
+      "avgPages",
+      {
+        size: {
+          $if: {
+            if: { $gte: [{ $get: "avgPages" }, 400] },
+            then: "long",
+            else: "short"
+          }
+        }
+      }
+    ],
+    group: {
+      by: "size",
+      aggregates: {
+        genreCount: { $count: null },
+        totalAvgPages: { $sum: { $pluck: "avgPages" } }
+      }
+    }
+  }
+}
+// Returns: [
+//   { size: "long", genreCount: 2, totalAvgPages: 950 },
+//   { size: "short", genreCount: 3, totalAvgPages: 800 }
+// ]
+```
+
+### Top-Level WHERE vs Group WHERE
+
+Important distinction:
+
+```javascript
+// Top-level WHERE filters BEFORE grouping (like SQL WHERE)
+{
+  type: "books",
+  where: { publishedYear: { $gte: 2020 } },  // Filter books first
+  group: {
+    by: "genre",
+    aggregates: {
+      count: { $count: null }
+    }
+  }
+}
+
+// Group WHERE filters AFTER grouping (like SQL HAVING)
+{
+  type: "books",
+  group: {
+    by: "genre",
+    aggregates: {
+      count: { $count: null }
+    },
+    where: { $gt: [{ $get: "count" }, 50] }  // Filter groups
+  }
+}
+
+// Both together
+{
+  type: "books",
+  where: { publishedYear: { $gte: 2020 } },  // First: filter books
+  group: {
+    by: "genre",
+    aggregates: {
+      count: { $count: null }
+    },
+    where: { $gt: [{ $get: "count" }, 50] }  // Then: filter groups
+  }
+}
+```
+
+**Note:** Grouping is currently supported in memory-store. SQL store support is in development.
 
 ## Expressions
 
@@ -250,19 +537,19 @@ SpectraGraph includes a powerful expression system for computations and transfor
 
 ```javascript
 {
-  type: "products",
+  type: "books",
   select: {
-    name: "name",
-    price: "price",
-    isExpensive: { $gt: ["price", 100] },
-    category: {
+    title: "title",
+    pageCount: "pageCount",
+    isLongBook: { $gt: [{ $get: "pageCount" }, 400] },
+    readingLevel: {
       $case: {
-        value: "price",
+        value: { $get: "pageCount" },
         cases: [
-          { when: { $gte: 100 }, then: "Premium" },
-          { when: { $gte: 50 }, then: "Standard" }
+          { when: { $gte: 500 }, then: "Advanced" },
+          { when: { $gte: 250 }, then: "Intermediate" }
         ],
-        default: "Budget"
+        default: "Beginner"
       }
     }
   }
@@ -273,11 +560,11 @@ SpectraGraph includes a powerful expression system for computations and transfor
 
 ```javascript
 {
-  type: "users",
+  type: "patrons",
   select: {
-    fullName: { $concat: ["firstName", " ", "lastName"] },
-    upperName: { $uppercase: "name" },
-    lowerEmail: { $lowercase: "email" },
+    fullName: { $concat: [{ $get: "firstName" }, " ", { $get: "lastName" }] },
+    upperName: { $uppercase: { $get: "name" } },
+    lowerEmail: { $lowercase: { $get: "email" } },
   }
 }
 ```
@@ -286,7 +573,7 @@ SpectraGraph includes a powerful expression system for computations and transfor
 
 ```javascript
 {
-  type: "users",
+  type: "patrons",
   select: {
     name: "name",
     status: {
@@ -298,7 +585,7 @@ SpectraGraph includes a powerful expression system for computations and transfor
     },
     tier: {
       $case: {
-        value: "points",
+        value: { $get: "points" },
         cases: [
           { when: { $gte: 1000 }, then: "Gold" },
           { when: { $gte: 500 }, then: "Silver" }
@@ -316,9 +603,9 @@ SpectraGraph includes a powerful expression system for computations and transfor
 
 ```javascript
 {
-  type: "users",
+  type: "patrons",
   select: ["name", {
-    posts: ["title", "createdAt"]  // One-to-many relationship
+    loans: ["title", "createdAt"]  // One-to-many relationship
   }]
 }
 ```
@@ -327,13 +614,13 @@ SpectraGraph includes a powerful expression system for computations and transfor
 
 ```javascript
 {
-  type: "users",
+  type: "patrons",
   select: ["name", {
-    posts: ["title", {
-      comments: [      // Posts -> Comments (nested relationship)
+    loans: ["title", {
+      reviews: [      // Loans -> Reviews (nested relationship)
         "content",
         {
-          author: ["name"]  // Comments -> Author (three levels deep)
+          author: ["name"]  // Reviews -> Author (three levels deep)
         }
       ]
     }]
@@ -345,11 +632,11 @@ SpectraGraph includes a powerful expression system for computations and transfor
 
 ```javascript
 {
-  type: "users",
+  type: "patrons",
   select: ["name", {
-    posts: {
+    loans: {
       select: ["title"],
-      where: { published: true },  // Only published posts
+      where: { status: "active" },  // Only active loans
       order: { createdAt: "desc" },
       limit: 5
     }
@@ -367,14 +654,14 @@ const fields = ["name", "email"];
 const includeStats = true;
 
 const query = {
-  type: "users",
+  type: "patrons",
   select: [
     ...fields,
     ...(includeStats
       ? [
           {
-            postCount: { $count: "posts" },
-            avgRating: { $mean: "posts" },
+            loanCount: { $count: { $get: "loans" } },
+            avgRating: { $mean: { $get: "loans" } },
           },
         ]
       : []),
@@ -386,22 +673,22 @@ const query = {
 
 ```javascript
 {
-  type: "orders",
+  type: "loans",
   select: {
-    orderNumber: "orderNumber",
-    hasExpressShipping: { $eq: ["shippingMethod", "express"] },
-    status: {
+    loanId: "loanId",
+    isOverdue: { $eq: [{ $get: "status" }, "overdue"] },
+    displayStatus: {
       $case: {
-        value: "orderStatus",
+        value: { $get: "status" },
         cases: [
-          { when: "pending", then: "Processing" },
-          { when: "shipped", then: "On the way" },
-          { when: "delivered", then: "Complete" }
+          { when: "active", then: "Currently Borrowed" },
+          { when: "returned", then: "Returned" },
+          { when: "overdue", then: "Please Return" }
         ],
         default: "Unknown"
       }
     },
-    isHighValue: { $gt: ["total", 500] }
+    hasLargeFine: { $gt: [{ $get: "fineAmount" }, 10] }
   }
 }
 ```
@@ -426,35 +713,35 @@ Common validation errors and how to fix them:
 
 // Correct
 {
-  type: "users",
+  type: "patrons",
   select: ["name"]
 }
 
 // Wrong: Invalid attribute reference
 {
-  type: "users",
+  type: "patrons",
   select: ["nonexistentField"]
 }
 
 // Correct: Check your schema for valid attribute names
 {
-  type: "users",
+  type: "patrons",
   select: ["name"]  // 'name' exists in schema
 }
 
 // Wrong: Invalid relationship syntax
 {
-  type: "users",
+  type: "patrons",
   select: {
-    posts: "title"  // Should be array or object with select
+    loans: "title"  // Should be array or object with select
   }
 }
 
 // Correct
 {
-  type: "users",
+  type: "patrons",
   select: {
-    posts: ["title"]  // Array syntax
+    loans: ["title"]  // Array syntax
   }
 }
 ```

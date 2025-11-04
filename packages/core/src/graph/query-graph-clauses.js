@@ -28,7 +28,7 @@ function createGroupQueryGraphClauses(groupQuery, options = {}) {
 			const invalidProp = properties.find((p) => !columnsSet.has(p));
 			if (invalidProp) {
 				throw new Error(
-					`invalid group "order" clause: '${invalidProp}' is not a valid field from "groups.select" or "groups.aggregates"`,
+					`invalid group "order" clause: '${invalidProp}' is not a valid field from "group.select" or "group.aggregates"`,
 				);
 			}
 

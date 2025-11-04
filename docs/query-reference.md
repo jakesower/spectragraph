@@ -12,6 +12,7 @@
 - [Where Clause](#where-clause)
 - [Ordering](#ordering)
 - [Pagination](#pagination)
+- [Grouping and Aggregation](#grouping-and-aggregation)
 - [Subqueries](#subqueries)
 - [Expressions](#expressions)
 - [Result Shapes](#result-shapes)
@@ -382,43 +383,43 @@ Use expression operators for comparisons:
 // Numeric comparisons
 where: {
   age: {
-    $gte: 18;
+    $gte: 18,
   }
 }
 where: {
   renewalCount: {
-    $lt: 3;
+    $lt: 3,
   }
 }
 
 // String matching
 where: {
   name: {
-    $matchesRegex: "^Kenji";
+    $matchesRegex: "^Kenji",
   }
 }
 where: {
   email: {
-    $matchesLike: "%@example.com";
+    $matchesLike: "%@example.com",
   }
 }
 
 // Array membership
 where: {
   membershipType: {
-    $in: ["basic", "premium"];
+    $in: ["basic", "premium"],
   }
 }
 where: {
   status: {
-    $nin: ["suspended", "expired"];
+    $nin: ["suspended", "expired"],
   }
 }
 
 // Negation
 where: {
   returned: {
-    $ne: true;
+    $ne: true,
   }
 }
 ```
@@ -449,7 +450,7 @@ where: {
 where: {
   $not: {
     status: {
-      $eq: "banned";
+      $eq: "banned",
     }
   }
 }
@@ -726,6 +727,481 @@ Limit and offset work in relationship subqueries:
 
 ---
 
+## Grouping and Aggregation
+
+SpectraGraph supports grouping resources and computing aggregates via the `group` clause. Queries use either `select` (regular queries) OR `group` (aggregation queries), but not both at the top level.
+
+**Availability:** Currently supported in memory-store. SQL store support is in development.
+
+### Basic Syntax
+
+```javascript
+{
+  type: "books",
+  group: {
+    by: "genre",                    // Required: field(s) to group by
+    select: ["genre"],              // Optional: fields to return (defaults to `by`)
+    aggregates: {                   // Optional: computed aggregates
+      total: { $count: null }
+    },
+    where: { ... },                 // Optional: filter within groups
+    order: { total: "desc" },       // Optional: sort groups
+    limit: 10,                      // Optional: limit groups
+    offset: 0                       // Optional: skip groups
+  }
+}
+```
+
+### Group By
+
+Specify one or more attributes to group by:
+
+```javascript
+// Single field
+{
+  type: "books",
+  group: {
+    by: "genre"
+  }
+}
+// Returns: [{ genre: "fiction" }, { genre: "nonfiction" }]
+
+// Multiple fields
+{
+  type: "books",
+  group: {
+    by: ["genre", "publishedYear"]
+  }
+}
+// Returns: [
+//   { genre: "fiction", publishedYear: 2020 },
+//   { genre: "fiction", publishedYear: 2021 },
+//   ...
+// ]
+
+// Array form (same as single string)
+{
+  type: "books",
+  group: {
+    by: ["genre"]  // Equivalent to: by: "genre"
+  }
+}
+```
+
+**Rules:**
+
+- `by` is required
+- Must reference valid schema attributes (not relationships)
+- Can be a string or array of strings
+- Groups with null values are grouped together
+
+### Aggregates
+
+Compute values over each group using expressions:
+
+```javascript
+{
+  type: "books",
+  group: {
+    by: "genre",
+    aggregates: {
+      count: { $count: null },
+      totalPages: { $sum: { $pluck: "pageCount" } },
+      avgPages: { $mean: { $pluck: "pageCount" } },
+      longestBook: { $max: { $pluck: "pageCount" } },
+      shortestBook: { $min: { $pluck: "pageCount" } }
+    }
+  }
+}
+// Returns: [
+//   {
+//     genre: "fiction",
+//     count: 150,
+//     totalPages: 45000,
+//     avgPages: 300,
+//     longestBook: 650,
+//     shortestBook: 180
+//   },
+//   ...
+// ]
+```
+
+**Common Aggregate Patterns:**
+
+```javascript
+// Count items
+{
+  $count: null;
+}
+
+// Sum field values
+{
+  $sum: {
+    $pluck: "fieldName";
+  }
+}
+
+// Average
+{
+  $mean: {
+    $pluck: "fieldName";
+  }
+}
+
+// Maximum
+{
+  $max: {
+    $pluck: "fieldName";
+  }
+}
+
+// Minimum
+{
+  $min: {
+    $pluck: "fieldName";
+  }
+}
+
+// Collect values into array
+{
+  $pluck: "fieldName";
+}
+
+// Multiple operations composed
+{
+  $sum: {
+    $map: {
+      $multiply: [{ $get: "quantity" }, { $get: "price" }];
+    }
+  }
+}
+```
+
+**Rules:**
+
+- Each aggregate must be a valid SELECT expression
+- Can reference any field from the grouped resources
+- Cannot reference relationships directly
+
+Aggregates operate on the array of items in each group. That means you'll want to use `$pluck` instead of `$get` for most of your addressing needs. This can take a bit of getting used to at first.
+
+### Select in Groups
+
+Control which fields appear in output and add computed fields:
+
+```javascript
+// Default: `by` fields are automatically selected
+{
+  type: "books",
+  group: {
+    by: "genre"
+  }
+}
+// Returns: [{ genre: "fiction" }, { genre: "nonfiction" }]
+
+// Explicit select (rename fields)
+{
+  type: "books",
+  group: {
+    by: "genre",
+    select: { category: "genre" }
+  }
+}
+// Returns: [{ category: "fiction" }, { category: "nonfiction" }]
+
+// Computed fields
+{
+  type: "books",
+  group: {
+    by: "pageCount",
+    select: [
+      "pageCount",
+      {
+        tier: {
+          $if: {
+            if: { $gte: [{ $get: "pageCount" }, 1000] },
+            then: "sprawling",
+            else: "reasonable"
+          }
+        }
+      }
+    ]
+  }
+}
+
+// Mix of select and aggregates
+{
+  type: "books",
+  group: {
+    by: ["genre", "publishedYear"],
+    select: {
+      category: "genre",
+      year: "publishedYear"
+    },
+    aggregates: {
+      count: { $count: null }
+    }
+  }
+}
+// Returns: [
+//   { category: "fiction", year: 2020, count: 45 },
+//   ...
+// ]
+```
+
+**Rules:**
+
+- `select` is optional (defaults to `by` fields)
+- Can only reference `by` fields (not arbitrary attributes)
+- Cannot reference relationships
+- Supports expressions for computed fields
+- Computed fields can be used in nested grouping
+
+### Filtering Within Groups
+
+**Top-Level Where** (filters resources before grouping):
+
+```javascript
+{
+  type: "books",
+  where: { year: 2024 },        // Filter sales BEFORE grouping
+  group: {
+    by: "genre",
+    aggregates: {
+      count: { $count: null }
+    }
+  }
+}
+```
+
+**Group-Level Where** (filters groups after aggregation, like SQL HAVING):
+
+```javascript
+{
+  type: "books",
+  group: {
+    by: "genre",
+    aggregates: {
+      count: { $count: null }
+    },
+    where: { $gt: [{ $get: "count" }, 100] }  // Filter GROUPS
+  }
+}
+// Returns only regions with >100 sales
+```
+
+**Both Together:**
+
+```javascript
+{
+  type: "books",
+  where: { year: 2024 },          // First: filter sales records
+  group: {
+    by: "genre",
+    aggregates: {
+      revenue: { $sum: { $pluck: "pageCount" } }
+    },
+    where: { $gt: [{ $get: "avgPages" }, 400] }  // Then: filter groups
+  }
+}
+```
+
+**Rules:**
+
+- Top-level `where` filters resources (applied before grouping)
+- Group-level `where` filters groups (applied after aggregation)
+- Group `where` can reference fields from `select` or `aggregates`
+- Uses the same expressions as regular queries
+
+### Ordering Groups
+
+Sort groups by any field in `select` or `aggregates`:
+
+```javascript
+// Sort by aggregate
+{
+  type: "books",
+  group: {
+    by: "genre",
+    aggregates: {
+      revenue: { $sum: { $pluck: "pageCount" } }
+    },
+    order: { revenue: "desc" }
+  }
+}
+
+// Sort by group field
+{
+  type: "books",
+  group: {
+    by: ["genre", "publishedYear"],
+    order: [
+      { genre: "asc" },
+      { publishedYear: "asc" }
+    ]
+  }
+}
+
+// Sort by computed field
+{
+  type: "books",
+  group: {
+    by: "genre",
+    select: [
+      "genre",
+      { tier: { $if: { ... } } }
+    ],
+    order: { tier: "desc" }
+  }
+}
+```
+
+**Rules:**
+
+- Can only order by fields from `select` or `aggregates`
+- Cannot order by `by` fields unless they're in `select`
+- Uses same syntax as regular query `order`
+
+### Pagination with Groups
+
+Limit and offset work on groups (not individual resources):
+
+```javascript
+{
+  type: "books",
+  group: {
+    by: "genre",
+    aggregates: {
+      revenue: { $sum: { $pluck: "pageCount" } }
+    },
+    order: { revenue: "desc" },
+    limit: 10,      // Top 10 genres
+    offset: 0
+  }
+}
+
+// Paginate groups
+{
+  type: "books",
+  group: {
+    by: ["author", "genre"],
+    aggregates: { count: { $count: null } },
+    order: [{ author: "asc" }, { genre: "asc" }],
+    limit: 20,
+    offset: 40    // Skip first 40 groups
+  }
+}
+```
+
+### Nested Grouping
+
+Groups can contain nested `group` clauses for multi-level aggregation:
+
+```javascript
+{
+  type: "books",
+  group: {
+    by: "genre",
+    select: {
+      isSpeculativeFiction: {
+        $pipe: [{ $get: "genre" }, { $in: ["fantasy", "science fiction"] }]
+      }
+    },
+    group: {                       // Nested group
+      by: "isSpeculativeFiction",
+      aggregates: {
+        bookCount: { $count: null },
+      },
+      order: { bookCount: "desc" }
+    }
+  }
+}
+// Returns: [
+//   { isSpeculativeFiction: true, bookCount: 943 },
+//   { isSpeculativeFiction: false, bookCount: 19322 }
+// ]
+```
+
+**Rules:**
+
+- Nested groups operate on the results of the parent group
+- Can reference any field from parent's `select` or `aggregates`
+- Supports arbitrary nesting depth
+- Each level can have its own `where`, `order`, `limit`, `offset`
+
+### Complete Example
+
+```javascript
+{
+  type: "books",
+  // Filter resources before grouping
+  where: {
+    publishedYear: { $gte: 2020 },
+    inPrint: true
+  },
+  // Group and aggregate
+  group: {
+    by: ["genre", "author"],
+    select: {
+      category: "genre",
+      writer: "author"
+    },
+    aggregates: {
+      bookCount: { $count: null },
+      totalPages: { $sum: { $pluck: "pageCount" } },
+      avgPages: { $mean: { $pluck: "pageCount" } }
+    },
+    // Filter groups (HAVING)
+    where: { $gt: [{ $get: "bookCount" }, 3] },
+    // Sort groups
+    order: [
+      { totalPages: "desc" },
+      { category: "asc" }
+    ],
+    // Paginate groups
+    limit: 20,
+    offset: 0
+  }
+}
+```
+
+### Query Structure with Groups
+
+When using `group`, the query structure changes:
+
+```javascript
+// Regular query (select mode)
+{
+  type: "books",
+  select: ["genre", "pageCount"],  // Required for regular queries
+  where: { ... },
+  order: { ... },
+  limit: 10
+}
+
+// Aggregation query (group mode)
+{
+  type: "books",
+  group: {                      // Mutually exclusive with `select`
+    by: "genre",
+    aggregates: { ... }
+  },
+  where: { ... },               // Filters resources before grouping
+  order: { ... },               // Sorts before grouping
+  limit: 10                     // Limits before grouping (offset OK too)
+}
+```
+
+**Important:** When using `group`:
+
+- Top-level `select` is not allowed (use `group.select` instead)
+- Top-level `where` filters resources before grouping
+- Top-level `order`, `limit`, `offset` are applied before grouping
+- Top-level `id` is not supported with grouping
+- Top-level `ids` can be used to group specific resources
+
+---
+
 ## Subqueries
 
 Any relationship can include a full query with almost all standard query operations. `id` and `ids` are not supported.
@@ -808,13 +1284,7 @@ Queries can nest to arbitrary depth:
 }
 ```
 
-**Performance Warning:** Deep nesting can cause performance issues:
-
-- **N+1 queries** in some stores
-- **Large result sets** when multiplying relationships
-- **Memory usage** in client-side stores
-
-Check your store's documentation for optimization strategies.
+**Note:** Deep nesting can sometimes cause performance issues, including multiple queries, large result sets, and high memory usage. Take care to monitor these queries and ensure you're working with your store's way of doing things.
 
 ### Subquery Result Shapes
 
@@ -977,30 +1447,30 @@ where: {
 ```javascript
 // Numeric
 {
-  $eq: 5;
+  $eq: 5,
 } // Equal to 5
 {
-  $ne: 0;
+  $ne: 0,
 } // Not equal to 0
 {
-  $gt: 10;
+  $gt: 10,
 } // Greater than 10
 {
-  $gte: 18;
+  $gte: 18,
 } // Greater than or equal to 18
 {
-  $lt: 100;
+  $lt: 100,
 } // Less than 100
 {
-  $lte: 65;
+  $lte: 65,
 } // Less than or equal to 65
 
 // Array membership
 {
-  $in: ["active", "pending"];
+  $in: ["active", "pending"],
 }
 {
-  $nin: ["deleted", "banned"];
+  $nin: ["deleted", "banned"],
 }
 ```
 
@@ -1015,8 +1485,8 @@ where: {
 // OR
 {
   $or: [
-    { $eq: [{ $get: "role" }, "admin"] },
-    { $eq: [{ $get: "role" }, "moderator"] },
+    { $eq: [{ $get: "membershipType" }, "premium"] },
+    { $eq: [{ $get: "membershipType" }, "moderator"] },
   ];
 }
 
@@ -1032,33 +1502,21 @@ where: {
 
 ```javascript
 // Count relationships
-postCount: {
-  $count: "posts";
+loanCount: {
+  $count: "loans",
 }
 
 // Sum values
-totalSpent: {
+totalFines: {
   $sum: {
-    $get: "orders.$.amount";
+    $get: "loans.$.fineAmount",
   }
 }
 
 // Average
 avgRating: {
   $avg: {
-    $get: "reviews.$.rating";
-  }
-}
-
-// Min/Max
-cheapest: {
-  $min: {
-    $get: "products.$.price";
-  }
-}
-mostExpensive: {
-  $max: {
-    $get: "products.$.price";
+    $get: "reviews.$.rating",
   }
 }
 ```
@@ -1067,18 +1525,18 @@ mostExpensive: {
 
 ```javascript
 // Map over array
-postTitles: {
-  $map: [{ $get: "posts" }, { $get: "title" }];
+bookTitles: {
+  $map: [{ $get: "books" }, { $get: "title" }],
 }
 
 // Filter array
-publishedPosts: {
-  $filter: [{ $get: "posts" }, { $get: "published" }];
+activeLoans: {
+  $filter: [{ $get: "loans" }, { $get: "active" }],
 }
 
 // Join strings
 tags: {
-  $join: [{ $get: "tagList" }, ", "];
+  $join: [{ $get: "genreList" }, ", "],
 }
 ```
 
@@ -1113,11 +1571,11 @@ ageGroup: {
 ```javascript
 // Basic arithmetic
 total: {
-  $add: [{ $get: "subtotal" }, { $get: "tax" }, { $get: "shipping" }];
+  $add: [{ $get: "subtotal" }, { $get: "tax" }],
 }
 
 discount: {
-  $multiply: [{ $get: "price" }, 0.15];
+  $multiply: [{ $get: "price" }, 0.15],
 }
 
 // Complex calculation
@@ -1133,25 +1591,39 @@ finalPrice: {
 
 See the [json-expressions documentation](https://github.com/jakesower/json-expressions) for the complete list of operators and detailed usage.
 
-**Core:** `$compose`, `$debug`, `$ensurePath`, `$get`, `$prop`, `$isPresent`, `$literal`, `$pipe`
+#### WHERE Clause Operators
 
-**Conditionals:** `$switch`, `$case`, `$if`
+The WHERE clause uses the `filteringPack` from json-expressions.
+
+**Comparisons:** `$between`, `$eq`, `$gt`, `$gte`, `$in`, `$lt`, `$lte`, `$ne`, `$nin`
 
 **Logic:** `$and`, `$not`, `$or`
 
-**Comparisons:** `$eq`, `$gt`, `$gte`, `$lt`, `$lte`, `$in`, `$nin`, `$ne`
+**Pattern Matching:** `$exists`, `$isEmpty`, `$isPresent`, `$matchesAll`, `$matchesRegex`
 
-**Pattern Matching:** `$matchesRegex`, `$matchesLike`, `$matchesGlob`
+**Array Filtering:** `$all`, `$any`, `$filter`, `$filterBy`, `$find`
 
-**Aggregation (SELECT only):** `$count`, `$max`, `$min`, `$mean`, `$median`, `$mode`, `$sum`
+#### SELECT Clause Operators
 
-**Array Operations (SELECT only):** `$all`, `$any`, `$append`, `$filter`, `$find`, `$flatMap`, `$join`, `$map`, `$prepend`, `$reverse`
+The SELECT clause uses `filteringPack`, `projectionPack`, `aggregationPack`, and `mathPack` from json-expressions.
 
-**Math (SELECT only):** `$add`, `$subtract`, `$multiply`, `$divide`, `$modulo`
+**Data Access:** `$get`, `$select`
 
-**Generative (SELECT only):** `$random`, `$uuid`
+**Conditionals:** `$case`, `$if`
 
-**Temporal (SELECT only):** `$nowLocal`, `$nowUTC`, `$timestamp`
+**Logic:** `$and`, `$not`, `$or`
+
+**Comparisons:** `$between`, `$eq`, `$gt`, `$gte`, `$in`, `$lt`, `$lte`, `$ne`, `$nin`
+
+**Pattern Matching:** `$exists`, `$isEmpty`, `$isPresent`, `$matchesRegex`
+
+**Aggregation:** `$count`, `$first`, `$groupBy`, `$last`, `$max`, `$mean`, `$min`, `$sum`
+
+**Array Operations:** `$all`, `$any`, `$concat`, `$filter`, `$filterBy`, `$find`, `$flatMap`, `$join`, `$map`, `$pluck`, `$unique`
+
+**String Operations:** `$lowercase`, `$substring`, `$uppercase`
+
+**Math:** `$abs`, `$add`, `$divide`, `$modulo`, `$multiply`, `$pow`, `$sqrt`, `$subtract`
 
 ---
 
@@ -1397,32 +1869,23 @@ function paginateQuery(baseQuery, page, perPage = 10) {
 {
   type: "loans",
   select: {
-    dueDate: "dueDate",
+    title: "title",
     renewalCount: "renewalCount",
     status: {
-      $if: {
-        if: { $get: "returned" },
-        then: "returned",
-        else: { $if: {
-          if: { $lt: [{ $get: "dueDate" }, { $nowLocal: null }] },
-          then: "overdue",
-          else: "active"
-        }}
+      $case: {
+        value: { $get: "status" },
+        cases: [
+          { when: "returned", then: "Returned" },
+          { when: "overdue", then: "Overdue" }
+        ],
+        default: "Active"
       }
     },
-    daysOverdue: {
+    canRenew: {
       $if: {
-        if: { $get: "returned" },
-        then: 0,
-        else: {
-          $max: [
-            0,
-            { $subtract: [
-              { $timestamp: { $nowLocal: null } },
-              { $timestamp: { $get: "dueDate" } }
-            ]}
-          ]
-        }
+        if: { $lt: [{ $get: "renewalCount" }, 3] },
+        then: true,
+        else: false
       }
     }
   }
@@ -1433,17 +1896,18 @@ function paginateQuery(baseQuery, page, perPage = 10) {
   type: "patrons",
   select: {
     name: "name",
-    totalLoans: { $count: "loans" },
+    totalLoans: { $count: { $get: "loans" } },
+    overdueCount: { $count: { $get: "overdueLoans" } },
     lateFeeBase: {
       $multiply: [
-        { $count: "overdueLoans" },
+        { $count: { $get: "overdueLoans" } },
         5.00
       ]
     },
     processingFee: 2.50,
     totalFees: {
       $add: [
-        { $multiply: [{ $count: "overdueLoans" }, 5.00] },
+        { $multiply: [{ $count: { $get: "overdueLoans" } }, 5.00] },
         2.50
       ]
     }
@@ -1621,7 +2085,7 @@ results.sort((a, b) => b.loanCount - a.loanCount);
   }
 }
 
-// Workaround: Filter in SELECT, then in application
+// Workaround 1: Filter in SELECT, then in application
 const patrons = await store.query({
   type: "patrons",
   select: {
@@ -1631,7 +2095,18 @@ const patrons = await store.query({
 });
 const filtered = patrons.filter(p => p.loanCount > 5);
 
-// Using both id and ids
+// Workaround 2: Use a group query (typically better than workaround 1)
+const filteredWithAggregation = await store.query({
+  type: "patrons",
+  group: {
+    by: "name",
+    aggregates: { loanCount: { $count: null } },
+    where: { loanCount: { $gt: 5 } }
+  }
+});
+
+
+// Using both id and ids (ERROR)
 {
   type: "patrons",
   id: "p1",
