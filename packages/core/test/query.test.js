@@ -372,14 +372,17 @@ describe("validateQuery", () => {
 			expect(result.length).toBeGreaterThan(0);
 		});
 
-		it('does not validate with an empty array "by" clause', () => {
+		it('validates with an empty array "by" clause for grand totals', () => {
 			const query = {
-				type: "matches",
-				group: { by: [] },
+				type: "bears",
+				group: {
+					by: [],
+					aggregates: { totalBears: { $count: null } },
+				},
 			};
 
 			const result = validateQuery(careBearSchema, query);
-			expect(result.length).toBeGreaterThan(0);
+			expect(result.length).toEqual(0);
 		});
 
 		it("does not validate with an array aggregates clause", () => {

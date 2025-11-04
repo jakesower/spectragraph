@@ -123,6 +123,28 @@ const query = {
 
 SpectraGraph supports grouping and aggregation operations through the `group` clause, enabling analytics queries similar to SQL's GROUP BY functionality.
 
+#### Grand Totals
+
+Aggregate all resources into a single group using an empty `by` array:
+
+```javascript
+// Compute totals across all matches
+const query = {
+  type: "matches",
+  group: {
+    by: [],
+    aggregates: {
+      totalMatches: { $count: null },
+      totalGoals: { $sum: { $pluck: "goals" } },
+      avgGoals: { $mean: { $pluck: "goals" } },
+    },
+  },
+};
+// Returns: [{ totalMatches: 150, totalGoals: 423, avgGoals: 2.82 }]
+```
+
+This is equivalent to SQL aggregates without a GROUP BY clause.
+
 #### Basic Grouping
 
 Group resources by one or more attributes:

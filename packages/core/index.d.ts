@@ -155,6 +155,10 @@ export type SelectClause =
 	| { [k: string]: string | Query | Expression | SelectClause }
 	| "*";
 
+/**
+ * Group clause for aggregation queries.
+ * Use `by: []` to create grand totals (aggregate all resources into one group).
+ */
 export interface GroupClause {
 	by: string | string[];
 	select?: SelectClause;
