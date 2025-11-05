@@ -527,8 +527,6 @@ Important distinction:
 }
 ```
 
-**Note:** Grouping is currently supported in memory-store. SQL store support is in development.
-
 ## Expressions
 
 SpectraGraph includes a powerful expression system for computations and transformations:
