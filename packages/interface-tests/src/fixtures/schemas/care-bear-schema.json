@@ -30,7 +30,7 @@
 		"homes": {
 			"idAttribute": "id",
 			"attributes": {
-				"id": { "type": "string" },
+				"id": { "type": "integer" },
 				"name": { "type": "string" },
 				"location": { "type": "object" },
 				"caringMeter": { "type": "number" },

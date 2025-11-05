@@ -245,7 +245,7 @@ export type NormalQuery = NormalSelectQuery | NormalGroupQuery;
 
 export interface Ref {
 	type: string;
-	id: string;
+	id: string | number;
 }
 
 export interface BaseResource {
@@ -253,13 +253,13 @@ export interface BaseResource {
 }
 
 export interface NormalResource extends BaseResource {
-	id: string;
+	id: string | number;
 	attributes: { [k: string]: unknown };
 	relationships: { [k: string]: Ref | Ref[] | null };
 }
 
 export interface PartialNormalResource extends BaseResource {
-	id?: string;
+	id?: string | number;
 	attributes?: { [k: string]: unknown };
 	relationships?: { [k: string]: Ref | Ref[] | null };
 }

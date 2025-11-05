@@ -1460,3 +1460,154 @@ describe("mergeNormalResources", () => {
 		});
 	});
 });
+
+describe("numeric ID support", () => {
+	describe("create validation", () => {
+		it("passes validation with a numeric ID", () => {
+			const result = validateCreateResource(soccerSchema, {
+				type: "fields",
+				id: 123,
+				attributes: { name: "Tempe Elementary B" },
+			});
+			expect(result.length).toEqual(0);
+		});
+
+		it("passes validation with a numeric ID in relationships", () => {
+			const result = validateCreateResource(soccerSchema, {
+				type: "games",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: {
+						type: "teams",
+						id: 456,
+					},
+				},
+			});
+			expect(result.length).toEqual(0);
+		});
+	});
+
+	describe("update validation", () => {
+		it("passes validation with a numeric ID", () => {
+			const result = validateUpdateResource(soccerSchema, {
+				type: "fields",
+				id: 789,
+				attributes: { name: "Tempe Elementary B" },
+			});
+			expect(result.length).toEqual(0);
+		});
+
+		it("passes validation with a numeric ID in relationships", () => {
+			const result = validateUpdateResource(soccerSchema, {
+				type: "games",
+				id: 100,
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: { type: "teams", id: 200 },
+				},
+			});
+			expect(result.length).toEqual(0);
+		});
+	});
+
+	describe("delete validation", () => {
+		it("passes validation with a numeric ID", () => {
+			const result = validateDeleteResource(soccerSchema, {
+				type: "teams",
+				id: 999,
+			});
+			expect(result.length).toEqual(0);
+		});
+	});
+
+	describe("merge validation", () => {
+		it("passes validation with a numeric ID for update", () => {
+			const result = validateMergeResource(soccerSchema, {
+				type: "teams",
+				id: 42,
+				attributes: { name: "Tempe Wave" },
+			});
+			expect(result.length).toEqual(0);
+		});
+
+		it("passes validation with numeric ID in nested relationships", () => {
+			const result = validateMergeResource(soccerSchema, {
+				type: "games",
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: {
+						type: "teams",
+						id: 300,
+						attributes: { name: "Scottsdale Surf" },
+						relationships: {
+							homeField: {
+								type: "fields",
+								id: 400,
+							},
+						},
+					},
+				},
+			});
+			expect(result.length).toEqual(0);
+		});
+	});
+
+	describe("mergeNormalResources with numeric IDs", () => {
+		it("merges resources with numeric IDs", () => {
+			const left = {
+				type: "fields",
+				id: 1,
+				attributes: { name: "Field A" },
+				relationships: {},
+			};
+			const right = {
+				type: "fields",
+				id: 1,
+				attributes: { capacity: 5000 },
+				relationships: {},
+			};
+
+			const result = mergeNormalResources(left, right);
+
+			expect(result).toEqual({
+				type: "fields",
+				id: 1,
+				attributes: {
+					name: "Field A",
+					capacity: 5000,
+				},
+				relationships: {},
+			});
+		});
+
+		it("throws error when numeric IDs are different", () => {
+			const left = { type: "fields", id: 1, attributes: {} };
+			const right = { type: "fields", id: 2, attributes: {} };
+
+			expect(() => mergeNormalResources(left, right)).toThrow();
+		});
+	});
+
+	describe("float ID rejection", () => {
+		it("fails validation with a float ID", () => {
+			const result = validateCreateResource(soccerSchema, {
+				type: "fields",
+				id: 123.456,
+				attributes: { name: "Tempe Elementary B" },
+			});
+			expect(result.length).toBeGreaterThan(0);
+		});
+
+		it("fails validation with a float ID in relationships", () => {
+			const result = validateUpdateResource(soccerSchema, {
+				type: "games",
+				id: 100,
+				attributes: { homeScore: 5, awayScore: 1 },
+				relationships: {
+					homeTeam: { type: "teams", id: 200.5 },
+				},
+			});
+			expect(result.length).toBeGreaterThan(0);
+		});
+	});
+});
