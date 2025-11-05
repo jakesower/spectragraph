@@ -206,6 +206,22 @@ describe("update validation", () => {
 		expect(result.length).toEqual(0);
 	});
 
+	it("passes validation on an object with a type, and integer ID", () => {
+		const result = validateUpdateResource(soccerSchema, {
+			type: "games",
+			id: 1,
+		});
+		expect(result.length).toEqual(0);
+	});
+
+	it("passes validation on an object with a type, and string ID where there should be an integer", () => {
+		const result = validateUpdateResource(soccerSchema, {
+			type: "games",
+			id: "1",
+		});
+		expect(result.length).toBeGreaterThan(0);
+	});
+
 	it("passes validation with an valid type", () => {
 		const result = validateUpdateResource(soccerSchema, {
 			type: "fields",
@@ -257,7 +273,7 @@ describe("update validation", () => {
 	it("passes validation with a null, non-required relationship", () => {
 		const result = validateUpdateResource(soccerSchema, {
 			type: "games",
-			id: "1",
+			id: 1,
 			attributes: { homeScore: 5, awayScore: 1 },
 			relationships: {
 				homeTeam: null,
@@ -269,7 +285,7 @@ describe("update validation", () => {
 	it("passes validation with a valid relationship", () => {
 		const result = validateUpdateResource(soccerSchema, {
 			type: "games",
-			id: "1",
+			id: 1,
 			attributes: { homeScore: 5, awayScore: 1 },
 			relationships: {
 				homeTeam: { type: "teams", id: "abc" },
@@ -486,7 +502,7 @@ describe("resource merge validation", () => {
 		it("fails validation with an invalid minimum", () => {
 			const result = validateUpdateResource(soccerSchema, {
 				type: "games",
-				id: "1",
+				id: 1,
 				attributes: { homeScore: 5, awayScore: -1 },
 			});
 			expect(result.length).toBeGreaterThan(0);
@@ -504,7 +520,7 @@ describe("resource merge validation", () => {
 		it("fails validation with an invalid related resource", () => {
 			const result = validateUpdateResource(soccerSchema, {
 				type: "games",
-				id: "1",
+				id: 1,
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
 					homeTeam: {},
@@ -516,7 +532,7 @@ describe("resource merge validation", () => {
 		it("passes validation with a null, non-required relationship", () => {
 			const result = validateUpdateResource(soccerSchema, {
 				type: "games",
-				id: "1",
+				id: 1,
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
 					homeTeam: null,
@@ -528,7 +544,7 @@ describe("resource merge validation", () => {
 		it("passes validation with a valid relationship", () => {
 			const result = validateUpdateResource(soccerSchema, {
 				type: "games",
-				id: "1",
+				id: 1,
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
 					homeTeam: { type: "teams", id: "abc" },
@@ -1465,14 +1481,14 @@ describe("numeric ID support", () => {
 	describe("create validation", () => {
 		it("passes validation with a numeric ID", () => {
 			const result = validateCreateResource(soccerSchema, {
-				type: "fields",
+				type: "games",
 				id: 123,
-				attributes: { name: "Tempe Elementary B" },
+				attributes: { homeScore: 1, awayScore: 2 },
 			});
 			expect(result.length).toEqual(0);
 		});
 
-		it("passes validation with a numeric ID in relationships", () => {
+		it("fails validation with a numeric ID in relationships whith a string ID", () => {
 			const result = validateCreateResource(soccerSchema, {
 				type: "games",
 				attributes: { homeScore: 5, awayScore: 1 },
@@ -1483,6 +1499,18 @@ describe("numeric ID support", () => {
 					},
 				},
 			});
+			expect(result.length).toBeGreaterThan(0);
+		});
+
+		it("passes validation with a proper numeric ID in relationships", () => {
+			const result = validateCreateResource(soccerSchema, {
+				type: "teams",
+				attributes: { name: "Tempe Surf" },
+				relationships: {
+					homeGames: [{ type: "games", id: 123 }],
+					homeField: { type: "fields", id: "hi" },
+				},
+			});
 			expect(result.length).toEqual(0);
 		});
 	});
@@ -1490,20 +1518,33 @@ describe("numeric ID support", () => {
 	describe("update validation", () => {
 		it("passes validation with a numeric ID", () => {
 			const result = validateUpdateResource(soccerSchema, {
-				type: "fields",
+				type: "games",
 				id: 789,
-				attributes: { name: "Tempe Elementary B" },
+				attributes: { homeScore: 1, awayScore: 1 },
 			});
 			expect(result.length).toEqual(0);
 		});
 
-		it("passes validation with a numeric ID in relationships", () => {
+		it("passes validation with a proper string ID in relationships", () => {
 			const result = validateUpdateResource(soccerSchema, {
 				type: "games",
 				id: 100,
 				attributes: { homeScore: 5, awayScore: 1 },
 				relationships: {
-					homeTeam: { type: "teams", id: 200 },
+					homeTeam: { type: "teams", id: "200" },
+				},
+			});
+			expect(result.length).toEqual(0);
+		});
+
+		it("passes validation with a proper numeric ID in relationships", () => {
+			const result = validateUpdateResource(soccerSchema, {
+				type: "teams",
+				id: "100",
+				attributes: { name: "Tempe Surf" },
+				relationships: {
+					homeGames: [{ type: "games", id: 123 }],
+					homeField: { type: "fields", id: "hi" },
 				},
 			});
 			expect(result.length).toEqual(0);
@@ -1513,19 +1554,35 @@ describe("numeric ID support", () => {
 	describe("delete validation", () => {
 		it("passes validation with a numeric ID", () => {
 			const result = validateDeleteResource(soccerSchema, {
-				type: "teams",
+				type: "games",
 				id: 999,
 			});
 			expect(result.length).toEqual(0);
+		});
+
+		it("fails validation with a numeric ID where a string is expected", () => {
+			const result = validateDeleteResource(soccerSchema, {
+				type: "teams",
+				id: 999,
+			});
+			expect(result.length).toBeGreaterThan(0);
+		});
+
+		it("fails validation with a string ID where a number is expected", () => {
+			const result = validateDeleteResource(soccerSchema, {
+				type: "games",
+				id: "999",
+			});
+			expect(result.length).toBeGreaterThan(0);
 		});
 	});
 
 	describe("merge validation", () => {
 		it("passes validation with a numeric ID for update", () => {
 			const result = validateMergeResource(soccerSchema, {
-				type: "teams",
+				type: "games",
 				id: 42,
-				attributes: { name: "Tempe Wave" },
+				attributes: { homeScore: 1, awayScore: 2 },
 			});
 			expect(result.length).toEqual(0);
 		});
