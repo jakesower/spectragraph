@@ -95,9 +95,9 @@ Every query is an object with these components:
 
 ### Optional Fields
 
-- **`id`** _(string)_ - Fetch a single resource by ID. Returns single object or `null`. Mutually exclusive with `ids`.
+- **`id`** _(string | number)_ - Fetch a single resource by ID. Returns single object or `null`. Mutually exclusive with `ids`.
 
-- **`ids`** _(string[])_ - Fetch multiple specific resources by IDs. Returns array. Mutually exclusive with `id`.
+- **`ids`** _((string | number)[])_ - Fetch multiple specific resources by IDs. Returns array. Mutually exclusive with `id`.
 
 - **`where`** _(object)_ - Filter conditions. See [Where Clause](#where-clause).
 

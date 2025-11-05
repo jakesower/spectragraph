@@ -12,7 +12,7 @@ import { defaultSelectEngine, defaultValidator } from "./lib/defaults.js";
 /**
  * @typedef {Object} Ref
  * @property {string} type
- * @property {string} id
+ * @property {string|number} id
  */
 
 /**
@@ -26,7 +26,7 @@ import { defaultSelectEngine, defaultValidator } from "./lib/defaults.js";
 
 /**
  * @typedef {BaseResource & {
- *   id: string,
+ *   id: string|number,
  *   attributes: Object<string, *>,
  *   relationships: Object<string, Ref|Ref[]|null>,
  * }} NormalResource
@@ -34,7 +34,7 @@ import { defaultSelectEngine, defaultValidator } from "./lib/defaults.js";
 
 /**
  * @typedef {BaseResource & {
- *   id?: string,
+ *   id?: string|number,
  *   attributes?: Object<string, *>,
  *   relationships?: Object<string, Ref|Ref[]|null>,
  * }} PartialNormalResource
@@ -61,7 +61,7 @@ import { defaultSelectEngine, defaultValidator } from "./lib/defaults.js";
 /**
  * @typedef {Object} DeleteResource - A resource reference for deletion
  * @property {string} type - The resource type
- * @property {string} id - The resource ID
+ * @property {string|number} id - The resource ID
  * @property {Object<string, *>} [attributes] - Optional attributes (for optimistic deletion)
  * @property {Object<string, Ref|Ref[]|null>} [relationships] - Optional relationships (for optimistic deletion)
  */
@@ -99,7 +99,7 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 
 	return {
 		type: { const: resource.type },
-		id: { type: "string" },
+		id: { type: ["string", "integer"] },
 		attributes: {
 			type: "object",
 			required: resSchema.requiredAttributes ?? [],
@@ -127,7 +127,7 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 								required: ["type", "id"],
 								properties: {
 									type: { const: relSchema.type },
-									id: { type: "string" },
+									id: { type: ["string", "integer"] },
 								},
 							}
 						: {
@@ -137,7 +137,7 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 										required: ["type", "id"],
 										properties: {
 											type: { const: relSchema.type },
-											id: { type: "string" },
+											id: { type: ["string", "integer"] },
 										},
 									},
 									{ type: "null" },
@@ -150,7 +150,7 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 								required: ["type", "id"],
 								properties: {
 									type: { const: relSchema.type },
-									id: { type: "string" },
+									id: { type: ["string", "integer"] },
 								},
 							},
 						},
@@ -534,7 +534,7 @@ export function validateMergeResource(schema, resource, options = {}) {
 					type: "object",
 					required: ["type", "id"],
 					additionalProperties: false,
-					properties: { type: { const: type }, id: { type: "string" } },
+					properties: { type: { const: type }, id: { type: ["string", "integer"] } },
 				},
 				{ $ref: `#/definitions/create/${type}` },
 				{ $ref: `#/definitions/update/${type}` },
@@ -593,7 +593,7 @@ export function validateMergeResource(schema, resource, options = {}) {
 				additionalProperties: false,
 				properties: {
 					type: { const: resName },
-					id: { type: "string" },
+					id: { type: ["string", "integer"] },
 					new: { type: "boolean", const: false },
 					attributes: {
 						type: "object",
