@@ -84,11 +84,7 @@
 			"properties": {
 				"by": {
 					"oneOf": [
-						{
-							"type": "array",
-							"minItems": 1,
-							"items": { "type": "string" }
-						},
+						{ "type": "array", "items": { "type": "string" } },
 						{ "type": "string" }
 					]
 				},
