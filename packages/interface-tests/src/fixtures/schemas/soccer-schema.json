@@ -25,7 +25,7 @@
 			"idAttribute": "id",
 			"requiredAttributes": ["homeScore", "awayScore"],
 			"attributes": {
-				"id": { "type": "string" },
+				"id": { "type": "integer" },
 				"homeScore": { "type": "integer", "minimum": 0 },
 				"awayScore": { "type": "integer", "minimum": 0 },
 				"status": { "type": "string", "default": "scheduled" },

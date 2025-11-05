@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). This project is still in v0.x versioning and will not follow semantic versioning until v1.0. Instead, expect minor dot changes to sometimes introduce breaking changes. Patch versions will not break anything.
 
+## [0.5.3] - 2025-11-05
+
+- Strengthened validation on ID types.
+
 ## [0.5.2] - 2025-11-05
 
 ### Added

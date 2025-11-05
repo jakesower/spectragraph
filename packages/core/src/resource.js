@@ -75,6 +75,11 @@ import { defaultSelectEngine, defaultValidator } from "./lib/defaults.js";
  * @property {function(import('./query.js').RootQuery): Promise<*>} query - Queries the store
  */
 
+const getIdType = (schema, resourceType) =>
+	schema.resources[resourceType]?.attributes[
+		schema.resources[resourceType]?.idAttribute ?? "id"
+	]?.type;
+
 /**
  * Creates a new validator instance
  * @param {Object} options
@@ -93,13 +98,12 @@ export const createValidator = ({ ajvSchemas = [] } = {}) => {
 
 const resourceValidationProperties = (schema, resource, options = {}) => {
 	const { allowExtraAttributes = false } = options;
-
 	const resSchema = schema.resources[resource.type];
 	const requiredRelationships = resSchema.requiredRelationships ?? [];
 
 	return {
 		type: { const: resource.type },
-		id: { type: ["string", "integer"] },
+		id: { type: getIdType(schema, resource.type) },
 		attributes: {
 			type: "object",
 			required: resSchema.requiredAttributes ?? [],
@@ -111,7 +115,6 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 							not: true,
 							errorMessage:
 								"attributes must not have extra properties; extra property is ${0#}",
-							// errorMessage: "Unknown attribute \"${0#}\": not defined in schema",
 						},
 					}),
 		},
@@ -127,7 +130,7 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 								required: ["type", "id"],
 								properties: {
 									type: { const: relSchema.type },
-									id: { type: ["string", "integer"] },
+									id: { type: getIdType(schema, relSchema.type) },
 								},
 							}
 						: {
@@ -137,7 +140,7 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 										required: ["type", "id"],
 										properties: {
 											type: { const: relSchema.type },
-											id: { type: ["string", "integer"] },
+											id: { type: getIdType(schema, relSchema.type) },
 										},
 									},
 									{ type: "null" },
@@ -150,7 +153,7 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 								required: ["type", "id"],
 								properties: {
 									type: { const: relSchema.type },
-									id: { type: ["string", "integer"] },
+									id: { type: getIdType(schema, relSchema.type) },
 								},
 							},
 						},
@@ -463,6 +466,8 @@ export function validateUpdateResource(schema, resource, options = {}) {
  * @returns {Array} Array of validation errors
  */
 export function validateDeleteResource(schema, resource) {
+	const idType = getIdType(schema, resource.type);
+
 	if (typeof schema !== "object") {
 		return [
 			{ message: "Invalid schema: expected object, got " + typeof schema },
@@ -483,6 +488,12 @@ export function validateDeleteResource(schema, resource) {
 	if (!resource.id) {
 		return [{ message: "Missing resource ID: required for delete operation" }];
 	}
+	if (typeof resource.id !== (idType === "integer" ? "number" : "string")) {
+		return [
+			{ message: "Wrong resource ID type: required for delete operation" },
+		];
+	}
+
 	return [];
 }
 
@@ -534,7 +545,10 @@ export function validateMergeResource(schema, resource, options = {}) {
 					type: "object",
 					required: ["type", "id"],
 					additionalProperties: false,
-					properties: { type: { const: type }, id: { type: ["string", "integer"] } },
+					properties: {
+						type: { const: type },
+						id: { type: ["string", "integer"] },
+					},
 				},
 				{ $ref: `#/definitions/create/${type}` },
 				{ $ref: `#/definitions/update/${type}` },
