@@ -1,9 +1,77 @@
 import { describe, it, expect } from "vitest";
-import { queryGraph } from "../../../src/graph/query-graph.js";
-import schema from "../../fixtures/soccer-schema.json" with { type: "json" };
-import graph from "../../fixtures/soccer-fixtures.json" with { type: "json" };
+import { queryGraph } from "../../src/graph/query-graph.js";
+import schema from "../fixtures/soccer-schema.json" with { type: "json" };
+import graph from "../fixtures/soccer-fixtures.json" with { type: "json" };
 
 describe("group queries", () => {
+	describe("grand totals (by: [])", () => {
+		it("aggregates all resources into a single group", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: [],
+					aggregates: {
+						totalMatches: { $count: null },
+						totalGoals: { $sum: { $pluck: "goals" } },
+						avgGoals: { $mean: { $pluck: "goals" } },
+					},
+				},
+			};
+
+			const result = queryGraph(schema, query, graph);
+			expect(result).toEqual([
+				{
+					totalMatches: 4,
+					totalGoals: 9,
+					avgGoals: 2.25,
+				},
+			]);
+		});
+
+		it("supports select with by: []", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: [],
+					select: {
+						summary: { $if: { if: true, then: "All Matches", else: "" } },
+					},
+					aggregates: {
+						count: { $count: null },
+					},
+				},
+			};
+
+			const result = queryGraph(schema, query, graph);
+			expect(result).toEqual([{ summary: "All Matches", count: 4 }]);
+		});
+
+		it("supports nested grouping with by: [] as final grand total", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: "ageGroup",
+					aggregates: { groupGoals: { $sum: { $pluck: "goals" } } },
+					group: {
+						by: [],
+						aggregates: {
+							totalAgeGroups: { $count: null },
+							grandTotalGoals: { $sum: { $pluck: "groupGoals" } },
+						},
+					},
+				},
+			};
+
+			const result = queryGraph(schema, query, graph);
+			expect(result).toEqual([
+				{
+					totalAgeGroups: 3,
+					grandTotalGoals: 9,
+				},
+			]);
+		});
+	});
+
 	describe("select", () => {
 		it("groups by a single field with explicit select", () => {
 			const query = {

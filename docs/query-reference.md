@@ -755,6 +755,19 @@ SpectraGraph supports grouping resources and computing aggregates via the `group
 Specify one or more attributes to group by:
 
 ```javascript
+// Grand totals (empty array - all resources in one group)
+{
+  type: "books",
+  group: {
+    by: [],
+    aggregates: {
+      totalBooks: { $count: null },
+      totalPages: { $sum: { $pluck: "pageCount" } }
+    }
+  }
+}
+// Returns: [{ totalBooks: 1543, totalPages: 423891 }]
+
 // Single field
 {
   type: "books",
@@ -789,7 +802,8 @@ Specify one or more attributes to group by:
 **Rules:**
 
 - `by` is required
-- Must reference valid schema attributes (not relationships)
+- Can be an empty array `[]` (creates single group with all resources - grand totals)
+- Must reference valid schema attributes (not relationships) when non-empty
 - Can be a string or array of strings
 - Groups with null values are grouped together
 
