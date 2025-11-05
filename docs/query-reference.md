@@ -731,8 +731,6 @@ Limit and offset work in relationship subqueries:
 
 SpectraGraph supports grouping resources and computing aggregates via the `group` clause. Queries use either `select` (regular queries) OR `group` (aggregation queries), but not both at the top level.
 
-**Availability:** Currently supported in memory-store. SQL store support is in development.
-
 ### Basic Syntax
 
 ```javascript
