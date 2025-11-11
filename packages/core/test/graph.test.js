@@ -5,7 +5,9 @@ import {
 	linkInverses,
 	mergeGraphs,
 	mergeGraphsDeep,
+	createEmptyGraph,
 } from "../src/graph.js";
+import { buildResource } from "../src/resource.js";
 import {
 	careBearSchema,
 	careBearData,
@@ -59,6 +61,40 @@ describe("linkInverses", () => {
 		});
 
 		expect(linked).toEqual(careBearData);
+	});
+
+	describe("respects explicit empty values", () => {
+		it("does NOT link relationships when explicitly set to null", () => {
+			const bearsWithExplicitNull = mapValues(careBearData.bears, (bear) => ({
+				...bear,
+				relationships: { ...bear.relationships, home: null },
+			}));
+
+			const linked = linkInverses(careBearSchema, {
+				...careBearData,
+				bears: bearsWithExplicitNull,
+			});
+
+			// null should be preserved (not linked)
+			expect(linked.bears["1"].relationships.home).toBeNull();
+			expect(linked.bears["2"].relationships.home).toBeNull();
+		});
+
+		it("does NOT link relationships when explicitly set to empty array", () => {
+			const bearsWithExplicitEmpty = mapValues(careBearData.bears, (bear) => ({
+				...bear,
+				relationships: { ...bear.relationships, powers: [] },
+			}));
+
+			const linked = linkInverses(careBearSchema, {
+				...careBearData,
+				bears: bearsWithExplicitEmpty,
+			});
+
+			// [] should be preserved (not linked)
+			expect(linked.bears["1"].relationships.powers).toEqual([]);
+			expect(linked.bears["2"].relationships.powers).toEqual([]);
+		});
 	});
 });
 
@@ -726,5 +762,364 @@ describe("createGraphFromResources", () => {
 				villains: {},
 			});
 		});
+	});
+});
+
+describe("buildResource integration with linkInverses", () => {
+	it("links inverse relationships when using buildResource with default values", () => {
+		// Create homes first with explicit residents relationships
+		const home1 = buildResource(careBearSchema, "homes", {
+			id: "1",
+			name: "Care-a-Lot",
+			location: "Kingdom of Caring",
+			caringMeter: 1,
+			isInClouds: true,
+			residents: [
+				{ type: "bears", id: "1" },
+				{ type: "bears", id: "2" },
+				{ type: "bears", id: "3" },
+			],
+		});
+
+		// Create bears using buildResource - their home relationships will be undefined
+		const bear1 = buildResource(
+			careBearSchema,
+			"bears",
+			{
+				id: "1",
+				name: "Tenderheart Bear",
+				yearIntroduced: 1982,
+				bellyBadge: "red heart with pink outline",
+				furColor: "tan",
+			},
+			{ includeRelationships: false },
+		);
+
+		const bear2 = buildResource(
+			careBearSchema,
+			"bears",
+			{
+				id: "2",
+				name: "Cheer Bear",
+				yearIntroduced: 1982,
+				bellyBadge: "rainbow",
+				furColor: "carnation pink",
+			},
+			{ includeRelationships: false },
+		);
+
+		const bear3 = buildResource(
+			careBearSchema,
+			"bears",
+			{
+				id: "3",
+				name: "Wish Bear",
+				yearIntroduced: 1982,
+				bellyBadge: "shooting star",
+				furColor: "turquoise",
+			},
+			{ includeRelationships: false },
+		);
+
+		// Build a graph with these resources
+		const graph = {
+			...createEmptyGraph(careBearSchema),
+			bears: {
+				1: bear1,
+				2: bear2,
+				3: bear3,
+			},
+			homes: {
+				1: home1,
+			},
+		};
+
+		// Link inverses should populate the home relationship on bears
+		const linked = linkInverses(careBearSchema, graph);
+
+		// Each bear's home should now be linked from the inverse
+		expect(linked.bears["1"].relationships.home).toEqual({
+			type: "homes",
+			id: "1",
+		});
+		expect(linked.bears["2"].relationships.home).toEqual({
+			type: "homes",
+			id: "1",
+		});
+		expect(linked.bears["3"].relationships.home).toEqual({
+			type: "homes",
+			id: "1",
+		});
+	});
+
+	it("links inverse many-to-many relationships with buildResource defaults", () => {
+		// Create powers with explicit wielders
+		const power1 = buildResource(careBearSchema, "powers", {
+			powerId: "careBearStare",
+			name: "Care Bear Stare",
+			description: "Purges evil.",
+			type: "group power",
+			wielders: [
+				{ type: "bears", id: "1" },
+				{ type: "bears", id: "2" },
+			],
+		});
+
+		// Create bears with buildResource - their powers will be undefined
+		const bear1 = buildResource(
+			careBearSchema,
+			"bears",
+			{
+				id: "1",
+				name: "Tenderheart Bear",
+				yearIntroduced: 1982,
+				bellyBadge: "red heart with pink outline",
+				furColor: "tan",
+			},
+			{ includeRelationships: false },
+		);
+
+		const bear2 = buildResource(
+			careBearSchema,
+			"bears",
+			{
+				id: "2",
+				name: "Cheer Bear",
+				yearIntroduced: 1982,
+				bellyBadge: "rainbow",
+				furColor: "carnation pink",
+			},
+			{ includeRelationships: false },
+		);
+
+		const graph = {
+			...createEmptyGraph(careBearSchema),
+			bears: {
+				1: bear1,
+				2: bear2,
+			},
+			powers: {
+				careBearStare: power1,
+			},
+		};
+
+		const linked = linkInverses(careBearSchema, graph);
+
+		// Bears should have their powers linked from the inverse
+		expect(linked.bears["1"].relationships.powers).toEqual([
+			{ type: "powers", id: "careBearStare" },
+		]);
+		expect(linked.bears["2"].relationships.powers).toEqual([
+			{ type: "powers", id: "careBearStare" },
+		]);
+	});
+
+	it("preserves explicit relationships from buildResource and only links missing ones", () => {
+		// Create homes - one with residents, one without
+		const home1 = buildResource(
+			careBearSchema,
+			"homes",
+			{
+				id: "1",
+				name: "Care-a-Lot",
+				location: "Kingdom of Caring",
+				caringMeter: 1,
+				isInClouds: true,
+				// residents will be undefined - will be linked from bears
+			},
+			{ includeRelationships: false },
+		);
+
+		// Bear 1: explicitly set home
+		const bear1 = buildResource(
+			careBearSchema,
+			"bears",
+			{
+				id: "1",
+				name: "Tenderheart Bear",
+				yearIntroduced: 1982,
+				bellyBadge: "red heart with pink outline",
+				furColor: "tan",
+				home: { type: "homes", id: "1" },
+			},
+			{ includeRelationships: false },
+		);
+
+		// Bear 2: also explicitly set home
+		const bear2 = buildResource(
+			careBearSchema,
+			"bears",
+			{
+				id: "2",
+				name: "Cheer Bear",
+				yearIntroduced: 1982,
+				bellyBadge: "rainbow",
+				furColor: "carnation pink",
+				home: { type: "homes", id: "1" },
+			},
+			{ includeRelationships: false },
+		);
+
+		const graph = {
+			...createEmptyGraph(careBearSchema),
+			bears: {
+				1: bear1,
+				2: bear2,
+			},
+			homes: {
+				1: home1,
+			},
+		};
+
+		const linked = linkInverses(careBearSchema, graph);
+
+		// Bears' explicit home relationships should be preserved
+		expect(linked.bears["1"].relationships.home).toEqual({
+			type: "homes",
+			id: "1",
+		});
+		expect(linked.bears["2"].relationships.home).toEqual({
+			type: "homes",
+			id: "1",
+		});
+
+		// Home's residents should be linked from the inverse (bears' home relationships)
+		expect(linked.homes["1"].relationships.residents).toEqual([
+			{ type: "bears", id: "1" },
+			{ type: "bears", id: "2" },
+		]);
+	});
+
+	it("handles complex scenario with multiple resource types using buildResource", () => {
+		// Simulate a Multi-API store scenario where we fetch different resources
+		// from different sources and need to link them together
+
+		// Source 1: Fetch homes with residents
+		const home1 = buildResource(careBearSchema, "homes", {
+			id: "1",
+			name: "Care-a-Lot",
+			location: "Kingdom of Caring",
+			caringMeter: 1,
+			isInClouds: true,
+			residents: [{ type: "bears", id: "1" }],
+		});
+
+		// Source 2: Fetch powers with wielders
+		const power1 = buildResource(careBearSchema, "powers", {
+			powerId: "careBearStare",
+			name: "Care Bear Stare",
+			description: "Purges evil.",
+			type: "group power",
+			wielders: [{ type: "bears", id: "1" }],
+		});
+
+		// Source 3: Fetch bears without relationships (will be linked)
+		const bear1 = buildResource(
+			careBearSchema,
+			"bears",
+			{
+				id: "1",
+				name: "Tenderheart Bear",
+				yearIntroduced: 1982,
+				bellyBadge: "red heart with pink outline",
+				furColor: "tan",
+			},
+			{ includeRelationships: false },
+		);
+
+		const graph = {
+			...createEmptyGraph(careBearSchema),
+			bears: { 1: bear1 },
+			homes: { 1: home1 },
+			powers: { careBearStare: power1 },
+		};
+
+		const linked = linkInverses(careBearSchema, graph);
+
+		// Bear should have both home and powers linked from inverses
+		expect(linked.bears["1"].relationships.home).toEqual({
+			type: "homes",
+			id: "1",
+		});
+		expect(linked.bears["1"].relationships.powers).toEqual([
+			{ type: "powers", id: "careBearStare" },
+		]);
+	});
+
+	it("works with includeRelationships: false for multi-source data assembly", () => {
+		// Simulate assembling a graph from multiple sources at once
+		const home1 = buildResource(
+			careBearSchema,
+			"homes",
+			{
+				id: "1",
+				name: "Care-a-Lot",
+				location: "Kingdom of Caring",
+				caringMeter: 1,
+				isInClouds: true,
+				// residents will be undefined - will be linked from bears
+			},
+			{ includeRelationships: false },
+		);
+
+		const bear1 = buildResource(
+			careBearSchema,
+			"bears",
+			{
+				id: "1",
+				name: "Tenderheart Bear",
+				yearIntroduced: 1982,
+				bellyBadge: "red heart with pink outline",
+				furColor: "tan",
+				home: { type: "homes", id: "1" },
+				// powers will be undefined - will be linked from powers
+			},
+			{ includeRelationships: false },
+		);
+
+		const power1 = buildResource(
+			careBearSchema,
+			"powers",
+			{
+				powerId: "careBearStare",
+				name: "Care Bear Stare",
+				description: "Purges evil.",
+				type: "group power",
+				wielders: [{ type: "bears", id: "1" }],
+			},
+			{ includeRelationships: false },
+		);
+
+		// Assemble all resources into graph
+		const graph = {
+			...createEmptyGraph(careBearSchema),
+			bears: { 1: bear1 },
+			homes: { 1: home1 },
+			powers: { careBearStare: power1 },
+		};
+
+		// Single link populates all inverse relationships
+		const linked = linkInverses(careBearSchema, graph);
+
+		// Bear's home should be preserved (explicit)
+		expect(linked.bears["1"].relationships.home).toEqual({
+			type: "homes",
+			id: "1",
+		});
+
+		// Bear's powers should be linked from power's wielders
+		expect(linked.bears["1"].relationships.powers).toEqual([
+			{ type: "powers", id: "careBearStare" },
+		]);
+
+		// Home's residents should be linked from bear's home
+		expect(linked.homes["1"].relationships.residents).toEqual([
+			{ type: "bears", id: "1" },
+		]);
+
+		// Power's wielders should be preserved (explicit)
+		expect(linked.powers["careBearStare"].relationships.wielders).toEqual([
+			{ type: "bears", id: "1" },
+		]);
 	});
 });

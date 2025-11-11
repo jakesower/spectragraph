@@ -5,7 +5,7 @@ import {
 	defaultWhereEngine,
 } from "../src/lib/defaults.js";
 import { normalizeQuery } from "../src/query/normalize-query.js";
-import { validateQuery } from "../src/query.js";
+import { validateQuery, getQueryExtent } from "../src/query.js";
 import { ensure } from "../src/lib/helpers.js";
 
 const ensureValidQuery = ensure(validateQuery);
@@ -863,6 +863,430 @@ describe("normalizeQuery", () => {
 			location: "location",
 			caringMeter: "caringMeter",
 			isInClouds: "isInClouds",
+		});
+	});
+});
+
+describe("getQueryExtent", () => {
+	describe("simple attribute selection", () => {
+		it("returns root attributes", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: { name: "name", yearIntroduced: "yearIntroduced" },
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toEqual(["name", "yearIntroduced"]);
+		});
+
+		it("handles star expansion", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: "*",
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("name");
+			expect(extent).toContain("yearIntroduced");
+			expect(extent).toContain("bellyBadge");
+		});
+	});
+
+	describe("relationship selection", () => {
+		it("returns relationship paths", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					name: "name",
+					home: { select: { name: "name" } },
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("name");
+			expect(extent).toContain("home.name");
+		});
+
+		it("handles nested relationships", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					name: "name",
+					home: {
+						select: {
+							name: "name",
+							residents: { select: { name: "name" } },
+						},
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("name");
+			expect(extent).toContain("home.name");
+			expect(extent).toContain("home.residents.name");
+		});
+	});
+
+	describe("$get expression", () => {
+		it("extracts simple property paths", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					displayName: { $get: "name" },
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("name");
+		});
+
+		it("extracts nested property paths", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					homeName: { $get: "home.name" },
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("home.name");
+		});
+
+		it("strips $ wildcard from paths", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					powerNames: { $get: "powers.$.name" },
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("powers.name");
+		});
+	});
+
+	describe("$matchesAll expression", () => {
+		it("extracts properties from match object", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					isMatch: {
+						$matchesAll: {
+							name: "Tenderheart Bear",
+							yearIntroduced: 1983,
+						},
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("name");
+			expect(extent).toContain("yearIntroduced");
+		});
+	});
+
+	describe("$exists expression", () => {
+		it("extracts property path", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					hasHome: { $exists: "home" },
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("home");
+		});
+
+		it("extracts nested property path", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					hasHomeName: { $exists: "home.name" },
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("home.name");
+		});
+	});
+
+	describe("complex expressions", () => {
+		it("handles $pipe with $get", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					upperName: {
+						$pipe: [{ $get: "name" }, { $uppercase: null }],
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("name");
+		});
+
+		it("handles $pipe with $get and $matchesAll", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					livesInCaringPlace: {
+						$pipe: [
+							{ $get: "home" },
+							{ $matchesAll: { caringMeter: { $gt: 50 }, isInClouds: true } },
+						],
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("home");
+			expect(extent).toContain("home.caringMeter");
+			expect(extent).toContain("home.isInClouds");
+		});
+
+		it("handles $pipe with $get, $matchesAll, with a second $get cherry on top", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					livesInFriendlyPlace: {
+						$pipe: [
+							{ $get: "home" },
+							{
+								$and: [
+									{
+										$matchesAll: {
+											caringMeter: { $eq: { $count: { $get: "bears" } } },
+											isInClouds: true,
+										},
+									},
+									{ $gt: [{ $count: { $get: "bears" } }, 3] },
+								],
+							},
+						],
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("home");
+			expect(extent).toContain("home.caringMeter");
+			expect(extent).toContain("home.isInClouds");
+			expect(extent).toContain("home.bears");
+		});
+
+		it("handles a $matchesAll -> $get -> $matchesAny pattern", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					caringEnough: {
+						$matchesAll: {
+							bellyBadge: { $not: "heart" },
+							home: {
+								$matchesAny: {
+									caringMeter: { $gt: 0.5 },
+									isInClouds: true,
+								},
+							},
+						},
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("bellyBadge");
+			expect(extent).toContain("home");
+			expect(extent).toContain("home.caringMeter");
+			expect(extent).toContain("home.isInClouds");
+		});
+
+		it("handles $filter with property access", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					oldPowers: {
+						$pipe: [
+							{ $get: "powers" },
+							{
+								$filter: { $pipe: [{ $get: "yearIntroduced" }, { $lt: 1985 }] },
+							},
+						],
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("powers");
+			expect(extent).toContain("powers.yearIntroduced");
+		});
+
+		it("handles $pluck", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					powerNames: {
+						$pipe: [{ $get: "powers" }, { $pluck: "name" }],
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("powers");
+			expect(extent).toContain("powers.name");
+		});
+
+		it("handles $sort with string property", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					sortedPowers: {
+						$pipe: [{ $get: "powers" }, { $sort: { by: "name" } }],
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("powers");
+			expect(extent).toContain("powers.name");
+		});
+
+		it("handles $sort with expression property", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					sortedPowers: {
+						$pipe: [{ $get: "powers" }, { $sort: { by: { $get: "name" } } }],
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("powers");
+			expect(extent).toContain("powers.name");
+		});
+
+		it("handles $groupBy with string property", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					groupedByYear: {
+						$pipe: [{ $get: "powers" }, { $groupBy: "yearIntroduced" }],
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("powers");
+			expect(extent).toContain("powers.yearIntroduced");
+		});
+
+		it("handles $groupBy with expression property", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					groupedByYear: {
+						$pipe: [
+							{ $get: "powers" },
+							{ $groupBy: { $get: "yearIntroduced" } },
+						],
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("powers");
+			expect(extent).toContain("powers.yearIntroduced");
+		});
+	});
+
+	describe("deduplication", () => {
+		it("removes duplicate paths", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					name: "name",
+					upperName: { $uppercase: { $get: "name" } },
+					lowerName: { $lowercase: { $get: "name" } },
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			const nameCount = extent.filter((p) => p === "name").length;
+			expect(nameCount).toBe(1);
+		});
+	});
+
+	describe("edge cases", () => {
+		it("handles expressions that don't reference properties", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					literalValue: { $literal: { foo: "bar" } },
+					computed: { $add: [1, 2] },
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toEqual([]);
+		});
+
+		it("handles array paths in $get", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					homeName: { $get: ["home", "name"] },
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("home.name");
+		});
+
+		it("handles nested $pipe expressions", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					complex: {
+						$pipe: [
+							{ $get: "powers" },
+							{
+								$pipe: [
+									{
+										$filter: {
+											$pipe: [{ $get: "yearIntroduced" }, { $lt: 1985 }],
+										},
+									},
+									{ $pluck: "name" },
+								],
+							},
+						],
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("powers");
+			expect(extent).toContain("powers.yearIntroduced");
+			expect(extent).toContain("powers.name");
+		});
+
+		it("handles $filterBy", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					filtered: {
+						$pipe: [
+							{ $get: "powers" },
+							{ $filterBy: { yearIntroduced: { $gte: 1985 }, name: "Caring" } },
+						],
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("powers");
+			expect(extent).toContain("powers.yearIntroduced");
+			expect(extent).toContain("powers.name");
+		});
+
+		it("handles $filterBy with nested expressions", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				select: {
+					complexFilter: {
+						$pipe: [
+							{ $get: "powers" },
+							{
+								$filterBy: {
+									yearIntroduced: { $gte: 1985 },
+									wielders: { $pipe: [{ $get: "length" }, { $gt: 2 }] },
+								},
+							},
+						],
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("powers");
+			expect(extent).toContain("powers.yearIntroduced");
+			expect(extent).toContain("powers.wielders");
+			expect(extent).toContain("powers.wielders.length");
 		});
 	});
 });

@@ -275,9 +275,17 @@ export function normalizeResource(schema, resourceType, resource) {
  * @param {import('./schema.js').Schema} schema - The schema to use for defaults
  * @param {string} resourceType - The type of resource to create
  * @param {FlatResource} [partialResource] - The partial resource to create from
+ * @param {Object} [options]
+ * @param {boolean} [options.includeRelationships=true] - Whether to include default values for relationships not present in partialResource. When false, only relationships explicitly provided in partialResource will be included (useful when relationships will be linked later via linkInverses).
  * @returns {NormalResource} A complete normalized resource with defaults applied
  */
-export function buildResource(schema, resourceType, partialResource = {}) {
+export function buildResource(
+	schema,
+	resourceType,
+	partialResource = {},
+	options = {},
+) {
+	const { includeRelationships = true } = options;
 	const resSchema = schema.resources[resourceType];
 
 	const builtAttributes = mapValues(
@@ -286,15 +294,15 @@ export function buildResource(schema, resourceType, partialResource = {}) {
 			buildAttribute(attrSchema, partialResource[attrName]),
 	);
 
-	const defaultRelationships = mapValues(
-		resSchema.relationships,
-		(relSchema, relName) =>
-			partialResource[relName] === undefined
-				? relSchema.cardinality === "one"
-					? null
-					: []
-				: partialResource[relName],
-	);
+	const defaultRelationships = includeRelationships
+		? mapValues(resSchema.relationships, (relSchema, relName) =>
+				partialResource[relName] === undefined
+					? relSchema.cardinality === "one"
+						? null
+						: []
+					: partialResource[relName],
+			)
+		: {};
 
 	const flat = {
 		...defaultRelationships,

@@ -1077,6 +1077,137 @@ describe("buildResource", () => {
 			expect(result.attributes.status).toBe("scheduled");
 		});
 	});
+
+	describe("includeRelationships option", () => {
+		it("includes relationship defaults by default", () => {
+			const result = buildResource(soccerSchema, "teams", {
+				name: "Test Team",
+				homeField: { type: "fields", id: "field-1" },
+			});
+
+			// Should have default empty arrays for many cardinality
+			expect(result.relationships.homeGames).toEqual([]);
+			expect(result.relationships.awayGames).toEqual([]);
+		});
+
+		it("omits relationship defaults when includeRelationships is false", () => {
+			const result = buildResource(
+				soccerSchema,
+				"teams",
+				{
+					name: "Test Team",
+					homeField: { type: "fields", id: "field-1" },
+				},
+				{ includeRelationships: false },
+			);
+
+			// Should not have homeGames or awayGames at all
+			expect(result.relationships.homeGames).toBeUndefined();
+			expect(result.relationships.awayGames).toBeUndefined();
+			// But should have explicitly provided relationship
+			expect(result.relationships.homeField).toEqual({
+				type: "fields",
+				id: "field-1",
+			});
+		});
+
+		it("omits all relationships when includeRelationships is false and none provided", () => {
+			const result = buildResource(
+				soccerSchema,
+				"fields",
+				{
+					name: "Test Field",
+				},
+				{ includeRelationships: false },
+			);
+
+			// Should have no relationships at all
+			expect(result.relationships).toEqual({});
+		});
+
+		it("preserves explicit null/empty array when includeRelationships is false", () => {
+			const result = buildResource(
+				soccerSchema,
+				"games",
+				{
+					homeScore: 2,
+					awayScore: 1,
+					homeTeam: null,
+					awayTeam: null,
+				},
+				{ includeRelationships: false },
+			);
+
+			// Explicitly provided null should be preserved
+			expect(result.relationships.homeTeam).toBeNull();
+			expect(result.relationships.awayTeam).toBeNull();
+			// But referee should be undefined (not provided, not defaulted)
+			expect(result.relationships.referee).toBeUndefined();
+		});
+
+		it("preserves explicit relationships even when includeRelationships is false", () => {
+			const result = buildResource(
+				soccerSchema,
+				"games",
+				{
+					homeScore: 2,
+					awayScore: 1,
+					homeTeam: { type: "teams", id: "team-1" },
+					awayTeam: { type: "teams", id: "team-2" },
+				},
+				{ includeRelationships: false },
+			);
+
+			// Explicitly provided relationships should be preserved
+			expect(result.relationships.homeTeam).toEqual({
+				type: "teams",
+				id: "team-1",
+			});
+			expect(result.relationships.awayTeam).toEqual({
+				type: "teams",
+				id: "team-2",
+			});
+			// But referee should be undefined (not provided)
+			expect(result.relationships.referee).toBeUndefined();
+		});
+
+		it("still applies attribute defaults when includeRelationships is false", () => {
+			const result = buildResource(
+				soccerSchema,
+				"fields",
+				{
+					name: "Test Field",
+				},
+				{ includeRelationships: false },
+			);
+
+			// Attribute defaults should still be applied
+			expect(result.attributes.surface).toBe("grass");
+			expect(result.attributes.capacity).toBe(5000);
+			expect(result.attributes.amenities).toEqual([]);
+		});
+
+		it("works with nested object attribute defaults when includeRelationships is false", () => {
+			const result = buildResource(
+				soccerSchema,
+				"games",
+				{
+					homeScore: 3,
+					awayScore: 2,
+				},
+				{ includeRelationships: false },
+			);
+
+			// Nested object defaults should still work
+			expect(result.attributes.bookings).toEqual({
+				homeTeam: [],
+				awayTeam: [],
+			});
+			// But relationships should be undefined
+			expect(result.relationships.homeTeam).toBeUndefined();
+			expect(result.relationships.awayTeam).toBeUndefined();
+		});
+	});
 });
 
 describe("mergeNormalResources", () => {

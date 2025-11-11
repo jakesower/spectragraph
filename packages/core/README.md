@@ -507,6 +507,8 @@ const emptyGraph = createEmptyGraph(schema, { skipValidation: true });
 
 Links inverse relationships in a graph, filling in missing relationship data where possible. Queries will not work without relationships going in the direction of the query, so it's important to use this if you're constructing a graph from semi-connected pieces. This is commonly used with `mergeGraphsDeep`.
 
+`linkInverses` only populates relationships that are `undefined`. Relationships explicitly set (even to `null` or `[]`) are preserved. This allows you to distinguish between "no data available" and "explicitly empty".
+
 **Parameters:**
 
 - `schema` (Schema) - The schema defining relationships
@@ -515,9 +517,20 @@ Links inverse relationships in a graph, filling in missing relationship data whe
 **Returns:** New graph with inverse relationships linked
 
 ```javascript
-import { linkInverses } from "@spectragraph/core";
+import { linkInverses, buildResource, createEmptyGraph } from "@spectragraph/core";
 
+// Example: Multi-API store pattern
+const graph = createEmptyGraph(schema);
+
+// Resources built with includeRelationships: false have undefined relationships
+const team = buildResource(schema, "teams", apiData, {
+  includeRelationships: false
+});
+graph.teams["1"] = team;
+
+// Link relationships from their inverses
 const linkedGraph = linkInverses(schema, graph);
+// Now team's relationships are populated from inverses where available
 ```
 
 #### `mergeGraphs(left, right)`
@@ -597,6 +610,60 @@ const normalized = normalizeQuery(schema, {
 });
 ```
 
+#### `getQueryExtent(schema, normalQuery)`
+
+Analyzes a normalized query and returns an array of dot-notated paths representing all attributes and relationships required to fulfill the query's select clause.
+
+This is particularly useful for store implementations to optimize data fetching by determining exactly which fields need to be retrieved from the underlying data source.
+
+**Parameters:**
+
+- `schema` (Schema) - The schema defining resource types and relationships
+- `normalQuery` (NormalQuery) - The normalized query to analyze (use `normalizeQuery` first)
+
+**Returns:** Array of unique dot-notated paths (e.g., `["name", "home.name", "powers.wielders.name"]`)
+
+**Use Cases:**
+
+- **SQL stores**: Determine which columns to SELECT and which tables to JOIN
+- **Multi-API stores**: Identify which API endpoints and fields to request
+- **GraphQL**: Build minimal queries with only required fields
+- **Access control**: Validate user permissions for specific data paths
+
+**Limitations:**
+
+- Only analyzes the `select` clause (not `where` or `order` clauses)
+- Does not handle dynamically constructed paths (e.g., `{ $get: { $concat: ["home", ".name"] } }`)
+
+```javascript
+import { normalizeQuery, getQueryExtent } from "@spectragraph/core";
+
+const query = normalizeQuery(schema, {
+  type: "bears",
+  select: {
+    name: "name",
+    powerNames: { $get: "powers.$.name" },
+    home: {
+      select: {
+        name: "name",
+        residents: { select: ["name"] }
+      }
+    }
+  }
+});
+
+const extent = getQueryExtent(schema, query);
+// Returns: ["name", "powers.name", "home.name", "home.residents.name"]
+
+// Use in SQL store:
+const columns = extent.map(path => convertPathToColumn(path));
+const sql = `SELECT ${columns.join(', ')} FROM bears ...`;
+
+// Use in multi-API store:
+const fieldsToFetch = groupPathsByResource(extent);
+// { bears: ["name"], powers: ["name"], homes: ["name"], residents: ["name"] }
+```
+
 #### `queryGraph(schema, query, graph, options?)`
 
 Executes a query against a graph directly (convenience function).
@@ -663,6 +730,59 @@ const flatTeam = {
 
 const normalized = normalizeResource(schema, "teams", flatTeam);
 // Returns normalized resource with attributes and relationships separated
+```
+
+#### `buildResource(schema, resourceType, partialResource, options?)`
+
+Creates a normalized resource with schema defaults applied to attributes. This is particularly useful when working with data from external sources where you want attribute defaults but need to defer relationship initialization.
+
+**Parameters:**
+
+- `schema` (Schema) - The schema defining the resource structure
+- `resourceType` (string) - The type of resource to build
+- `partialResource` (object) - The partial resource data
+- `options` (object, optional) - Configuration options
+  - `includeRelationships` (boolean) - Whether to include default values for relationships not present in partialResource. When `false`, only relationships explicitly provided in partialResource will be included. This is useful when relationships will be linked later via `linkInverses()`. Defaults to `true`.
+
+**Returns:** Normalized resource with attribute defaults applied
+
+```javascript
+import { buildResource } from "@spectragraph/core";
+
+// Default behavior - includes relationship defaults
+const team = buildResource(schema, "teams", {
+  name: "Phoenix Fire",
+  city: "Phoenix",
+});
+// team.relationships.homeMatches = []
+// team.relationships.awayMatches = []
+
+// For Multi-API stores - omit relationship defaults
+const teamFromAPI = buildResource(
+  schema,
+  "teams",
+  {
+    name: "Phoenix Fire",
+    city: "Phoenix",
+  },
+  { includeRelationships: false },
+);
+// teamFromAPI.relationships.homeMatches = undefined
+// teamFromAPI.relationships.awayMatches = undefined
+// These can be linked later via linkInverses()
+
+// Explicit relationships are preserved even with includeRelationships: false
+const teamWithExplicitRel = buildResource(
+  schema,
+  "teams",
+  {
+    name: "Phoenix Fire",
+    homeMatches: [{ type: "matches", id: "match-1" }],
+  },
+  { includeRelationships: false },
+);
+// teamWithExplicitRel.relationships.homeMatches = [{ type: "matches", id: "match-1" }]
+// teamWithExplicitRel.relationships.awayMatches = undefined
 ```
 
 #### `mergeNormalResources(left, right)`
