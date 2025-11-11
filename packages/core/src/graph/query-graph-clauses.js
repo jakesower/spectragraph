@@ -115,7 +115,7 @@ export function createQueryGraphClauses(
 				// subquery
 				if (!(propName in resSchema.relationships)) {
 					throw new Error(
-						`The "${propName}" relationship is undefined on a resource of type "${query.type}". You probably have an invalid schema or constructed your graph wrong. Check that the resources have "inverse" set in the schema try linking the inverses (via "linkInverses"), check your schema to make sure all inverses have been defined correctly there, and make sure all resources have been loaded into the graph.`,
+						`The "${propName}" relationship is undefined on a resource of type "${query.type}". You probably have an invalid schema or constructed your graph wrong. Check that the resources have "inverse" set in the schema, try linking the inverses (via "linkInverses"), check your schema to make sure all inverses have been defined correctly there, and make sure all resources have been loaded into the graph.`,
 					);
 				}
 

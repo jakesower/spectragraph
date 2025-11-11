@@ -472,6 +472,41 @@ export function normalizeQuery(
 	},
 ): NormalQuery;
 
+/**
+ * Calculates the statically determinable extent (required attributes and relationships) of a query.
+ * Returns an array of dot-notated paths representing all attributes and relationships that must be
+ * accessed to fulfill the query's select clause.
+ *
+ * This is useful for store implementations to optimize data fetching by:
+ * - Determining which database columns to SELECT in SQL queries
+ * - Knowing which API endpoints/fields to fetch in multi-API stores
+ * - Building minimal GraphQL queries
+ * - Validating access permissions for specific paths
+ *
+ * @param schema - The schema defining resource types and relationships
+ * @param normalQuery - The normalized query to analyze (use normalizeQuery first)
+ * @returns Array of unique dot-notated paths (e.g., ["name", "home.name", "powers.wielders.name"])
+ *
+ * @example
+ * ```typescript
+ * const query = normalizeQuery(schema, {
+ *   type: "bears",
+ *   select: {
+ *     name: "name",
+ *     powerNames: { $get: "powers.$.name" },
+ *     home: { select: { name: "name" } }
+ *   }
+ * });
+ *
+ * const extent = getQueryExtent(schema, query);
+ * // Returns: ["name", "powers.name", "home.name"]
+ * ```
+ *
+ * @note Does not analyze dynamically constructed paths (e.g., { $get: { $concat: ["home", ".name"] } })
+ * @note Only analyzes the select clause - does not include paths referenced in where/order clauses
+ */
+export function getQueryExtent(schema: Schema, normalQuery: NormalQuery): string[];
+
 // === GRAPH FUNCTIONS ===
 
 /**
@@ -602,6 +637,8 @@ export function buildResource(
  * @param schema - The schema defining the resource structure
  * @param resourceType - The type of resource to build
  * @param partialResource - The partial resource data
+ * @param options - Optional configuration
+ * @param options.includeRelationships - Whether to include default values for relationships not present in partialResource. When false, only relationships explicitly provided in partialResource will be included (useful when relationships will be linked later via linkInverses). Defaults to true.
  * @returns Complete normalized resource
  */
 export function buildNormalResource(
