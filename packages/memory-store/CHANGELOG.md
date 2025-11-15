@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Automatic ID generation now supports both integer and string ID types based on schema definition
+- Integer IDs use auto-incrementing counters initialized from existing data (max ID + 1)
+- String IDs continue to use UUID generation via `crypto.randomUUID()`
+
 ## [Pre-Log]
 
 - In-memory graph store implementing the complete SpectraGraph Store interface with CRUD operations, querying, and bidirectional relationship management

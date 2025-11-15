@@ -97,7 +97,7 @@ function getResourceStructureValidator(schema, resourceType, engines) {
 				required: ["group"],
 				properties: {
 					type: { type: "string", const: resourceType },
-					ids: { type: "array", items: { type: "string" } },
+					ids: { type: "array", items: { type: ["string", "integer"] } },
 					limit: { type: "integer", minimum: 1 },
 					offset: { type: "integer", minimum: 0 },
 					where: { $ref: "#/definitions/whereClause" },
@@ -156,8 +156,8 @@ function getResourceStructureValidator(schema, resourceType, engines) {
 				],
 				properties: {
 					type: { type: "string", const: resourceType },
-					id: { type: "string" },
-					ids: { type: "array", items: { type: "string" } },
+					id: { type: ["string", "integer"] },
+					ids: { type: "array", items: { type: ["string", "integer"] } },
 					select: {},
 					limit: { type: "integer", minimum: 1 },
 					offset: { type: "integer", minimum: 0 },

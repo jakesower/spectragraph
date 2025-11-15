@@ -12,10 +12,10 @@ import { setInverseRelationships } from "./lib/store-helpers.js";
  * @returns {import('@spectragraph/core').NormalResource} The created resource
  */
 export function create(resource, context) {
-	const { schema, storeGraph } = context;
+	const { schema, storeGraph, idGenerator } = context;
 	const resSchema = schema.resources[resource.type];
 
-	const id = crypto.randomUUID();
+	const id = idGenerator(resource.type);
 	const blankWithId = buildNormalResource(schema, resource.type, {
 		[resSchema.idAttribute ?? "id"]: id,
 	});

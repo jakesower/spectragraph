@@ -175,7 +175,7 @@ export function runQueryTests(createStore) {
 					},
 				});
 
-				expect(result).toEqual([{ id: "2" }]);
+				expect(result).toEqual([{ id: 2 }]);
 			});
 		});
 

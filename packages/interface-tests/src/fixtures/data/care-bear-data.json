@@ -12,7 +12,7 @@
 			},
 			"relationships": {
 				"bestFriend": null,
-				"home": { "type": "homes", "id": "1" },
+				"home": { "type": "homes", "id": 1 },
 				"powers": [{ "type": "powers", "id": "careBearStare" }]
 			}
 		},
@@ -27,7 +27,7 @@
 				"furColor": "carnation pink"
 			},
 			"relationships": {
-				"home": { "type": "homes", "id": "1" },
+				"home": { "type": "homes", "id": 1 },
 				"powers": [{ "type": "powers", "id": "careBearStare" }],
 				"bestFriend": { "type": "bears", "id": "3" }
 			}
@@ -43,7 +43,7 @@
 				"furColor": "turquoise"
 			},
 			"relationships": {
-				"home": { "type": "homes", "id": "1" },
+				"home": { "type": "homes", "id": 1 },
 				"powers": [
 					{ "type": "powers", "id": "careBearStare" },
 					{ "type": "powers", "id": "makeWish" }
@@ -71,9 +71,9 @@
 	"homes": {
 		"1": {
 			"type": "homes",
-			"id": "1",
+			"id": 1,
 			"attributes": {
-				"id": "1",
+				"id": 1,
 				"name": "Care-a-Lot",
 				"location": "Kingdom of Caring",
 				"caringMeter": 1,
@@ -89,9 +89,9 @@
 		},
 		"2": {
 			"type": "homes",
-			"id": "2",
+			"id": 2,
 			"attributes": {
-				"id": "2",
+				"id": 2,
 				"name": "Forest of Feelings",
 				"location": "Kingdom of Caring",
 				"caringMeter": 1,
@@ -103,9 +103,9 @@
 		},
 		"3": {
 			"type": "homes",
-			"id": "3",
+			"id": 3,
 			"attributes": {
-				"id": "3",
+				"id": 3,
 				"name": "Earth",
 				"location": "Earth",
 				"caringMeter": 0.5,

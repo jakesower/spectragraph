@@ -163,3 +163,22 @@ export function setInverseRelationships(oldResource, newResource, context) {
 		);
 	});
 }
+
+export function createIdGenerator(schema, initialData) {
+	const counters = {};
+
+	Object.entries(schema.resources).forEach(([resType, resSchema]) => {
+		const idAttr = resSchema.idAttribute ?? "id";
+		const idType = resSchema.attributes[idAttr]?.type;
+
+		if (idType === "integer") {
+			const existingIds = Object.keys(initialData[resType] ?? {}).map(Number);
+			const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+			counters[resType] = maxId + 1;
+		}
+	});
+
+	return (resType) => {
+		return resType in counters ? counters[resType]++ : crypto.randomUUID();
+	};
+}
