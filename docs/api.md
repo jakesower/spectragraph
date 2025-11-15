@@ -52,7 +52,7 @@ Create a new resource.
 ```javascript
 const newUser = await store.create({
   type: "users",
-  attributes: { name: "Alice", email: "alice@example.com" },
+  attributes: { name: "Serafina", email: "serafina@example.com" },
 });
 ```
 
@@ -72,7 +72,7 @@ Update an existing resource.
 const updatedUser = await store.update({
   type: "users",
   id: "1",
-  attributes: { name: "Alice Smith" },
+  attributes: { name: "Serafina Smith" },
 });
 ```
 
@@ -92,7 +92,7 @@ Create or update a resource (create if no ID, update if ID exists).
 const user = await store.upsert({
   type: "users",
   id: "1", // Will update if exists, create if not
-  attributes: { name: "Alice", email: "alice@example.com" },
+  attributes: { name: "Serafina", email: "serafina@example.com" },
 });
 ```
 
@@ -290,8 +290,8 @@ with relationships converted to {type, id} reference objects.
 ```javascript
 const flatUser = {
   id: "1",
-  name: "Alice",
-  email: "alice@example.com",
+  name: "Serafina",
+  email: "serafina@example.com",
   company: "acme",
 };
 const normalized = normalizeResource(schema, "users", flatUser);
@@ -299,12 +299,41 @@ const normalized = normalizeResource(schema, "users", flatUser);
 // {
 //   type: "users",
 //   id: "1",
-//   attributes: { id: "1", name: "Alice", email: "alice@example.com" },
+//   attributes: { id: "1", name: "Serafina", email: "serafina@example.com" },
 //   relationships: { company: { type: "companies", id: "acme" } }
 // }
 ```
 
-### buildResource(schema, resourceType, partialResource)
+### buildResource(schema, resourceType, partialResource, options?)
+
+Create a flat resource with schema defaults applied. Takes flat resource format and returns flat format with defaults applied.
+
+This function applies schema defaults to any missing attributes and relationships.
+Calling it with an empty partial resource is useful to get a resource with all defaults applied.
+
+**Parameters:**
+
+- `schema` (`Schema`) - Schema definition
+- `resourceType` (`string`) - The type of resource to create
+- `partialResource` (`FlatResource`) - Partial flat resource (defaults will be applied for missing fields)
+- `options` (`object`, optional) - Configuration options
+  - `includeRelationships` (`boolean`) - Whether to include default relationship values. Defaults to `true`.
+
+**Returns:** `FlatResource` - Flat resource with defaults applied
+
+**Example:**
+
+```javascript
+// Create with partial data - defaults will fill in missing fields
+const user = buildResource(schema, "users", { name: "Serafina" });
+// If schema defines default email: "user@example.com", result will be:
+// { name: "Serafina", email: "user@example.com", ...other defaults }
+
+// Create with all defaults
+const emptyUser = buildResource(schema, "users", {});
+```
+
+### buildNormalResource(schema, resourceType, partialResource, options?)
 
 Create a normalized resource with schema defaults applied. Takes flat resource format and returns normalized format.
 
@@ -316,6 +345,8 @@ Calling it with an empty partial resource is useful to get a resource with all d
 - `schema` (`Schema`) - Schema definition
 - `resourceType` (`string`) - The type of resource to create
 - `partialResource` (`FlatResource`) - Partial flat resource (defaults will be applied for missing fields)
+- `options` (`object`, optional) - Configuration options
+  - `includeRelationships` (`boolean`) - Whether to include default relationship values. Defaults to `true`.
 
 **Returns:** `NormalResource` - Normalized resource with defaults applied
 
@@ -323,17 +354,17 @@ Calling it with an empty partial resource is useful to get a resource with all d
 
 ```javascript
 // Create with partial data - defaults will fill in missing fields
-const user = buildResource(schema, "users", { name: "Alice" });
+const user = buildNormalResource(schema, "users", { name: "Serafina" });
 // If schema defines default email: "user@example.com", result will be:
 // {
 //   type: "users",
 //   id: undefined,
-//   attributes: { name: "Alice", email: "user@example.com" },
+//   attributes: { name: "Serafina", email: "user@example.com" },
 //   relationships: {}
 // }
 
 // Create with all defaults
-const emptyUser = buildResource(schema, "users", {});
+const emptyUser = buildNormalResource(schema, "users", {});
 ```
 
 ### mergeNormalResources(left, right)
@@ -432,7 +463,7 @@ normalizes everything, and creates a graph structure with all resources organize
 const flatUsers = [
   {
     id: "1",
-    name: "Alice",
+    name: "Serafina",
     company: { id: "acme", name: "ACME Corp" }, // Nested flat resource
   },
   { id: "2", name: "Bob", company: "acme" }, // Reference by ID

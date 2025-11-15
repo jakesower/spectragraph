@@ -162,7 +162,7 @@ const sortByName = (users) =>
 
 // Process data through the pipeline
 const rawData =
-  '{"users": [{"name": "Bob", "active": true}, {"name": "Alice", "active": false}]}';
+  '{"users": [{"name": "Bob", "active": true}, {"name": "Serafina", "active": false}]}';
 
 const result = pipeThru(rawData, [
   parseJson,

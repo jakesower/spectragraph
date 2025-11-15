@@ -582,16 +582,33 @@ export function mergeNormalResources(
 export function createValidator(options?: { ajvSchemas?: unknown[] }): Ajv;
 
 /**
- * Creates a normal resource from a partial resource and schema
+ * Creates a flat resource from a partial resource and schema
+ * @param schema - The schema defining the resource structure
+ * @param resourceType - The type of resource to build
+ * @param partialResource - The partial resource data
+ * @param options - Optional configuration
+ * @param options.includeRelationships - Whether to include default values for relationships not present in partialResource. When false, only relationships explicitly provided in partialResource will be included (useful when relationships will be linked later via linkInverses). Defaults to true.
+ * @returns Complete flat resource with defaults applied
+ */
+export function buildResource(
+	schema: Schema,
+	resourceType: string,
+	partialResource?: FlatResource,
+	options?: { includeRelationships?: boolean },
+): FlatResource;
+
+/**
+ * Creates a normalized resource from a partial resource and schema
  * @param schema - The schema defining the resource structure
  * @param resourceType - The type of resource to build
  * @param partialResource - The partial resource data
  * @returns Complete normalized resource
  */
-export function buildResource(
+export function buildNormalResource(
 	schema: Schema,
 	resourceType: string,
-	partialResource: PartialNormalResource,
+	partialResource?: FlatResource,
+	options?: { includeRelationships?: boolean },
 ): NormalResource;
 
 /**

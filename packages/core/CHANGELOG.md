@@ -4,6 +4,40 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). This project is still in v0.x versioning and will not follow semantic versioning until v1.0. Instead, expect minor dot changes to sometimes introduce breaking changes. Patch versions will not break anything.
 
+## [Unreleased]
+
+### Changed
+
+- **Breaking:** `buildResource(schema, resourceType, partialResource, options)` now returns a **flat resource** (attributes and relationship IDs at root level) instead of a normalized resource. This makes it more intuitive since it takes flat input and returns flat output.
+- **New:** `buildNormalResource(schema, resourceType, partialResource, options)` added for building normalized resources with the `type`/`id`/`attributes`/`relationships` structure. This is the renamed version of the old `buildResource` behavior.
+
+### Migration Guide
+
+If you were using `buildResource` and need a normalized resource:
+
+```js
+// Before
+const resource = buildResource(schema, "bears", { name: "Grumpy" });
+
+// After
+const resource = buildNormalResource(schema, "bears", { name: "Grumpy" });
+```
+
+If you want a flat resource (new behavior):
+
+```js
+// After
+const resource = buildResource(schema, "bears", { name: "Grumpy" });
+// Returns: { name: "Grumpy", furColor: "brown", ... } (with defaults applied)
+```
+
+## [0.5.4] - 2025-11-11
+
+### Added
+
+- `getQueryExtent(schema, normalQuery)` - Analyzes a normalized query and returns an array of dot-notated paths representing all attributes and relationships required to fulfill the query's select clause. This is particularly useful for store implementations to optimize data fetching (e.g., determining which SQL columns to SELECT, which API fields to request, or which paths to validate for access control).
+- `buildResource` now accepts an optional `options` parameter with an `includeRelationships` option. When set to `false`, relationship defaults are omitted, leaving only explicitly provided relationships. This is useful when building resources that will be linked later via `linkInverses()`, particularly in Multi-API store scenarios.
+
 ## [0.5.3] - 2025-11-05
 
 - Strengthened validation on ID types.

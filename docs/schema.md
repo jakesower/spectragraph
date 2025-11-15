@@ -242,6 +242,40 @@ Define both sides of relationships for automatic linking:
 }
 ```
 
+#### One-Way Relationships
+
+Inverse relationships can be set to `null` when you only need to traverse a relationship in one direction:
+
+```javascript
+{
+  resources: {
+    teams: {
+      attributes: { title: { type: 'string' } },
+      relationships: {
+        rival: {
+          type: 'teams',
+          cardinality: 'one',
+          inverse: null           // One-way relationship - no automatic back-reference
+        }
+      }
+    }
+  }
+}
+```
+
+**When to use one-way relationships:**
+
+- **Asymmetric relationships**: When the relationship doesn't naturally flow both ways
+- **Performance optimization**: When you only query in one direction and want to avoid maintaining reverse links
+- **Simplifying data models**: When the inverse relationship would add unnecessary complexity
+
+**Caveats:**
+
+- **Manual data management**: You're responsible for maintaining relationship integrity. SpectraGraph won't automatically update related resources when you modify a one-way relationship.
+- **Query limitations**: You can only traverse the relationship in the defined direction. To query from the other side, you'll need to use filtering or other query mechanisms.
+- **Data consistency**: Without automatic inverse updates, it's possible to create orphaned or inconsistent relationships if not managed carefully.
+- **Harder to reason about**: Bidirectional relationships make data dependencies more explicit. One-way relationships can hide important connections in your data model.
+
 ### Self-Referencing Relationships
 
 Resources can reference themselves:
@@ -463,7 +497,10 @@ const cmsSchema = {
         title: { type: "string" },
         isbn: { type: "string" },
         content: { type: "string" },
-        status: { type: "string", enum: ["available", "checked-out", "archived"] },
+        status: {
+          type: "string",
+          enum: ["available", "checked-out", "archived"],
+        },
         publishedAt: { type: "string", format: "date-time" },
         createdAt: { type: "string", format: "date-time" },
         updatedAt: { type: "string", format: "date-time" },
