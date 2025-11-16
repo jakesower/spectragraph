@@ -8,13 +8,23 @@ import {
 } from "../../interface-tests/src/index.js";
 import { createMultiApiStore } from "../src/multi-api-store.js";
 
-function parseUrl(url) {
+function parseUrl(url, schema) {
 	const urlObj = new URL(url);
 	const pathSegments = urlObj.pathname.split("/").filter(Boolean);
 
 	if (pathSegments.length >= 1) {
 		const type = pathSegments[0];
-		const id = pathSegments[1] ?? undefined;
+		let id = pathSegments[1] ?? undefined;
+
+		// Convert ID to correct type based on schema
+		if (id !== undefined && type && schema.resources[type]) {
+			const idAttr = schema.resources[type].idAttribute ?? "id";
+			const idType = schema.resources[type].attributes[idAttr]?.type;
+			if (idType === "integer") {
+				id = Number(id);
+			}
+		}
+
 		return { type, id };
 	}
 
@@ -28,7 +38,7 @@ const memoryStore = createMemoryStore(careBearSchema, {
 
 const responders = {
 	GET: async (url) => {
-		const { type, id } = parseUrl(url);
+		const { type, id } = parseUrl(url, careBearSchema);
 		const query = {
 			type,
 			id,
@@ -80,7 +90,7 @@ const responders = {
 		};
 	},
 	DELETE: async (url) => {
-		const { type, id } = parseUrl(url);
+		const { type, id } = parseUrl(url, careBearSchema);
 		await memoryStore.delete({ type, id });
 		return {
 			ok: true,

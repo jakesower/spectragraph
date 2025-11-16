@@ -39,6 +39,13 @@ export function createEmptyGraph(schema, options = {}) {
 export function linkInverses(schema, graph) {
 	const output = structuredClone(graph);
 
+	// Helper to convert ID to correct type based on schema
+	const getTypedId = (resourceType, id) => {
+		const idAttr = schema.resources[resourceType].idAttribute ?? "id";
+		const idType = schema.resources[resourceType].attributes[idAttr]?.type;
+		return idType === "integer" ? Number(id) : id;
+	};
+
 	Object.entries(schema.resources).forEach(([resType, resSchema]) => {
 		const sampleRes = Object.values(graph[resType])[0];
 		if (!sampleRes) return;
@@ -53,7 +60,7 @@ export function linkInverses(schema, graph) {
 				Object.entries(graph[foreignType]).forEach(
 					([foreignId, foreignRes]) => {
 						applyOrMap(foreignRes.relationships[inverse], (foreignRef) => {
-							map[foreignRef.id] = foreignId;
+							map[foreignRef.id] = getTypedId(foreignType, foreignId);
 						});
 					},
 				);
@@ -69,7 +76,7 @@ export function linkInverses(schema, graph) {
 					([foreignId, foreignRes]) => {
 						applyOrMap(foreignRes.relationships[inverse], (foreignRef) => {
 							if (!map[foreignRef.id]) map[foreignRef.id] = [];
-							map[foreignRef.id].push(foreignId);
+							map[foreignRef.id].push(getTypedId(foreignType, foreignId));
 						});
 					},
 				);
@@ -175,7 +182,13 @@ export function createGraphFromResources(
 	const go = (resourceType, resource) => {
 		const resourceSchema = schema.resources[resourceType];
 		const idAttribute = resourceSchema.idAttribute ?? "id";
-		const resourceId = resource[idAttribute];
+
+		// Convert ID to correct type based on schema
+		const idType = resourceSchema.attributes[idAttribute]?.type;
+		const resourceId =
+			idType === "integer" && resource[idAttribute] !== undefined
+				? Number(resource[idAttribute])
+				: resource[idAttribute];
 
 		output[resourceType][resourceId] = mergeNormalResources(
 			normalizeResource(schema, resourceType, resource),

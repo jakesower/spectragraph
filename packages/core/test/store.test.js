@@ -289,16 +289,16 @@ describe("storeMutation", () => {
 
 			// games has idAttribute: "id"
 			mutation("games", {
-				id: "game-123",
+				id: 123,
 				homeScore: 3,
 				awayScore: 1,
 			});
 
 			expect(receivedResource).toMatchObject({
 				type: "games",
-				id: "game-123",
+				id: 123,
 				attributes: {
-					id: "game-123",
+					id: 123,
 					homeScore: 3,
 					awayScore: 1,
 				},

@@ -217,7 +217,7 @@ describe("mergeGraphsDeep", () => {
 					type: "bears",
 					id: "1",
 					attributes: { name: "Tenderheart Bear" },
-					relationships: { home: { type: "homes", id: "1" } },
+					relationships: { home: { type: "homes", id: 1 } },
 				},
 			},
 		};
@@ -236,7 +236,7 @@ describe("mergeGraphsDeep", () => {
 		const merged = mergeGraphsDeep(left, right);
 
 		expect(merged.bears["1"].relationships).toEqual({
-			home: { type: "homes", id: "1" },
+			home: { type: "homes", id: 1 },
 			powers: [{ type: "powers", id: "careBearStare" }],
 		});
 	});
@@ -281,7 +281,7 @@ describe("mergeGraphsDeep", () => {
 					id: "1",
 					attributes: {},
 					relationships: {
-						home: { type: "homes", id: "1" },
+						home: { type: "homes", id: 1 },
 						powers: [{ type: "powers", id: "oldPower" }],
 					},
 				},
@@ -304,7 +304,7 @@ describe("mergeGraphsDeep", () => {
 		const merged = mergeGraphsDeep(left, right);
 
 		expect(merged.bears["1"].relationships).toEqual({
-			home: { type: "homes", id: "1" }, // preserved from left
+			home: { type: "homes", id: 1 }, // preserved from left
 			powers: [{ type: "powers", id: "newPower" }], // overridden by right
 		});
 	});
@@ -322,7 +322,7 @@ describe("mergeGraphsDeep", () => {
 					type: "bears",
 					id: "1",
 					attributes: { name: "Test Bear" },
-					relationships: { home: { type: "homes", id: "1" } },
+					relationships: { home: { type: "homes", id: 1 } },
 				},
 			},
 		};
@@ -333,7 +333,7 @@ describe("mergeGraphsDeep", () => {
 			type: "bears",
 			id: "1",
 			attributes: { name: "Test Bear" },
-			relationships: { home: { type: "homes", id: "1" } },
+			relationships: { home: { type: "homes", id: 1 } },
 		});
 	});
 
@@ -652,9 +652,9 @@ describe("createGraphFromResources", () => {
 				homes: {
 					1: {
 						type: "homes",
-						id: "1",
+						id: 1,
 						attributes: {
-							id: "1",
+							id: 1,
 							name: "Care-a-Lot",
 							location: "Kingdom of Caring",
 							caringMeter: 1,
@@ -806,15 +806,15 @@ describe("buildNormalResource integration with linkInverses", () => {
 		// Each bear's home should now be linked from the inverse
 		expect(linked.bears["1"].relationships.home).toEqual({
 			type: "homes",
-			id: "1",
+			id: 1,
 		});
 		expect(linked.bears["2"].relationships.home).toEqual({
 			type: "homes",
-			id: "1",
+			id: 1,
 		});
 		expect(linked.bears["3"].relationships.home).toEqual({
 			type: "homes",
-			id: "1",
+			id: 1,
 		});
 	});
 
@@ -906,7 +906,7 @@ describe("buildNormalResource integration with linkInverses", () => {
 				yearIntroduced: 1982,
 				bellyBadge: "red heart with pink outline",
 				furColor: "tan",
-				home: { type: "homes", id: "1" },
+				home: { type: "homes", id: 1 },
 			},
 			{ includeRelationships: false },
 		);
@@ -921,7 +921,7 @@ describe("buildNormalResource integration with linkInverses", () => {
 				yearIntroduced: 1982,
 				bellyBadge: "rainbow",
 				furColor: "carnation pink",
-				home: { type: "homes", id: "1" },
+				home: { type: "homes", id: 1 },
 			},
 			{ includeRelationships: false },
 		);
@@ -942,11 +942,11 @@ describe("buildNormalResource integration with linkInverses", () => {
 		// Bears' explicit home relationships should be preserved
 		expect(linked.bears["1"].relationships.home).toEqual({
 			type: "homes",
-			id: "1",
+			id: 1,
 		});
 		expect(linked.bears["2"].relationships.home).toEqual({
 			type: "homes",
-			id: "1",
+			id: 1,
 		});
 
 		// Home's residents should be linked from the inverse (bears' home relationships)
@@ -1005,7 +1005,7 @@ describe("buildNormalResource integration with linkInverses", () => {
 		// Bear should have both home and powers linked from inverses
 		expect(linked.bears["1"].relationships.home).toEqual({
 			type: "homes",
-			id: "1",
+			id: 1,
 		});
 		expect(linked.bears["1"].relationships.powers).toEqual([
 			{ type: "powers", id: "careBearStare" },
@@ -1037,7 +1037,7 @@ describe("buildNormalResource integration with linkInverses", () => {
 				yearIntroduced: 1982,
 				bellyBadge: "red heart with pink outline",
 				furColor: "tan",
-				home: { type: "homes", id: "1" },
+				home: { type: "homes", id: 1 },
 				// powers will be undefined - will be linked from powers
 			},
 			{ includeRelationships: false },
@@ -1070,7 +1070,7 @@ describe("buildNormalResource integration with linkInverses", () => {
 		// Bear's home should be preserved (explicit)
 		expect(linked.bears["1"].relationships.home).toEqual({
 			type: "homes",
-			id: "1",
+			id: 1,
 		});
 
 		// Bear's powers should be linked from power's wielders

@@ -62,7 +62,7 @@ describe("queryTree core", () => {
 		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result.home).toEqual({
-			id: "1",
+			id: 1,
 			name: "Care-a-Lot",
 			isInClouds: true,
 			location: "Kingdom of Caring",
@@ -197,7 +197,7 @@ describe("queryTree core", () => {
 		const result = queryGraph(careBearSchema, query, careBearData);
 
 		expect(result).toEqual({
-			home: { id: "1" },
+			home: { id: 1 },
 		});
 	});
 

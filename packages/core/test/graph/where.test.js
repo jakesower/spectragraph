@@ -54,7 +54,7 @@ describe("where clauses", () => {
 		};
 		const result = queryGraph(careBearSchema, query, careBearData);
 
-		expect(result).toEqual([{ id: "2" }]);
+		expect(result).toEqual([{ id: 2 }]);
 	});
 
 	it("filters using $eq operator", async () => {

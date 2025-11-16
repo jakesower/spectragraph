@@ -239,10 +239,23 @@ export const validateNormalResource = (schema, resource, options = {}) => {
 export function normalizeResource(schema, resourceType, resource) {
 	const resSchema = schema.resources[resourceType];
 
-	const attributes = mapValues(
-		resSchema.attributes,
-		(_, attr) => resource[attr],
-	);
+	// Helper to convert ID to correct type based on schema
+	const getTypedId = (foreignResourceType, id) => {
+		const foreignSchema = schema.resources[foreignResourceType];
+		const idAttr = foreignSchema.idAttribute ?? "id";
+		const idType = foreignSchema.attributes[idAttr]?.type;
+		return idType === "integer" ? Number(id) : id;
+	};
+
+	const idAttr = resSchema.idAttribute ?? "id";
+	const attributes = mapValues(resSchema.attributes, (attrSchema, attr) => {
+		const value = resource[attr];
+		// Type the ID attribute based on schema
+		if (attr === idAttr && value !== undefined && attrSchema.type === "integer") {
+			return Number(value);
+		}
+		return value;
+	});
 
 	const relationships = mapValues(resSchema.relationships, (relSchema, rel) => {
 		const emptyRel = relSchema.cardinality === "many" ? [] : null;
@@ -252,19 +265,27 @@ export function normalizeResource(schema, resourceType, resource) {
 			return undefined;
 		}
 
-		return applyOrMap(resource[rel] ?? emptyRel, (relRes) =>
-			typeof relRes === "object"
-				? {
-						type: relSchema.type,
-						id: relRes[relResSchema.idAttribute] ?? relRes.id,
-					}
-				: { type: relSchema.type, id: relRes },
-		);
+		return applyOrMap(resource[rel] ?? emptyRel, (relRes) => {
+			const rawId =
+				typeof relRes === "object"
+					? relRes[relResSchema.idAttribute] ?? relRes.id
+					: relRes;
+			return {
+				type: relSchema.type,
+				id: getTypedId(relSchema.type, rawId),
+			};
+		});
 	});
+
+	const rawId = resource[resSchema.idAttribute ?? "id"];
+	const typedId =
+		resSchema.attributes[idAttr]?.type === "integer" && rawId !== undefined
+			? Number(rawId)
+			: rawId;
 
 	return {
 		type: resourceType,
-		id: resource[resSchema.idAttribute ?? "id"],
+		id: typedId,
 		attributes: pickBy(attributes, (a) => a !== undefined),
 		relationships: pickBy(relationships, (r) => r !== undefined),
 	};
