@@ -107,3 +107,13 @@ export function translateAjvErrors(
 		otherErrors: ajvErrors,
 	}));
 }
+
+export function looksLikeExpression(val) {
+	return (
+		val !== null &&
+		typeof val === "object" &&
+		!Array.isArray(val) &&
+		Object.keys(val).length === 1 &&
+		Object.keys(val)[0].startsWith("$")
+	);
+}

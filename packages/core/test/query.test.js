@@ -395,40 +395,146 @@ describe("validateQuery", () => {
 			expect(result.length).toBeGreaterThan(0);
 		});
 
-		it("does not validate with a string aggregates clause", () => {
-			const query = {
-				type: "bears",
-				group: { by: "yearIntroduced", aggregates: "invalid" },
-			};
+		describe("group.aggregates", () => {
+			it("does not validate with a string aggregates clause", () => {
+				const query = {
+					type: "bears",
+					group: { by: "yearIntroduced", aggregates: "invalid" },
+				};
 
-			const result = validateQuery(careBearSchema, query);
-			expect(result.length).toBeGreaterThan(0);
-		});
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
 
-		it("does not validate with non-expression aggregates values", () => {
-			const query = {
-				type: "bears",
-				group: {
-					by: "yearIntroduced",
-					aggregates: { total: "notAnExpression" },
-				},
-			};
+			it("does not validate with non-expression aggregates values", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: { total: "notAnExpression" },
+					},
+				};
 
-			const result = validateQuery(careBearSchema, query);
-			expect(result.length).toBeGreaterThan(0);
-		});
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
 
-		it("validates with valid aggregates", () => {
-			const query = {
-				type: "bears",
-				group: {
-					by: "yearIntroduced",
-					aggregates: { count: { $count: null } },
-				},
-			};
+			it("validates with valid aggregates", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: { count: { $count: null } },
+					},
+				};
 
-			const result = validateQuery(careBearSchema, query);
-			expect(result.length).toEqual(0);
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it("fails validation on nonexistant nested paths from group.aggregates", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: {
+							homeNames: { $pluck: "home.helloWorld" },
+						},
+					},
+				};
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it("fails validation on badly nested paths from group.aggregates", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: {
+							homeNames: { $pluck: { $get: "home.name" } }, // $get nested in $pluck
+						},
+					},
+				};
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it("passes validation when aggregate references valid attribute", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: {
+							names: { $pluck: "name" },
+						},
+					},
+				};
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it("passes validation when aggregate references valid relationship", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: {
+							homeNames: { $pluck: "home.name" },
+						},
+					},
+				};
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it("fails validation when aggregate references invalid attribute", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: {
+							invalid: { $pluck: "notAnAttribute" },
+						},
+					},
+				};
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it("passes validation when aggregate uses complex expression with valid paths", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: {
+							powerCount: {
+								$sum: {
+									$pipe: [{ $get: "powers" }, { $count: null }],
+								},
+							},
+						},
+					},
+				};
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it("fails validation when aggregate expression references invalid nested path", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: {
+							invalid: {
+								$pluck: "home.invalidField",
+							},
+						},
+					},
+				};
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
 		});
 
 		describe("group.select", () => {
@@ -487,6 +593,130 @@ describe("validateQuery", () => {
 					group: {
 						by: "yearIntroduced",
 						select: { computed: { $notAnExpression: [1, 2] } },
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it("passes validation when selecting a string attribute that's in the by clause", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: { year: "yearIntroduced" },
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it("fails validation when selecting a string attribute that's not in the by clause", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: { badge: "bellyBadge" },
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it("passes validation when selecting an expression that only references attributes from the by clause", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: { doubled: { $multiply: [{ $get: "yearIntroduced" }, 2] } },
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it("fails validation when selecting an expression that references attributes not in the by clause", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: { upperName: { $uppercase: { $get: "name" } } },
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it("fails validation when selecting an expression with nested $get referencing non-by field", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: {
+							computed: {
+								$pipe: [{ $get: "bellyBadge" }, { $uppercase: null }],
+							},
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it("fails validation when selecting an expression with $if referencing non-by field", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: {
+							computed: {
+								$if: {
+									if: { $gt: [{ $get: "bellyBadge" }, "star"] },
+									then: "cool",
+									else: "not cool",
+								},
+							},
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it("passes validation when selecting expression with multiple references all in by clause", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: ["yearIntroduced", "bellyBadge"],
+						select: {
+							combined: {
+								$concat: [{ $get: "yearIntroduced" }, "-", { $get: "bellyBadge" }],
+							},
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it("fails validation when one of multiple expression references is not in by clause", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: {
+							combined: {
+								$concat: [{ $get: "yearIntroduced" }, "-", { $get: "name" }],
+							},
+						},
 					},
 				};
 
@@ -723,6 +953,193 @@ describe("validateQuery", () => {
 
 				const result = validateQuery(careBearSchema, query);
 				expect(result.length).toEqual(0);
+			});
+
+			it("fails validation when nested group aggregates contains a non-expression value", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: ["yearIntroduced"],
+						aggregates: { count: { $count: {} } },
+						group: {
+							by: "count",
+							aggregates: {
+								invalidValue: "notAnExpression",
+							},
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it("passes validation when nested group select references parent by field", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: ["yearIntroduced", "bellyBadge"],
+						aggregates: { count: { $count: {} } },
+						group: {
+							by: "bellyBadge",
+							select: { badge: "bellyBadge" },
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it("passes validation when nested group select references parent aggregate", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: { total: { $count: {} } },
+						group: {
+							by: "total",
+							select: { theTotal: "total" },
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it("fails validation when nested group select references field not in parent output", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: { count: { $count: {} } },
+						group: {
+							by: "count",
+							select: { invalidRef: "bellyBadge" },
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it("passes validation when nested group aggregate references parent select field", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: { year: "yearIntroduced" },
+						aggregates: { count: { $count: {} } },
+						group: {
+							by: "year",
+							aggregates: {
+								years: { $pluck: "year" },
+							},
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it("passes validation when nested group aggregate references parent aggregate field", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: { total: { $count: {} } },
+						group: {
+							by: "yearIntroduced",
+							aggregates: {
+								maxTotal: { $max: { $pluck: "total" } },
+							},
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it("fails validation when nested group aggregate references invalid parent field", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: { count: { $count: {} } },
+						group: {
+							by: "yearIntroduced",
+							aggregates: {
+								invalid: { $pluck: "notAField" },
+							},
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it("fails validation when nested group aggregate uses dotted path reference", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						select: { year: "yearIntroduced" },
+						aggregates: { count: { $count: {} } },
+						group: {
+							by: "year",
+							aggregates: {
+								invalid: { $get: "year.something" },
+							},
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
+			});
+
+			it("passes validation when nested group select uses expression referencing parent by field", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: { count: { $count: {} } },
+						group: {
+							by: "yearIntroduced",
+							select: {
+								doubled: { $multiply: [{ $get: "yearIntroduced" }, 2] },
+							},
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toEqual(0);
+			});
+
+			it("fails validation when nested group select expression references non-by field", () => {
+				const query = {
+					type: "bears",
+					group: {
+						by: "yearIntroduced",
+						aggregates: { count: { $count: {} } },
+						group: {
+							by: "yearIntroduced",
+							select: {
+								invalid: { $get: "count" },
+							},
+						},
+					},
+				};
+
+				const result = validateQuery(careBearSchema, query);
+				expect(result.length).toBeGreaterThan(0);
 			});
 		});
 	});
@@ -1287,6 +1704,116 @@ describe("getQueryExtent", () => {
 			expect(extent).toContain("powers.yearIntroduced");
 			expect(extent).toContain("powers.wielders");
 			expect(extent).toContain("powers.wielders.length");
+		});
+	});
+
+	describe("group mode", () => {
+		it("includes attributes from group.by", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				group: {
+					by: "yearIntroduced",
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("yearIntroduced");
+		});
+
+		it("includes attributes from group.by array", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				group: {
+					by: ["yearIntroduced", "bellyBadge"],
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("yearIntroduced");
+			expect(extent).toContain("bellyBadge");
+		});
+
+		it("includes attributes from group.select", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				group: {
+					by: ["yearIntroduced", "bellyBadge"],
+					select: ["yearIntroduced", "bellyBadge"],
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("yearIntroduced");
+			expect(extent).toContain("bellyBadge");
+		});
+
+		it("includes attributes from group.aggregates", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				group: {
+					by: "yearIntroduced",
+					aggregates: {
+						count: { $count: null },
+						totalNames: { $pluck: "name" },
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("yearIntroduced");
+			expect(extent).toContain("name");
+		});
+
+		it("includes nested paths from group.aggregates", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				group: {
+					by: "yearIntroduced",
+					aggregates: {
+						homeNames: { $pluck: "home.name" },
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("yearIntroduced");
+			expect(extent).toContain("home.name");
+		});
+
+		it("combines attributes from both group.select and group.aggregates", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				group: {
+					by: "yearIntroduced",
+					select: { year: "yearIntroduced" },
+					aggregates: {
+						nameCount: { $count: { $get: "name" } },
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("yearIntroduced");
+			expect(extent).toContain("name");
+		});
+
+		it("does not traverse into nested group clauses", () => {
+			const query = normalizeQuery(careBearSchema, {
+				type: "bears",
+				group: {
+					by: "yearIntroduced",
+					select: ["yearIntroduced"],
+					aggregates: {
+						count: { $count: null },
+					},
+					group: {
+						by: "count",
+						select: ["count"],
+						aggregates: {
+							years: { $pluck: "yearIntroduced" },
+							nestedNameCount: { $count: { $get: "count" } },
+						},
+					},
+				},
+			});
+			const extent = getQueryExtent(careBearSchema, query);
+			expect(extent).toContain("yearIntroduced");
+			// Should NOT include "name" from the nested group's aggregates
+			expect(extent).not.toContain("count");
 		});
 	});
 });
