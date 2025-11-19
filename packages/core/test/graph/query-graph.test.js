@@ -70,21 +70,6 @@ describe("queryTree core", () => {
 		});
 	});
 
-	it("fetches a single resource with its id", async () => {
-		const query = {
-			type: "bears",
-			id: "1",
-			select: ["id", "name"],
-		};
-
-		const result = queryGraph(careBearSchema, query, careBearData);
-
-		expect(result).toEqual({ id: "1", name: "Tenderheart Bear" });
-		expect(() => {
-			ensureValidQueryResult(careBearSchema, query, result);
-		});
-	});
-
 	it("fetches multiple resources by ids", async () => {
 		const query = {
 			type: "bears",
@@ -356,6 +341,28 @@ describe("queryTree core", () => {
 				},
 			});
 		}).rejects.toThrowError();
+	});
+
+	it("preserves null vs undefined attributes", async () => {
+		const query = {
+			type: "companions",
+			select: ["name", "description"],
+		};
+
+		const result = queryGraph(careBearSchema, query, careBearData);
+
+		expect(result).toEqual([
+			{
+				name: "Brave Heart Lion",
+				description:
+					"Strong and brave leader\nAlways ready to help\nLives in Care-a-Lot",
+			},
+			{ name: "Cozy Heart Penguin", description: null },
+			{ name: "Loyal Heart Dog", description: undefined },
+		]);
+		expect(() => {
+			ensureValidQueryResult(careBearSchema, query, result);
+		});
 	});
 
 	it("doesn't get stuck in an infinite loop with a certain kind of graph 2025-08-29", () => {

@@ -1,6 +1,7 @@
 import { mapValues, orderBy } from "es-toolkit";
 import { defaultSelectEngine, defaultWhereEngine } from "../lib/defaults.js";
 import { ID, RAW, TYPE } from "./query-graph.js";
+import { get } from "@spectragraph/utils";
 
 const ITEMS = Symbol("group items");
 
@@ -104,7 +105,7 @@ export function createQueryGraphClauses(
 					return (result) =>
 						propQuery in result[RAW].relationships
 							? result[RAW].relationships[propQuery]
-							: selectEngine.apply({ $get: propQuery }, result);
+							: get(result, propQuery);
 				}
 
 				// expression

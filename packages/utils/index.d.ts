@@ -20,6 +20,17 @@ export function applyOrMapAsync<T, R>(
 ): Promise<R | R[]> | null | undefined;
 
 /**
+ * Gets a value from an object using a property path.
+ * Supports the $ wildcard for array element iteration and flattening.
+ * Supports both dot notation and bracket notation.
+ */
+export function get(
+	objOrArray: any,
+	path: string | string[],
+	allowWildcards?: boolean
+): any;
+
+/**
  * Pipes a value through a series of functions in sequence.
  * Each function receives the result of the previous function.
  */

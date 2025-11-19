@@ -5,6 +5,60 @@
  */
 
 /**
+ * Parses a path string into segments, supporting both dot and bracket notation.
+ *
+ * @param {string} path - The path string to parse
+ * @returns {Array<string>} Array of path segments
+ *
+ * @example
+ * parsePath("foo.bar") // ["foo", "bar"]
+ * parsePath("foo[0].bar") // ["foo", "0", "bar"]
+ * parsePath("foo[$].bar") // ["foo", "$", "bar"]
+ * parsePath("foo[0][1]") // ["foo", "0", "1"]
+ */
+function parsePath(path) {
+	// Fast path for simple dot notation (no brackets)
+	if (!path.includes("[")) {
+		return path.split(".");
+	}
+
+	const segments = [];
+	let current = "";
+	let inBracket = false;
+
+	for (let i = 0; i < path.length; i++) {
+		const char = path[i];
+
+		if (char === "[") {
+			if (current) {
+				segments.push(current);
+				current = "";
+			}
+			inBracket = true;
+		} else if (char === "]") {
+			if (inBracket && current) {
+				segments.push(current);
+				current = "";
+			}
+			inBracket = false;
+		} else if (char === "." && !inBracket) {
+			if (current) {
+				segments.push(current);
+				current = "";
+			}
+		} else {
+			current += char;
+		}
+	}
+
+	if (current) {
+		segments.push(current);
+	}
+
+	return segments;
+}
+
+/**
  * Applies a function to an item or maps it over an array of items.
  * Handles null and undefined gracefully by returning them unchanged.
  *
@@ -54,6 +108,107 @@ export function applyOrMapAsync(itemItemsOrNull, asyncFn) {
 	return Array.isArray(itemItemsOrNull)
 		? Promise.all(itemItemsOrNull.map(asyncFn))
 		: asyncFn(itemItemsOrNull);
+}
+
+/**
+ * Gets a value from an object using a property path.
+ * Supports the $ wildcard for array element iteration and flattening.
+ * Supports both dot notation and bracket notation.
+ *
+ * @param {Object|Array} objOrArray - The object or array to query
+ * @param {string | Array} path - The path of the property to get. Use "$" to iterate over array elements.
+ * @param {boolean} [allowWildcards=false] - Whether to allow wildcard ($) in paths
+ * @returns {*} Returns the resolved value, or undefined if not found
+ *
+ * @example
+ * // Simple property access
+ * const bear = {
+ *   name: "Tenderheart Bear",
+ *   yearIntroduced: 1982,
+ *   home: { name: "Care-a-Lot" }
+ * };
+ * get(bear, "name")              // "Tenderheart Bear"
+ * get(bear, "home.name")         // "Care-a-Lot"
+ * get(bear, "bestFriend")        // undefined (property doesn't exist)
+ *
+ * @example
+ * // Bracket notation
+ * const bears = [
+ *   { name: "Tenderheart Bear" },
+ *   { name: "Cheer Bear" }
+ * ];
+ * get(bears, "[0].name")         // "Tenderheart Bear"
+ * get(bears, "[1].name")         // "Cheer Bear"
+ *
+ * @example
+ * // Wildcard ($) for array iteration
+ * const bear = {
+ *   name: "Wish Bear",
+ *   powers: [
+ *     { name: "Care Bear Stare" },
+ *     { name: "Make a Wish" }
+ *   ]
+ * };
+ * get(bear, "powers.$.name", true)  // ["Care Bear Stare", "Make a Wish"]
+ *
+ * @example
+ * // Nested wildcards
+ * const home = {
+ *   name: "Care-a-Lot",
+ *   residents: [
+ *     {
+ *       name: "Tenderheart Bear",
+ *       powers: [{ name: "Care Bear Stare" }]
+ *     },
+ *     {
+ *       name: "Cheer Bear",
+ *       powers: [{ name: "Care Bear Stare" }]
+ *     }
+ *   ]
+ * };
+ * get(home, "residents.$.name", true)           // ["Tenderheart Bear", "Cheer Bear"]
+ * get(home, "residents.$.powers.$.name", true)  // ["Care Bear Stare", "Care Bear Stare"]
+ */
+export function get(objOrArray, path, allowWildcards = false) {
+	if (objOrArray === null || objOrArray === undefined) return null;
+	if (path === "" || path === "." || path.length === 0) return objOrArray;
+
+	// Convert the path to an array if it's not already
+	const pathArray = Array.isArray(path) ? path : parsePath(path);
+
+	let current = objOrArray;
+
+	for (let i = 0; i < pathArray.length; i++) {
+		const segment = pathArray[i];
+
+		// Handle wildcard array iteration
+		if (segment === "$") {
+			if (!allowWildcards) {
+				const pathStr = Array.isArray(path) ? path.join(".") : path;
+				throw new Error(
+					`Wildcard ($) not supported in this context. Path: "${pathStr}"`,
+				);
+			}
+
+			const asArray = Array.isArray(current) ? current : [current];
+			const remainingPath = pathArray.slice(i + 1);
+
+			// If no remaining path, return the array
+			if (remainingPath.length === 0) return asArray;
+
+			// Recursively get from each array element
+			return asArray.flatMap((item) =>
+				get(item, remainingPath, allowWildcards),
+			);
+		}
+
+		// Normal property access
+		current = current?.[segment];
+
+		if (current === null || current === undefined) return current;
+	}
+
+	return current;
 }
 
 /**

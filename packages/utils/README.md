@@ -23,11 +23,79 @@ npm install @spectragraph/utils
 
 The package provides utility functions that handle common patterns in data processing:
 
+- **Property Access**: Safe, flexible path-based property access with wildcard support
 - **Mapping**: Apply functions to single items or arrays uniformly
 - **Piping**: Chain operations together in a functional style
 - **Null handling**: Safe operations that gracefully handle null/undefined values
 
 ## API Reference
+
+### `get(objOrArray, path, allowWildcards)`
+
+Gets a value from an object using a property path. Supports the `$` wildcard for array element iteration and flattening. Supports both dot notation and bracket notation.
+
+**Parameters:**
+
+- `objOrArray` (Object | Array) - The object or array to query
+- `path` (string | Array) - The path of the property to get. Use `"$"` to iterate over array elements.
+- `allowWildcards` (boolean, optional) - Whether to allow wildcard ($) in paths. Default: `false`
+
+**Returns:** The resolved value, `null` if the input is null/undefined, or `undefined` if the property is not found
+
+**Examples:**
+
+```javascript
+import { get } from "@spectragraph/utils";
+
+// Simple property access
+const bear = {
+  name: "Tenderheart Bear",
+  yearIntroduced: 1982,
+  home: { name: "Care-a-Lot" }
+};
+
+get(bear, "name");              // "Tenderheart Bear"
+get(bear, "home.name");         // "Care-a-Lot"
+get(bear, "bestFriend");        // undefined
+
+// Bracket notation
+const bears = [
+  { name: "Tenderheart Bear" },
+  { name: "Cheer Bear" }
+];
+
+get(bears, "[0].name");         // "Tenderheart Bear"
+get(bears, "[1].name");         // "Cheer Bear"
+
+// Wildcard ($) for array iteration
+const bear = {
+  name: "Wish Bear",
+  powers: [
+    { name: "Care Bear Stare" },
+    { name: "Make a Wish" }
+  ]
+};
+
+get(bear, "powers.$.name", true);  // ["Care Bear Stare", "Make a Wish"]
+
+// Nested wildcards
+const home = {
+  name: "Care-a-Lot",
+  residents: [
+    {
+      name: "Tenderheart Bear",
+      powers: [{ name: "Care Bear Stare" }]
+    },
+    {
+      name: "Cheer Bear",
+      powers: [{ name: "Care Bear Stare" }]
+    }
+  ]
+};
+
+get(home, "residents.$.name", true);           // ["Tenderheart Bear", "Cheer Bear"]
+get(home, "residents.$.powers.$.name", true);  // ["Care Bear Stare", "Care Bear Stare"]
+```
 
 ### `applyOrMap(itemItemsOrNull, fn)`
 
@@ -101,6 +169,69 @@ pipeThru(10, [add5, multiply2, toString]); // Returns: "30"
 ```
 
 ## Examples
+
+### Property Access and Path Navigation
+
+```javascript
+import { get } from "@spectragraph/utils";
+
+// Working with deeply nested data
+const careBear = {
+  name: "Tenderheart Bear",
+  home: {
+    name: "Care-a-Lot",
+    location: {
+      realm: "Cloud Kingdom",
+      coordinates: { x: 100, y: 200 }
+    }
+  },
+  powers: [
+    { name: "Care Bear Stare", type: "group" },
+    { name: "Healing Touch", type: "individual" }
+  ]
+};
+
+// Simple nested access
+get(careBear, "home.location.realm");  // "Cloud Kingdom"
+get(careBear, "home.location.coordinates.x");  // 100
+
+// Extract all power names using wildcard
+get(careBear, "powers.$.name", true);  // ["Care Bear Stare", "Healing Touch"]
+
+// Filter and extract with additional processing
+const powerTypes = get(careBear, "powers.$.type", true);
+// ["group", "individual"]
+```
+
+### Working with SpectraGraph Resources
+
+```javascript
+import { get } from "@spectragraph/utils";
+
+// Typical SpectraGraph resource structure
+const resource = {
+  type: "bears",
+  id: "1",
+  attributes: {
+    name: "Tenderheart Bear",
+    yearIntroduced: 1982
+  },
+  relationships: {
+    home: { type: "homes", id: 1 },
+    powers: [
+      { type: "powers", id: "careBearStare" },
+      { type: "powers", id: "healing" }
+    ]
+  }
+};
+
+// Access attributes
+get(resource, "attributes.name");  // "Tenderheart Bear"
+
+// Access relationship IDs
+get(resource, "relationships.home.id");  // 1
+get(resource, "relationships.powers.$.id", true);  // ["careBearStare", "healing"]
+```
 
 ### Data Transformation
 
@@ -234,7 +365,23 @@ const normalizedMultiple = normalizeResources(multipleResources);
 SpectraGraph Utils includes comprehensive TypeScript definitions:
 
 ```typescript
-import { applyOrMap, applyOrMapAsync, pipeThru } from "@spectragraph/utils";
+import { get, applyOrMap, applyOrMapAsync, pipeThru } from "@spectragraph/utils";
+
+// Property access
+interface Bear {
+  name: string;
+  home: { name: string; location: string };
+  powers: Array<{ name: string; type: string }>;
+}
+
+const bear: Bear = {
+  name: "Tenderheart Bear",
+  home: { name: "Care-a-Lot", location: "Cloud Kingdom" },
+  powers: [{ name: "Care Bear Stare", type: "group" }]
+};
+
+const homeName: any = get(bear, "home.name");  // Type: any
+const powerNames: any = get(bear, "powers.$.name", true);  // Type: any
 
 // Type-safe transformations
 const numbers: number[] = [1, 2, 3];

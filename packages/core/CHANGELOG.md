@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Breaking:** `buildResource(schema, resourceType, partialResource, options)` now returns a **flat resource** (attributes and relationship IDs at root level) instead of a normalized resource. This makes it more intuitive since it takes flat input and returns flat output.
 - **New:** `buildNormalResource(schema, resourceType, partialResource, options)` added for building normalized resources with the `type`/`id`/`attributes`/`relationships` structure. This is the renamed version of the old `buildResource` behavior.
 
+### Fixed
+
+- `queryGraph` preserves `undefined` values instead of turning them into `null`.
+
 ### Migration Guide
 
 If you were using `buildResource` and need a normalized resource:

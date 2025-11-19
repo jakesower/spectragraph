@@ -179,7 +179,7 @@
 			"attributes": {
 				"companionId": "2",
 				"name": "Cozy Heart Penguin",
-				"description": "Warm and caring friend.\nLoves to sing and dance.\nBrings joy to everyone."
+				"description": null
 			},
 			"relationships": {}
 		},
@@ -188,8 +188,7 @@
 			"id": "3",
 			"attributes": {
 				"companionId": "3",
-				"name": "Loyal Heart Dog",
-				"description": "Faithful companion\nAlways loyal to friends\nHelps bears with tasks\nstart: Always loyal\nend: Never gives up"
+				"name": "Loyal Heart Dog"
 			},
 			"relationships": {}
 		}

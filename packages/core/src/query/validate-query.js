@@ -382,6 +382,201 @@ function buildGroupSelectObject(groupQuery) {
 }
 
 /**
+ * Validates group select clause (expressions must only reference by clause fields)
+ */
+function validateGroupSelect(select, byArray, path, addError, selectEngine) {
+	if (!select) return;
+
+	// Handle wildcard
+	if (select === "*") return;
+
+	// Handle array select
+	if (Array.isArray(select)) {
+		select.forEach((item, idx) => {
+			const currentPath = [...path, "select", idx];
+
+			// Wildcard in array is allowed
+			if (item === "*") return;
+
+			// Handle object with key-value pairs (e.g., { tier: { $if: ... } })
+			if (typeof item === "object" && !looksLikeExpression(item)) {
+				Object.entries(item).forEach(([key, val]) => {
+					validateGroupSelectValue(
+						val,
+						byArray,
+						[...currentPath, key],
+						addError,
+						selectEngine,
+					);
+				});
+				return;
+			}
+
+			// Handle string or expression
+			validateGroupSelectValue(item, byArray, currentPath, addError, selectEngine);
+		});
+		return;
+	}
+
+	// Handle object select
+	if (typeof select === "object") {
+		Object.entries(select).forEach(([key, val]) => {
+			const currentPath = [...path, "select", key];
+			validateGroupSelectValue(val, byArray, currentPath, addError, selectEngine);
+		});
+	}
+}
+
+/**
+ * Validates a single select value (string or expression)
+ */
+function validateGroupSelectValue(item, byArray, path, addError, selectEngine) {
+	// String must be in by array
+	if (typeof item === "string") {
+		if (!byArray.includes(item)) {
+			addError(
+				`Invalid select clause value "${item}". All values in the select clause must be in the by clause or expressions that don't reference any outside of them.`,
+				path,
+			);
+		}
+		return;
+	}
+
+	// Must be an expression
+	if (!looksLikeExpression(item)) {
+		addError(
+			`Invalid select clause value "${JSON.stringify(item)}". All values in the select clause must be in the by clause or expressions that don't reference any outside of them.`,
+			path,
+		);
+		return;
+	}
+
+	// Validate expression syntax
+	const expressionErrors = selectEngine.validateExpression(item);
+	expressionErrors.forEach((err) => {
+		addError(err.message, path);
+	});
+
+	// Validate expression references
+	const { paths: exprPaths } = extractQuerySelection(item);
+	exprPaths.forEach((exprPath) => {
+		if (!byArray.includes(exprPath.join("."))) {
+			addError(
+				`Invalid select clause value "${JSON.stringify(item)}". All values in the select clause must be in the by clause or expressions that don't reference any outside of them. Got a reference to ${exprPath.join(".")}`,
+				path,
+			);
+		}
+	});
+}
+
+/**
+ * Validates base group aggregates (can reference any valid resource attribute/relationship)
+ */
+function validateBaseGroupAggregates(aggregates, schema, queryType, path, addError) {
+	if (!aggregates) return;
+
+	const checkPath = (curPath, curType) => {
+		const curResSchema = schema.resources[curType];
+		const [head, ...tail] = curPath;
+
+		if (typeof head !== "string") {
+			return false;
+		} else if (tail.length === 0) {
+			return (
+				head in curResSchema.attributes || head in curResSchema.relationships
+			);
+		} else if (head in curResSchema.relationships) {
+			return checkPath(tail, curResSchema.relationships[head].type);
+		} else if (head in curResSchema.attributes) {
+			return !!get(curResSchema.attributes, curPath);
+		} else {
+			return false;
+		}
+	};
+
+	Object.entries(aggregates).forEach(([key, item]) => {
+		if (looksLikeExpression(item)) {
+			try {
+				const { paths: exprPaths } = extractQuerySelection(item);
+				exprPaths.forEach((exprPath) => {
+					if (!checkPath(exprPath, queryType)) {
+						addError(
+							`Invalid aggregates clause value. All values must be expressions that reference only attributes or relationships. Got a reference to ${JSON.stringify(exprPath)}.`,
+							[...path, "aggregates", key],
+						);
+					}
+				});
+			} catch (err) {
+				const message = err.cause
+					? `Invalid aggregates clause value. An error was caught evaluating it with message: ${err.cause}`
+					: "Invalid aggregates clause value. An error was caught evaluating it with an unknown error (logged).";
+
+				if (!err.cause) console.error(err);
+				addError(message, [...path, "aggregates", key]);
+			}
+		} else {
+			addError(
+				`Invalid aggregates clause value "${item}". All values must be expressions that reference only attributes or relationships.`,
+				[...path, "aggregates", key],
+			);
+		}
+	});
+}
+
+/**
+ * Validates nested group aggregates (can only reference parent output fields)
+ */
+function validateNestedGroupAggregates(
+	aggregates,
+	parentGroup,
+	path,
+	addError,
+) {
+	if (!aggregates) return;
+
+	const parentSelectObj = buildGroupSelectObject(parentGroup);
+	const validFields = [
+		...Object.keys(parentSelectObj ?? {}),
+		...Object.keys(parentGroup.aggregates ?? {}),
+	];
+
+	Object.entries(aggregates).forEach(([key, item]) => {
+		if (looksLikeExpression(item)) {
+			try {
+				const { paths: exprPaths } = extractQuerySelection(item);
+
+				exprPaths.forEach((exprPath) => {
+					const [head, ...tail] = exprPath;
+					if (tail.length > 0) {
+						addError(
+							`Invalid aggregates clause value. Nested group aggregates cannot reference nested fields (using dot notation). Got ${exprPath.join(".")}. Valid options: ${validFields.join(", ")}`,
+							[...path, "aggregates", key],
+						);
+					} else if (!validFields.includes(head)) {
+						addError(
+							`Invalid aggregates clause value. Nested group aggregate expressions may only reference fields in the parent group clause's by, select, or aggregates clause. Got ${exprPath.join(".")}. Valid options: ${validFields.join(", ")}`,
+							[...path, "aggregates", key],
+						);
+					}
+				});
+			} catch (err) {
+				const message = err.cause
+					? `Invalid aggregates clause value. An error was caught evaluating it with message: ${err.cause}`
+					: "Invalid aggregates clause value. An error was caught evaluating it with an unknown error (logged).";
+
+				if (!err.cause) console.error(err);
+				addError(message, [...path, "aggregates", key]);
+			}
+		} else {
+			addError(
+				`Invalid aggregates clause value. Nested group aggregate expressions may only reference fields in the parent group clause's by, select, or aggregates clause. Got ${JSON.stringify(item)}. Valid options: ${validFields.join(", ")}`,
+				[...path, "aggregates", key],
+			);
+		}
+	});
+}
+
+/**
  * Validates a group query (can be called recursively for nested groups)
  */
 function validateGroupQuery(query, context) {
@@ -407,9 +602,6 @@ function validateGroupQuery(query, context) {
 				: [...parentByArray, ...Object.keys(parentGroup.aggregates ?? {})],
 		);
 
-		const parentSelectObj = buildGroupSelectObject(parentGroup);
-		const selectObj = buildGroupSelectObject(query.group);
-
 		byArray.forEach((field) => {
 			if (!parentOutputFields.has(field)) {
 				addError(
@@ -419,154 +611,13 @@ function validateGroupQuery(query, context) {
 			}
 		});
 
-		Object.entries(select ? selectObj : {}).forEach(([key, item]) => {
-			if (byArray.includes(item)) return;
-			if (looksLikeExpression(item)) {
-				const { paths: exprPaths } = extractQuerySelection(item);
-				exprPaths.forEach((exprPath) => {
-					if (!byArray.includes(exprPath.join("."))) {
-						addError(
-							`Invalid select clause value "${JSON.stringify(item)}". All values in the select clause must be in the by clause or expressions that don't reference any outside of them. Got a reference to ${exprPath.join(".")}`,
-							[...path, "select", key],
-						);
-					}
-				});
-			} else {
-				addError(
-					`Invalid select clause value "${item}". All values in the select clause must be in the by clause or expressions that don't reference any outside of them.`,
-					[...path, "select", key],
-				);
-			}
-		});
-
-		Object.entries(aggregates ?? {}).forEach(([key, item]) => {
-			const validFields = [
-				...Object.keys(parentSelectObj ?? {}),
-				...Object.keys(parentGroup.aggregates ?? {}),
-			];
-
-			if (looksLikeExpression(item)) {
-				try {
-					const { paths: exprPaths } = extractQuerySelection(item);
-
-					exprPaths.forEach((exprPath) => {
-						const [head, ...tail] = exprPath;
-						if (tail.length > 0) {
-							addError(
-								`Invalid aggregates clause value. Nested group aggregates cannot reference nested fields (using dot notation). Got ${exprPath.join(".")}. Valid options: ${validFields.join(", ")}`,
-								[...path, "aggregates", key],
-							);
-						} else if (!validFields.includes(head)) {
-							addError(
-								`Invalid aggregates clause value. Nested group aggregate expressions may only reference fields in the parent group clause's by, select, or aggregates clause. Got ${exprPath.join(".")}. Valid options: ${validFields.join(", ")}`,
-								[...path, "aggregates", key],
-							);
-						}
-					});
-				} catch (err) {
-					if (err.cause) {
-						addError(
-							`Invalid aggregates clause value. An error was caught evaluating it with message: ${err.cause}`,
-							[...path, "aggregates", key],
-						);
-					} else {
-						console.error(err);
-						addError(
-							"Invalid aggregates clause value. An error was caught evaluating it with an unknown error (logged).",
-							[...path, "aggregates", key],
-						);
-					}
-				}
-			} else {
-				addError(
-					`Invalid aggregates clause value. Nested group aggregate expressions may only reference fields in the parent group clause's by, select, or aggregates clause. Got ${JSON.stringify(item)}. Valid options: ${validFields.join(", ")}`,
-					[...path, "aggregates", key],
-				);
-			}
-		});
+		// Validate select and aggregates for nested groups
+		validateGroupSelect(select, byArray, path, addError, selectEngine);
+		validateNestedGroupAggregates(aggregates, parentGroup, path, addError);
 	} else {
-		const checkPath = (curPath, curType) => {
-			const curResSchema = schema.resources[curType];
-			const [head, ...tail] = curPath;
-
-			if (typeof head !== "string") {
-				return false;
-			} else if (tail.length === 0) {
-				return (
-					head in curResSchema.attributes || head in curResSchema.relationships
-				);
-			} else if (head in curResSchema.relationships) {
-				return checkPath(tail, curResSchema.relationships[head].type);
-			} else if (head in curResSchema.attributes) {
-				return !!get(curResSchema.attributes, curPath);
-			} else {
-				return false;
-			}
-		};
-
-		Object.entries(select ?? {}).forEach(([key, item]) => {
-			if (byArray.includes(item)) return;
-			if (looksLikeExpression(item)) {
-				const { paths: exprPaths } = extractQuerySelection(item);
-				exprPaths.forEach((exprPath) => {
-					if (!byArray.includes(exprPath.join("."))) {
-						addError(
-							`Invalid select clause value "${JSON.stringify(item)}". All values in the select clause must be attributes in the by clause or expressions that don't reference any outside of them. Got a reference to ${exprPath.join(".")}`,
-							[...path, "select", key],
-						);
-					}
-				});
-			} else {
-				addError(
-					`Invalid select clause value "${item}". All values in the select clause must be attributes in the by clause or expressions that don't reference any outside of them.`,
-					[...path, "select", key],
-				);
-			}
-		});
-
-		Object.entries(aggregates ?? {}).forEach(([key, item]) => {
-			if (looksLikeExpression(item)) {
-				try {
-					const { paths: exprPaths } = extractQuerySelection(item);
-					exprPaths.forEach((exprPath) => {
-						if (!checkPath(exprPath, query.type)) {
-							addError(
-								`Invalid aggregates clause value. All values must be expressions that reference only attributes or relationships. Got a reference to ${JSON.stringify(exprPath)}.`,
-								[...path, "aggregates", key],
-							);
-						}
-					});
-				} catch (err) {
-					if (err.cause) {
-						addError(
-							`Invalid aggregates clause value. An error was caught evaluating it with message: ${err.cause}`,
-							[...path, "aggregates", key],
-						);
-					} else {
-						console.error(err);
-						addError(
-							"Invalid aggregates clause value. An error was caught evaluating it with an unknown error (logged).",
-							[...path, "aggregates", key],
-						);
-					}
-				}
-			} else {
-				addError(
-					`Invalid aggregates clause value "${item}". All values must be expressions that reference only attributes or relationships.`,
-					[...path, "aggregates", key],
-				);
-			}
-		});
-	}
-
-	// Validate group.select
-	if (select) {
-		validateSelectClause(select, {
-			validFields: new Set(byArray),
-			isExpression: selectEngine.isExpression,
-			path: [...path, "select"],
-			addError,
-		});
+		// Validate select and aggregates for base groups
+		validateGroupSelect(select, byArray, path, addError, selectEngine);
+		validateBaseGroupAggregates(aggregates, schema, query.type, path, addError);
 	}
 
 	// Validate group.where
