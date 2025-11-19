@@ -1,7 +1,7 @@
 import { mapValues, orderBy } from "es-toolkit";
+import { get } from "@spectragraph/utils";
 import { defaultSelectEngine, defaultWhereEngine } from "../lib/defaults.js";
 import { ID, RAW, TYPE } from "./query-graph.js";
-import { get } from "@spectragraph/utils";
 
 const ITEMS = Symbol("group items");
 
