@@ -26,7 +26,7 @@
 	"keywords": [],
 	"author": "Jake Sower",
 	"dependencies": {
-		"@spectragraph/utils": "*",
+		"@spectragraph/utils": "^0.1.0",
 		"ajv": "^8.17.1",
 		"ajv-errors": "^3.0.0",
 		"ajv-formats": "^3.0.1",
