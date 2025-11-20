@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). This project is still in v0.x versioning and will not follow semantic versioning until v1.0. Instead, expect minor dot changes to sometimes introduce breaking changes. Patch versions will not break anything.
 
+## [0.6.2] - 2025-11-20
+
+No changes. Failed to build and deployed the wrong thing with 0.6.1.
+
 ## [0.6.1] - 2025-11-20
 
 ### Fixed
