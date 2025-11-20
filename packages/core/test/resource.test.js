@@ -724,6 +724,22 @@ describe("validateQueryResult", () => {
 		);
 		expect(result.length).toBeGreaterThan(0);
 	});
+
+	it("allows null for a selected to-one relationship", () => {
+		const query = {
+			type: "games",
+			id: "1",
+			select: {
+				attendance: "attendance",
+				referee: { select: ["name"] },
+			},
+		};
+		const result = validateQueryResult(soccerSchema, query, {
+			attendance: 1000,
+			referee: null,
+		});
+		expect(result.length).toEqual(0);
+	});
 });
 
 describe("buildNormalResource", () => {

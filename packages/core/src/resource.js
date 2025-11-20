@@ -251,7 +251,11 @@ export function normalizeResource(schema, resourceType, resource) {
 	const attributes = mapValues(resSchema.attributes, (attrSchema, attr) => {
 		const value = resource[attr];
 		// Type the ID attribute based on schema
-		if (attr === idAttr && value !== undefined && attrSchema.type === "integer") {
+		if (
+			attr === idAttr &&
+			value !== undefined &&
+			attrSchema.type === "integer"
+		) {
 			return Number(value);
 		}
 		return value;
@@ -268,7 +272,7 @@ export function normalizeResource(schema, resourceType, resource) {
 		return applyOrMap(resource[rel] ?? emptyRel, (relRes) => {
 			const rawId =
 				typeof relRes === "object"
-					? relRes[relResSchema.idAttribute] ?? relRes.id
+					? (relRes[relResSchema.idAttribute] ?? relRes.id)
 					: relRes;
 			return {
 				type: relSchema.type,
@@ -765,7 +769,7 @@ export function validateQueryResult(schema, rootQuery, result, options = {}) {
 
 				const relDef = resDef.relationships[prop];
 				return relDef.cardinality === "one"
-					? queryDefinition(def)
+					? { oneOf: [queryDefinition(def), { type: "null" }] }
 					: { type: "array", items: queryDefinition(def) };
 			}),
 		});
