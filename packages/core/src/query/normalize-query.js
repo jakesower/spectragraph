@@ -93,6 +93,7 @@ const normalizers = {
 	group(schema, query, type) {
 		const applyGroup = (groupQuery) => {
 			const defaultedGroupQuery = {
+				aggregates: {},
 				...groupQuery,
 				select: groupQuery.select ?? groupQuery.by,
 				...(groupQuery.group ? { group: applyGroup(groupQuery.group) } : {}),

@@ -3,11 +3,10 @@ import addFormats from "ajv-formats";
 import addErrors from "ajv-errors";
 import { applyOrMap } from "@spectragraph/utils";
 import { mapValues, omit, pickBy } from "es-toolkit";
-import { normalizeQuery } from "./query/normalize-query.js";
-import { createDeepCache, ensure, translateAjvErrors } from "./lib/helpers.js";
-import { validateSchema } from "./schema.js";
+import { createDeepCache, translateAjvErrors } from "./lib/helpers.js";
 import { buildAttribute } from "./resource-helpers.js";
-import { defaultSelectEngine, defaultValidator } from "./lib/defaults.js";
+import { defaultValidator } from "./lib/defaults.js";
+import { validateQueryResult } from "./resource/validate-query-result.js";
 
 /**
  * @typedef {Object} Ref
@@ -166,7 +165,6 @@ const getNormalResourceCache = createDeepCache();
 const getCreateResourceCache = createDeepCache();
 const getUpdateResourceCache = createDeepCache();
 const getMergeResourceCache = createDeepCache();
-const getValidateQueryResultCache = createDeepCache();
 
 /**
  * Validates a normal resource.
@@ -716,76 +714,4 @@ export function validateMergeResource(schema, resource, options = {}) {
 		: translateAjvErrors(compiledValidator.errors, resource, "resource");
 }
 
-/**
- * Validates a query result. This function can be quite slow. It's recommended for use mostly in testing.
- *
- * @param {import('./schema.js').Schema} schema - The schema to validate against
- * @param {import('./query.js').RootQuery} query - The query run to produce the result
- * @param {Object|Object[]} result - The resource tree to validate
- * @param {Object} [options]
- * @param {Ajv} [options.validator] - The validator instance to use
- * @param {import('./lib/defaults.js').SelectExpressionEngine} [options.selectEngine] - Expression engine for SELECT clause validation
- * @return {import('./lib/helpers.js').StandardError[]}
- */
-export function validateQueryResult(schema, rootQuery, result, options = {}) {
-	const { selectEngine = defaultSelectEngine, validator = defaultValidator } =
-		options;
-
-	ensure(validateSchema)(schema, options);
-
-	if (typeof validator !== "object") {
-		return [
-			{
-				message: "Invalid validator: expected object, got " + typeof validator,
-			},
-		];
-	}
-	if (typeof rootQuery !== "object") {
-		return [
-			{ message: "Invalid query: expected object, got " + typeof rootQuery },
-		];
-	}
-	// check for the special case of a null result to improve error quality
-	if (rootQuery.id && result === null) {
-		return [];
-	}
-
-	const cache = getValidateQueryResultCache(schema, validator, rootQuery);
-	let compiledValidator = cache.value;
-	if (!compiledValidator) {
-		const normalQuery = normalizeQuery(schema, rootQuery);
-
-		const queryDefinition = (query) => ({
-			type: "object",
-			required: Object.keys(query.select),
-			properties: mapValues(query.select, (def, prop) => {
-				const resDef = schema.resources[query.type];
-
-				if (selectEngine.isExpression(def)) return {};
-
-				if (typeof def === "string") {
-					return { ...resDef.attributes[def] };
-				}
-
-				const relDef = resDef.relationships[prop];
-				return relDef.cardinality === "one"
-					? { oneOf: [queryDefinition(def), { type: "null" }] }
-					: { type: "array", items: queryDefinition(def) };
-			}),
-		});
-
-		const validationSchema = normalQuery.id
-			? queryDefinition(normalQuery)
-			: {
-					type: "array",
-					items: queryDefinition(normalQuery),
-				};
-
-		compiledValidator = validator.compile(validationSchema);
-		cache.set(compiledValidator);
-	}
-
-	return compiledValidator(result)
-		? []
-		: translateAjvErrors(compiledValidator.errors, result, "resource");
-}
+export { validateQueryResult };

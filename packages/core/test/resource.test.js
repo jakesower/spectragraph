@@ -740,6 +740,180 @@ describe("validateQueryResult", () => {
 		});
 		expect(result.length).toEqual(0);
 	});
+
+	it("allows undefined for an attribute", () => {
+		const query = {
+			type: "games",
+			id: "1",
+			select: ["attendance", "homeScore"],
+		};
+		const result = validateQueryResult(soccerSchema, query, {
+			attendance: 1000,
+			homeScore: undefined,
+		});
+		expect(result.length).toEqual(0);
+	});
+
+	it("fails validation when result contains extra attributes not in select", () => {
+		const query = {
+			type: "games",
+			id: "1",
+			select: ["attendance"],
+		};
+		const result = validateQueryResult(soccerSchema, query, {
+			attendance: 1000,
+			homeScore: 3,
+		});
+		expect(result.length).toBeGreaterThan(0);
+	});
+
+	it("allows empty array for to-many relationships", () => {
+		const query = {
+			type: "teams",
+			id: "1",
+			select: {
+				name: "name",
+				homeGames: { select: ["attendance"] },
+			},
+		};
+		const result = validateQueryResult(soccerSchema, query, {
+			name: "Team A",
+			homeGames: [],
+		});
+		expect(result.length).toEqual(0);
+	});
+
+	it("allows null to-one relationships in array results", () => {
+		const query = {
+			type: "games",
+			select: {
+				attendance: "attendance",
+				referee: { select: ["name"] },
+			},
+		};
+		const result = validateQueryResult(soccerSchema, query, [
+			{ attendance: 1000, referee: { name: "Ref 1" } },
+			{ attendance: 2000, referee: null },
+		]);
+		expect(result.length).toEqual(0);
+	});
+
+	it("validates non-empty to-many relationships with nested objects", () => {
+		const query = {
+			type: "teams",
+			id: "1",
+			select: {
+				name: "name",
+				homeGames: { select: ["attendance"] },
+			},
+		};
+		const result = validateQueryResult(soccerSchema, query, {
+			name: "Team A",
+			homeGames: [{ attendance: 1000 }, { attendance: 2000 }],
+		});
+		expect(result.length).toEqual(0);
+	});
+
+	describe("group query results", () => {
+		it("validates simple group by with select", () => {
+			const query = {
+				type: "games",
+				group: {
+					by: ["attendance"],
+					select: ["attendance"],
+				},
+			};
+			const result = validateQueryResult(soccerSchema, query, [
+				{ attendance: 1000 },
+				{ attendance: 2000 },
+			]);
+			expect(result.length).toEqual(0);
+		});
+
+		it("validates group with aggregates", () => {
+			const query = {
+				type: "games",
+				group: {
+					by: "attendance",
+					aggregates: { total: { $count: null } },
+				},
+			};
+			const result = validateQueryResult(soccerSchema, query, [
+				{ attendance: 1000, total: 2 },
+				{ attendance: 2000, total: 1 },
+			]);
+			expect(result.length).toEqual(0);
+		});
+
+		it("validates group with select and aggregates combined", () => {
+			const query = {
+				type: "games",
+				group: {
+					by: ["attendance"],
+					select: { count: "attendance" },
+					aggregates: { total: { $count: null } },
+				},
+			};
+			const result = validateQueryResult(soccerSchema, query, [
+				{ count: 1000, total: 2 },
+				{ count: 2000, total: 1 },
+			]);
+			expect(result.length).toEqual(0);
+		});
+
+		it("validates grand total query (by: [])", () => {
+			const query = {
+				type: "games",
+				group: {
+					by: [],
+					aggregates: {
+						totalGames: { $count: null },
+						avgAttendance: { $mean: { $pluck: "attendance" } },
+					},
+				},
+			};
+			const result = validateQueryResult(soccerSchema, query, [
+				{
+					totalGames: 4,
+					avgAttendance: 1500,
+				},
+			]);
+			expect(result.length).toEqual(0);
+		});
+
+		it("validates nested group query results", () => {
+			const query = {
+				type: "games",
+				group: {
+					by: "attendance",
+					aggregates: { gameCount: { $count: null } },
+					group: {
+						by: "gameCount",
+						aggregates: { attendanceLevels: { $count: null } },
+					},
+				},
+			};
+			const result = validateQueryResult(soccerSchema, query, [
+				{ gameCount: 2, attendanceLevels: 1 },
+				{ gameCount: 1, attendanceLevels: 2 },
+			]);
+			expect(result.length).toEqual(0);
+		});
+
+		it("fails validation when group result is missing aggregate field", () => {
+			const query = {
+				type: "games",
+				group: {
+					by: "attendance",
+					aggregates: { total: { $count: null } },
+				},
+			};
+			const result = validateQueryResult(soccerSchema, query, [
+				{ attendance: 1000 }, // missing 'total'
+			]);
+			expect(result.length).toBeGreaterThan(0);
+		});
+	});
 });
 
 describe("buildNormalResource", () => {
