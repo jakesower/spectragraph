@@ -179,7 +179,7 @@
 			"attributes": {
 				"companionId": "2",
 				"name": "Cozy Heart Penguin",
-				"description": null
+				"description": "Warm and caring friend.\nLoves to sing and dance.\nBrings joy to everyone."
 			},
 			"relationships": {}
 		},
@@ -188,7 +188,27 @@
 			"id": "3",
 			"attributes": {
 				"companionId": "3",
-				"name": "Loyal Heart Dog"
+				"name": "Loyal Heart Dog",
+				"description": "Faithful companion\nAlways loyal to friends\nHelps bears with tasks\nstart: Always loyal\nend: Never gives up"
+			},
+			"relationships": {}
+		},
+		"4": {
+			"type": "companions",
+			"id": "4",
+			"attributes": {
+				"companionId": "4",
+				"name": "Swift Heart Rabbit",
+				"description": null
+			},
+			"relationships": {}
+		},
+		"5": {
+			"type": "companions",
+			"id": "5",
+			"attributes": {
+				"companionId": "5",
+				"name": "Proud Heart Cat"
 			},
 			"relationships": {}
 		}
