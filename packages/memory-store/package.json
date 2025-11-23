@@ -47,6 +47,6 @@
 	"dependencies": {
 		"@spectragraph/core": "*",
 		"es-toolkit": "^1.41.0",
-		"json-expressions": "^0.13.2"
+		"json-expressions": "^0.15.0"
 	}
 }

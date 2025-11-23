@@ -41,5 +41,8 @@
 		"README.md",
 		"LICENSE"
 	],
-	"sideEffects": false
+	"sideEffects": false,
+	"dependencies": {
+		"json-expressions": "^0.15.0"
+	}
 }

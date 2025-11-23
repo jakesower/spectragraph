@@ -26,6 +26,6 @@
 		"vitest": "^4.0.3"
 	},
 	"dependencies": {
-		"json-expressions": "^0.13.2"
+		"json-expressions": "^0.15.0"
 	}
 }
