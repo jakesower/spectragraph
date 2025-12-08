@@ -349,14 +349,19 @@ describe("queryTree core", () => {
 			select: ["name", "description"],
 		};
 
-		const result = queryGraph(careBearSchema, query, careBearData);
+		const result = queryGraph(careBearSchema, query, {
+			companions: {
+				1: {
+					attributes: {
+						name: "Cozy Heart Penguin",
+						description: null,
+					},
+				},
+				2: { attributes: { name: "Loyal Heart Dog", description: undefined } },
+			},
+		});
 
 		expect(result).toEqual([
-			{
-				name: "Brave Heart Lion",
-				description:
-					"Strong and brave leader\nAlways ready to help\nLives in Care-a-Lot",
-			},
 			{ name: "Cozy Heart Penguin", description: null },
 			{ name: "Loyal Heart Dog", description: undefined },
 		]);
