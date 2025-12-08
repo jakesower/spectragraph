@@ -1,14 +1,14 @@
 import { mapValues } from "es-toolkit";
 
 const distributingExpressions = {
-	$and: (operand, attribute, { resolve }) => ({
-		$and: operand.map((pred) => resolve(pred, attribute)),
+	$and: (operand, { resolve }) => ({
+		$and: operand.map(resolve),
 	}),
-	$or: (operand, attribute, { resolve }) => ({
-		$or: operand.map((pred) => resolve(pred, attribute)),
+	$or: (operand, { resolve }) => ({
+		$or: operand.map(resolve),
 	}),
-	$not: (operand, attribute, { resolve }) => ({
-		$not: resolve(operand, attribute),
+	$not: (operand, { resolve }) => ({
+		$not: resolve(operand),
 	}),
 };
 
@@ -19,19 +19,20 @@ const looksLikeExpression = (val) =>
 	Object.keys(val).length === 1 &&
 	Object.keys(val)[0].startsWith("$");
 
-// Structure has already been validated, so no need for defensive coding/covering all cases.
+// structure has already been validated, so no need for defensive coding/covering all cases.
 export function normalizeWhereClause(where) {
-	const resolve = (node, attribute) => {
+	const resolve = (node) => {
 		if (looksLikeExpression(node)) {
 			const [expressionName, operand] = Object.entries(node)[0];
 
-			// attribute information needs to be distributed
+			// distributing expressions ($and/$or/$not) recursively normalize their operands
 			if (expressionName in distributingExpressions) {
 				const expression = distributingExpressions[expressionName];
-				return expression(operand, attribute, { resolve });
+				return expression(operand, { resolve });
 			}
 
-			return attribute ? { $pipe: [{ $get: attribute }, node] } : node;
+			// non-distributing expressions are returned as-is
+			return node;
 		}
 
 		if (typeof node === "object" && node !== null && !Array.isArray(node)) {
@@ -45,5 +46,5 @@ export function normalizeWhereClause(where) {
 		throw new Error("where clauses must either be objects or expressions");
 	};
 
-	return resolve(where, null);
+	return resolve(where);
 }

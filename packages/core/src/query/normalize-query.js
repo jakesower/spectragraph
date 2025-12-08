@@ -6,14 +6,14 @@ import { ensure } from "../lib/helpers.js";
 export const NORMALIZED = Symbol("normalized");
 
 const distributingExpressions = {
-	$and: (operand, attribute, { resolve }) => ({
-		$and: operand.map((pred) => resolve(pred, attribute)),
+	$and: (operand, { resolve }) => ({
+		$and: operand.map(resolve),
 	}),
-	$or: (operand, attribute, { resolve }) => ({
-		$or: operand.map((pred) => resolve(pred, attribute)),
+	$or: (operand, { resolve }) => ({
+		$or: operand.map(resolve),
 	}),
-	$not: (operand, attribute, { resolve }) => ({
-		$not: resolve(operand, attribute),
+	$not: (operand, { resolve }) => ({
+		$not: resolve(operand),
 	}),
 };
 
@@ -109,17 +109,18 @@ const normalizers = {
 		return applyGroup(query.group);
 	},
 	where(schema, query) {
-		const resolve = (node, attribute) => {
+		const resolve = (node) => {
 			if (looksLikeExpression(node)) {
 				const [expressionName, operand] = Object.entries(node)[0];
 
-				// attribute information needs to be distributed
+				// distributing expressions ($and/$or/$not) recursively normalize their operands
 				if (expressionName in distributingExpressions) {
 					const expression = distributingExpressions[expressionName];
-					return expression(operand, attribute, { resolve });
+					return expression(operand, { resolve });
 				}
 
-				return attribute ? { $pipe: [{ $get: attribute }, node] } : node;
+				// mon-distributing expressions are returned as-is
+				return node;
 			}
 
 			if (typeof node === "object" && node !== null && !Array.isArray(node)) {
@@ -133,7 +134,7 @@ const normalizers = {
 			throw new Error("where clauses must either be objects or expressions");
 		};
 
-		return query.where ? resolve(query.where, null) : {};
+		return query.where ? resolve(query.where) : {};
 	},
 	order(schema, query) {
 		return Array.isArray(query.order) ? query.order : [query.order];
