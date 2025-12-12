@@ -311,6 +311,10 @@ export function buildResource(
 	const { includeRelationships = true } = options;
 	const resSchema = schema.resources[resourceType];
 
+	if (!resSchema) {
+		throw new Error(`${resourceType} is not a valid resource type`);
+	}
+
 	const builtAttributes = mapValues(
 		resSchema.attributes,
 		(attrSchema, attrName) =>
