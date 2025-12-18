@@ -1,3 +1,4 @@
+import { getFullQueryExtent } from "./query/query-extent.js";
 import { normalizeQuery } from "./query/normalize-query.js";
 import { validateQuery } from "./query/validate-query.js";
 import { looksLikeExpression } from "./lib/helpers.js";
@@ -66,7 +67,7 @@ import { extractQuerySelection } from "./query/helpers.js";
  * ```
  *
  * @note Does not analyze dynamically constructed paths (e.g., { $get: { $concat: ["home", ".name"] } })
- * @note Only analyzes the select clause - does not include paths referenced in where/order clauses
+ * @note Only analyzes the select and group clauses - does not include paths referenced in where/order clauses
  */
 export function getQueryExtent(schema, query) {
 	const normalQuery = normalizeQuery(schema, query);
@@ -110,4 +111,4 @@ export function getQueryExtent(schema, query) {
 	return Array.from(pathSet);
 }
 
-export { normalizeQuery, validateQuery };
+export { getFullQueryExtent, normalizeQuery, validateQuery };

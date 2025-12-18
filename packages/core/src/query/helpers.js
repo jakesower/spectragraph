@@ -25,14 +25,6 @@ const matchesHandler = (operand, { apply }) => ({
 	]),
 });
 
-const resolveStringOrExpression = (strOrExprs, apply) => ({
-	paths: [
-		strOrExprs.flatMap((strOrExpr) =>
-			typeof strOrExpr === "string" ? strOrExpr : apply(strOrExpr).paths,
-		),
-	],
-});
-
 const extendExpandingExpressions = {
 	$literal: () => ({ paths: [] }),
 	$get: (operand) => {
@@ -66,18 +58,24 @@ const extendExpandingExpressions = {
 		return operand.reduce(walk, { paths: [], traverse: [] });
 	},
 	$sort: (operand, { apply }) => {
-		const normal =
-			typeof operand === "string"
-				? [operand]
-				: Array.isArray(operand.by)
-					? operand.by
-					: [operand.by];
+		if (typeof operand === "string") {
+			return { paths: [operand] };
+		}
 
-		return resolveStringOrExpression(normal, apply);
+		const normal = Array.isArray(operand.by) ? operand.by : [operand.by];
+		return {
+			paths: normal.flatMap((strOrExpr) =>
+				typeof strOrExpr === "string" ? [[strOrExpr]] : apply(strOrExpr).paths,
+			),
+		};
 	},
 	$groupBy: (operand, { apply }) => {
 		const normal = Array.isArray(operand) ? operand : [operand];
-		return resolveStringOrExpression(normal, apply);
+		return {
+			paths: normal.flatMap((strOrExpr) =>
+				typeof strOrExpr === "string" ? [[strOrExpr]] : apply(strOrExpr).paths,
+			),
+		};
 	},
 };
 
