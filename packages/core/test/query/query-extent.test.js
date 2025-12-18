@@ -678,4 +678,51 @@ describe("getQueryExtentByClause", () => {
 			});
 		});
 	});
+
+	describe("order", () => {
+		it("includes attributes from simple order clause", () => {
+			const extent = getQueryExtentByClause(careBearSchema, {
+				type: "bears",
+				select: "*",
+				order: { name: "asc" },
+			});
+			expect(extent.order).toEqual({
+				attributes: ["name"],
+				relationships: {},
+			});
+		});
+
+		it("includes attributes from multiple order fields", () => {
+			const extent = getQueryExtentByClause(careBearSchema, {
+				type: "bears",
+				select: "*",
+				order: [{ name: "asc" }, { yearIntroduced: "desc" }],
+			});
+			expect(extent.order).toEqual({
+				attributes: ["name", "yearIntroduced"],
+				relationships: {},
+			});
+		});
+
+		it("includes attributes from order clause in a subquery", () => {
+			const extent = getQueryExtentByClause(careBearSchema, {
+				type: "bears",
+				select: {
+					home: {
+						select: ["name"],
+						order: { caringMeter: "desc" },
+					},
+				},
+			});
+			expect(extent.order).toEqual({
+				attributes: [],
+				relationships: {
+					home: {
+						attributes: ["caringMeter"],
+						relationships: {},
+					},
+				},
+			});
+		});
+	});
 });

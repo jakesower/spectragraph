@@ -78,6 +78,12 @@ const getQueryWhereExtent = createClauseExtractor((subquery, addPath) => {
 	extractQuerySelection(subquery.where ?? {}).paths.forEach(addPath);
 });
 
+const getQueryOrderExtent = createClauseExtractor((subquery, addPath) => {
+	(subquery.order ?? []).forEach((o) => {
+		Object.keys(o).forEach((k) => addPath([k]));
+	});
+});
+
 const getQuerySelectExtent = createClauseExtractor((subquery, addPath) => {
 	Object.values(subquery.select ?? {}).forEach((val) => {
 		if (typeof val === "string") {
@@ -101,6 +107,7 @@ export function getQueryExtentByClause(schema, query) {
 	return {
 		group: getQueryGroupExtent(schema, normalQuery),
 		select: getQuerySelectExtent(schema, normalQuery),
+		order: getQueryOrderExtent(schema, normalQuery),
 		where: getQueryWhereExtent(schema, normalQuery),
 	};
 }
