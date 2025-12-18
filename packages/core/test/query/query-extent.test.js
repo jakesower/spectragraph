@@ -580,5 +580,102 @@ describe("getQueryExtentByClause", () => {
 				relationships: {},
 			});
 		});
+
+		it("includes attributes from a nested group", () => {
+			const extent = getQueryExtentByClause(careBearSchema, {
+				type: "bears",
+				select: {
+					home: {
+						group: { by: ["name"], aggregates: { total: { $count: null } } },
+					},
+				},
+			});
+			expect(extent.group).toEqual({
+				attributes: [],
+				relationships: {
+					home: {
+						attributes: ["name"],
+						relationships: {},
+					},
+				},
+			});
+		});
+	});
+
+	describe("where", () => {
+		it("includes attributes from simple equality conditions", () => {
+			const extent = getQueryExtentByClause(careBearSchema, {
+				type: "bears",
+				select: "*",
+				where: { name: "Tenderheart Bear", yearIntroduced: 1983 },
+			});
+			expect(extent.where).toEqual({
+				attributes: ["name", "yearIntroduced"],
+				relationships: {},
+			});
+		});
+
+		it("includes attributes from comparison expressions ($gt, $lt, etc.)", () => {
+			const extent = getQueryExtentByClause(careBearSchema, {
+				type: "bears",
+				select: "*",
+				where: {
+					yearIntroduced: { $gt: 1985 },
+					name: { $ne: "Grumpy Bear" },
+				},
+			});
+			expect(extent.where).toEqual({
+				attributes: ["yearIntroduced", "name"],
+				relationships: {},
+			});
+		});
+
+		it("includes attributes from complex logical expressions ($and, $or, $not)", () => {
+			const extent = getQueryExtentByClause(careBearSchema, {
+				type: "bears",
+				select: "*",
+				where: {
+					$and: [
+						{ yearIntroduced: { $gt: 1985 } },
+						{
+							$or: [
+								{ name: "Tenderheart Bear" },
+								{ $not: { bellyBadge: "heart" } },
+							],
+						},
+					],
+				},
+			});
+			expect(extent.where).toEqual({
+				attributes: ["yearIntroduced", "name", "bellyBadge"],
+				relationships: {},
+			});
+		});
+
+		it("includes attributes from $matchesAll within where clause", () => {
+			const extent = getQueryExtentByClause(careBearSchema, {
+				type: "bears",
+				select: {
+					home: {
+						select: ["name"],
+						where: {
+							$matchesAll: {
+								caringMeter: { $gt: 50 },
+								isInClouds: true,
+							},
+						},
+					},
+				},
+			});
+			expect(extent.where).toEqual({
+				attributes: [],
+				relationships: {
+					home: {
+						attributes: ["caringMeter", "isInClouds"],
+						relationships: {},
+					},
+				},
+			});
+		});
 	});
 });

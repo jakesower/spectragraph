@@ -46,47 +46,51 @@ function createExtent(schema, baseType) {
 	};
 }
 
-function getQuerySelectExtent(schema, normalQuery) {
-	// NOTE: extent gets mutated throughout the function
-	const { extent, addPath } = createExtent(schema, normalQuery.type);
+function createClauseExtractor(extractFn) {
+	return (schema, normalQuery) => {
+		const { extent, addPath } = createExtent(schema, normalQuery.type);
 
-	const go = (subquery, path) => {
-		Object.entries(subquery.select ?? {}).forEach(([key, val]) => {
+		const go = (subquery, path) => {
+			extractFn(subquery, (xPath) => addPath([...path, ...xPath]));
+
 			const resSchema = schema.resources[subquery.type];
+			Object.entries(subquery.select ?? {}).forEach(([k, v]) => {
+				if (k in resSchema.relationships) {
+					go(v, [...path, k]);
+				}
+			});
+		};
 
-			if (typeof val === "string") {
-				return addPath([...path, val]);
-			}
-			if (key in resSchema.relationships) {
-				return go(val, [...path, key]);
-			}
-			if (looksLikeExpression(val)) {
-				const exprPaths = extractQuerySelection(val);
-				return exprPaths.paths.forEach((exprPath) => {
-					addPath([...path, ...exprPath]);
-				});
-			}
-
-			throw new Error(`unexpected query selection { ${key}: ${val} }`);
-		});
+		go(normalQuery, []);
+		return arrayifyAttributeSets(extent);
 	};
-
-	go(normalQuery, []);
-	return arrayifyAttributeSets(extent);
 }
 
-function getQueryGroupExtent(schema, normalQuery) {
-	// NOTE: extent gets mutated throughout the function
-	const { extent, addPath } = createExtent(schema, normalQuery.type);
-
-	(normalQuery.group?.by ?? []).forEach((by) => addPath([by]));
-	Object.values(normalQuery.group?.aggregates ?? {}).forEach((agg) => {
+const getQueryGroupExtent = createClauseExtractor((subquery, addPath) => {
+	(subquery.group?.by ?? []).forEach((by) => addPath([by]));
+	Object.values(subquery.group?.aggregates ?? {}).forEach((agg) => {
 		const exprPaths = extractQuerySelection(agg);
 		exprPaths.paths.forEach(addPath);
 	});
+});
 
-	return arrayifyAttributeSets(extent);
-}
+const getQueryWhereExtent = createClauseExtractor((subquery, addPath) => {
+	extractQuerySelection(subquery.where ?? {}).paths.forEach(addPath);
+});
+
+const getQuerySelectExtent = createClauseExtractor((subquery, addPath) => {
+	Object.values(subquery.select ?? {}).forEach((val) => {
+		if (typeof val === "string") {
+			return addPath([val]);
+		}
+		if (looksLikeExpression(val)) {
+			const exprPaths = extractQuerySelection(val);
+			return exprPaths.paths.forEach((exprPath) => {
+				addPath([...exprPath]);
+			});
+		}
+	});
+});
 
 export function getFullQueryExtent(schema, query) {
 	return getQuerySelectExtent(schema, query);
@@ -97,5 +101,6 @@ export function getQueryExtentByClause(schema, query) {
 	return {
 		group: getQueryGroupExtent(schema, normalQuery),
 		select: getQuerySelectExtent(schema, normalQuery),
+		where: getQueryWhereExtent(schema, normalQuery),
 	};
 }
