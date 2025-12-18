@@ -1,4 +1,7 @@
-import { getFullQueryExtent } from "./query/query-extent.js";
+import {
+	getFullQueryExtent,
+	getQueryExtentByClause,
+} from "./query/query-extent.js";
 import { normalizeQuery } from "./query/normalize-query.js";
 import { validateQuery } from "./query/validate-query.js";
 import { looksLikeExpression } from "./lib/helpers.js";
@@ -111,4 +114,9 @@ export function getQueryExtent(schema, query) {
 	return Array.from(pathSet);
 }
 
-export { getFullQueryExtent, normalizeQuery, validateQuery };
+export {
+	getFullQueryExtent,
+	getQueryExtentByClause,
+	normalizeQuery,
+	validateQuery,
+};
