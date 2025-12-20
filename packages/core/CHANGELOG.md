@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `getQueryExtentByClause(schema, query)` - Analyzes a query and returns which attributes and relationships are referenced by each query clause (select, where, order, group) separately. This enables fine-grained optimization where different clauses have different performance or security characteristics (e.g., SQL stores can determine which columns are needed for WHERE vs SELECT, access control can apply different permissions to filter vs display fields).
+- `getFullQueryExtent(schema, query)` - Analyzes a query and returns the complete set of attributes and relationships referenced across all query clauses, merged into a single extent. Useful for stores that need to know all data requirements upfront for prefetching or permission checks.
+
+### Changed
+
+- **Breaking:** `getQueryExtent(schema, normalQuery)` has been removed. Use `getFullQueryExtent(schema, query)` for the merged extent across all clauses, or `getQueryExtentByClause(schema, query)` for per-clause analysis. The new functions analyze all query clauses (select, where, order, group) instead of only the select clause, and accept unnormalized queries for convenience.
+
 ### Fixed
 
 - `validateQueryResult` now supports validating group query results. Note: aggregate field types cannot be statically validated as they depend on the aggregation function and data.

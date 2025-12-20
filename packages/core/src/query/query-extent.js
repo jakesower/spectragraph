@@ -1,7 +1,21 @@
-import { mapValues } from "es-toolkit";
+import { mapValues, uniq } from "es-toolkit";
 import { looksLikeExpression } from "../lib/helpers.js";
 import { normalizeQuery } from "./normalize-query.js";
 import { extractQuerySelection } from "./helpers.js";
+
+/**
+ * @typedef {Object} QueryExtent
+ * @property {string[]} attributes - Array of attribute names referenced in the query
+ * @property {Object.<string, QueryExtent>} relationships - Map of relationship names to their nested extents
+ */
+
+/**
+ * @typedef {Object} QueryExtentByClause
+ * @property {QueryExtent} select - Extent of attributes/relationships referenced in select clause
+ * @property {QueryExtent} where - Extent of attributes/relationships referenced in where clause
+ * @property {QueryExtent} order - Extent of attributes/relationships referenced in order clause
+ * @property {QueryExtent} group - Extent of attributes/relationships referenced in group clause
+ */
 
 function arrayifyAttributeSets(curExtent) {
 	return {
@@ -87,21 +101,21 @@ const getQueryOrderExtent = createClauseExtractor((subquery, addPath) => {
 const getQuerySelectExtent = createClauseExtractor((subquery, addPath) => {
 	Object.values(subquery.select ?? {}).forEach((val) => {
 		if (typeof val === "string") {
-			return addPath([val]);
-		}
-		if (looksLikeExpression(val)) {
-			const exprPaths = extractQuerySelection(val);
-			return exprPaths.paths.forEach((exprPath) => {
-				addPath([...exprPath]);
-			});
+			addPath([val]);
+		} else if (looksLikeExpression(val)) {
+			extractQuerySelection(val).paths.forEach(addPath);
 		}
 	});
 });
 
-export function getFullQueryExtent(schema, query) {
-	return getQuerySelectExtent(schema, query);
-}
-
+/**
+ * Analyzes a query to determine which schema attributes and relationships are referenced
+ * by each query clause (select, where, order, group).
+ *
+ * @param {Object} schema - The schema object defining resources, attributes, and relationships
+ * @param {Object} query - The query object to analyze
+ * @returns {QueryExtentByClause} Object containing separate extents for each clause type
+ */
 export function getQueryExtentByClause(schema, query) {
 	const normalQuery = normalizeQuery(schema, query);
 	return {
@@ -110,4 +124,37 @@ export function getQueryExtentByClause(schema, query) {
 		order: getQueryOrderExtent(schema, normalQuery),
 		where: getQueryWhereExtent(schema, normalQuery),
 	};
+}
+
+const emptyExtent = { attributes: [], relationships: {} };
+const mergeExtents = (left = emptyExtent, right = emptyExtent) => {
+	const attributes = uniq([...left.attributes, ...right.attributes]);
+
+	const allRelationships = uniq([
+		...Object.keys(left.relationships),
+		...Object.keys(right.relationships),
+	]);
+
+	const relationships = Object.fromEntries(
+		allRelationships.map((rel) => [
+			rel,
+			mergeExtents(left.relationships[rel], right.relationships[rel]),
+		]),
+	);
+
+	return { attributes, relationships };
+};
+
+/**
+ * Analyzes a query to determine the complete set of schema attributes and relationships
+ * referenced across all query clauses (select, where, order, group), merged into a single extent.
+ *
+ * @param {Object} schema - The schema object defining resources, attributes, and relationships
+ * @param {Object} query - The query object to analyze
+ * @returns {QueryExtent} Single merged extent containing all referenced attributes and relationships
+ */
+export function getFullQueryExtent(schema, query) {
+	return Object.values(getQueryExtentByClause(schema, query)).reduce(
+		mergeExtents,
+	);
 }

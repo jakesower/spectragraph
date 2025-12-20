@@ -473,9 +473,67 @@ export function normalizeQuery(
 ): NormalQuery;
 
 /**
- * Calculates the statically determinable extent (required attributes and relationships) of a query.
- * Returns an array of dot-notated paths representing all attributes and relationships that must be
- * accessed to fulfill the query's select clause.
+ * Extent structure representing attributes and relationships referenced in a query clause.
+ */
+export interface QueryExtent {
+	/** Array of attribute names referenced */
+	attributes: string[];
+	/** Map of relationship names to their nested extents */
+	relationships: { [relationshipName: string]: QueryExtent };
+}
+
+/**
+ * Extent structure organized by query clause type.
+ */
+export interface QueryExtentByClause {
+	/** Extent of attributes/relationships referenced in select clause */
+	select: QueryExtent;
+	/** Extent of attributes/relationships referenced in where clause */
+	where: QueryExtent;
+	/** Extent of attributes/relationships referenced in order clause */
+	order: QueryExtent;
+	/** Extent of attributes/relationships referenced in group clause */
+	group: QueryExtent;
+}
+
+/**
+ * Analyzes a query to determine which schema attributes and relationships are referenced
+ * by each query clause (select, where, order, group).
+ *
+ * This enables fine-grained optimization by store implementations:
+ * - SQL stores can determine which columns are needed for WHERE vs SELECT
+ * - Access control can apply different permissions to filter vs display fields
+ * - Query optimizers can fetch minimal data incrementally
+ *
+ * @param schema - The schema defining resource types and relationships
+ * @param query - The query object to analyze
+ * @returns Object containing separate extents for each clause type
+ *
+ * @example
+ * ```typescript
+ * const extents = getQueryExtentByClause(schema, {
+ *   type: "bears",
+ *   select: ["name"],
+ *   where: { furColor: "brown" },
+ *   order: { yearIntroduced: "asc" }
+ * });
+ * // Returns:
+ * // {
+ * //   select: { attributes: ["name"], relationships: {} },
+ * //   where: { attributes: ["furColor"], relationships: {} },
+ * //   order: { attributes: ["yearIntroduced"], relationships: {} },
+ * //   group: { attributes: [], relationships: {} }
+ * // }
+ * ```
+ */
+export function getQueryExtentByClause(
+	schema: Schema,
+	query: RootQuery,
+): QueryExtentByClause;
+
+/**
+ * Analyzes a query to determine the complete set of schema attributes and relationships
+ * referenced across all query clauses (select, where, order, group), merged into a single extent.
  *
  * This is useful for store implementations to optimize data fetching by:
  * - Determining which database columns to SELECT in SQL queries
@@ -484,28 +542,25 @@ export function normalizeQuery(
  * - Validating access permissions for specific paths
  *
  * @param schema - The schema defining resource types and relationships
- * @param normalQuery - The normalized query to analyze (use normalizeQuery first)
- * @returns Array of unique dot-notated paths (e.g., ["name", "home.name", "powers.wielders.name"])
+ * @param query - The query object to analyze
+ * @returns Single merged extent containing all referenced attributes and relationships
  *
  * @example
  * ```typescript
- * const query = normalizeQuery(schema, {
+ * const extent = getFullQueryExtent(schema, {
  *   type: "bears",
- *   select: {
- *     name: "name",
- *     powerNames: { $get: "powers.$.name" },
- *     home: { select: { name: "name" } }
- *   }
+ *   select: ["name"],
+ *   where: { furColor: "brown" },
+ *   order: { yearIntroduced: "asc" }
  * });
- *
- * const extent = getQueryExtent(schema, query);
- * // Returns: ["name", "powers.name", "home.name"]
+ * // Returns:
+ * // {
+ * //   attributes: ["name", "furColor", "yearIntroduced"],
+ * //   relationships: {}
+ * // }
  * ```
- *
- * @note Does not analyze dynamically constructed paths (e.g., { $get: { $concat: ["home", ".name"] } })
- * @note Only analyzes the select clause - does not include paths referenced in where/order clauses
  */
-export function getQueryExtent(schema: Schema, normalQuery: NormalQuery): string[];
+export function getFullQueryExtent(schema: Schema, query: RootQuery): QueryExtent;
 
 // === GRAPH FUNCTIONS ===
 

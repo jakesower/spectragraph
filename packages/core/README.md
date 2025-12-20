@@ -611,58 +611,123 @@ const normalized = normalizeQuery(schema, {
 });
 ```
 
-#### `getQueryExtent(schema, normalQuery)`
+#### `getQueryExtentByClause(schema, query)`
 
-Analyzes a normalized query and returns an array of dot-notated paths representing all attributes and relationships required to fulfill the query's select clause.
+Analyzes a query to determine which schema attributes and relationships are referenced by each query clause (select, where, order, group) separately.
 
-This is particularly useful for store implementations to optimize data fetching by determining exactly which fields need to be retrieved from the underlying data source.
+This enables fine-grained optimization by store implementations where different clauses have different performance or security characteristics.
 
 **Parameters:**
 
 - `schema` (Schema) - The schema defining resource types and relationships
-- `normalQuery` (NormalQuery) - The normalized query to analyze (use `normalizeQuery` first)
+- `query` (RootQuery) - The query object to analyze
 
-**Returns:** Array of unique dot-notated paths (e.g., `["name", "home.name", "powers.wielders.name"]`)
+**Returns:** Object with separate extents for each clause:
+
+```typescript
+{
+  select: QueryExtent,
+  where: QueryExtent,
+  order: QueryExtent,
+  group: QueryExtent
+}
+```
+
+Where `QueryExtent` has the structure:
+
+```typescript
+{
+  attributes: string[],
+  relationships: { [relationshipName: string]: QueryExtent }
+}
+```
 
 **Use Cases:**
 
-- **SQL stores**: Determine which columns to SELECT and which tables to JOIN
-- **Multi-API stores**: Identify which API endpoints and fields to request
-- **GraphQL**: Build minimal queries with only required fields
-- **Access control**: Validate user permissions for specific data paths
-
-**Limitations:**
-
-- Only analyzes the `select` clause (not `where` or `order` clauses)
-- Does not handle dynamically constructed paths (e.g., `{ $get: { $concat: ["home", ".name"] } }`)
+- **SQL query building**: WHERE clause paths → JOIN/WHERE, SELECT paths → SELECT columns, ORDER paths → ORDER BY
+- **Access control**: Apply different permissions to filter fields vs display fields
+- **Incremental fetching**: Fetch filtering data first, then display data for filtered results
+- **Query optimization**: Identify which fields need indexes (ORDER/WHERE) vs which are just displayed
 
 ```javascript
-import { normalizeQuery, getQueryExtent } from "@spectragraph/core";
+import { getQueryExtentByClause } from "@spectragraph/core";
 
-const query = normalizeQuery(schema, {
+const extents = getQueryExtentByClause(schema, {
   type: "bears",
-  select: {
-    name: "name",
-    powerNames: { $get: "powers.$.name" },
-    home: {
-      select: {
-        name: "name",
-        residents: { select: ["name"] },
-      },
-    },
-  },
+  select: ["name", { home: ["caringMeter"] }],
+  where: { furColor: "brown" },
+  order: { yearIntroduced: "asc" },
 });
 
-const extent = getQueryExtent(schema, query);
-// Returns: ["name", "powers.name", "home.name", "home.residents.name"]
+// Returns:
+// {
+//   select: {
+//     attributes: ["name"],
+//     relationships: { home: { attributes: ["caringMeter"], relationships: {} } }
+//   },
+//   where: {
+//     attributes: ["furColor"],
+//     relationships: {}
+//   },
+//   order: {
+//     attributes: ["yearIntroduced"],
+//     relationships: {}
+//   },
+//   group: {
+//     attributes: [],
+//     relationships: {}
+//   }
+// }
 
 // Use in SQL store:
-const columns = extent.map((path) => convertPathToColumn(path));
-const sql = `SELECT ${columns.join(", ")} FROM bears ...`;
+const whereColumns = extents.where.attributes; // ["furColor"]
+const selectColumns = extents.select.attributes; // ["name"]
+const orderColumns = extents.order.attributes; // ["yearIntroduced"]
+const joins = Object.keys(extents.select.relationships); // ["home"]
+```
+
+#### `getFullQueryExtent(schema, query)`
+
+Analyzes a query to determine the complete set of schema attributes and relationships referenced across all query clauses (select, where, order, group), merged into a single extent.
+
+This is useful for store implementations that need to know all data requirements upfront.
+
+**Parameters:**
+
+- `schema` (Schema) - The schema defining resource types and relationships
+- `query` (RootQuery) - The query object to analyze
+
+**Returns:** Single `QueryExtent` object with all referenced attributes and relationships merged
+
+**Use Cases:**
+
+- **Prefetching**: Fetch all needed data in one round trip
+- **Simple permission checks**: Does user have access to ANY of these fields?
+- **Caching**: Cache key based on all accessed data
+- **Multi-API coordination**: Coordinate fetches across multiple backend stores
+
+```javascript
+import { getFullQueryExtent } from "@spectragraph/core";
+
+const extent = getFullQueryExtent(schema, {
+  type: "bears",
+  select: ["name", { home: ["caringMeter"] }],
+  where: { furColor: "brown" },
+  order: { yearIntroduced: "asc" },
+});
+
+// Returns:
+// {
+//   attributes: ["name", "furColor", "yearIntroduced"],
+//   relationships: {
+//     home: { attributes: ["caringMeter"], relationships: {} }
+//   }
+// }
 
 // Use in multi-API store:
-const fieldsToFetch = groupPathsByResource(extent);
-// { bears: ["name"], powers: ["name"], homes: ["name"], residents: ["name"] }
+const allAttributes = extent.attributes; // ["name", "furColor", "yearIntroduced"]
+const allRelationships = Object.keys(extent.relationships); // ["home"]
+prefetchData(allAttributes, allRelationships);
 ```
 
 #### `queryGraph(schema, query, graph, options?)`

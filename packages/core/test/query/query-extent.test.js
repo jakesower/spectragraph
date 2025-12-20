@@ -1,6 +1,6 @@
 import { expect, it, describe } from "vitest";
 import { careBearSchema } from "@spectragraph/interface-tests";
-import { getQueryExtentByClause } from "../../src/query.js";
+import { getFullQueryExtent, getQueryExtentByClause } from "../../src/query.js";
 
 describe("getQueryExtentByClause", () => {
 	describe("select", () => {
@@ -556,7 +556,7 @@ describe("getQueryExtentByClause", () => {
 			});
 		});
 
-		it("does not traverse into nested group clauses", () => {
+		it("does not traverse into group clauses nested in other group clauses", () => {
 			const extent = getQueryExtentByClause(careBearSchema, {
 				type: "bears",
 				group: {
@@ -723,6 +723,105 @@ describe("getQueryExtentByClause", () => {
 					},
 				},
 			});
+		});
+	});
+});
+
+describe("getFullQueryExtent", () => {
+	it("gets the extent of a select", () => {
+		const extent = getFullQueryExtent(careBearSchema, {
+			type: "bears",
+			select: ["name"],
+		});
+		expect(extent).toEqual({ attributes: ["name"], relationships: {} });
+	});
+
+	it("gets the extent of a select and order", () => {
+		const extent = getFullQueryExtent(careBearSchema, {
+			type: "bears",
+			select: ["name"],
+			order: { yearIntroduced: "asc" },
+		});
+		expect(extent).toEqual({
+			attributes: ["name", "yearIntroduced"],
+			relationships: {},
+		});
+	});
+
+	it("gets the extent of a nested select and shallow order", () => {
+		const extent = getFullQueryExtent(careBearSchema, {
+			type: "bears",
+			select: { home: ["caringMeter"] },
+			order: { yearIntroduced: "asc" },
+		});
+		expect(extent).toEqual({
+			attributes: ["yearIntroduced"],
+			relationships: {
+				home: { attributes: ["caringMeter"], relationships: {} },
+			},
+		});
+	});
+
+	it("gets the extent of a select and a where with a nesting expression", () => {
+		const extent = getFullQueryExtent(careBearSchema, {
+			type: "bears",
+			select: ["bellyBadge"],
+			where: { $eq: [{ $get: "home.name" }, "Care-a-Lot"] },
+		});
+		expect(extent).toEqual({
+			attributes: ["bellyBadge"],
+			relationships: {
+				home: { attributes: ["name"], relationships: {} },
+			},
+		});
+	});
+
+	it("merges attributes from multiple clauses without duplication", () => {
+		const extent = getFullQueryExtent(careBearSchema, {
+			type: "bears",
+			select: ["name", "yearIntroduced"],
+			where: { name: "Tenderheart Bear" },
+			order: { name: "asc" },
+		});
+		expect(extent).toEqual({
+			attributes: ["name", "yearIntroduced"],
+			relationships: {},
+		});
+	});
+
+	it("merges relationships from different clauses with nested attributes", () => {
+		const extent = getFullQueryExtent(careBearSchema, {
+			type: "bears",
+			select: { home: ["name"] },
+			where: { $eq: [{ $get: "home.caringMeter" }, 100] },
+		});
+		expect(extent).toEqual({
+			attributes: [],
+			relationships: {
+				home: { attributes: ["name", "caringMeter"], relationships: {} },
+			},
+		});
+	});
+
+	it("merges deeply nested relationships from different clauses", () => {
+		const extent = getFullQueryExtent(careBearSchema, {
+			type: "bears",
+			select: { home: { select: { residents: ["name"] } } },
+			where: { $eq: [{ $get: "home.residents.yearIntroduced" }, 1983] },
+		});
+		expect(extent).toEqual({
+			attributes: [],
+			relationships: {
+				home: {
+					attributes: [],
+					relationships: {
+						residents: {
+							attributes: ["name", "yearIntroduced"],
+							relationships: {},
+						},
+					},
+				},
+			},
 		});
 	});
 });
