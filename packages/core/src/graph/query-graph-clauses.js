@@ -12,12 +12,6 @@ function createGroupQueryGraphClauses(groupQuery, options = {}) {
 	const { whereEngine = defaultWhereEngine } = options;
 
 	const { limit, offset, order, where } = groupQuery;
-	const columns = [
-		...Object.keys(groupQuery.select ?? {}),
-		...Object.keys(groupQuery.aggregates ?? {}),
-	];
-	const columnsSet = new Set(columns);
-
 	const clauses = {
 		where(results) {
 			return results.filter((result) => whereEngine.apply(where, result));
@@ -25,13 +19,6 @@ function createGroupQueryGraphClauses(groupQuery, options = {}) {
 		order(results) {
 			const properties = order.flatMap((o) => Object.keys(o));
 			const dirs = order.flatMap((o) => Object.values(o));
-
-			const invalidProp = properties.find((p) => !columnsSet.has(p));
-			if (invalidProp) {
-				throw new Error(
-					`invalid group "order" clause: '${invalidProp}' is not a valid field from "group.select" or "group.aggregates"`,
-				);
-			}
 
 			return orderBy(results, properties, dirs);
 		},
@@ -74,14 +61,6 @@ export function createQueryGraphClauses(
 			const order = Array.isArray(query.order) ? query.order : [query.order];
 			const properties = order.flatMap((o) => Object.keys(o));
 			const dirs = order.flatMap((o) => Object.values(o));
-
-			// Validate against schema
-			const invalidProp = properties.find((p) => !(p in resSchema.attributes));
-			if (invalidProp) {
-				throw new Error(
-					`invalid "order" clause: '${invalidProp}' is not a valid attribute`,
-				);
-			}
 
 			return orderBy(results, properties, dirs);
 		},
