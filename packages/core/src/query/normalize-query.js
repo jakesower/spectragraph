@@ -119,7 +119,7 @@ const normalizers = {
 					return expression(operand, { resolve });
 				}
 
-				// mon-distributing expressions are returned as-is
+				// non-distributing expressions are returned as-is
 				return node;
 			}
 
