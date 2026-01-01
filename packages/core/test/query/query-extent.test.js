@@ -12,6 +12,7 @@ describe("getQueryExtentByClause", () => {
 				};
 				const extent = getQueryExtentByClause(careBearSchema, query);
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: ["name", "yearIntroduced"],
 					relationships: {},
 				});
@@ -21,6 +22,7 @@ describe("getQueryExtentByClause", () => {
 				const query = { type: "bears", select: "*" };
 				const extent = getQueryExtentByClause(careBearSchema, query);
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: Object.keys(careBearSchema.resources.bears.attributes),
 					relationships: {},
 				});
@@ -37,8 +39,11 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: ["name"],
-					relationships: { home: { attributes: ["name"], relationships: {} } },
+					relationships: {
+						home: { type: "homes", attributes: ["name"], relationships: {} },
+					},
 				});
 			});
 
@@ -54,12 +59,18 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: ["name"],
 					relationships: {
 						home: {
+							type: "homes",
 							attributes: ["name"],
 							relationships: {
-								residents: { attributes: ["name"], relationships: {} },
+								residents: {
+									type: "bears",
+									attributes: ["name"],
+									relationships: {},
+								},
 							},
 						},
 					},
@@ -76,6 +87,7 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: ["name"],
 					relationships: {},
 				});
@@ -89,8 +101,11 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: [],
-					relationships: { home: { attributes: ["name"], relationships: {} } },
+					relationships: {
+						home: { type: "homes", attributes: ["name"], relationships: {} },
+					},
 				});
 			});
 
@@ -102,9 +117,10 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: [],
 					relationships: {
-						powers: { attributes: ["name"], relationships: {} },
+						powers: { type: "powers", attributes: ["name"], relationships: {} },
 					},
 				});
 			});
@@ -125,6 +141,7 @@ describe("getQueryExtentByClause", () => {
 				};
 				const extent = getQueryExtentByClause(careBearSchema, query);
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: ["name", "yearIntroduced"],
 					relationships: {},
 				});
@@ -141,8 +158,11 @@ describe("getQueryExtentByClause", () => {
 				};
 				const extent = getQueryExtentByClause(careBearSchema, query);
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: [],
-					relationships: { home: { attributes: [], relationships: {} } },
+					relationships: {
+						home: { type: "homes", attributes: [], relationships: {} },
+					},
 				});
 			});
 
@@ -154,8 +174,11 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: [],
-					relationships: { home: { attributes: ["name"], relationships: {} } },
+					relationships: {
+						home: { type: "homes", attributes: ["name"], relationships: {} },
+					},
 				});
 			});
 		});
@@ -171,6 +194,7 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: ["name"],
 					relationships: {},
 				});
@@ -189,9 +213,11 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: [],
 					relationships: {
 						home: {
+						  type: "homes",
 							attributes: ["caringMeter", "isInClouds"],
 							relationships: {},
 						},
@@ -222,12 +248,14 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: [],
 					relationships: {
 						home: {
+						  type: "homes",
 							attributes: ["caringMeter", "isInClouds"],
 							relationships: {
-								residents: { attributes: [], relationships: {} },
+								residents: { type: "bears", attributes: [], relationships: {} },
 							},
 						},
 					},
@@ -252,9 +280,11 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: ["bellyBadge"],
 					relationships: {
 						home: {
+						  type: "homes",
 							attributes: ["caringMeter", "isInClouds"],
 							relationships: {},
 						},
@@ -272,9 +302,11 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: [],
 					relationships: {
 						powers: {
+						  type: "powers",
 							attributes: ["name"],
 							relationships: {},
 						},
@@ -292,9 +324,11 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: [],
 					relationships: {
 						powers: {
+						  type: "powers",
 							attributes: ["name"],
 							relationships: {},
 						},
@@ -312,9 +346,11 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: [],
 					relationships: {
 						powers: {
+						  type: "powers",
 							attributes: ["name"],
 							relationships: {},
 						},
@@ -335,9 +371,11 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: [],
 					relationships: {
 						powers: {
+						  type: "powers",
 							attributes: ["name", "type"],
 							relationships: {},
 						},
@@ -355,9 +393,11 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: [],
 					relationships: {
 						powers: {
+						  type: "powers",
 							attributes: ["type"],
 							relationships: {},
 						},
@@ -375,9 +415,11 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: [],
 					relationships: {
 						powers: {
+						  type: "powers",
 							attributes: ["type"],
 							relationships: {},
 						},
@@ -397,6 +439,7 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: ["name"],
 					relationships: {},
 				});
@@ -412,7 +455,11 @@ describe("getQueryExtentByClause", () => {
 						computed: { $add: [1, 2] },
 					},
 				});
-				expect(extent.select).toEqual({ attributes: [], relationships: {} });
+				expect(extent.select).toEqual({
+					type: "bears",
+					attributes: [],
+					relationships: {},
+				});
 			});
 
 			it("handles array paths in $get", () => {
@@ -423,8 +470,11 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: [],
-					relationships: { home: { attributes: ["name"], relationships: {} } },
+					relationships: {
+						home: { type: "homes", attributes: ["name"], relationships: {} },
+					},
 				});
 			});
 
@@ -450,9 +500,14 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: [],
 					relationships: {
-						powers: { attributes: ["type", "name"], relationships: {} },
+						powers: {
+							type: "powers",
+							attributes: ["type", "name"],
+							relationships: {},
+						},
 					},
 				});
 			});
@@ -470,9 +525,14 @@ describe("getQueryExtentByClause", () => {
 					},
 				});
 				expect(extent.select).toEqual({
+					type: "bears",
 					attributes: [],
 					relationships: {
-						powers: { attributes: ["type", "name"], relationships: {} },
+						powers: {
+							type: "powers",
+							attributes: ["type", "name"],
+							relationships: {},
+						},
 					},
 				});
 			});
@@ -488,6 +548,7 @@ describe("getQueryExtentByClause", () => {
 				},
 			});
 			expect(extent.group).toEqual({
+				type: "bears",
 				attributes: ["yearIntroduced"],
 				relationships: {},
 			});
@@ -501,6 +562,7 @@ describe("getQueryExtentByClause", () => {
 				},
 			});
 			expect(extent.group).toEqual({
+				type: "bears",
 				attributes: ["yearIntroduced", "bellyBadge"],
 				relationships: {},
 			});
@@ -518,6 +580,7 @@ describe("getQueryExtentByClause", () => {
 				},
 			});
 			expect(extent.group).toEqual({
+				type: "bears",
 				attributes: ["yearIntroduced", "name"],
 				relationships: {},
 			});
@@ -534,8 +597,11 @@ describe("getQueryExtentByClause", () => {
 				},
 			});
 			expect(extent.group).toEqual({
+				type: "bears",
 				attributes: ["yearIntroduced"],
-				relationships: { home: { attributes: ["name"], relationships: {} } },
+				relationships: {
+					home: { type: "homes", attributes: ["name"], relationships: {} },
+				},
 			});
 		});
 
@@ -551,6 +617,7 @@ describe("getQueryExtentByClause", () => {
 				},
 			});
 			expect(extent.group).toEqual({
+				type: "bears",
 				attributes: ["yearIntroduced", "name"],
 				relationships: {},
 			});
@@ -576,6 +643,7 @@ describe("getQueryExtentByClause", () => {
 				},
 			});
 			expect(extent.group).toEqual({
+				type: "bears",
 				attributes: ["yearIntroduced"],
 				relationships: {},
 			});
@@ -591,9 +659,11 @@ describe("getQueryExtentByClause", () => {
 				},
 			});
 			expect(extent.group).toEqual({
+				type: "bears",
 				attributes: [],
 				relationships: {
 					home: {
+						type: "homes",
 						attributes: ["name"],
 						relationships: {},
 					},
@@ -610,6 +680,7 @@ describe("getQueryExtentByClause", () => {
 				where: { name: "Tenderheart Bear", yearIntroduced: 1983 },
 			});
 			expect(extent.where).toEqual({
+				type: "bears",
 				attributes: ["name", "yearIntroduced"],
 				relationships: {},
 			});
@@ -625,6 +696,7 @@ describe("getQueryExtentByClause", () => {
 				},
 			});
 			expect(extent.where).toEqual({
+				type: "bears",
 				attributes: ["yearIntroduced", "name"],
 				relationships: {},
 			});
@@ -647,6 +719,7 @@ describe("getQueryExtentByClause", () => {
 				},
 			});
 			expect(extent.where).toEqual({
+				type: "bears",
 				attributes: ["yearIntroduced", "name", "bellyBadge"],
 				relationships: {},
 			});
@@ -668,9 +741,11 @@ describe("getQueryExtentByClause", () => {
 				},
 			});
 			expect(extent.where).toEqual({
+				type: "bears",
 				attributes: [],
 				relationships: {
 					home: {
+						type: "homes",
 						attributes: ["caringMeter", "isInClouds"],
 						relationships: {},
 					},
@@ -687,6 +762,7 @@ describe("getQueryExtentByClause", () => {
 				order: { name: "asc" },
 			});
 			expect(extent.order).toEqual({
+				type: "bears",
 				attributes: ["name"],
 				relationships: {},
 			});
@@ -699,6 +775,7 @@ describe("getQueryExtentByClause", () => {
 				order: [{ name: "asc" }, { yearIntroduced: "desc" }],
 			});
 			expect(extent.order).toEqual({
+				type: "bears",
 				attributes: ["name", "yearIntroduced"],
 				relationships: {},
 			});
@@ -715,9 +792,11 @@ describe("getQueryExtentByClause", () => {
 				},
 			});
 			expect(extent.order).toEqual({
+				type: "bears",
 				attributes: [],
 				relationships: {
 					home: {
+						type: "homes",
 						attributes: ["caringMeter"],
 						relationships: {},
 					},
@@ -733,7 +812,11 @@ describe("getFullQueryExtent", () => {
 			type: "bears",
 			select: ["name"],
 		});
-		expect(extent).toEqual({ attributes: ["name"], relationships: {} });
+		expect(extent).toEqual({
+			type: "bears",
+			attributes: ["name"],
+			relationships: {},
+		});
 	});
 
 	it("gets the extent of a select and order", () => {
@@ -743,6 +826,7 @@ describe("getFullQueryExtent", () => {
 			order: { yearIntroduced: "asc" },
 		});
 		expect(extent).toEqual({
+			type: "bears",
 			attributes: ["name", "yearIntroduced"],
 			relationships: {},
 		});
@@ -755,9 +839,10 @@ describe("getFullQueryExtent", () => {
 			order: { yearIntroduced: "asc" },
 		});
 		expect(extent).toEqual({
+			type: "bears",
 			attributes: ["yearIntroduced"],
 			relationships: {
-				home: { attributes: ["caringMeter"], relationships: {} },
+				home: { type: "homes", attributes: ["caringMeter"], relationships: {} },
 			},
 		});
 	});
@@ -769,9 +854,10 @@ describe("getFullQueryExtent", () => {
 			where: { $eq: [{ $get: "home.name" }, "Care-a-Lot"] },
 		});
 		expect(extent).toEqual({
+			type: "bears",
 			attributes: ["bellyBadge"],
 			relationships: {
-				home: { attributes: ["name"], relationships: {} },
+				home: { type: "homes", attributes: ["name"], relationships: {} },
 			},
 		});
 	});
@@ -784,6 +870,7 @@ describe("getFullQueryExtent", () => {
 			order: { name: "asc" },
 		});
 		expect(extent).toEqual({
+			type: "bears",
 			attributes: ["name", "yearIntroduced"],
 			relationships: {},
 		});
@@ -796,9 +883,14 @@ describe("getFullQueryExtent", () => {
 			where: { $eq: [{ $get: "home.caringMeter" }, 100] },
 		});
 		expect(extent).toEqual({
+			type: "bears",
 			attributes: [],
 			relationships: {
-				home: { attributes: ["name", "caringMeter"], relationships: {} },
+				home: {
+					type: "homes",
+					attributes: ["name", "caringMeter"],
+					relationships: {},
+				},
 			},
 		});
 	});
@@ -810,12 +902,15 @@ describe("getFullQueryExtent", () => {
 			where: { $eq: [{ $get: "home.residents.yearIntroduced" }, 1983] },
 		});
 		expect(extent).toEqual({
+			type: "bears",
 			attributes: [],
 			relationships: {
 				home: {
+					type: "homes",
 					attributes: [],
 					relationships: {
 						residents: {
+							type: "bears",
 							attributes: ["name", "yearIntroduced"],
 							relationships: {},
 						},

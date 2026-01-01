@@ -19,6 +19,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - `validateQueryResult` now supports validating group query results. Note: aggregate field types cannot be statically validated as they depend on the aggregation function and data.
 
+### Improved
+
+- `linkInverses` now clones less of the graph, making it quicker and less memory-intensive.
+
 ## [0.6.2] - 2025-11-20
 
 No changes. Failed to build and deployed the wrong thing with 0.6.1.
