@@ -923,7 +923,7 @@ describe("normalizeResource", () => {
 			const ref = { type: "teams", id: "team-123" };
 
 			expect(() =>
-				normalizeResource(soccerSchema, "teams", ref)
+				normalizeResource(soccerSchema, "teams", ref),
 			).toThrow(/ref object/i);
 		});
 
@@ -931,7 +931,7 @@ describe("normalizeResource", () => {
 			const ref = { type: "fields", id: "field-456" };
 
 			expect(() =>
-				normalizeResource(soccerSchema, "fields", ref)
+				normalizeResource(soccerSchema, "fields", ref),
 			).toThrow(/ref object.*instead of resource data/i);
 		});
 
@@ -945,7 +945,7 @@ describe("normalizeResource", () => {
 			};
 
 			expect(() =>
-				normalizeResource(soccerSchema, "games", resource)
+				normalizeResource(soccerSchema, "games", resource),
 			).not.toThrow();
 		});
 
@@ -959,7 +959,7 @@ describe("normalizeResource", () => {
 			};
 
 			expect(() =>
-				normalizeResource(soccerSchema, "teams", resource)
+				normalizeResource(soccerSchema, "teams", resource),
 			).not.toThrow();
 		});
 	});
