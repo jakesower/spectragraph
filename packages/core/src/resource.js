@@ -237,6 +237,18 @@ export const validateNormalResource = (schema, resource, options = {}) => {
 export function normalizeResource(schema, resourceType, resource) {
 	const resSchema = schema.resources[resourceType];
 
+	// Detect if a ref object was passed instead of resource data
+	if (
+		resource.type &&
+		resource.id !== undefined &&
+		Object.keys(resource).length === 2
+	) {
+		throw new Error(
+			`normalizeResource received a ref object { type: "${resource.type}", id: "${resource.id}" } ` +
+				"instead of resource data. Either pass the resource's data directly or pass the ID alone.",
+		);
+	}
+
 	// Helper to convert ID to correct type based on schema
 	const getTypedId = (foreignResourceType, id) => {
 		const foreignSchema = schema.resources[foreignResourceType];

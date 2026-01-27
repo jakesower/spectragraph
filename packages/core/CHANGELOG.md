@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - `getQueryExtentByClause(schema, query)` - Analyzes a query and returns which attributes and relationships are referenced by each query clause (select, where, order, group) separately. This enables fine-grained optimization where different clauses have different performance or security characteristics (e.g., SQL stores can determine which columns are needed for WHERE vs SELECT, access control can apply different permissions to filter vs display fields).
 - `getFullQueryExtent(schema, query)` - Analyzes a query and returns the complete set of attributes and relationships referenced across all query clauses, merged into a single extent. Useful for stores that need to know all data requirements upfront for prefetching or permission checks.
+- `normalizeResource` now validates input to detect when a ref object `{ type, id }` is accidentally passed instead of resource data. This prevents subtle bugs where the ref's `type` property could be mistaken for a resource attribute. The validation throws a clear error message: "normalizeResource received a ref object { type: '...', id: '...' } instead of resource data. Either pass the resource's data directly or pass the ID alone."
 
 ### Changed
 
