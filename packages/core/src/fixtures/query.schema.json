@@ -29,8 +29,7 @@
 				"ids": { "type": "array", "items": { "type": ["string", "number"] } },
 				"where": { "type": "object" },
 				"order": { "$ref": "#/definitions/orderClause" },
-				"limit": { "$ref": "#/definitions/limitClause" },
-				"offset": { "$ref": "#/definitions/offsetClause" },
+				"slice": { "$ref": "#/definitions/sliceClause" },
 				"group": { "$ref": "#/definitions/groupClause" },
 				"meta": {}
 			}
@@ -46,8 +45,7 @@
 				"ids": { "type": "array", "items": { "type": ["string", "number"] } },
 				"where": { "type": "object" },
 				"order": { "$ref": "#/definitions/orderClause" },
-				"limit": { "$ref": "#/definitions/limitClause" },
-				"offset": { "$ref": "#/definitions/offsetClause" },
+				"slice": { "$ref": "#/definitions/sliceClause" },
 				"meta": {}
 			}
 		},
@@ -109,14 +107,19 @@
 				},
 				"where": { "type": "object" },
 				"order": { "$ref": "#/definitions/orderClause" },
-				"limit": { "$ref": "#/definitions/limitClause" },
-				"offset": { "$ref": "#/definitions/offsetClause" },
+				"slice": { "$ref": "#/definitions/sliceClause" },
 				"group": { "$ref": "#/definitions/groupClause" },
 				"meta": {}
 			}
 		},
-		"limitClause": { "type": "number", "minimum": 1 },
-		"offsetClause": { "type": "number", "minimum": 0 },
+		"sliceClause": {
+			"type": "object",
+			"properties": {
+				"limit": { "type": "number", "minimum": 1 },
+				"offset": { "type": "number", "minimum": 0 }
+			},
+			"additionalProperties": false
+		},
 		"orderClauseObject": {
 			"type": "object",
 			"minProperties": 1,

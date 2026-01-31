@@ -103,8 +103,7 @@ function getResourceStructureValidator(schema, resourceType, engines) {
 				properties: {
 					type: { type: "string", const: resourceType },
 					ids: { type: "array", items: { type: ["string", "integer"] } },
-					limit: { type: "integer", minimum: 1 },
-					offset: { type: "integer", minimum: 0 },
+					slice: { $ref: "#/definitions/sliceClause" },
 					where: { $ref: "#/definitions/whereClause" },
 					order: { $ref: "#/definitions/orderClause" },
 					group: {
@@ -152,8 +151,7 @@ function getResourceStructureValidator(schema, resourceType, engines) {
 								],
 							},
 							order: {},
-							limit: { type: "integer", minimum: 1 },
-							offset: { type: "integer", minimum: 0 },
+							slice: { $ref: "#/definitions/sliceClause" },
 						},
 					},
 				},
@@ -170,8 +168,7 @@ function getResourceStructureValidator(schema, resourceType, engines) {
 					id: { type: ["string", "integer"] },
 					ids: { type: "array", items: { type: ["string", "integer"] } },
 					select: {},
-					limit: { type: "integer", minimum: 1 },
-					offset: { type: "integer", minimum: 0 },
+					slice: { $ref: "#/definitions/sliceClause" },
 					where: { $ref: "#/definitions/whereClause" },
 					order: { $ref: "#/definitions/orderClause" },
 				},
@@ -230,6 +227,14 @@ function getResourceStructureValidator(schema, resourceType, engines) {
 						},
 					},
 				],
+			},
+			sliceClause: {
+				type: "object",
+				properties: {
+					limit: { type: "integer", minimum: 1 },
+					offset: { type: "integer", minimum: 0 },
+				},
+				additionalProperties: false,
 			},
 		},
 	};

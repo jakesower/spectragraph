@@ -16,8 +16,7 @@ import { extractQuerySelection } from "./query/helpers.js";
  * @typedef {Object} Query
  * @property {string} [id] - Fetch a single resource by ID (mutually exclusive with ids)
  * @property {string[]} [ids] - Fetch multiple resources by IDs (mutually exclusive with id)
- * @property {number} [limit]
- * @property {number} [offset]
+ * @property {Object} [slice] - Pagination: { limit?: number, offset?: number }
  * @property {Object|Object[]} [order] - Single order object or array of order objects
  * @property {Array|Object|string} select - Select clause: array, object, or "*"
  * @property {string} [type]

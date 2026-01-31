@@ -84,6 +84,17 @@ const metaschemaWithErrors = (() => {
 					},
 				},
 			},
+			resource: {
+				properties: {
+					schema: {
+						not: {
+							required: ["properties"],
+						},
+						errorMessage:
+							'schema must not contain a "properties" property; instead, properties are defined as attributes at the root level of the resource',
+					},
+				},
+			},
 		},
 	});
 	delete out.$id;
@@ -118,7 +129,8 @@ export function validateSchema(schema, options = {}) {
 	}
 
 	const attributeSchemaErrors = [];
-	Object.entries(schema.resources).forEach(([resName, resSchema]) =>
+	Object.entries(schema.resources).forEach(([resName, resSchema]) => {
+		// Validate individual attribute schemas
 		Object.entries(resSchema.attributes).forEach(([attrName, attrSchema]) => {
 			try {
 				validator.compile(attrSchema);
@@ -127,8 +139,23 @@ export function validateSchema(schema, options = {}) {
 					message: `Invalid attribute schema "${resName}.${attrName}": ${err.message}`,
 				});
 			}
-		}),
-	);
+		});
+
+		// Validate that the resource-level schema is valid JSON Schema
+		if (resSchema.schema) {
+			try {
+				validator.compile({
+					type: "object",
+					properties: resSchema.attributes,
+					...resSchema.schema,
+				});
+			} catch (err) {
+				attributeSchemaErrors.push({
+					message: `Invalid resource schema "${resName}": ${err.message}`,
+				});
+			}
+		}
+	});
 
 	if (attributeSchemaErrors.length > 0) {
 		validatorCache.set(attributeSchemaErrors);

@@ -150,6 +150,11 @@ export interface Expression {
 	[key: string]: unknown;
 }
 
+export interface SliceClause {
+	limit?: number;
+	offset?: number;
+}
+
 export type SelectClause =
 	| readonly (string | { [k: string]: string | Query | Expression })[]
 	| { [k: string]: string | Query | Expression | SelectClause }
@@ -165,8 +170,7 @@ export interface GroupClause {
 	aggregates?: { [k: string]: Expression };
 	where?: Expression | { [k: string]: unknown };
 	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
-	limit?: number;
-	offset?: number;
+	slice?: SliceClause;
 	group?: GroupClause;
 }
 
@@ -176,14 +180,12 @@ export interface NormalGroupClause {
 	aggregates?: { [k: string]: Expression };
 	where?: Expression | { [k: string]: unknown };
 	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
-	limit?: number;
-	offset?: number;
+	slice?: SliceClause;
 	group?: NormalGroupClause;
 }
 
 interface BaseSelectQuery {
-	limit?: number;
-	offset?: number;
+	slice?: SliceClause;
 	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
 	select: SelectClause;
 	type?: string;
@@ -192,8 +194,7 @@ interface BaseSelectQuery {
 }
 
 interface BaseGroupQuery {
-	limit?: number;
-	offset?: number;
+	slice?: SliceClause;
 	order?: { [k: string]: "asc" | "desc" } | { [k: string]: "asc" | "desc" }[];
 	group: GroupClause;
 	type?: string;

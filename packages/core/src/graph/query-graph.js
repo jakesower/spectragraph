@@ -95,8 +95,12 @@ function runQuery(schema, rootQuery, data, options = {}) {
 			? [data[query.type][query.id]]
 			: Object.values(data[query.type]);
 
+		const hasClause = (opName) =>
+			opName === "limit" || opName === "offset"
+				? query.slice?.[opName] !== undefined
+				: opName in query;
 		const processed = Object.entries(operationDefinitions).reduce(
-			(acc, [opName, fn]) => (opName in query ? fn(acc) : acc),
+			(acc, [opName, fn]) => (hasClause(opName) ? fn(acc) : acc),
 			results,
 		);
 

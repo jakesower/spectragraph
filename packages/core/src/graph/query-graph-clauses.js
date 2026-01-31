@@ -11,7 +11,8 @@ const ITEMS = Symbol("group items");
 function createGroupQueryGraphClauses(groupQuery, options = {}) {
 	const { whereEngine = defaultWhereEngine } = options;
 
-	const { limit, offset, order, where } = groupQuery;
+	const { order, where } = groupQuery;
+	const { limit, offset } = groupQuery.slice ?? {};
 	const clauses = {
 		where(results) {
 			return results.filter((result) => whereEngine.apply(where, result));
@@ -45,7 +46,7 @@ export function createQueryGraphClauses(
 	} = options;
 
 	const resSchema = schema.resources[query.type];
-	const { limit, offset } = query;
+	const { limit, offset } = query.slice ?? {};
 
 	const clauses = {
 		ids(results) {
@@ -216,8 +217,12 @@ export function createQueryGraphClauses(
 				);
 
 				const groupClauses = createGroupQueryGraphClauses(groupQuery, options);
+				const hasClause = (opName) =>
+					opName === "limit" || opName === "offset"
+						? groupQuery.slice?.[opName] !== undefined
+						: opName in groupQuery;
 				const processed = Object.entries(groupClauses).reduce(
-					(acc, [opName, fn]) => (opName in groupQuery ? fn(acc) : acc),
+					(acc, [opName, fn]) => (hasClause(opName) ? fn(acc) : acc),
 					extracted,
 				);
 
