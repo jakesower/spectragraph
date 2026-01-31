@@ -8,6 +8,7 @@ import {
 	validateUpdateResource,
 	buildNormalResource,
 	mergeNormalResources,
+	normalizeResource,
 } from "../src/resource.js";
 import { soccerSchema, geojsonSchema } from "../interface-tests/src/index.js";
 
@@ -912,6 +913,54 @@ describe("validateQueryResult", () => {
 				{ attendance: 1000 }, // missing 'total'
 			]);
 			expect(result.length).toBeGreaterThan(0);
+		});
+	});
+});
+
+describe("normalizeResource", () => {
+	describe("ref object detection", () => {
+		it("throws helpful error when passed a ref object instead of resource data", () => {
+			const ref = { type: "teams", id: "team-123" };
+
+			expect(() =>
+				normalizeResource(soccerSchema, "teams", ref),
+			).toThrow(/ref object/i);
+		});
+
+		it("throws helpful error when passed a ref with only type and id properties", () => {
+			const ref = { type: "fields", id: "field-456" };
+
+			expect(() =>
+				normalizeResource(soccerSchema, "fields", ref),
+			).toThrow(/ref object.*instead of resource data/i);
+		});
+
+		it("does not throw when passed valid resource data with type attribute", () => {
+			// This should NOT throw - it's a valid resource with a "type" attribute
+			// (e.g., from a schema where "type" is an actual attribute, not just the resource type)
+			const resource = {
+				id: "game-123",
+				homeScore: 2,
+				awayScore: 1,
+			};
+
+			expect(() =>
+				normalizeResource(soccerSchema, "games", resource),
+			).not.toThrow();
+		});
+
+		it("does not throw when passed a resource with many properties including type and id", () => {
+			// Should not throw - has more than just type and id
+			const resource = {
+				type: "teams", // This would be a top-level property in the raw data
+				id: "team-123",
+				name: "Test Team",
+				homeField: { type: "fields", id: "field-1" },
+			};
+
+			expect(() =>
+				normalizeResource(soccerSchema, "teams", resource),
+			).not.toThrow();
 		});
 	});
 });

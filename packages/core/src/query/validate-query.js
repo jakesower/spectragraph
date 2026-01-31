@@ -413,7 +413,13 @@ function validateGroupSelect(select, byArray, path, addError, selectEngine) {
 			}
 
 			// Handle string or expression
-			validateGroupSelectValue(item, byArray, currentPath, addError, selectEngine);
+			validateGroupSelectValue(
+				item,
+				byArray,
+				currentPath,
+				addError,
+				selectEngine,
+			);
 		});
 		return;
 	}
@@ -422,7 +428,13 @@ function validateGroupSelect(select, byArray, path, addError, selectEngine) {
 	if (typeof select === "object") {
 		Object.entries(select).forEach(([key, val]) => {
 			const currentPath = [...path, "select", key];
-			validateGroupSelectValue(val, byArray, currentPath, addError, selectEngine);
+			validateGroupSelectValue(
+				val,
+				byArray,
+				currentPath,
+				addError,
+				selectEngine,
+			);
 		});
 	}
 }
@@ -472,7 +484,13 @@ function validateGroupSelectValue(item, byArray, path, addError, selectEngine) {
 /**
  * Validates base group aggregates (can reference any valid resource attribute/relationship)
  */
-function validateBaseGroupAggregates(aggregates, schema, queryType, path, addError) {
+function validateBaseGroupAggregates(
+	aggregates,
+	schema,
+	queryType,
+	path,
+	addError,
+) {
 	if (!aggregates) return;
 
 	const checkPath = (curPath, curType) => {

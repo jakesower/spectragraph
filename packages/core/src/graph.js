@@ -32,13 +32,15 @@ export function createEmptyGraph(schema, options = {}) {
 /**
  * Links inverse relationships in a graph
  *
+ * This implementation uses a two-pass approach:
+ * 1. Identify which resource types have missing inverse relationships
+ * 2. Shallow-clone only those types, sharing references for unchanged types
+ *
  * @param {import('./schema.js').Schema} schema - The schema defining relationships
  * @param {Graph} graph - The graph to link inverses in
  * @returns {Graph} Graph with inverse relationships linked
  */
 export function linkInverses(schema, graph) {
-	const output = structuredClone(graph);
-
 	// Helper to convert ID to correct type based on schema
 	const getTypedId = (resourceType, id) => {
 		const idAttr = schema.resources[resourceType].idAttribute ?? "id";
@@ -46,47 +48,75 @@ export function linkInverses(schema, graph) {
 		return idType === "integer" ? Number(id) : id;
 	};
 
+	// Pass 1: Identify which resource types need inverse relationships added
+	const typesNeedingInverses = new Map();
+
 	Object.entries(schema.resources).forEach(([resType, resSchema]) => {
 		const sampleRes = Object.values(graph[resType])[0];
 		if (!sampleRes) return;
+
+		const missingRels = [];
 
 		Object.entries(resSchema.relationships).forEach(([relName, relSchema]) => {
 			const { cardinality, type: foreignType, inverse } = relSchema;
 
 			if (sampleRes.relationships[relName] !== undefined || !inverse) return;
 
-			if (cardinality === "one") {
-				const map = {};
-				Object.entries(graph[foreignType]).forEach(
-					([foreignId, foreignRes]) => {
-						applyOrMap(foreignRes.relationships[inverse], (foreignRef) => {
-							map[foreignRef.id] = getTypedId(foreignType, foreignId);
-						});
-					},
-				);
+			// Build inverse map for this relationship
+			const map = {};
+			Object.entries(graph[foreignType]).forEach(([foreignId, foreignRes]) => {
+				applyOrMap(foreignRes.relationships[inverse], (foreignRef) => {
+					if (cardinality === "one") {
+						map[foreignRef.id] = getTypedId(foreignType, foreignId);
+					} else {
+						if (!map[foreignRef.id]) map[foreignRef.id] = [];
+						map[foreignRef.id].push(getTypedId(foreignType, foreignId));
+					}
+				});
+			});
 
-				Object.entries(output[resType]).forEach(([localId, localRes]) => {
-					localRes.relationships[relName] = map[localId]
+			missingRels.push({ relName, cardinality, foreignType, map });
+		});
+
+		if (missingRels.length > 0) {
+			typesNeedingInverses.set(resType, missingRels);
+		}
+	});
+
+	// Pass 2: Build output graph, shallow-cloning only modified types
+	const output = {};
+
+	Object.keys(schema.resources).forEach((resType) => {
+		const missingRels = typesNeedingInverses.get(resType);
+
+		if (!missingRels) {
+			// No changes needed - share reference to original resource collection
+			output[resType] = graph[resType];
+			return;
+		}
+
+		// Shallow-clone resources in this type, adding inverse relationships
+		output[resType] = {};
+
+		Object.entries(graph[resType]).forEach(([localId, localRes]) => {
+			// Shallow clone: new resource wrapper + new relationships object
+			const newRes = {
+				...localRes,
+				relationships: { ...localRes.relationships },
+			};
+
+			// Fill in missing inverse relationships
+			missingRels.forEach(({ relName, cardinality, foreignType, map }) => {
+				newRes.relationships[relName] = map[localId]
+					? cardinality === "one"
 						? { type: foreignType, id: map[localId] }
-						: null;
-				});
-			} else if (cardinality === "many") {
-				const map = {};
-				Object.entries(graph[foreignType]).forEach(
-					([foreignId, foreignRes]) => {
-						applyOrMap(foreignRes.relationships[inverse], (foreignRef) => {
-							if (!map[foreignRef.id]) map[foreignRef.id] = [];
-							map[foreignRef.id].push(getTypedId(foreignType, foreignId));
-						});
-					},
-				);
-
-				Object.entries(output[resType]).forEach(([localId, localRes]) => {
-					localRes.relationships[relName] = map[localId]
-						? map[localId].map((id) => ({ type: foreignType, id }))
+						: map[localId].map((id) => ({ type: foreignType, id }))
+					: cardinality === "one"
+						? null
 						: [];
-				});
-			}
+			});
+
+			output[resType][localId] = newRes;
 		});
 	});
 

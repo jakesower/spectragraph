@@ -17,7 +17,7 @@ export {
 	mergeGraphs,
 	mergeGraphsDeep,
 } from "./graph.js";
-export { getQueryExtent } from "./query.js";
+export { getFullQueryExtent, getQueryExtentByClause } from "./query.js";
 export { queryGraph } from "./graph/query-graph.js";
 export {
 	createValidator,

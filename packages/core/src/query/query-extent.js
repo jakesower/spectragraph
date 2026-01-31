@@ -5,6 +5,7 @@ import { extractQuerySelection } from "./helpers.js";
 
 /**
  * @typedef {Object} QueryExtent
+ * @property {string} type - Type of the resource
  * @property {string[]} attributes - Array of attribute names referenced in the query
  * @property {Object.<string, QueryExtent>} relationships - Map of relationship names to their nested extents
  */
@@ -19,6 +20,7 @@ import { extractQuerySelection } from "./helpers.js";
 
 function arrayifyAttributeSets(curExtent) {
 	return {
+		type: curExtent.type,
 		attributes: [...curExtent.attributes],
 		relationships: mapValues(curExtent.relationships, arrayifyAttributeSets),
 	};
@@ -26,7 +28,7 @@ function arrayifyAttributeSets(curExtent) {
 
 // NOTE: this creates a function that mutates the extent argument
 function createExtent(schema, baseType) {
-	const extent = { attributes: new Set(), relationships: {} };
+	const extent = { type: baseType, attributes: new Set(), relationships: {} };
 
 	return {
 		extent,
@@ -38,8 +40,11 @@ function createExtent(schema, baseType) {
 				if (head in resSchema.attributes) {
 					curExtent.attributes.add(head);
 				} else if (head in resSchema.relationships) {
+					const relType = resSchema.relationships[head].type;
+
 					if (!(head in curExtent.relationships)) {
 						curExtent.relationships[head] = {
+							type: relType,
 							attributes: new Set(),
 							relationships: {},
 						};
@@ -142,7 +147,7 @@ const mergeExtents = (left = emptyExtent, right = emptyExtent) => {
 		]),
 	);
 
-	return { attributes, relationships };
+	return { type: left.type ?? right.type, attributes, relationships };
 };
 
 /**
