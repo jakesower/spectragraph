@@ -5,6 +5,38 @@ import { ID, RAW, TYPE } from "./query-graph.js";
 
 const ITEMS = Symbol("group items");
 
+/**
+ * Tuple comparison for before/after slice anchors.
+ *
+ * For `after` with asc: row passes if tuple(row) > tuple(anchor)
+ * For `before` with asc: row passes if tuple(row) < tuple(anchor)
+ * Direction flips per-key based on the sort direction.
+ *
+ * Lexicographic: (a,b) > (x,y) means a > x OR (a === x AND b > y)
+ */
+function tupleCompare(query, anchor, row, mode) {
+	const { order } = query;
+
+	for (let i = 0; i < order.length; i += 1) {
+		const [key, dir] = Object.entries(order[i])[0];
+		const anchorVal = anchor[key];
+		const rowVal = row[key];
+
+		// Determine which comparison means "later in sort order"
+		const gt = dir === "asc" ? rowVal > anchorVal : rowVal < anchorVal;
+		const lt = dir === "asc" ? rowVal < anchorVal : rowVal > anchorVal;
+
+		if (mode === "after" && gt) return true;
+		if (mode === "after" && lt) return false;
+		if (mode === "before" && lt) return true;
+		if (mode === "before" && gt) return false;
+		// equal on this key — continue to next key
+	}
+
+	// All keys equal — exclusive, so exclude
+	return false;
+}
+
 // NOTE: The order of definition of clauses is CRITICAL for proper functioning.
 // For example, if limit/offset were switched it would break.
 
@@ -12,7 +44,9 @@ function createGroupQueryGraphClauses(groupQuery, options = {}) {
 	const { whereEngine = defaultWhereEngine } = options;
 
 	const { order, where } = groupQuery;
-	const { limit, offset } = groupQuery.slice ?? {};
+	const { limit, offset, before, after } = groupQuery.slice ?? {};
+	const reverseSlice = before && !after;
+
 	const clauses = {
 		where(results) {
 			return results.filter((result) => whereEngine.apply(where, result));
@@ -23,10 +57,26 @@ function createGroupQueryGraphClauses(groupQuery, options = {}) {
 
 			return orderBy(results, properties, dirs);
 		},
+		after(results) {
+			return results.filter((result) =>
+				tupleCompare(groupQuery, after, result, "after"),
+			);
+		},
+		before(results) {
+			return results.filter((result) =>
+				tupleCompare(groupQuery, before, result, "before"),
+			);
+		},
 		offset(result) {
+			if (reverseSlice) {
+				return offset ? result.slice(0, -offset) : result;
+			}
 			return result.slice(offset);
 		},
 		limit(result) {
+			if (reverseSlice) {
+				return result.slice(-limit);
+			}
 			return result.slice(0, limit);
 		},
 	};
@@ -46,7 +96,8 @@ export function createQueryGraphClauses(
 	} = options;
 
 	const resSchema = schema.resources[query.type];
-	const { limit, offset } = query.slice ?? {};
+	const { limit, offset, before, after } = query.slice ?? {};
+	const reverseSlice = before && !after;
 
 	const clauses = {
 		ids(results) {
@@ -66,11 +117,29 @@ export function createQueryGraphClauses(
 			return orderBy(results, properties, dirs);
 		},
 
+		after(results) {
+			return results.filter((result) =>
+				tupleCompare(query, after, result, "after"),
+			);
+		},
+
+		before(results) {
+			return results.filter((result) =>
+				tupleCompare(query, before, result, "before"),
+			);
+		},
+
 		offset(result) {
+			if (reverseSlice) {
+				return offset ? result.slice(0, -offset) : result;
+			}
 			return result.slice(offset);
 		},
 
 		limit(result) {
+			if (reverseSlice) {
+				return result.slice(-limit);
+			}
 			return result.slice(0, limit);
 		},
 
@@ -218,7 +287,10 @@ export function createQueryGraphClauses(
 
 				const groupClauses = createGroupQueryGraphClauses(groupQuery, options);
 				const hasClause = (opName) =>
-					opName === "limit" || opName === "offset"
+					opName === "limit" ||
+					opName === "offset" ||
+					opName === "before" ||
+					opName === "after"
 						? groupQuery.slice?.[opName] !== undefined
 						: opName in groupQuery;
 				const processed = Object.entries(groupClauses).reduce(

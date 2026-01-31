@@ -153,6 +153,8 @@ export interface Expression {
 export interface SliceClause {
 	limit?: number;
 	offset?: number;
+	before?: { [k: string]: unknown };
+	after?: { [k: string]: unknown };
 }
 
 export type SelectClause =

@@ -233,6 +233,8 @@ function getResourceStructureValidator(schema, resourceType, engines) {
 				properties: {
 					limit: { type: "integer", minimum: 1 },
 					offset: { type: "integer", minimum: 0 },
+					before: { type: "object" },
+					after: { type: "object" },
 				},
 				additionalProperties: false,
 			},
@@ -265,6 +267,55 @@ function validateStructure(schema, query, type, engines) {
 		const errs = selectEngine.validateExpression(expr);
 		errors.push(...errs);
 	});
+
+	const addError = createErrorReporter("query");
+
+	// Validate before/after slice subclauses
+	const { before, after } = query.slice ?? {};
+	if (before || after) {
+		if (!query.order) {
+			errors.push(
+				addError("`before` and `after` in slice require an `order` clause", [
+					"slice",
+				]),
+			);
+		} else {
+			const order = Array.isArray(query.order) ? query.order : [query.order];
+			const orderKeys = order.map((o) => Object.keys(o)[0]);
+
+			[
+				["before", before],
+				["after", after],
+			].forEach(([label, anchor]) => {
+				if (!anchor) return;
+
+				Object.keys(anchor).forEach((anchorKey) => {
+					if (!orderKeys.includes(anchorKey)) {
+						errors.push(
+							addError(
+								`\`${label}\` keys must only contain the keys found in the \`order\` clause (got "${anchorKey}")`,
+								["slice", label],
+							),
+						);
+					}
+				});
+
+				let nonAnchorKey;
+				orderKeys.forEach((orderKey) => {
+					if (anchor[orderKey] !== undefined && nonAnchorKey) {
+						errors.push(
+							addError(
+								`\`${label}\` keys must not skip keys \`order\` clause (got "${orderKey}" but not "${nonAnchorKey}")`,
+								["slice", label],
+							),
+						);
+					} else if (anchor[orderKey] === undefined) {
+						nonAnchorKey = orderKey;
+					}
+				});
+			});
+		}
+	}
 
 	return errors;
 }

@@ -96,7 +96,10 @@ function runQuery(schema, rootQuery, data, options = {}) {
 			: Object.values(data[query.type]);
 
 		const hasClause = (opName) =>
-			opName === "limit" || opName === "offset"
+			opName === "limit" ||
+			opName === "offset" ||
+			opName === "before" ||
+			opName === "after"
 				? query.slice?.[opName] !== undefined
 				: opName in query;
 		const processed = Object.entries(operationDefinitions).reduce(
