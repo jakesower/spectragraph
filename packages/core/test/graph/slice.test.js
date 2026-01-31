@@ -8,7 +8,7 @@ describe("limit/offset", () => {
 		const query = {
 			type: "bears",
 			select: { name: "name" },
-			limit: 1,
+			slice: { limit: 1 },
 		};
 		const result = queryGraph(careBearSchema, query, careBearData);
 
@@ -23,7 +23,7 @@ describe("limit/offset", () => {
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
-			limit: 2,
+			slice: { limit: 2 },
 		};
 
 		const result = queryGraph(careBearSchema, query, careBearData);
@@ -43,7 +43,7 @@ describe("limit/offset", () => {
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
-			limit: 1,
+			slice: { limit: 1 },
 		};
 		const result = queryGraph(careBearSchema, query, careBearData);
 
@@ -55,8 +55,7 @@ describe("limit/offset", () => {
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
-			limit: 2,
-			offset: 1,
+			slice: { limit: 2, offset: 1 },
 		};
 		const result = queryGraph(careBearSchema, query, careBearData);
 
@@ -71,7 +70,7 @@ describe("limit/offset", () => {
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
-			offset: 1,
+			slice: { offset: 1 },
 		};
 		const result = queryGraph(careBearSchema, query, careBearData);
 
@@ -87,8 +86,7 @@ describe("limit/offset", () => {
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
-			limit: 6,
-			offset: 2,
+			slice: { limit: 6, offset: 2 },
 		};
 		const result = queryGraph(careBearSchema, query, careBearData);
 
@@ -103,8 +101,7 @@ describe("limit/offset", () => {
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
-			limit: 6,
-			offset: 20,
+			slice: { limit: 6, offset: 20 },
 		};
 		const result = queryGraph(careBearSchema, query, careBearData);
 
@@ -116,7 +113,7 @@ describe("limit/offset", () => {
 			type: "bears",
 			select: { name: "name" },
 			order: { name: "asc" },
-			offset: 0,
+			slice: { offset: 0 },
 		};
 		const result = queryGraph(careBearSchema, query, careBearData);
 

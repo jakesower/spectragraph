@@ -72,14 +72,14 @@ describe("validateQuery", () => {
 			expect(result.length).toEqual(0);
 		});
 
-		it("should validate a valid query with a nested limit", () => {
+		it("should validate a valid query with a nested slice", () => {
 			const query = {
 				type: "homes",
 				select: {
 					id: "id",
 					residents: {
 						select: ["name"],
-						limit: 3,
+						slice: { limit: 3 },
 					},
 				},
 			};
@@ -228,12 +228,12 @@ describe("validateQuery", () => {
 		});
 	});
 
-	describe("limit/offset", () => {
+	describe("slice", () => {
 		it("fails validation when using a bad value for limit", () => {
 			const query = {
 				type: "bears",
 				select: ["id"],
-				limit: 0,
+				slice: { limit: 0 },
 			};
 			const result = validateQuery(careBearSchema, query);
 			expect(result.length).toBeGreaterThan(0);
@@ -243,8 +243,7 @@ describe("validateQuery", () => {
 			const query = {
 				type: "bears",
 				select: ["id"],
-				limit: 3,
-				offset: -1,
+				slice: { limit: 3, offset: -1 },
 			};
 			const result = validateQuery(careBearSchema, query);
 			expect(result.length).toBeGreaterThan(0);
@@ -815,13 +814,13 @@ describe("validateQuery", () => {
 			});
 		});
 
-		describe("group.limit/offset", () => {
+		describe("group.slice", () => {
 			it("fails validation when limit is less than 1", () => {
 				const query = {
 					type: "bears",
 					group: {
 						by: "yearIntroduced",
-						limit: 0,
+						slice: { limit: 0 },
 					},
 				};
 
@@ -834,7 +833,7 @@ describe("validateQuery", () => {
 					type: "bears",
 					group: {
 						by: "yearIntroduced",
-						offset: -1,
+						slice: { offset: -1 },
 					},
 				};
 

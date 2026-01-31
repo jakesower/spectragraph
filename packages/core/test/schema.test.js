@@ -257,3 +257,152 @@ describe("real world bugs", () => {
 		expect(result.length).toBeGreaterThan(0);
 	});
 });
+
+describe("resource-level schema field", () => {
+	it("should validate a schema with a resource-level schema field", () => {
+		const schema = {
+			resources: {
+				games: {
+					attributes: {
+						id: { type: "string" },
+						title: { type: "string" },
+						homeScore: { type: "integer" },
+					},
+					relationships: {},
+					schema: {
+						required: ["title"],
+						oneOf: [{ required: ["homeScore"] }],
+					},
+				},
+			},
+		};
+		const result = validateSchema(schema);
+		expect(result).toEqual([]);
+	});
+
+	it("should not validate when schema contains properties field", () => {
+		const schema = {
+			resources: {
+				games: {
+					attributes: {
+						id: { type: "string" },
+						title: { type: "string" },
+					},
+					relationships: {},
+					schema: {
+						properties: {
+							title: { type: "string" },
+						},
+					},
+				},
+			},
+		};
+		const result = validateSchema(schema);
+		expect(result.length).toBeGreaterThan(0);
+		expect(result[0].message).toContain("properties");
+	});
+
+	it("should validate schema with complex cross-field validation", () => {
+		const schema = {
+			resources: {
+				games: {
+					attributes: {
+						id: { type: "string" },
+						type: { type: "string", enum: ["friendly", "tournament"] },
+						tournamentRound: { type: "string" },
+					},
+					relationships: {},
+					schema: {
+						if: {
+							properties: { type: { const: "tournament" } },
+						},
+						then: {
+							required: ["tournamentRound"],
+						},
+					},
+				},
+			},
+		};
+		const result = validateSchema(schema);
+		expect(result).toEqual([]);
+	});
+
+	it("should not validate schema with invalid JSON Schema syntax", () => {
+		const schema = {
+			resources: {
+				teams: {
+					attributes: {
+						id: { type: "string" },
+						name: { type: "string" },
+					},
+					relationships: {},
+					schema: {
+						// Invalid - oneOf requires an array
+						oneOf: { required: ["name"] },
+					},
+				},
+			},
+		};
+		const result = validateSchema(schema);
+		expect(result.length).toBeGreaterThan(0);
+	});
+
+	it("should validate schema with anyOf", () => {
+		const schema = {
+			resources: {
+				referees: {
+					attributes: {
+						id: { type: "string" },
+						hasAdvancedCert: { type: "boolean" },
+						experience: { type: "integer" },
+					},
+					relationships: {},
+					schema: {
+						if: {
+							properties: { hasAdvancedCert: { const: true } },
+						},
+						then: {
+							anyOf: [
+								{
+									properties: { experience: { minimum: 5 } },
+								},
+							],
+						},
+					},
+				},
+			},
+		};
+		const result = validateSchema(schema);
+		expect(result).toEqual([]);
+	});
+
+	it("should validate schema with allOf", () => {
+		const schema = {
+			resources: {
+				fields: {
+					attributes: {
+						id: { type: "string" },
+						name: { type: "string" },
+						capacity: { type: "integer" },
+					},
+					relationships: {},
+					schema: {
+						allOf: [
+							{ required: ["name"] },
+							{
+								if: {
+									properties: { capacity: { minimum: 20000 } },
+								},
+								then: {
+									required: ["name"],
+								},
+							},
+						],
+					},
+				},
+			},
+		};
+		const result = validateSchema(schema);
+		expect(result).toEqual([]);
+	});
+});

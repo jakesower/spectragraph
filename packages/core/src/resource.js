@@ -100,23 +100,27 @@ const resourceValidationProperties = (schema, resource, options = {}) => {
 	const resSchema = schema.resources[resource.type];
 	const requiredRelationships = resSchema.requiredRelationships ?? [];
 
+	// Build attributes validation schema by merging resource-level schema with individual attributes
+	const attributesValidation = {
+		type: "object",
+		properties: resSchema.attributes,
+		...(allowExtraAttributes
+			? {}
+			: {
+					additionalProperties: {
+						not: true,
+						errorMessage:
+							"attributes must not have extra properties; extra property is ${0#}",
+					},
+				}),
+		// Merge in resource-level schema for cross-field validation
+		...(resSchema.schema || {}),
+	};
+
 	return {
 		type: { const: resource.type },
 		id: { type: getIdType(schema, resource.type) },
-		attributes: {
-			type: "object",
-			required: resSchema.requiredAttributes ?? [],
-			properties: resSchema.attributes,
-			...(allowExtraAttributes
-				? {}
-				: {
-						additionalProperties: {
-							not: true,
-							errorMessage:
-								"attributes must not have extra properties; extra property is ${0#}",
-						},
-					}),
-		},
+		attributes: attributesValidation,
 		relationships: {
 			type: "object",
 			required: resSchema.requiredRelationships,

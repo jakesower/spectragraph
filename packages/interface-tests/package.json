@@ -20,6 +20,7 @@
 		"spectragraph"
 	],
 	"author": "Jake Sower",
+	"license": "AGPL-3.0",
 	"private": true,
 	"sideEffects": false,
 	"devDependencies": {

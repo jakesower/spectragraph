@@ -392,8 +392,7 @@ describe("group queries", () => {
 					by: "ageGroup",
 					aggregates: { count: { $count: null } },
 					order: { ageGroup: "asc" },
-					limit: 1,
-					offset: 1,
+					slice: { limit: 1, offset: 1 },
 				},
 			};
 
@@ -406,7 +405,7 @@ describe("group queries", () => {
 					by: "ageGroup",
 					aggregates: { count: { $count: null } },
 					order: { ageGroup: "asc" },
-					limit: 1,
+					slice: { limit: 1 },
 				},
 			};
 

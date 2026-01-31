@@ -56,8 +56,8 @@ describe("handler tests - other clause pushdown", () => {
 		});
 	});
 
-	describe("limit pushdown", () => {
-		it("pushes limit to API", async () => {
+	describe("slice pushdown", () => {
+		it("pushes slice to API", async () => {
 			global.fetch.mockResolvedValueOnce({
 				ok: true,
 				json: async () => [
@@ -82,21 +82,21 @@ describe("handler tests - other clause pushdown", () => {
 					parks: {},
 				},
 				pushdown: {
-					limit: {
-						apply: (limit) => ({ limit }),
+					slice: {
+						apply: (slice) => ({ limit: slice.limit }),
 					},
 				},
 			};
 
 			const store = createMultiApiStore(utahParksSchema, config);
-			await store.query({ type: "parks", select: "*", limit: 2 });
+			await store.query({ type: "parks", select: "*", slice: { limit: 2 } });
 
 			expect(global.fetch).toHaveBeenCalledWith(
 				"https://api.nps.example.org/parks?limit=2",
 			);
 		});
 
-		it("handles query without limit", async () => {
+		it("handles query without slice", async () => {
 			global.fetch.mockResolvedValueOnce({
 				ok: true,
 				json: async () => [],
@@ -110,8 +110,8 @@ describe("handler tests - other clause pushdown", () => {
 					parks: {},
 				},
 				pushdown: {
-					limit: {
-						apply: (limit) => ({ limit: limit }),
+					slice: {
+						apply: (slice) => ({ limit: slice.limit }),
 					},
 				},
 			};
@@ -123,10 +123,8 @@ describe("handler tests - other clause pushdown", () => {
 				"https://api.nps.example.org/parks",
 			);
 		});
-	});
 
-	describe("offset pushdown", () => {
-		it("pushes offset to API", async () => {
+		it("pushes slice with offset to API", async () => {
 			global.fetch.mockResolvedValueOnce({
 				ok: true,
 				json: async () => [
@@ -146,45 +144,21 @@ describe("handler tests - other clause pushdown", () => {
 					parks: {},
 				},
 				pushdown: {
-					offset: {
-						apply: (offsetValue) => ({ offset: offsetValue }),
+					slice: {
+						apply: (slice) => {
+							const result = {};
+							if (slice.offset !== undefined) result.offset = slice.offset;
+							return result;
+						},
 					},
 				},
 			};
 
 			const store = createMultiApiStore(utahParksSchema, config);
-			await store.query({ type: "parks", select: "*", offset: 10 });
+			await store.query({ type: "parks", select: "*", slice: { offset: 10 } });
 
 			expect(global.fetch).toHaveBeenCalledWith(
 				"https://api.nps.example.org/parks?offset=10",
-			);
-		});
-
-		it("handles query without offset", async () => {
-			global.fetch.mockResolvedValueOnce({
-				ok: true,
-				json: async () => [],
-			});
-
-			const config = {
-				request: {
-					baseURL: "https://api.nps.example.org",
-				},
-				resources: {
-					parks: {},
-				},
-				pushdown: {
-					offset: {
-						apply: (offsetValue) => ({ offset: offsetValue }),
-					},
-				},
-			};
-
-			const store = createMultiApiStore(utahParksSchema, config);
-			await store.query({ type: "parks", select: "*" });
-
-			expect(global.fetch).toHaveBeenCalledWith(
-				"https://api.nps.example.org/parks",
 			);
 		});
 	});
@@ -490,11 +464,13 @@ describe("handler tests - other clause pushdown", () => {
 							return { fields: selectedAttributes.join(",") };
 						},
 					},
-					limit: {
-						apply: (limitValue) => ({ limit: limitValue }),
-					},
-					offset: {
-						apply: (offsetValue) => ({ offset: offsetValue }),
+					slice: {
+						apply: (slice) => {
+							const result = {};
+							if (slice.limit !== undefined) result.limit = slice.limit;
+							if (slice.offset !== undefined) result.offset = slice.offset;
+							return result;
+						},
 					},
 					order: {
 						apply: (orderClause) => {
@@ -513,8 +489,7 @@ describe("handler tests - other clause pushdown", () => {
 			await store.query({
 				type: "parks",
 				select: ["id", "name", "location"],
-				limit: 5,
-				offset: 10,
+				slice: { limit: 5, offset: 10 },
 				order: { name: "desc" },
 			});
 

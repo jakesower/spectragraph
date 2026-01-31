@@ -35,18 +35,23 @@
 			"type": "object",
 			"required": ["attributes", "relationships"],
 			"properties": {
+				"title": { "type": "string" },
+				"description": { "type": "string" },
+				"$comment": { "type": "string" },
 				"plural": { "type": "string" },
 				"singular": { "type": "string" },
 				"idAttribute": { "type": "string" },
-				"requiredAttributes": {
-					"type": "array",
-					"items": { "type": "string" },
-					"default": []
-				},
-				"requiredRelationships": {
-					"type": "array",
-					"items": { "type": "string" },
-					"default": []
+				"schema": {
+					"type": "object",
+					"description": "JSON Schema object for cross-field validation. Must not contain 'properties' field - use 'attributes' instead.",
+					"allOf": [
+						{ "$ref": "http://json-schema.org/draft-07/schema#" },
+						{
+							"not": {
+								"required": ["properties"]
+							}
+						}
+					]
 				},
 				"attributes": {
 					"type": "object",

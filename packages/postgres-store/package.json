@@ -25,6 +25,7 @@
 	},
 	"keywords": [],
 	"author": "Jake Sower",
+	"license": "AGPL-3.0",
 	"devDependencies": {
 		"@rollup/plugin-commonjs": "^28.0.9",
 		"@rollup/plugin-json": "^6.1.0",

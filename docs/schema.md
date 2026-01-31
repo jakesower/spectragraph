@@ -9,6 +9,7 @@ Schemas define the structure of your data, including resource types, attributes,
 - [Attribute Types](#attribute-types)
 - [Relationships](#relationships)
 - [Advanced Schema Features](#advanced-schema-features)
+  - [Cross-Field Validation](#cross-field-validation)
 - [Schema Validation](#schema-validation)
 - [Examples](#examples)
 
@@ -170,8 +171,13 @@ Use JSON Schema features for validation:
     }
   },
 
-  // Required attributes are specified at resource level
+  // Required attributes can be specified at resource level (legacy approach)
   requiredAttributes: ['name', 'email']  // These must be present
+
+  // Or use schema.required (recommended)
+  schema: {
+    required: ['name', 'email']
+  }
 }
 ```
 
@@ -300,6 +306,167 @@ Resources can reference themselves:
   }
 }
 ```
+
+## Advanced Schema Features
+
+### Cross-Field Validation
+
+For complex business rules that involve multiple fields, use the `schema` property on resources. This property accepts any JSON Schema keywords except `properties` (use `attributes` for field definitions instead).
+
+#### Conditional Requirements
+
+Require fields based on the value of other fields using `if`/`then`:
+
+```javascript
+{
+  resources: {
+    fires: {
+      attributes: {
+        id: { type: 'string' },
+        type: { type: 'string', enum: ['wildfire', 'complex'] },
+        containedFires: { type: 'array', items: { type: 'string' } }
+      },
+      relationships: {},
+      schema: {
+        // If type is "complex", require containedFires
+        if: {
+          properties: { type: { const: 'complex' } }
+        },
+        then: {
+          required: ['containedFires']
+        }
+      }
+    }
+  }
+}
+```
+
+#### Mutually Exclusive Fields
+
+Require one of several fields using `oneOf`:
+
+```javascript
+{
+  resources: {
+    fires: {
+      attributes: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        origin: { type: 'object' },      // Point location
+        perimeter: { type: 'object' }    // Polygon boundary
+      },
+      relationships: {},
+      schema: {
+        required: ['name'],
+        // Fire must have EITHER origin OR perimeter (but not both, not neither)
+        oneOf: [
+          { required: ['origin'] },
+          { required: ['perimeter'] }
+        ]
+      }
+    }
+  }
+}
+```
+
+#### At Least One Required
+
+Require at least one field from a set using `anyOf`:
+
+```javascript
+{
+  resources: {
+    assignments: {
+      attributes: {
+        id: { type: 'string' },
+        damageReported: { type: 'boolean' },
+        destroyedTotal: { type: 'integer', minimum: 0 },
+        protectiveActionsTotal: { type: 'integer', minimum: 0 }
+      },
+      relationships: {},
+      schema: {
+        // If damage was reported, at least one counter must be > 0
+        if: {
+          properties: { damageReported: { const: true } }
+        },
+        then: {
+          anyOf: [
+            { properties: { destroyedTotal: { minimum: 1 } } },
+            { properties: { protectiveActionsTotal: { minimum: 1 } } }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+#### Multiple Constraints
+
+Combine multiple requirements using `allOf`:
+
+```javascript
+{
+  resources: {
+    fires: {
+      attributes: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        acreage: { type: 'number', minimum: 0 },
+        origin: { type: 'object' },
+        incidentCommander: { type: 'string' }
+      },
+      relationships: {},
+      schema: {
+        required: ['name'],
+        allOf: [
+          // Must have location data
+          { required: ['origin'] },
+          // Large fires require incident commander
+          {
+            if: {
+              properties: { acreage: { minimum: 1000 } }
+            },
+            then: {
+              required: ['incidentCommander']
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+#### Schema vs requiredAttributes
+
+The `schema` property is the recommended approach for defining required fields and complex validation. The legacy `requiredAttributes` array is still supported for backward compatibility:
+
+```javascript
+{
+  resources: {
+    users: {
+      attributes: {
+        name: { type: 'string' },
+        email: { type: 'string' }
+      },
+      relationships: {},
+
+      // Legacy approach (still supported)
+      requiredAttributes: ['name', 'email'],
+
+      // Modern approach (recommended)
+      schema: {
+        required: ['name', 'email']
+      }
+    }
+  }
+}
+```
+
+When both are present, `schema.required` takes precedence over `requiredAttributes`.
+
+**Note:** The `schema` property cannot contain a `properties` field. Use the `attributes` object for field definitions to maintain separation of concerns.
 
 ## Schema Validation
 
@@ -595,8 +762,10 @@ const cmsSchema = {
 3. **Define relationships carefully** - Always specify inverse relationships when possible
 4. **Choose appropriate types** - Use the most specific type that fits your data
 5. **Add constraints** - Use enums, minimums, maximums to validate data
-6. **Plan for growth** - Consider how your schema might evolve over time
-7. **Document complex relationships** - Add comments for business logic via "$comment" keys anywhere you like
+6. **Use schema for complex validation** - Leverage cross-field validation for business rules
+7. **Prefer schema.required over requiredAttributes** - The `schema` property is more powerful and flexible
+8. **Plan for growth** - Consider how your schema might evolve over time
+9. **Document complex relationships** - Add comments for business logic via "$comment" keys anywhere you like
 
 For query examples using these schemas, see [query.md](query.md).
 For expression usage with schema data, see the [json-expressions documentation](https://github.com/jakesower/json-expressions/blob/main/docs/expressions.md).

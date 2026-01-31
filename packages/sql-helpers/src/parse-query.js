@@ -73,24 +73,29 @@ const QUERY_CLAUSE_EXTRACTORS = {
 			}),
 		};
 	},
-	limit: (limit, { query, queryInfo, schema }) => {
-		if (limit < 0) {
-			throw new Error("`limit` must be at least 0");
+	slice: (slice, { query, queryInfo, schema }) => {
+		const { limit, offset } = slice;
+		const result = {};
+
+		if (limit !== undefined) {
+			if (limit < 0) {
+				throw new Error("`limit` must be at least 0");
+			}
+
+			if (!(queryInfo.path.length > 0 || hasToManyRelationship(schema, query))) {
+				result.limit = limit;
+				result.offset = offset ?? 0;
+			}
 		}
 
-		return queryInfo.path.length > 0 || hasToManyRelationship(schema, query)
-			? {}
-			: { limit, offset: query.offset ?? 0 };
-	},
-	offset: (offset, { query }) => {
-		if (offset < 0) {
-			throw new Error("`offset` must be at least 0");
+		if (offset !== undefined && limit === undefined) {
+			if (offset < 0) {
+				throw new Error("`offset` must be at least 0");
+			}
+			result.offset = offset;
 		}
 
-		if (!query.limit) {
-			return { offset };
-		}
-		return {};
+		return result;
 	},
 	select: (select, context) => {
 		const { schema, table, queryInfo, columnTypeModifiers = {} } = context;

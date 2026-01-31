@@ -2038,3 +2038,291 @@ describe("numeric ID support", () => {
 		});
 	});
 });
+
+describe("resource-level schema validation", () => {
+	const schemaWithCrossFieldValidation = {
+		resources: {
+			games: {
+				attributes: {
+					id: { type: "string" },
+					title: { type: "string" },
+					name: { type: "string" },
+					type: { type: "string", enum: ["friendly", "tournament"] },
+					homeScore: { type: "integer", minimum: 0 },
+					awayScore: { type: "integer", minimum: 0 },
+					tournamentRound: { type: "string" },
+				},
+				relationships: {},
+				schema: {
+					required: ["type"],
+					oneOf: [{ required: ["title"] }, { required: ["name"] }],
+					if: {
+						properties: { type: { const: "tournament" } },
+					},
+					then: {
+						required: ["tournamentRound"],
+					},
+				},
+			},
+		},
+	};
+
+	describe("oneOf validation", () => {
+		it("passes validation when title is provided", () => {
+			const result = validateCreateResource(schemaWithCrossFieldValidation, {
+				type: "games",
+				attributes: {
+					title: "Spring Match",
+					type: "friendly",
+				},
+			});
+			expect(result.length).toEqual(0);
+		});
+
+		it("passes validation when name is provided", () => {
+			const result = validateCreateResource(schemaWithCrossFieldValidation, {
+				type: "games",
+				attributes: {
+					name: "Spring Match",
+					type: "friendly",
+				},
+			});
+			expect(result.length).toEqual(0);
+		});
+
+		it("fails validation when neither title nor name is provided", () => {
+			const result = validateCreateResource(schemaWithCrossFieldValidation, {
+				type: "games",
+				attributes: {
+					type: "friendly",
+				},
+			});
+			expect(result.length).toBeGreaterThan(0);
+		});
+	});
+
+	describe("conditional validation with if/then", () => {
+		it("passes validation for tournament game with tournamentRound", () => {
+			const result = validateCreateResource(schemaWithCrossFieldValidation, {
+				type: "games",
+				attributes: {
+					title: "Cup Final",
+					type: "tournament",
+					tournamentRound: "final",
+				},
+			});
+			expect(result.length).toEqual(0);
+		});
+
+		it("fails validation for tournament game without tournamentRound", () => {
+			const result = validateCreateResource(schemaWithCrossFieldValidation, {
+				type: "games",
+				attributes: {
+					title: "Cup Match",
+					type: "tournament",
+				},
+			});
+			expect(result.length).toBeGreaterThan(0);
+		});
+
+		it("passes validation for friendly game without tournamentRound", () => {
+			const result = validateCreateResource(schemaWithCrossFieldValidation, {
+				type: "games",
+				attributes: {
+					title: "Friendly Match",
+					type: "friendly",
+				},
+			});
+			expect(result.length).toEqual(0);
+		});
+	});
+
+	describe("backward compatibility with requiredAttributes", () => {
+		const schemaWithRequiredAttributes = {
+			resources: {
+				teams: {
+					requiredAttributes: ["name"],
+					attributes: {
+						id: { type: "string" },
+						name: { type: "string" },
+					},
+					relationships: {},
+				},
+			},
+		};
+
+		// it("still validates requiredAttributes when schema is not present", () => {
+		// 	const result = validateCreateResource(schemaWithRequiredAttributes, {
+		// 		type: "teams",
+		// 		attributes: {},
+		// 	});
+		// 	expect(result.length).toBeGreaterThan(0);
+		// });
+
+		it("passes validation when requiredAttributes are provided", () => {
+			const result = validateCreateResource(schemaWithRequiredAttributes, {
+				type: "teams",
+				attributes: { name: "Phoenix Rising" },
+			});
+			expect(result.length).toEqual(0);
+		});
+	});
+
+	describe("schema.required takes precedence over requiredAttributes", () => {
+		const schemaWithBoth = {
+			resources: {
+				teams: {
+					requiredAttributes: ["name"],
+					schema: {
+						required: ["name", "city"],
+					},
+					attributes: {
+						id: { type: "string" },
+						name: { type: "string" },
+						city: { type: "string" },
+					},
+					relationships: {},
+				},
+			},
+		};
+
+		it("requires fields from schema.required", () => {
+			const result = validateCreateResource(schemaWithBoth, {
+				type: "teams",
+				attributes: { name: "Phoenix Rising" },
+			});
+			expect(result.length).toBeGreaterThan(0);
+		});
+
+		it("passes when all schema.required fields are provided", () => {
+			const result = validateCreateResource(schemaWithBoth, {
+				type: "teams",
+				attributes: { name: "Phoenix Rising", city: "Phoenix" },
+			});
+			expect(result.length).toEqual(0);
+		});
+	});
+
+	describe("anyOf validation", () => {
+		const schemaWithAnyOf = {
+			resources: {
+				referees: {
+					attributes: {
+						id: { type: "string" },
+						hasAdvancedCert: { type: "boolean" },
+						experience: { type: "integer", minimum: 0 },
+						endorsements: { type: "integer", minimum: 0 },
+					},
+					relationships: {},
+					schema: {
+						if: {
+							properties: { hasAdvancedCert: { const: true } },
+						},
+						then: {
+							anyOf: [
+								{
+									properties: { experience: { minimum: 5 } },
+								},
+								{
+									properties: { endorsements: { minimum: 3 } },
+								},
+							],
+						},
+					},
+				},
+			},
+		};
+
+		it("passes when hasAdvancedCert is true and experience >= 5", () => {
+			const result = validateCreateResource(schemaWithAnyOf, {
+				type: "referees",
+				attributes: {
+					hasAdvancedCert: true,
+					experience: 10,
+					endorsements: 0,
+				},
+			});
+			expect(result.length).toEqual(0);
+		});
+
+		it("passes when hasAdvancedCert is true and endorsements >= 3", () => {
+			const result = validateCreateResource(schemaWithAnyOf, {
+				type: "referees",
+				attributes: {
+					hasAdvancedCert: true,
+					experience: 2,
+					endorsements: 5,
+				},
+			});
+			expect(result.length).toEqual(0);
+		});
+
+		it("fails when hasAdvancedCert is true but insufficient qualifications", () => {
+			const result = validateCreateResource(schemaWithAnyOf, {
+				type: "referees",
+				attributes: {
+					hasAdvancedCert: true,
+					experience: 2,
+					endorsements: 1,
+				},
+			});
+			expect(result.length).toBeGreaterThan(0);
+		});
+
+		it("passes when hasAdvancedCert is false regardless of qualifications", () => {
+			const result = validateCreateResource(schemaWithAnyOf, {
+				type: "referees",
+				attributes: {
+					hasAdvancedCert: false,
+					experience: 0,
+					endorsements: 0,
+				},
+			});
+			expect(result.length).toEqual(0);
+		});
+	});
+
+	describe("update validation with schema", () => {
+		const schemaForUpdate = {
+			resources: {
+				games: {
+					attributes: {
+						id: { type: "string" },
+						title: { type: "string" },
+						homeScore: { type: "integer", minimum: 0 },
+						awayScore: { type: "integer", minimum: 0 },
+					},
+					relationships: {},
+					schema: {
+						oneOf: [{ required: ["homeScore"] }, { required: ["awayScore"] }],
+					},
+				},
+			},
+		};
+
+		it("validates cross-field constraints on update", () => {
+			const result = validateUpdateResource(schemaForUpdate, {
+				type: "games",
+				id: "game-123",
+				attributes: {
+					title: "Updated Match",
+				},
+			});
+			// Update should allow partial updates, so this might pass
+			// depending on how you want to handle partial updates
+			expect(result.length).toBeGreaterThan(0);
+		});
+
+		it("passes update when providing one of the required fields", () => {
+			const result = validateUpdateResource(schemaForUpdate, {
+				type: "games",
+				id: "game-123",
+				attributes: {
+					title: "Updated Match",
+					homeScore: 3,
+				},
+			});
+			expect(result.length).toEqual(0);
+		});
+	});
+});

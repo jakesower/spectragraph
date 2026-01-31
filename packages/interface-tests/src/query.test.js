@@ -859,8 +859,7 @@ export function runQueryTests(createStore) {
 						select: ["yearIntroduced"],
 						aggregates: { count: { $count: null } },
 						order: { yearIntroduced: "asc" },
-						limit: 1,
-						offset: 1,
+						slice: { limit: 1, offset: 1 },
 					},
 				};
 
