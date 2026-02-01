@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Support for `before` and `after` subclauses in `slice` (via @spectragraph/core upgrade). These are applied in post-processing rather than translated to SQL. See core changelog for details.
+
 ## [Pre-Log]
 
 - Schema-driven SQLite backend with full CRUD operations (create, read, update, delete, upsert)

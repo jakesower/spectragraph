@@ -34,8 +34,7 @@ Optional query parameters:
   select: ["name"],
   where: { active: true }, // Optional: filtering conditions
   order: { name: "asc" },  // Optional: sorting
-  limit: 10,               // Optional: max results
-  offset: 5                // Optional: skip results (pagination)
+  slice: { limit: 10, offset: 5 }  // Optional: pagination
 }
 ```
 
@@ -67,7 +66,7 @@ SpectraGraph supports multiple ways to specify which fields to select:
 }
 ```
 
-### Mixed Syntax (Most Flexible)
+### Mixed Syntax (Also Recommended)
 
 ```javascript
 // Combine arrays and objects
@@ -79,8 +78,8 @@ SpectraGraph supports multiple ways to specify which fields to select:
     {
       fullName: { $concat: [{ $get: "firstName" }, " ", { $get: "lastName" }] }, // Expression
       loans:  {
-        select: ["title"], // Relationship with sub-selection, requires explicit select since it also uses limit
-        limit: 10,
+        select: ["title"], // Relationship with sub-selection, requires explicit select since it also uses slice
+        slice: { limit: 10 },
       }
     }
   ]
@@ -231,6 +230,8 @@ SpectraGraph supports multiple ways to specify which fields to select:
 }
 ```
 
+Note: The array form is consistent with JSON semantics. JavaScript honors the order of keys in an object, but JSON does not.
+
 ## Pagination
 
 ```javascript
@@ -238,8 +239,10 @@ SpectraGraph supports multiple ways to specify which fields to select:
   type: "loans",
   select: ["title"],
   order: { createdAt: "desc" },
-  limit: 20,    // Max 20 results
-  offset: 40    // Skip first 40 (page 3 if 20 per page)
+  slice: {
+    limit: 20,    // Max 20 results
+    offset: 40    // Skip first 40 (page 3 if 20 per page)
+  }
 }
 ```
 
@@ -422,8 +425,7 @@ Groups support the same ordering and pagination as regular queries:
       avgPages: { $mean: { $pluck: "pageCount" } }
     },
     order: { avgPages: "desc" },  // Order by aggregate
-    limit: 10,                     // Top 10 genres
-    offset: 0
+    slice: { limit: 10 }
   }
 }
 
@@ -636,7 +638,7 @@ SpectraGraph includes a powerful expression system for computations and transfor
       select: ["title"],
       where: { status: "active" },  // Only active loans
       order: { createdAt: "desc" },
-      limit: 5
+      slice: { limit: 5 }
     }
   }]
 }

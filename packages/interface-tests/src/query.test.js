@@ -905,4 +905,174 @@ export function runQueryTests(createStore) {
 			});
 		});
 	});
+
+	// ordered by name asc: Cheer, Smart Heart, Tenderheart, Wish
+	// yearIntroduced: Cheer(1982), Smart Heart(2005), Tenderheart(1982), Wish(1982)
+	describe("before/after slice", () => {
+		it("returns results after an anchor value", async () => {
+			const store = createStore(careBearSchema, {
+				initialData: careBearData,
+			});
+
+			const result = await store.query({
+				type: "bears",
+				select: { name: "name" },
+				order: { name: "asc" },
+				slice: { after: { name: "Smart Heart Bear" } },
+			});
+
+			expect(result).toEqual([
+				{ name: "Tenderheart Bear" },
+				{ name: "Wish Bear" },
+			]);
+		});
+
+		it("returns results before an anchor value", async () => {
+			const store = createStore(careBearSchema, {
+				initialData: careBearData,
+			});
+
+			const result = await store.query({
+				type: "bears",
+				select: { name: "name" },
+				order: { name: "asc" },
+				slice: { before: { name: "Tenderheart Bear" } },
+			});
+
+			expect(result).toEqual([
+				{ name: "Cheer Bear" },
+				{ name: "Smart Heart Bear" },
+			]);
+		});
+
+		it("takes from the end when using before with limit", async () => {
+			const store = createStore(careBearSchema, {
+				initialData: careBearData,
+			});
+
+			const result = await store.query({
+				type: "bears",
+				select: { name: "name" },
+				order: { name: "asc" },
+				slice: { before: { name: "Wish Bear" }, limit: 2 },
+			});
+
+			// name < "Wish Bear" → [Cheer, Smart Heart, Tenderheart], limit 2 from end
+			expect(result).toEqual([
+				{ name: "Smart Heart Bear" },
+				{ name: "Tenderheart Bear" },
+			]);
+		});
+
+		it("applies before with limit and offset from the end", async () => {
+			const store = createStore(careBearSchema, {
+				initialData: careBearData,
+			});
+
+			const result = await store.query({
+				type: "bears",
+				select: { name: "name" },
+				order: { name: "asc" },
+				slice: { before: { name: "Wish Bear" }, limit: 1, offset: 1 },
+			});
+
+			// name < "Wish Bear" → [Cheer, Smart Heart, Tenderheart]
+			// offset 1 from end → [Cheer, Smart Heart], limit 1 from end → [Smart Heart]
+			expect(result).toEqual([{ name: "Smart Heart Bear" }]);
+		});
+
+		it("returns a window when using both after and before", async () => {
+			const store = createStore(careBearSchema, {
+				initialData: careBearData,
+			});
+
+			const result = await store.query({
+				type: "bears",
+				select: { name: "name" },
+				order: { name: "asc" },
+				slice: {
+					after: { name: "Cheer Bear" },
+					before: { name: "Wish Bear" },
+				},
+			});
+
+			expect(result).toEqual([
+				{ name: "Smart Heart Bear" },
+				{ name: "Tenderheart Bear" },
+			]);
+		});
+
+		it("works with anchor values not present in the data", async () => {
+			const store = createStore(careBearSchema, {
+				initialData: careBearData,
+			});
+
+			const result = await store.query({
+				type: "bears",
+				select: { name: "name" },
+				order: { yearIntroduced: "asc" },
+				slice: { after: { yearIntroduced: 1990 } },
+			});
+
+			// yearIntroduced > 1990 → Smart Heart (2005)
+			expect(result).toEqual([{ name: "Smart Heart Bear" }]);
+		});
+
+		it("respects desc order", async () => {
+			const store = createStore(careBearSchema, {
+				initialData: careBearData,
+			});
+
+			const result = await store.query({
+				type: "bears",
+				select: { name: "name" },
+				order: { yearIntroduced: "desc" },
+				slice: { before: { yearIntroduced: 1982 } },
+			});
+
+			// desc order, before 1982 means yearIntroduced > 1982 → Smart Heart
+			expect(result).toEqual([{ name: "Smart Heart Bear" }]);
+		});
+
+		it("uses tuple comparison for multi-key after", async () => {
+			const store = createStore(careBearSchema, {
+				initialData: careBearData,
+			});
+
+			const result = await store.query({
+				type: "bears",
+				select: { name: "name" },
+				order: [{ yearIntroduced: "asc" }, { name: "asc" }],
+				slice: { after: { yearIntroduced: 1982, name: "Tenderheart Bear" } },
+			});
+
+			// (year, name) > (1982, "Tenderheart Bear"):
+			//   year > 1982 → Smart Heart
+			//   year === 1982 AND name > "Tenderheart Bear" → Wish Bear
+			expect(result).toEqual([
+				{ name: "Wish Bear" },
+				{ name: "Smart Heart Bear" },
+			]);
+		});
+
+		it("combines after with limit and offset", async () => {
+			const store = createStore(careBearSchema, {
+				initialData: careBearData,
+			});
+
+			const result = await store.query({
+				type: "bears",
+				select: { name: "name" },
+				order: { name: "asc" },
+				slice: { after: { name: "Cheer Bear" }, limit: 2, offset: 1 },
+			});
+
+			// name > "Cheer Bear" → [Smart Heart, Tenderheart, Wish]
+			// offset 1 → [Tenderheart, Wish], limit 2 → [Tenderheart, Wish]
+			expect(result).toEqual([
+				{ name: "Tenderheart Bear" },
+				{ name: "Wish Bear" },
+			]);
+		});
+	});
 }

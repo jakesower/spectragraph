@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Support for `before` and `after` subclauses in `slice` (via @spectragraph/core upgrade). See core changelog for details.
+
 ### Changed
 
 - Automatic ID generation now supports both integer and string ID types based on schema definition

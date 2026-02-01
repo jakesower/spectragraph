@@ -57,8 +57,12 @@ SpectraGraph queries are JSON objects that describe what data to retrieve and ho
   order: [{ name: "asc" }, { memberSince: "desc" }],  // Multiple fields
 
   // ===== PAGINATION =====
-  limit: 10,                  // Maximum results
-  offset: 20,                 // Skip N results
+  slice: {
+    limit: 10,                // Maximum results
+    offset: 20,               // Skip N results
+    after: { name: "M" },     // Cursor-style: results after this value
+    before: { name: "Z" },    // Cursor-style: results before this value
+  },
 
   // ===== FIELD SELECTION (pick one form) =====
   select: "*",                // All attributes
@@ -71,12 +75,12 @@ SpectraGraph queries are JSON objects that describe what data to retrieve and ho
     loanCount: { $count: "loans" },  // Expression
     loans: {                  // Relationship subquery
       select: ["dueDate"],
-      limit: 5
+      slice: { limit: 5 }
     }
   }
 
   select: ["name", "patronName", "loanCount", { // mixed, most idiomatic
-    loans: { select: ["dueDate"], limit: 5}
+    loans: { select: ["dueDate"], slice: { limit: 5 } }
   }]
 }
 ```
@@ -103,9 +107,7 @@ Every query is an object with these components:
 
 - **`order`** _(object | object[])_ - Sort order. See [Ordering](#ordering).
 
-- **`limit`** _(integer ≥ 1)_ - Maximum number of results to return.
-
-- **`offset`** _(integer ≥ 0)_ - Number of results to skip (for pagination).
+- **`slice`** _(object)_ - Pagination controls. See [Pagination](#pagination).
 
 ### Validation
 
@@ -138,9 +140,11 @@ Query operations execute in this specific order:
 1. id/ids       → Select specific resources
 2. where        → Filter resources
 3. order        → Sort results
-4. offset       → Skip N results
-5. limit        → Take first N results
-6. select       → Project and transform fields
+4. after        → Keep results after anchor value (from slice)
+5. before       → Keep results before anchor value (from slice)
+6. offset       → Skip N results (from slice)
+7. limit        → Take N results (from slice)
+8. select       → Project and transform fields
 ```
 
 ### Why This Matters
@@ -153,9 +157,11 @@ Understanding execution order explains query behavior:
   ids: ["p1", "p2", "p3", "p4", "p5"],    // 1. Start with 5 specific patrons
   where: { membershipActive: true },      // 2. Filter to active patrons only
   order: { name: "asc" },                 // 3. Sort by name
-  offset: 1,                              // 4. Skip first result
-  limit: 2,                               // 5. Take next 2 results
-  select: ["name", "email"]               // 6. Return only name and email
+  slice: {                                // 4-7. Paginate
+    offset: 1,                            //   Skip first result
+    limit: 2,                             //   Take next 2 results
+  },
+  select: ["name", "email"]               // 8. Return only name and email
 }
 
 // Execution flow:
@@ -267,7 +273,7 @@ The most powerful form, supporting aliases, expressions, and computed fields:
     loans: {
       select: ["dueDate", "renewalCount"],
       order: { dueDate: "asc" },
-      limit: 5
+      slice: { limit: 5 }
     },
 
     // Nested expressions
@@ -354,7 +360,7 @@ SpectraGraph normalizes all forms to the object form internally.
 
 - Aliasing fields: `patronName: "name"`
 - Computing fields: `loanCount: { $count: "loans" }`
-- Complex subqueries: `loans: { select: [...], where: {...}, limit: 5 }`
+- Complex subqueries: `loans: { select: [...], where: {...}, slice: { limit: 5 } }`
 
 ---
 
@@ -619,7 +625,7 @@ Order works in relationship subqueries:
     recentLoans: {
       select: ["dueDate", "renewalCount"],
       order: { dueDate: "desc" },  // Order nested results
-      limit: 5
+      slice: { limit: 5 }
     }
   }
 }
@@ -629,47 +635,34 @@ Order works in relationship subqueries:
 
 ## Pagination
 
-Limit and offset results for pagination.
-
-### Limit
-
-Restrict the number of results:
+The `slice` clause controls pagination. All pagination subclauses live inside `slice`.
 
 ```javascript
 {
   type: "books",
   select: ["title"],
-  limit: 10  // Return at most 10 results
+  order: { publishedYear: "desc" },
+  slice: {
+    limit: 10,
+    offset: 20,
+    after: { publishedYear: 2020 },
+    before: { publishedYear: 2025 },
+  }
 }
 ```
 
-**Rules:**
+### Slice Subclauses
 
-- Must be an integer ≥ 1
-- Applied **after** filtering and sorting
-- Returns fewer results if not enough match
+| Subclause | Type        | Description                                          |
+| --------- | ----------- | ---------------------------------------------------- |
+| `limit`   | integer ≥ 1 | Maximum number of results                            |
+| `offset`  | integer ≥ 0 | Number of results to skip                            |
+| `after`   | object      | Keep results ordinally after this value (exclusive)  |
+| `before`  | object      | Keep results ordinally before this value (exclusive) |
 
-### Offset
+### Limit and Offset
 
-Skip a number of results:
-
-```javascript
-{
-  type: "books",
-  select: ["title"],
-  offset: 20  // Skip first 20 results
-}
-```
-
-**Rules:**
-
-- Must be an integer ≥ 0
-- Applied **after** filtering and sorting, **before** limit
-- If offset exceeds result count, returns empty array
-
-### Combining Limit and Offset
-
-Standard pagination pattern:
+Standard page-based pagination:
 
 ```javascript
 // Page 1 (items 0-9)
@@ -677,8 +670,7 @@ Standard pagination pattern:
   type: "books",
   select: ["title"],
   order: { publishedYear: "desc" },
-  limit: 10,
-  offset: 0
+  slice: { limit: 10, offset: 0 }
 }
 
 // Page 2 (items 10-19)
@@ -686,23 +678,131 @@ Standard pagination pattern:
   type: "books",
   select: ["title"],
   order: { publishedYear: "desc" },
-  limit: 10,
-  offset: 10
+  slice: { limit: 10, offset: 10 }
 }
 
-// Page N (items (N-1)*10 to N*10-1)
+// Page N
 {
   type: "books",
   select: ["title"],
   order: { publishedYear: "desc" },
-  limit: 10,
-  offset: (page - 1) * 10
+  slice: { limit: 10, offset: (page - 1) * 10 }
 }
 ```
 
+### Before and After (Keyset Pagination)
+
+`before` and `after` use ordinal comparison against sorted results, similar to SQL keyset pagination. They require an `order` clause, and the keys must be a prefix of the `order` keys.
+
+```javascript
+// All books published after 2020
+{
+  type: "books",
+  select: ["title"],
+  order: { publishedYear: "asc" },
+  slice: { after: { publishedYear: 2020 } }
+}
+
+// 10 books published after 2020
+{
+  type: "books",
+  select: ["title"],
+  order: { publishedYear: "asc" },
+  slice: { after: { publishedYear: 2020 }, limit: 10 }
+}
+
+// Books published between 2020 and 2025 (exclusive)
+{
+  type: "books",
+  select: ["title"],
+  order: { publishedYear: "asc" },
+  slice: {
+    after: { publishedYear: 2020 },
+    before: { publishedYear: 2025 }
+  }
+}
+```
+
+**Anchor values don't need to exist in the data.** The comparison is ordinal, not positional — `after: { publishedYear: 1990 }` returns all books published after 1990, regardless of whether any book was published in exactly 1990.
+
+#### Direction Awareness
+
+`before` and `after` respect the sort direction:
+
+```javascript
+// Ascending: after means "greater than"
+{
+  order: { publishedYear: "asc" },
+  slice: { after: { publishedYear: 2020 } }
+  // → publishedYear > 2020
+}
+
+// Descending: after means "less than" (later in desc order)
+{
+  order: { publishedYear: "desc" },
+  slice: { after: { publishedYear: 2020 } }
+  // → publishedYear < 2020
+}
+```
+
+#### Before + Limit (Reverse Pagination)
+
+When `before` is used without `after`, `limit` and `offset` apply from the **end** of the filtered results. This enables backward pagination:
+
+```javascript
+// Last 10 books before 2025
+{
+  type: "books",
+  select: ["title"],
+  order: { publishedYear: "asc" },
+  slice: { before: { publishedYear: 2025 }, limit: 10 }
+}
+// If results before 2025 are [A, B, C, ..., X, Y, Z],
+// this returns [Q, R, S, T, U, V, W, X, Y, Z] (last 10)
+
+// With offset: skip 5 from the end, then take 10
+{
+  type: "books",
+  select: ["title"],
+  order: { publishedYear: "asc" },
+  slice: { before: { publishedYear: 2025 }, limit: 10, offset: 5 }
+}
+```
+
+When both `after` and `before` are present, `limit` and `offset` apply from the **start** (normal direction).
+
+#### Multi-Key Comparison (Advanced)
+
+`before` and `after` support multiple keys for composite cursor pagination. The keys must be a prefix of the `order` keys, and comparison uses lexicographic (tuple) ordering:
+
+```javascript
+// After (2020, "Design Patterns") in (year asc, title asc) order
+{
+  type: "books",
+  select: ["title"],
+  order: [{ publishedYear: "asc" }, { title: "asc" }],
+  slice: {
+    after: { publishedYear: 2020, title: "Design Patterns" }
+  }
+}
+// Matches books where:
+//   publishedYear > 2020
+//   OR (publishedYear === 2020 AND title > "Design Patterns")
+```
+
+This is equivalent to SQL's `ROW(year, title) > ROW(2020, 'Design Patterns')` and is the standard mechanism for keyset pagination with composite sort keys.
+
+**Rules:**
+
+- `after`/`before` keys must be a prefix of the `order` keys
+- Keys must be valid attributes on the resource
+- `order` is required when using `after` or `before`
+- Single-key is the common case; multi-key is for composite sort orders
+- Each key's comparison direction follows the corresponding `order` direction
+
 ### Pagination in Subqueries
 
-Limit and offset work in relationship subqueries:
+Slice works in relationship subqueries:
 
 ```javascript
 {
@@ -712,24 +812,15 @@ Limit and offset work in relationship subqueries:
     recentLoans: {
       select: ["dueDate"],
       order: { createdAt: "desc" },
-      limit: 5,        // Limit nested results
-      offset: 0
+      slice: { limit: 5 }
     }
   }
 }
 ```
 
-### Performance Considerations
-
-- **Memory Store:** Loads all data, then slices (inefficient for large datasets)
-- **SQL Stores:** Translates to `LIMIT`/`OFFSET` (efficient)
-- **API Stores:** May paginate requests or fetch all then slice (check store docs)
-
----
-
 ## Grouping and Aggregation
 
-SpectraGraph supports grouping resources and computing aggregates via the `group` clause. Queries use either `select` (regular queries) OR `group` (aggregation queries), but not both at the top level.
+SpectraGraph supports grouping resources and computing aggregates via the `group` clause. Queries use either `select` (selection queries) OR `group` (aggregation queries), but not both at the top level.
 
 ### Basic Syntax
 
@@ -744,8 +835,7 @@ SpectraGraph supports grouping resources and computing aggregates via the `group
     },
     where: { ... },                 // Optional: filter within groups
     order: { total: "desc" },       // Optional: sort groups
-    limit: 10,                      // Optional: limit groups
-    offset: 0                       // Optional: skip groups
+    slice: { limit: 10, offset: 0 } // Optional: paginate groups
   }
 }
 ```
@@ -891,7 +981,7 @@ Compute values over each group using expressions:
 
 **Rules:**
 
-- Each aggregate must be a valid SELECT expression
+- Each aggregate must be a valid `select` expression
 - Can reference any field from the grouped resources
 - Cannot reference relationships directly
 
@@ -1076,7 +1166,7 @@ Sort groups by any field in `select` or `aggregates`:
 
 ### Pagination with Groups
 
-Limit and offset work on groups (not individual resources):
+Slice works on groups (not individual resources):
 
 ```javascript
 {
@@ -1087,8 +1177,7 @@ Limit and offset work on groups (not individual resources):
       revenue: { $sum: { $pluck: "pageCount" } }
     },
     order: { revenue: "desc" },
-    limit: 10,      // Top 10 genres
-    offset: 0
+    slice: { limit: 10 }      // Top 10 genres
   }
 }
 
@@ -1099,8 +1188,7 @@ Limit and offset work on groups (not individual resources):
     by: ["author", "genre"],
     aggregates: { count: { $count: null } },
     order: [{ author: "asc" }, { genre: "asc" }],
-    limit: 20,
-    offset: 40    // Skip first 40 groups
+    slice: { limit: 20, offset: 40 }    // Skip first 40 groups
   }
 }
 ```
@@ -1139,7 +1227,7 @@ Groups can contain nested `group` clauses for multi-level aggregation:
 - Nested groups operate on the results of the parent group
 - Can reference any field from parent's `select` or `aggregates`
 - Supports arbitrary nesting depth
-- Each level can have its own `where`, `order`, `limit`, `offset`
+- Each level can have its own `where`, `order`, `slice`
 
 ### Complete Example
 
@@ -1171,8 +1259,7 @@ Groups can contain nested `group` clauses for multi-level aggregation:
       { category: "asc" }
     ],
     // Paginate groups
-    limit: 20,
-    offset: 0
+    slice: { limit: 20, offset: 0 }
   }
 }
 ```
@@ -1188,7 +1275,7 @@ When using `group`, the query structure changes:
   select: ["genre", "pageCount"],  // Required for regular queries
   where: { ... },
   order: { ... },
-  limit: 10
+  slice: { limit: 10 }
 }
 
 // Aggregation query (group mode)
@@ -1200,7 +1287,7 @@ When using `group`, the query structure changes:
   },
   where: { ... },               // Filters resources before grouping
   order: { ... },               // Sorts before grouping
-  limit: 10                     // Limits before grouping (offset OK too)
+  slice: { limit: 10 }          // Limits before grouping
 }
 ```
 
@@ -1208,7 +1295,7 @@ When using `group`, the query structure changes:
 
 - Top-level `select` is not allowed (use `group.select` instead)
 - Top-level `where` filters resources before grouping
-- Top-level `order`, `limit`, `offset` are applied before grouping
+- Top-level `order` and `slice` are applied before grouping
 - Top-level `id` is not supported with grouping
 - Top-level `ids` can be used to group specific resources
 
@@ -1255,8 +1342,7 @@ Every relationship subquery supports all query operations:
     currentLoans: {
       where: { returned: false },        // Filter
       order: { dueDate: "asc" },         // Sort
-      limit: 10,                         // Limit
-      offset: 0,                         // Offset
+      slice: { limit: 10, offset: 0 },   // Paginate
       select: {                          // Select
         dueDate: "dueDate",
         bookTitle: { $get: "book.title" },    // Expressions
@@ -1747,8 +1833,10 @@ Real-world query patterns for common use cases.
 function paginateQuery(baseQuery, page, perPage = 10) {
   return {
     ...baseQuery,
-    limit: perPage,
-    offset: (page - 1) * perPage
+    slice: {
+      limit: perPage,
+      offset: (page - 1) * perPage
+    }
   };
 }
 
@@ -1757,8 +1845,7 @@ function paginateQuery(baseQuery, page, perPage = 10) {
   type: "books",
   select: ["title", "isbn"],
   order: { createdAt: "desc" },
-  limit: 10,
-  offset: 0
+  slice: { limit: 10, offset: 0 }
 }
 
 // Page 2
@@ -1766,8 +1853,7 @@ function paginateQuery(baseQuery, page, perPage = 10) {
   type: "books",
   select: ["title", "isbn"],
   order: { publishedYear: "desc" },
-  limit: 10,
-  offset: 10
+  slice: { limit: 10, offset: 10 }
 }
 ```
 
@@ -1940,7 +2026,7 @@ function paginateQuery(baseQuery, page, perPage = 10) {
     currentLoans: {
       where: { returned: false },
       order: { dueDate: "asc" },
-      limit: 10,
+      slice: { limit: 10 },
       select: {
         dueDate: "dueDate",
         renewalCount: "renewalCount",
@@ -1951,7 +2037,7 @@ function paginateQuery(baseQuery, page, perPage = 10) {
     },
     recentReservations: {
       order: { createdAt: "desc" },
-      limit: 5,
+      slice: { limit: 5 },
       select: {
         createdAt: "createdAt",
         status: "status",
@@ -1990,7 +2076,7 @@ function paginateQuery(baseQuery, page, perPage = 10) {
       latestLoan: {
         select: ["dueDate", "renewalCount"],
         order: { createdAt: "desc" },
-        limit: 1
+        slice: { limit: 1 }
       }
     }
   }
@@ -2031,7 +2117,7 @@ function paginateQuery(baseQuery, page, perPage = 10) {
   select: {
     name: "name",
     loans: {
-      limit: 10,  // Limit nested results
+      slice: { limit: 10 },  // Limit nested results
       select: ["dueDate"]
     }
   }
@@ -2040,16 +2126,16 @@ function paginateQuery(baseQuery, page, perPage = 10) {
 // Paginate at every level
 {
   type: "authors",
-  limit: 20,
+  slice: { limit: 20 },
   select: {
     name: "name",
     books: {
-      limit: 10,
+      slice: { limit: 10 },
       order: { publishedYear: "desc" },
       select: {
         title: "title",
         loans: {
-          limit: 5,
+          slice: { limit: 5 },
           order: { createdAt: "desc" },
           select: ["dueDate", "patron"]
         }
@@ -2062,7 +2148,7 @@ function paginateQuery(baseQuery, page, perPage = 10) {
 {
   type: "patrons",
   select: ["id", "name"],  // Not "select: '*'"
-  limit: 100
+  slice: { limit: 100 }
 }
 ```
 
