@@ -6,9 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-### Added
+### Changed
 
-- `before` and `after` subclauses in `slice` for keyset-style pagination. These use ordinal comparison against sorted results, respecting the sort direction of each key in the `order` clause. Multi-key tuple comparison is supported — `after`/`before` keys must be a prefix of the `order` keys. When `before` is used without `after`, `limit` and `offset` apply from the end of the filtered results, enabling backward pagination. Anchor values do not need to exist in the data. Requires an `order` clause when used.
+- **Breaking:** `limit` and `offset` are no longer top level keys. Instead, there is a top level `slice` key that accepts `limit` and `offset` and behaves as before. It also supports `before` and `after` subclauses for keyset-style pagination. These use ordinal comparison against sorted results, respecting the sort direction of each key in the `order` clause. Multi-key tuple comparison is supported — `after`/`before` keys must be a prefix of the `order` keys. When `before` is used without `after`, `limit` and `offset` apply from the end of the filtered results, enabling backward pagination. Anchor values do not need to exist in the data. Requires an `order` clause when used.
 
 ## [0.7.0] - 2026-01-27
 
