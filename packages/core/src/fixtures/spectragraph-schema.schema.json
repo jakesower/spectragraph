@@ -41,6 +41,20 @@
 				"plural": { "type": "string" },
 				"singular": { "type": "string" },
 				"idAttribute": { "type": "string" },
+				"requiredAttributes": {
+					"type": "array",
+					"items": { "type": "string" },
+					"default": [],
+					"deprecated": true,
+					"description": "Deprecated: use resource-level 'schema' with JSON Schema 'required' instead."
+				},
+				"requiredRelationships": {
+					"type": "array",
+					"items": { "type": "string" },
+					"default": [],
+					"deprecated": true,
+					"description": "Deprecated: use resource-level 'schema' with JSON Schema 'required' instead."
+				},
 				"schema": {
 					"type": "object",
 					"description": "JSON Schema object for cross-field validation. Must not contain 'properties' field - use 'attributes' instead.",

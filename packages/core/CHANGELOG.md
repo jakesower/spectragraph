@@ -4,11 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). This project is still in v0.x versioning and will not follow semantic versioning until v1.0. Instead, expect minor dot changes to sometimes introduce breaking changes. Patch versions will not break anything.
 
-## [Unreleased]
+## [0.8.0] - 2026-07-30
+
+### Added
+
+- **Derived field filtering**: `where` clauses can now filter on computed fields defined in `select`, not just schema attributes.
+- **Resource-level `schema`**: Resources in the schema can now include a `schema` property for cross-attribute JSON Schema validation (e.g., `dependentRequired`, `if`/`then`). The `schema` object is merged with attribute definitions during validation. It must not contain a `properties` field — attributes are defined separately.
+- **Schema metadata fields**: Resource definitions now support `title`, `description`, and `$comment` fields.
+- Top-level `where` clauses on group queries are now validated against schema attributes.
 
 ### Changed
 
 - **Breaking:** `limit` and `offset` are no longer top level keys. Instead, there is a top level `slice` key that accepts `limit` and `offset` and behaves as before. It also supports `before` and `after` subclauses for keyset-style pagination. These use ordinal comparison against sorted results, respecting the sort direction of each key in the `order` clause. Multi-key tuple comparison is supported — `after`/`before` keys must be a prefix of the `order` keys. When `before` is used without `after`, `limit` and `offset` apply from the end of the filtered results, enabling backward pagination. Anchor values do not need to exist in the data. Requires an `order` clause when used.
+- `requiredAttributes` and `requiredRelationships` have been marked as deprecated in the metaschema definition. Going forward use the resource-level `schema` property for cross-field validation.
+- Query graph clause execution now uses an explicit operation order array instead of relying on object key insertion order.
 
 ## [0.7.0] - 2026-01-27
 

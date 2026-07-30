@@ -134,7 +134,7 @@ Validation checks:
 
 ## Execution Order
 
-Query operations execute in this specific order:
+Query operations always execute in this order:
 
 ```
 1. id/ids       → Select specific resources
@@ -527,6 +527,29 @@ where: {
   },
 }
 // Then filter results in application code
+```
+
+### Filtering on Derived Fields
+
+Where clauses can filter on computed fields defined in `select`:
+
+```javascript
+{
+  type: "patrons",
+  select: [
+    "name",
+    { isActive: { $gt: [{ $get: "lastLoginDays" }, 0] } }
+  ],
+  where: { isActive: true }
+}
+```
+
+The filter key must match a field name in `select`. Shorthand values work the same as with attributes — arrays become `$in`, plain values become `$eq`:
+
+```javascript
+where: { isActive: true }          // equality
+where: { tier: ["gold", "silver"] } // $in
+where: { score: { $gte: 90 } }     // expression
 ```
 
 ### Store-Specific Behavior
