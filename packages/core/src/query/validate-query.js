@@ -711,6 +711,9 @@ function validateGroupQuery(query, context) {
 		// Validate select and aggregates for base groups
 		validateGroupSelect(select, byArray, path, addError, selectEngine);
 		validateBaseGroupAggregates(aggregates, schema, query.type, path, addError);
+
+		// Additionally validate top level where clauses
+		validateWhereClause(query, context);
 	}
 
 	// Validate group.where

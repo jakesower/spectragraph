@@ -111,7 +111,11 @@ const normalizers = {
 	where(schema, query) {
 		const resSchema = schema.resources[query.type];
 		const attributeNames = Object.keys(resSchema.attributes);
-		const expandedSelect = expandSelectObject(schema, query.select, query.type);
+		const expandedSelect = expandSelectObject(
+			schema,
+			query.select ?? {}, // group queries don't have a select clause
+			query.type,
+		);
 
 		const resolve = (node) => {
 			if (looksLikeExpression(node)) {

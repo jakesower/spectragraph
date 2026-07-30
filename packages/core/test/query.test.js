@@ -409,6 +409,32 @@ describe("validateQuery", () => {
 			expect(result.length).toBeGreaterThan(0);
 		});
 
+		it("validates with a top level where clause", () => {
+			const query = {
+				type: "bears",
+				group: {
+					by: [],
+				},
+				where: { yearIntroduced: 1982 },
+			};
+
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toEqual(0);
+		});
+
+		it("fails validation with a top level where clause with an invalid attribute", () => {
+			const query = {
+				type: "bears",
+				group: {
+					by: [],
+				},
+				where: { chickenButt: 1982 },
+			};
+
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toBeGreaterThan(0);
+		});
+
 		describe("group.aggregates", () => {
 			it("does not validate with a string aggregates clause", () => {
 				const query = {

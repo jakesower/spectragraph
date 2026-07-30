@@ -368,7 +368,23 @@ describe("group queries", () => {
 			]);
 		});
 
-		it.todo("filters pre-grouped data on top level where clause");
+		it("filters pre-grouped data on top level where clause", () => {
+			const query = {
+				type: "matches",
+				group: {
+					by: "ageGroup",
+					aggregates: { total: { $count: null } },
+				},
+				where: { goals: { $gt: 1 } },
+			};
+
+			const result = queryGraph(schema, query, graph);
+			expect(result).toEqual([
+				{ ageGroup: 11, total: 1 },
+				{ ageGroup: 12, total: 1 },
+				{ ageGroup: 13, total: 1 },
+			]);
+		});
 
 		it("filters groups with group-level where", () => {
 			const query = {
