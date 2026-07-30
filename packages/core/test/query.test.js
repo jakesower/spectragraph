@@ -319,6 +319,21 @@ describe("validateQuery", () => {
 			expect(result.length).toBeGreaterThan(0);
 		});
 
+		it("passes validation when using a field defined in select", () => {
+			const query = {
+				type: "bears",
+				select: [
+					"id",
+					{ isOriginal: { $lt: [{ $get: "yearIntroduced" }, 1985] } },
+				],
+				where: {
+					isOriginal: true,
+				},
+			};
+			const result = validateQuery(careBearSchema, query);
+			expect(result.length).toEqual(0);
+		});
+
 		it("passes validation when using a valid expression for the value", () => {
 			const query = {
 				type: "bears",

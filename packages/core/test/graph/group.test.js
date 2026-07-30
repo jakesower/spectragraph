@@ -368,6 +368,8 @@ describe("group queries", () => {
 			]);
 		});
 
+		it.todo("filters pre-grouped data on top level where clause");
+
 		it("filters groups with group-level where", () => {
 			const query = {
 				type: "matches",

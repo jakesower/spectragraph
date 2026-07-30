@@ -1,4 +1,4 @@
-import { mapValues, omit } from "es-toolkit";
+import { mapValues, omit, pick } from "es-toolkit";
 import { validateQuery } from "../query.js";
 import { defaultSelectEngine, defaultWhereEngine } from "../lib/defaults.js";
 import { ensure } from "../lib/helpers.js";
@@ -109,6 +109,10 @@ const normalizers = {
 		return applyGroup(query.group);
 	},
 	where(schema, query) {
+		const resSchema = schema.resources[query.type];
+		const attributeNames = Object.keys(resSchema.attributes);
+		const expandedSelect = expandSelectObject(schema, query.select, query.type);
+
 		const resolve = (node) => {
 			if (looksLikeExpression(node)) {
 				const [expressionName, operand] = Object.entries(node)[0];
@@ -124,11 +128,29 @@ const normalizers = {
 			}
 
 			if (typeof node === "object" && node !== null && !Array.isArray(node)) {
-				return {
-					$matchesAll: mapValues(node, (n) =>
-						Array.isArray(n) ? { $in: n } : n,
-					),
+				// Attribute filters work on data directly returned in the results
+				const attributeFilterKeys = pick(node, attributeNames);
+				const attributeFilters = mapValues(attributeFilterKeys, (n) =>
+					Array.isArray(n) ? { $in: n } : n,
+				);
+
+				// Derived filters come from select fields that are expressions that
+				// need to be resolved before they can be compared.
+				const derivedFilterKeys = omit(node, attributeNames);
+				const derivedFilters = Object.entries(derivedFilterKeys).map(
+					([filterName, filter]) =>
+						Array.isArray(filter)
+							? { $pipe: [expandedSelect[filterName], { $in: filter }] }
+							: looksLikeExpression(filter)
+								? { $pipe: [expandedSelect[filterName], filter] }
+								: { $pipe: [expandedSelect[filterName], { $eq: filter }] },
+				);
+
+				const allFilters = {
+					$and: [{ $matchesAll: attributeFilters }, ...derivedFilters],
 				};
+
+				return allFilters.$and.length === 1 ? allFilters.$and[0] : allFilters;
 			}
 
 			throw new Error("where clauses must either be objects or expressions");

@@ -217,7 +217,7 @@ describe("getQueryExtentByClause", () => {
 					attributes: [],
 					relationships: {
 						home: {
-						  type: "homes",
+							type: "homes",
 							attributes: ["caringMeter", "isInClouds"],
 							relationships: {},
 						},
@@ -252,7 +252,7 @@ describe("getQueryExtentByClause", () => {
 					attributes: [],
 					relationships: {
 						home: {
-						  type: "homes",
+							type: "homes",
 							attributes: ["caringMeter", "isInClouds"],
 							relationships: {
 								residents: { type: "bears", attributes: [], relationships: {} },
@@ -284,7 +284,7 @@ describe("getQueryExtentByClause", () => {
 					attributes: ["bellyBadge"],
 					relationships: {
 						home: {
-						  type: "homes",
+							type: "homes",
 							attributes: ["caringMeter", "isInClouds"],
 							relationships: {},
 						},
@@ -306,7 +306,7 @@ describe("getQueryExtentByClause", () => {
 					attributes: [],
 					relationships: {
 						powers: {
-						  type: "powers",
+							type: "powers",
 							attributes: ["name"],
 							relationships: {},
 						},
@@ -328,7 +328,7 @@ describe("getQueryExtentByClause", () => {
 					attributes: [],
 					relationships: {
 						powers: {
-						  type: "powers",
+							type: "powers",
 							attributes: ["name"],
 							relationships: {},
 						},
@@ -350,7 +350,7 @@ describe("getQueryExtentByClause", () => {
 					attributes: [],
 					relationships: {
 						powers: {
-						  type: "powers",
+							type: "powers",
 							attributes: ["name"],
 							relationships: {},
 						},
@@ -375,7 +375,7 @@ describe("getQueryExtentByClause", () => {
 					attributes: [],
 					relationships: {
 						powers: {
-						  type: "powers",
+							type: "powers",
 							attributes: ["name", "type"],
 							relationships: {},
 						},
@@ -397,7 +397,7 @@ describe("getQueryExtentByClause", () => {
 					attributes: [],
 					relationships: {
 						powers: {
-						  type: "powers",
+							type: "powers",
 							attributes: ["type"],
 							relationships: {},
 						},
@@ -419,7 +419,7 @@ describe("getQueryExtentByClause", () => {
 					attributes: [],
 					relationships: {
 						powers: {
-						  type: "powers",
+							type: "powers",
 							attributes: ["type"],
 							relationships: {},
 						},
@@ -697,7 +697,7 @@ describe("getQueryExtentByClause", () => {
 			});
 			expect(extent.where).toEqual({
 				type: "bears",
-				attributes: ["yearIntroduced", "name"],
+				attributes: ["name", "yearIntroduced"],
 				relationships: {},
 			});
 		});

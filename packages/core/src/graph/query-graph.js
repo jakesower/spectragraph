@@ -80,16 +80,28 @@ function prepGraph(graph) {
  * @returns {Result}
  */
 function runQuery(schema, rootQuery, data, options = {}) {
-	const processSubquery = (query) => {
+	const processQuery = (query) => {
 		if (query.id && !data[query.type][query.id]) return null;
 
 		// these are in order of execution
 		const operationDefinitions = createQueryGraphClauses(
 			schema,
 			query,
-			processSubquery,
+			processQuery,
 			options,
 		);
+
+		const operationOrder = [
+			"ids",
+			"where",
+			"order",
+			"after",
+			"before",
+			"offset",
+			"limit",
+			"select",
+			"group",
+		];
 
 		const results = query.id
 			? [data[query.type][query.id]]
@@ -102,15 +114,17 @@ function runQuery(schema, rootQuery, data, options = {}) {
 			opName === "after"
 				? query.slice?.[opName] !== undefined
 				: opName in query;
-		const processed = Object.entries(operationDefinitions).reduce(
-			(acc, [opName, fn]) => (hasClause(opName) ? fn(acc) : acc),
+
+		const processed = operationOrder.reduce(
+			(acc, opName) =>
+				hasClause(opName) ? operationDefinitions[opName](acc) : acc,
 			results,
 		);
 
 		return query.id ? processed[0] : processed;
 	};
 
-	return processSubquery(rootQuery);
+	return processQuery(rootQuery);
 }
 
 /**

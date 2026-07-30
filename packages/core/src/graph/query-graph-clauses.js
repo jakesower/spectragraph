@@ -98,7 +98,6 @@ export function createQueryGraphClauses(
 	const resSchema = schema.resources[query.type];
 	const { limit, offset, before, after } = query.slice ?? {};
 	const reverseSlice = before && !after;
-
 	const clauses = {
 		ids(results) {
 			const idsSet = new Set(query.ids);

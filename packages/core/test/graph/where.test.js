@@ -177,6 +177,26 @@ describe("where clauses", () => {
 		]);
 	});
 
+	it("filters derived attributes", () => {
+		const query = {
+			type: "bears",
+			select: [
+				"id",
+				{ isOriginal: { $lt: [{ $get: "yearIntroduced" }, 1985] } },
+			],
+			where: {
+				isOriginal: true,
+			},
+		};
+		const result = queryGraph(careBearSchema, query, careBearData);
+
+		expect(result).toEqual([
+			{ id: "1", isOriginal: true },
+			{ id: "2", isOriginal: true },
+			{ id: "3", isOriginal: true },
+		]);
+	});
+
 	it("filters related resources", async () => {
 		const query = {
 			type: "powers",

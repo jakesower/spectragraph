@@ -220,11 +220,6 @@ function getResourceStructureValidator(schema, resourceType, engines) {
 							schema.resources[resourceType].attributes,
 							() => ({}),
 						),
-						additionalProperties: {
-							not: true,
-							errorMessage:
-								"is neither an expression nor an object that uses valid attributes as keys",
-						},
 					},
 				],
 			},
@@ -321,6 +316,25 @@ function validateStructure(schema, query, type, engines) {
 }
 
 /**
+ * Extracts field names from a select clause (handles arrays, objects, wildcards)
+ */
+function extractFieldNames(selectClause, fallbackFields) {
+	if (selectClause === "*") return fallbackFields;
+
+	if (Array.isArray(selectClause)) {
+		return selectClause.flatMap((v) => extractFieldNames(v, fallbackFields));
+	}
+
+	if (typeof selectClause === "object") {
+		return Object.keys(selectClause).flatMap((v) =>
+			extractFieldNames(v, fallbackFields),
+		);
+	}
+
+	return [selectClause];
+}
+
+/**
  * Validates select clause (works for both regular and group select)
  *
  * @param {*} selectClause - The select clause to validate
@@ -405,25 +419,6 @@ function validateSelectClause(selectClause, options) {
 	addError('Invalid select value: must be "*", an object, or an array.', path);
 }
 
-/**
- * Extracts field names from a select clause (handles arrays, objects, wildcards)
- */
-function extractFieldNames(selectClause, fallbackFields) {
-	if (selectClause === "*") return fallbackFields;
-
-	if (Array.isArray(selectClause)) {
-		return selectClause.flatMap((v) => extractFieldNames(v, fallbackFields));
-	}
-
-	if (typeof selectClause === "object") {
-		return Object.keys(selectClause).flatMap((v) =>
-			extractFieldNames(v, fallbackFields),
-		);
-	}
-
-	return [selectClause];
-}
-
 function buildGroupSelectObject(groupQuery) {
 	const { by, select } = groupQuery;
 	const toObj = (val) => val.reduce((acc, v) => ({ ...acc, [v]: v }), {});
@@ -435,6 +430,30 @@ function buildGroupSelectObject(groupQuery) {
 		: Array.isArray(select)
 			? toObj(select)
 			: select;
+}
+
+function validateWhereClause(query, context) {
+	const { schema, resourceType, path, addError, whereEngine } = context;
+	const resSchema = schema.resources[resourceType];
+
+	// Validate where clause
+	if (query.where) {
+		const selectFieldNames = new Set(
+			extractFieldNames(query.select, Object.keys(resSchema.attributes)),
+		);
+
+		if (
+			!whereEngine.isExpression(query.where) &&
+			!Object.keys(query.where).every(
+				(k) => k in resSchema.attributes || selectFieldNames.has(k),
+			)
+		) {
+			addError(
+				"Invalid where clause: invalid filter key. Use valid attributes, selected fields, or an expression.",
+				[...path, "where"],
+			);
+		}
+	}
 }
 
 /**
@@ -770,30 +789,16 @@ function validateSelectQuery(query, context) {
 		path: [...path, "select"],
 		addError,
 	});
+
+	validateWhereClause(query, context);
 }
 
 /**
  * Validates semantic aspects of a query (after structural validation)
  */
 function validateQuerySemantics(query, type, path, context) {
-	const { schema, addError, whereEngine } = context;
-	const resSchema = schema.resources[type];
-
 	// Handle wildcard queries (just return "*")
 	if (query === "*") return;
-
-	// Validate where clause
-	if (query.where) {
-		if (
-			!whereEngine.isExpression(query.where) &&
-			Object.keys(query.where).some((k) => !(k in resSchema.attributes))
-		) {
-			addError(
-				"Invalid where clause: unknown attribute names. Use valid attributes or an expression.",
-				[...path, "where"],
-			);
-		}
-	}
 
 	// Branch based on query type
 	if (typeof query === "object" && query !== null && "group" in query) {
