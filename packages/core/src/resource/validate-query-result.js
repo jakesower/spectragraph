@@ -1,5 +1,9 @@
 import { mapValues } from "es-toolkit";
-import { defaultSelectEngine, defaultValidator } from "../lib/defaults.js";
+import {
+	defaultSelectEngine,
+	defaultValidator,
+	defaultWhereEngine,
+} from "../lib/defaults.js";
 import { createDeepCache, ensure, translateAjvErrors } from "../lib/helpers.js";
 import { normalizeQuery } from "../query.js";
 import { validateSchema } from "../schema.js";
@@ -15,11 +19,15 @@ const getNormalResourceCache = createDeepCache();
  * @param {Object} [options]
  * @param {Ajv} [options.validator] - The validator instance to use
  * @param {import('./lib/defaults.js').SelectExpressionEngine} [options.selectEngine] - Expression engine for SELECT clause validation
+ * @param {import('./lib/defaults.js').WhereExpressionEngine} [options.whereEngine] - Expression engine for WHERE clause validation
  * @return {import('./lib/helpers.js').StandardError[]}
  */
 export function validateQueryResult(schema, query, result, options = {}) {
-	const { selectEngine = defaultSelectEngine, validator = defaultValidator } =
-		options;
+	const {
+		selectEngine = defaultSelectEngine,
+		whereEngine = defaultWhereEngine,
+		validator = defaultValidator,
+	} = options;
 
 	ensure(validateSchema)(schema, options);
 
@@ -46,7 +54,10 @@ export function validateQueryResult(schema, query, result, options = {}) {
 		return [];
 	}
 
-	const normalQuery = normalizeQuery(schema, query);
+	const normalQuery = normalizeQuery(schema, query, {
+		selectEngine,
+		whereEngine,
+	});
 
 	const cache = getNormalResourceCache(schema, validator, normalQuery);
 	let schemaCache = cache;

@@ -10,6 +10,7 @@ import {
 	mergeNormalResources,
 	normalizeResource,
 } from "../src/resource.js";
+import { createWhereEngine } from "../src/lib/expression-engines.js";
 import { soccerSchema, geojsonSchema } from "../interface-tests/src/index.js";
 
 const geojsonDPSchema = structuredClone(soccerSchema);
@@ -914,6 +915,28 @@ describe("validateQueryResult", () => {
 			]);
 			expect(result.length).toBeGreaterThan(0);
 		});
+	});
+
+	it("passes a custom whereEngine through to normalizeQuery", () => {
+		const customWhereEngine = createWhereEngine({
+			custom: {
+				$nearby: (operand) => operand,
+			},
+		});
+
+		const query = {
+			type: "fields",
+			select: ["name"],
+			where: { $nearby: { lat: 0, lng: 0, radius: 10 } },
+		};
+
+		const result = validateQueryResult(
+			soccerSchema,
+			query,
+			[{ name: "Field A" }],
+			{ whereEngine: customWhereEngine },
+		);
+		expect(result.length).toEqual(0);
 	});
 });
 
