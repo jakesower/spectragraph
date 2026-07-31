@@ -765,6 +765,7 @@ export function validateMergeResource(
  * @param result - The resource tree to validate
  * @param options - Validation options
  * @param options.selectEngine - Expression engine for SELECT clauses
+ * @param options.whereEngine - Expression engine for WHERE clauses
  * @param options.validator - The validator instance to use
  * @returns Array of validation errors
  */
@@ -774,6 +775,7 @@ export function validateQueryResult(
 	result: unknown,
 	options?: {
 		selectEngine?: SelectExpressionEngine;
+		whereEngine?: WhereExpressionEngine;
 		validator?: Ajv;
 	},
 ): DefinedError[];
@@ -840,6 +842,7 @@ export function ensureValidMergeResource(
  * @param result - The resource tree to validate
  * @param options - Validation options
  * @param options.selectEngine - Expression engine for SELECT clauses
+ * @param options.whereEngine - Expression engine for WHERE clauses
  * @param options.validator - The validator instance to use
  * @throws If the resource tree is invalid
  */
@@ -849,6 +852,7 @@ export function ensureValidQueryResult(
 	result: unknown,
 	options?: {
 		selectEngine?: SelectExpressionEngine;
+		whereEngine?: WhereExpressionEngine;
 		validator?: Ajv;
 	},
 ): void;

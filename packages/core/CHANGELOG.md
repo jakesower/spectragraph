@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). This project is still in v0.x versioning and will not follow semantic versioning until v1.0. Instead, expect minor dot changes to sometimes introduce breaking changes. Patch versions will not break anything.
 
+## [0.8.1] - 2026-07-31
+
+### Fixed
+
+- `validateQueryResult` and `ensureValidQueryResult` now accept a `whereEngine` option and pass it through to `normalizeQuery`. Previously, queries using custom where expressions would fail during result validation.
+
+### Changed
+
+- Updated JSDoc/type documentation for `getQueryExtentByClause` and `getFullQueryExtent` to note that stores have generally been better served walking the normalized query directly rather than consuming extents.
+
 ## [0.8.0] - 2026-07-30
 
 ### Added
