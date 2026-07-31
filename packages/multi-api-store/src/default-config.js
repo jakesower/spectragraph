@@ -85,14 +85,26 @@ import { mapValues, pickBy } from "es-toolkit";
  * @property {Function} delete - DELETE handler for removing resources
  */
 export const standardHandlers = {
-	query: async (context) => {
+	query: async (context, finalizers) => {
 		const { request, query } = context;
 
 		const url = query.id
 			? `${request.baseURL}/${query.type}/${query.id}${request.queryParamsStr}`
 			: `${request.baseURL}/${query.type}${request.queryParamsStr}`;
 
-		return fetch(url);
+		const response = await fetch(url);
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({
+				message: response.statusText,
+			}));
+			throw new Error(errorData.message || `HTTP ${response.status}`, {
+				cause: { data: errorData, originalError: response },
+			});
+		}
+
+		const data = await response.json();
+		const asArray = data == null ? [] : Array.isArray(data) ? data : [data];
+		return finalizers.finalizeResources(asArray);
 	},
 
 	create: async (resource, { config }) => {

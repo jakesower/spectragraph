@@ -80,15 +80,17 @@ describe("auth.bearerToken middleware", () => {
 
 	describe("in examples", () => {
 		it("queries parks with auth token", async () => {
-			const mockQuery = vi.fn().mockResolvedValue([
-				{
-					id: "zion",
-					name: "Zion National Park",
-					location: "Utah",
-					established: 1919,
-					bestSeason: "spring",
-				},
-			]);
+			const mockQuery = vi.fn().mockImplementation((ctx, fin) =>
+				fin.finalizeResources([
+					{
+						id: "zion",
+						name: "Zion National Park",
+						location: "Utah",
+						established: 1919,
+						bestSeason: "spring",
+					},
+				]),
+			);
 
 			const config = {
 				specialHandlers: [],
@@ -118,6 +120,7 @@ describe("auth.bearerToken middleware", () => {
 						}),
 					}),
 				}),
+				expect.any(Object),
 			);
 
 			expect(result).toEqual([
@@ -198,15 +201,17 @@ describe("auth.queryParam middleware", () => {
 
 	describe("in examples", () => {
 		it("queries parks with auth query param", async () => {
-			const mockQuery = vi.fn().mockResolvedValue([
-				{
-					id: "zion",
-					name: "Zion National Park",
-					location: "Utah",
-					established: 1919,
-					bestSeason: "spring",
-				},
-			]);
+			const mockQuery = vi.fn().mockImplementation((ctx, fin) =>
+				fin.finalizeResources([
+					{
+						id: "zion",
+						name: "Zion National Park",
+						location: "Utah",
+						established: 1919,
+						bestSeason: "spring",
+					},
+				]),
+			);
 
 			const config = {
 				specialHandlers: [],
@@ -233,6 +238,7 @@ describe("auth.queryParam middleware", () => {
 						queryParamsStr: "?api_key=secret-nps-key",
 					}),
 				}),
+				expect.any(Object),
 			);
 
 			expect(result).toEqual([

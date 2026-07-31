@@ -55,7 +55,7 @@ describe("Manual Cache Mode", () => {
 				evidence: {
 					cache: { manual: true }, // Enable manual caching for evidence
 					query: {
-						fetch: async (ctx) => {
+						fetch: async (ctx, fin) => {
 							const { categoryIds, withCache } = ctx;
 
 							// Fetch evidence for each conspiracy category with manual caching
@@ -71,19 +71,20 @@ describe("Manual Cache Mode", () => {
 								),
 							);
 
-							return evidenceByCategory.flat();
+							return fin.finalizeResources(evidenceByCategory.flat());
 						},
 					},
 				},
 				theories: {
 					query: {
-						fetch: async () => [
-							{
-								id: "theory1",
-								title: "Auto Cached Theory",
-								category: "space",
-							},
-						],
+						fetch: async (ctx, fin) =>
+							fin.finalizeResources([
+								{
+									id: "theory1",
+									title: "Auto Cached Theory",
+									category: "space",
+								},
+							]),
 					},
 				},
 			},
@@ -144,17 +145,18 @@ describe("Manual Cache Mode", () => {
 				theories: {
 					// Automatic caching
 					query: {
-						fetch: theoryHandler,
+						fetch: async (ctx, fin) => fin.finalizeResources(await theoryHandler()),
 					},
 				},
 				sources: {
 					cache: { manual: true }, // Manual caching
 					query: {
-						fetch: async (ctx) => {
+						fetch: async (ctx, fin) => {
 							const { withCache, query } = ctx;
 
 							// Manual cache control for sources
-							return withCache(`source-${query.id}`, manualHandler);
+							const result = await withCache(`source-${query.id}`, manualHandler);
+							return fin.finalizeResources(result);
 						},
 					},
 				},
@@ -199,21 +201,24 @@ describe("Manual Cache Mode", () => {
 					test: (query, context) =>
 						query.type === "sources" && context.investigatorIds?.length > 1,
 					cache: { manual: true }, // Manual mode for special handler
-					query: async (ctx) => {
-						const { withCache, investigatorIds, query } = ctx;
+					query: {
+						fetch: async (ctx, fin) => {
+							const { withCache, investigatorIds, query } = ctx;
 
-						// Try each investigator's network until we find the source
-						for (const investigatorId of investigatorIds) {
-							const result = await withCache(
-								`source-${query.id}-investigator-${investigatorId}`,
-								async () => {
-									return multiSourceHandler();
-								},
-							);
+							// Try each investigator's network until we find the source
+							for (const investigatorId of investigatorIds) {
+								const result = await withCache(
+									`source-${query.id}-investigator-${investigatorId}`,
+									async () => {
+										return multiSourceHandler();
+									},
+								);
 
-							if (result.length > 0) return result;
-						}
-						return [];
+								if (result.length > 0)
+									return fin.finalizeResources(result);
+							}
+							return fin.finalizeResources([]);
+						},
 					},
 				},
 			],
@@ -247,15 +252,15 @@ describe("Manual Cache Mode", () => {
 			resources: {
 				theories: {
 					query: {
-						fetch: async (ctx) => {
+						fetch: async (ctx, fin) => {
 							receivedContext = ctx;
-							return [
+							return fin.finalizeResources([
 								{
 									id: "theory1",
 									title: "Government Mind Control",
 									category: "psychology",
 								},
-							];
+							]);
 						},
 					},
 				},

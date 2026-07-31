@@ -9,6 +9,7 @@ import {
 	handleResponseData,
 } from "./helpers/helpers.js";
 import { defaultConfig } from "./default-config.js";
+import { createFinalizers, FINALIZED } from "./helpers/finalize.js";
 
 /**
  * @typedef {Object} MiddlewareContext
@@ -70,21 +71,20 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 				},
 			};
 
+			const finalizers = createFinalizers(schema, query.type, stepConfig.query);
+
 			const fetcher = async () => {
 				// Use special handler if available, otherwise use regular handler
-				const response = await stepConfig.query.fetch(finishedCtx);
+				const response = await stepConfig.query.fetch(finishedCtx, finalizers);
 				const data = await handleResponseData(response);
 
-				const asArray =
-					data === null || data === undefined
-						? []
-						: Array.isArray(data)
-							? data
-							: [data];
-				const mapper = stepConfig.query?.map;
-				return mapper
-					? asArray.map((resource) => mapper(resource, finishedCtx))
-					: asArray;
+				if (!data?.[FINALIZED]) {
+					throw new Error(
+						`Handler for "${query.type}" must return result of finalize(), finalizeResources(), or finalizeResource()`,
+					);
+				}
+
+				return data;
 			};
 
 			if (stepConfig.cache.manual) return fetcher();
@@ -112,20 +112,20 @@ export async function loadQueryGraph(rootQuery, storeContext) {
 					...options,
 				}),
 		};
-		const queryTreePromise = pipe(middlewareCtx);
-		const queryGraphPromise = queryTreePromise.then((tree) =>
-			createGraphFromResources(schema, query.type, tree),
-		);
+		const resultPromise = pipe(middlewareCtx);
+		const queryGraphPromise = resultPromise.then((result) => result.graph);
 
 		const subqueryContext = {
 			...context,
 			parentQuery: query,
-			parentResultPromise: queryTreePromise,
+			parentResultPromise: resultPromise.then((result) => result.graph[query.type] ?? {}),
 		};
+		const handledRelationships = stepConfig.query?.handles?.relationships ?? [];
 		const relatedGraphPromises = Object.keys(
 			schema.resources[query.type].relationships,
 		)
 			.filter((relName) => query.select[relName])
+			.filter((relName) => !handledRelationships.includes(relName))
 			.map((relName) => step(query.select[relName], subqueryContext));
 
 		// intentionally do not catch -- errors from inside here are already high quality

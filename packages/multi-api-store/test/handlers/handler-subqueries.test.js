@@ -13,20 +13,22 @@ describe("handler tests", () => {
 
 	describe("dependent subqueries", () => {
 		it("receives a parentResultPromise that has results", async () => {
-			const mockParksGet = vi.fn().mockResolvedValue([
-				{
-					id: "zion",
-					name: "Zion National Park",
-					location: "Utah",
-					established: 1919,
-				},
-				{
-					id: "arches",
-					name: "Arches National Park",
-					location: "Utah",
-					established: 1971,
-				},
-			]);
+			const mockParksGet = vi.fn().mockImplementation((ctx, fin) =>
+				fin.finalizeResources([
+					{
+						id: "zion",
+						name: "Zion National Park",
+						location: "Utah",
+						established: 1919,
+					},
+					{
+						id: "arches",
+						name: "Arches National Park",
+						location: "Utah",
+						established: 1971,
+					},
+				]),
+			);
 
 			const mockActivitiesGet = vi.fn().mockResolvedValue([
 				{
@@ -57,15 +59,15 @@ describe("handler tests", () => {
 					},
 					activities: {
 						query: {
-							fetch: async (context) => {
+							fetch: async (context, finalizers) => {
 								const parent = await context.parentResultPromise;
-								const queryStr = context.queryStr
-									? `${context.queryStr ?? ""}&park=${parent.map((p) => p.id).join(",")}`
-									: `?park=${parent.map((p) => p.id).join(",")}`;
+								const parentIds = Object.keys(parent);
+								const queryStr = `?park=${parentIds.join(",")}`;
 
 								const url = `https://api.nps.example.org/activities${queryStr}`;
 
-								return mockActivitiesGet(url);
+								const data = await mockActivitiesGet(url);
+								return finalizers.finalizeResources(data);
 							},
 						},
 					},
@@ -87,6 +89,7 @@ describe("handler tests", () => {
 						select: { name: "name", activities: expect.any(Object) },
 					}),
 				}),
+				expect.any(Object),
 			);
 
 			expect(mockActivitiesGet).toHaveBeenCalledWith(

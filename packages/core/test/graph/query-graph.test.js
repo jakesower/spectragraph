@@ -1,6 +1,9 @@
 import { expect, it, describe } from "vitest";
 import { queryGraph } from "../../src/graph.js";
-import { ensureValidQueryResult } from "../../src/resource.js";
+import {
+	ensureValidQueryResult,
+	validateQueryResult,
+} from "../../src/index.js";
 import { careBearSchema, careBearData } from "../interface-tests/src/index.js";
 
 describe("queryTree core", () => {
@@ -16,7 +19,7 @@ describe("queryTree core", () => {
 		expect(result).toEqual({ name: "Tenderheart Bear" });
 		expect(() => {
 			ensureValidQueryResult(careBearSchema, query, result);
-		});
+		}).not.toThrow();
 	});
 
 	it("fetches a single resource with object notation", async () => {
@@ -31,7 +34,7 @@ describe("queryTree core", () => {
 		expect(result).toEqual({ name: "Tenderheart Bear" });
 		expect(() => {
 			ensureValidQueryResult(careBearSchema, query, result);
-		});
+		}).not.toThrow();
 	});
 
 	it("fetches a single resource with mixed notation", async () => {
@@ -49,7 +52,7 @@ describe("queryTree core", () => {
 		});
 		expect(() => {
 			ensureValidQueryResult(careBearSchema, query, result);
-		});
+		}).not.toThrow();
 	});
 
 	it("normalizes select object * and with * as subquery", () => {
@@ -109,7 +112,7 @@ describe("queryTree core", () => {
 		expect(result).toEqual({ name: "Tenderheart Bear" });
 		expect(() => {
 			ensureValidQueryResult(careBearSchema, query, result);
-		});
+		}).not.toThrow();
 	});
 
 	it("fetches a single resource and maps property names", async () => {
@@ -126,7 +129,7 @@ describe("queryTree core", () => {
 		expect(result).toEqual({ nombre: "Tenderheart Bear" });
 		expect(() => {
 			ensureValidQueryResult(careBearSchema, query, result);
-		});
+		}).not.toThrow();
 	});
 
 	it("fetches a property from multiple resources", async () => {
@@ -147,7 +150,7 @@ describe("queryTree core", () => {
 		expect(result).toEqual(expected);
 		expect(() => {
 			ensureValidQueryResult(careBearSchema, query, result);
-		});
+		}).not.toThrow();
 	});
 
 	it("fetches null for a nonexistent resource", async () => {
@@ -162,7 +165,7 @@ describe("queryTree core", () => {
 		expect(result).toEqual(null);
 		expect(() => {
 			ensureValidQueryResult(careBearSchema, query, result);
-		});
+		}).not.toThrow();
 	});
 
 	it("disallows queries with no 'type'", async () => {
@@ -216,7 +219,7 @@ describe("queryTree core", () => {
 		});
 		expect(() => {
 			ensureValidQueryResult(careBearSchema, query, result);
-		});
+		}).not.toThrow();
 	});
 
 	it("fetches a single resource with a subset of props on a relationship", async () => {
@@ -245,7 +248,7 @@ describe("queryTree core", () => {
 		expect(result).toEqual({ powerId: "careBearStare" });
 		expect(() => {
 			ensureValidQueryResult(careBearSchema, query, result);
-		});
+		}).not.toThrow();
 	});
 
 	it("fetches a single resource with many-to-many relationship and a `type` property", async () => {
@@ -262,7 +265,7 @@ describe("queryTree core", () => {
 		});
 		expect(() => {
 			ensureValidQueryResult(careBearSchema, query, result);
-		});
+		}).not.toThrow();
 	});
 
 	it("fetches multiple subqueries of various types", async () => {
@@ -294,7 +297,7 @@ describe("queryTree core", () => {
 		});
 		expect(() => {
 			ensureValidQueryResult(careBearSchema, query, result);
-		});
+		}).not.toThrow();
 	});
 
 	it("handles subqueries between the same type", async () => {
@@ -316,7 +319,7 @@ describe("queryTree core", () => {
 		]);
 		expect(() => {
 			ensureValidQueryResult(careBearSchema, query, result);
-		});
+		}).not.toThrow();
 	});
 
 	it("errors out on undefined resources", async () => {
@@ -365,9 +368,43 @@ describe("queryTree core", () => {
 			{ name: "Cozy Heart Penguin", description: null },
 			{ name: "Loyal Heart Dog", description: undefined },
 		]);
+		// This test covers only the engine's null-vs-undefined preservation (asserted
+		// above). Result validation is deliberately NOT run here: the null `description`
+		// is valid graph data to project but invalid per the schema (a non-nullable
+		// string), so validating it would (correctly) throw. That schema/data
+		// disagreement is its own contract, pinned by the next test.
+	});
+
+	it("rejects a result whose value violates the schema (schema/data disagreement)", () => {
+		// queryGraph is a faithful projection: it returns null because the graph holds
+		// null. The schema says `description` is a non-nullable string, so the result
+		// is genuinely schema-invalid. Result validation is where a store author sees
+		// that their data source and their schema disagree — it MUST flag it, not
+		// tolerate it. The engine stays pure; the policy (when/whether to validate)
+		// lives with the caller.
+		const query = {
+			type: "companions",
+			select: ["name", "description"],
+		};
+
+		const result = queryGraph(careBearSchema, query, {
+			companions: {
+				1: { attributes: { name: "Cozy Heart Penguin", description: null } },
+			},
+		});
+
+		expect(result).toEqual([
+			{ name: "Cozy Heart Penguin", description: null },
+		]);
+
+		// validateQueryResult surfaces the disagreement as an error...
+		const errors = validateQueryResult(careBearSchema, query, result);
+		expect(errors.length).toBeGreaterThan(0);
+
+		// ...and the throwing variant throws.
 		expect(() => {
 			ensureValidQueryResult(careBearSchema, query, result);
-		});
+		}).toThrow();
 	});
 
 	it("doesn't get stuck in an infinite loop with a certain kind of graph 2025-08-29", () => {

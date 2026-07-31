@@ -345,6 +345,8 @@ describe("handler tests", () => {
 				);
 			});
 
+			test.todo("it pushes computed expressions to the backend when supported");
+
 			describe("$and", () => {
 				it("appends query params when multiple $and paths exist", async () => {
 					global.fetch.mockResolvedValueOnce({

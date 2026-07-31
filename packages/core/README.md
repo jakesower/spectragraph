@@ -611,124 +611,40 @@ const normalized = normalizeQuery(schema, {
 });
 ```
 
-#### `getQueryExtentByClause(schema, query)`
+#### Query extent analysis
 
-Analyzes a query to determine which schema attributes and relationships are referenced by each query clause (select, where, order, group) separately.
+> **Note:** The extent functions below statically report _which_ attributes and
+> relationships a query references. In practice, stores that translate query
+> clauses into backend requests have been better served by walking the normalized
+> query directly (e.g. a custom expression engine that converts a `where` clause
+> into API query parameters) than by consuming these extents. They remain
+> available, but are no longer the recommended starting point for clause
+> translation, and their surface may be reconsidered before a 1.0 release.
 
-This enables fine-grained optimization by store implementations where different clauses have different performance or security characteristics.
+##### `getFullQueryExtent(schema, query)`
 
-**Parameters:**
-
-- `schema` (Schema) - The schema defining resource types and relationships
-- `query` (RootQuery) - The query object to analyze
-
-**Returns:** Object with separate extents for each clause:
-
-```typescript
-{
-  select: QueryExtent,
-  where: QueryExtent,
-  order: QueryExtent,
-  group: QueryExtent
-}
-```
-
-Where `QueryExtent` has the structure:
-
-```typescript
-{
-  attributes: string[],
-  relationships: { [relationshipName: string]: QueryExtent }
-}
-```
-
-**Use Cases:**
-
-- **SQL query building**: WHERE clause paths → JOIN/WHERE, SELECT paths → SELECT columns, ORDER paths → ORDER BY
-- **Access control**: Apply different permissions to filter fields vs display fields
-- **Incremental fetching**: Fetch filtering data first, then display data for filtered results
-- **Query optimization**: Identify which fields need indexes (ORDER/WHERE) vs which are just displayed
-
-```javascript
-import { getQueryExtentByClause } from "@spectragraph/core";
-
-const extents = getQueryExtentByClause(schema, {
-  type: "bears",
-  select: ["name", { home: ["caringMeter"] }],
-  where: { furColor: "brown" },
-  order: { yearIntroduced: "asc" },
-});
-
-// Returns:
-// {
-//   select: {
-//     attributes: ["name"],
-//     relationships: { home: { attributes: ["caringMeter"], relationships: {} } }
-//   },
-//   where: {
-//     attributes: ["furColor"],
-//     relationships: {}
-//   },
-//   order: {
-//     attributes: ["yearIntroduced"],
-//     relationships: {}
-//   },
-//   group: {
-//     attributes: [],
-//     relationships: {}
-//   }
-// }
-
-// Use in SQL store:
-const whereColumns = extents.where.attributes; // ["furColor"]
-const selectColumns = extents.select.attributes; // ["name"]
-const orderColumns = extents.order.attributes; // ["yearIntroduced"]
-const joins = Object.keys(extents.select.relationships); // ["home"]
-```
-
-#### `getFullQueryExtent(schema, query)`
-
-Analyzes a query to determine the complete set of schema attributes and relationships referenced across all query clauses (select, where, order, group), merged into a single extent.
-
-This is useful for store implementations that need to know all data requirements upfront.
-
-**Parameters:**
-
-- `schema` (Schema) - The schema defining resource types and relationships
-- `query` (RootQuery) - The query object to analyze
-
-**Returns:** Single `QueryExtent` object with all referenced attributes and relationships merged
-
-**Use Cases:**
-
-- **Prefetching**: Fetch all needed data in one round trip
-- **Simple permission checks**: Does user have access to ANY of these fields?
-- **Caching**: Cache key based on all accessed data
-- **Multi-API coordination**: Coordinate fetches across multiple backend stores
+Returns a single `QueryExtent` — the complete set of attributes and relationships referenced across all clauses (select, where, order, group), merged.
 
 ```javascript
 import { getFullQueryExtent } from "@spectragraph/core";
 
-const extent = getFullQueryExtent(schema, {
+getFullQueryExtent(schema, {
   type: "bears",
   select: ["name", { home: ["caringMeter"] }],
   where: { furColor: "brown" },
   order: { yearIntroduced: "asc" },
 });
-
-// Returns:
 // {
 //   attributes: ["name", "furColor", "yearIntroduced"],
-//   relationships: {
-//     home: { attributes: ["caringMeter"], relationships: {} }
-//   }
+//   relationships: { home: { attributes: ["caringMeter"], relationships: {} } }
 // }
-
-// Use in multi-API store:
-const allAttributes = extent.attributes; // ["name", "furColor", "yearIntroduced"]
-const allRelationships = Object.keys(extent.relationships); // ["home"]
-prefetchData(allAttributes, allRelationships);
 ```
+
+A `QueryExtent` has the shape `{ attributes: string[], relationships: { [name]: QueryExtent } }`.
+
+##### `getQueryExtentByClause(schema, query)`
+
+The same analysis, but with a separate `QueryExtent` per clause (`select`, `where`, `order`, `group`) instead of merged.
 
 #### `queryGraph(schema, query, graph, options?)`
 

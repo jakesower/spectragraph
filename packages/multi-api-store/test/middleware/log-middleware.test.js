@@ -80,15 +80,17 @@ describe("log.simple middleware", () => {
 				error: vi.fn(),
 			};
 
-			const mockQuery = vi.fn().mockResolvedValue([
-				{
-					id: "zion",
-					name: "Zion National Park",
-					location: "Utah",
-					established: 1919,
-					bestSeason: "spring",
-				},
-			]);
+			const mockQuery = vi.fn().mockImplementation((ctx, fin) =>
+				fin.finalizeResources([
+					{
+						id: "zion",
+						name: "Zion National Park",
+						location: "Utah",
+						established: 1919,
+						bestSeason: "spring",
+					},
+				]),
+			);
 
 			const config = {
 				specialHandlers: [],

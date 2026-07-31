@@ -503,10 +503,11 @@ export interface QueryExtentByClause {
  * Analyzes a query to determine which schema attributes and relationships are referenced
  * by each query clause (select, where, order, group).
  *
- * This enables fine-grained optimization by store implementations:
- * - SQL stores can determine which columns are needed for WHERE vs SELECT
- * - Access control can apply different permissions to filter vs display fields
- * - Query optimizers can fetch minimal data incrementally
+ * Note: for translating query clauses into backend requests, stores have generally
+ * been better served by walking the normalized query directly (e.g. a custom
+ * expression engine) than by consuming these extents. This function remains
+ * available but is not the recommended starting point, and its surface may be
+ * reconsidered before a 1.0 release.
  *
  * @param schema - The schema defining resource types and relationships
  * @param query - The query object to analyze
@@ -538,11 +539,11 @@ export function getQueryExtentByClause(
  * Analyzes a query to determine the complete set of schema attributes and relationships
  * referenced across all query clauses (select, where, order, group), merged into a single extent.
  *
- * This is useful for store implementations to optimize data fetching by:
- * - Determining which database columns to SELECT in SQL queries
- * - Knowing which API endpoints/fields to fetch in multi-API stores
- * - Building minimal GraphQL queries
- * - Validating access permissions for specific paths
+ * Note: for translating query clauses into backend requests, stores have generally
+ * been better served by walking the normalized query directly (e.g. a custom
+ * expression engine) than by consuming these extents. This function remains
+ * available but is not the recommended starting point, and its surface may be
+ * reconsidered before a 1.0 release.
  *
  * @param schema - The schema defining resource types and relationships
  * @param query - The query object to analyze

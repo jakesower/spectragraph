@@ -16,6 +16,7 @@ import { loadQueryGraph } from "./load-query-graph.js";
 import { createCache } from "./cache.js";
 import { standardHandlers, defaultConfig } from "./default-config.js";
 import { handleResponseData, normalizeConfig } from "./helpers/helpers.js";
+import { stripHandledClauses } from "./helpers/finalize.js";
 
 /**
  * @typedef {Object} StoreContext
@@ -82,7 +83,15 @@ export function createMultiApiStore(schema, config = {}) {
 			...queryContext,
 		});
 
-		return queryGraph(schema, rootQuery, graph, { selectEngine, whereEngine });
+		const unhandledQuery = stripHandledClauses(
+			normalQuery,
+			schema,
+			normalConfig.resources,
+		);
+		return queryGraph(schema, unhandledQuery, graph, {
+			selectEngine,
+			whereEngine,
+		});
 	};
 
 	const create = storeMutation(schema, "create", async (resource) => {

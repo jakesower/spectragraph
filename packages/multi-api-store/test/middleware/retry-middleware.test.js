@@ -118,15 +118,17 @@ describe("retry.exponential middleware", () => {
 				.fn()
 				.mockRejectedValueOnce(gatewayTimeout)
 				.mockRejectedValueOnce(gatewayTimeout)
-				.mockResolvedValueOnce([
-					{
-						id: "zion",
-						name: "Zion National Park",
-						location: "Utah",
-						established: 1919,
-						bestSeason: "spring",
-					},
-				]);
+				.mockImplementationOnce((ctx, fin) =>
+					fin.finalizeResources([
+						{
+							id: "zion",
+							name: "Zion National Park",
+							location: "Utah",
+							established: 1919,
+							bestSeason: "spring",
+						},
+					]),
+				);
 
 			const config = {
 				specialHandlers: [],

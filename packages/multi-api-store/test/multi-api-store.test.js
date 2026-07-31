@@ -6,8 +6,12 @@ describe("createMultiApiStore", () => {
 	it("supports forceRefresh to clear cache and fetch fresh data", async () => {
 		const mockQuery = vi
 			.fn()
-			.mockResolvedValueOnce([{ id: "1", name: "First Call" }])
-			.mockResolvedValueOnce([{ id: "1", name: "Second Call" }]);
+			.mockImplementationOnce((ctx, fin) =>
+				fin.finalizeResources([{ id: "1", name: "First Call" }]),
+			)
+			.mockImplementationOnce((ctx, fin) =>
+				fin.finalizeResources([{ id: "1", name: "Second Call" }]),
+			);
 
 		const config = {
 			cache: { enabled: true, ttl: 60000 },
@@ -41,15 +45,17 @@ describe("createMultiApiStore", () => {
 	});
 
 	it("queries parks with mocked get handler", async () => {
-		const mockQuery = vi.fn().mockResolvedValue([
-			{
-				id: "1",
-				name: "Zion National Park",
-				location: "Utah",
-				established: 1919,
-				bestSeason: "spring",
-			},
-		]);
+		const mockQuery = vi.fn().mockImplementation((ctx, fin) =>
+			fin.finalizeResources([
+				{
+					id: "1",
+					name: "Zion National Park",
+					location: "Utah",
+					established: 1919,
+					bestSeason: "spring",
+				},
+			]),
+		);
 
 		const config = {
 			specialHandlers: [],
@@ -77,6 +83,7 @@ describe("createMultiApiStore", () => {
 				}),
 				schema: utahParksSchema,
 			}),
+			expect.any(Object), // finalizers
 		);
 
 		expect(result).toEqual([
@@ -88,15 +95,18 @@ describe("createMultiApiStore", () => {
 	});
 
 	it("queries parks with mappers", async () => {
-		const mockQuery = vi.fn().mockResolvedValue([
-			{
-				id: "zion",
-				parkName: "Zion National Park",
-				state: "Utah",
-				yearEstablished: 1919,
-				description: "Famous for towering sandstone cliffs",
-			},
-		]);
+		// Handler returns raw API data; mappers in config transform it
+		const mockQuery = vi.fn().mockImplementation((ctx, fin) =>
+			fin.finalizeResources([
+				{
+					id: "zion",
+					parkName: "Zion National Park",
+					state: "Utah",
+					yearEstablished: 1919,
+					description: "Famous for towering sandstone cliffs",
+				},
+			]),
+		);
 
 		const config = {
 			specialHandlers: [],
@@ -128,6 +138,7 @@ describe("createMultiApiStore", () => {
 				}),
 				schema: utahParksSchema,
 			}),
+			expect.any(Object), // finalizers
 		);
 
 		expect(result).toEqual([
@@ -139,28 +150,32 @@ describe("createMultiApiStore", () => {
 	});
 
 	it("queries parks with related activities", async () => {
-		const mockParksGet = vi.fn().mockResolvedValue([
-			{
-				id: "zion",
-				name: "Zion National Park",
-				location: "Utah",
-				established: 1919,
-				bestSeason: "spring",
-				activities: ["angels-landing"],
-			},
-		]);
+		const mockParksGet = vi.fn().mockImplementation((ctx, fin) =>
+			fin.finalizeResources([
+				{
+					id: "zion",
+					name: "Zion National Park",
+					location: "Utah",
+					established: 1919,
+					bestSeason: "spring",
+					activities: ["angels-landing"],
+				},
+			]),
+		);
 
-		const mockActivitiesGet = vi.fn().mockResolvedValue([
-			{
-				id: "angels-landing",
-				name: "Angels Landing",
-				difficulty: "strenuous",
-				duration: 240,
-				description: "Iconic hike with chains",
-				seasonAvailable: ["spring", "summer", "fall"],
-				park: "zion",
-			},
-		]);
+		const mockActivitiesGet = vi.fn().mockImplementation((ctx, fin) =>
+			fin.finalizeResources([
+				{
+					id: "angels-landing",
+					name: "Angels Landing",
+					difficulty: "strenuous",
+					duration: 240,
+					description: "Iconic hike with chains",
+					seasonAvailable: ["spring", "summer", "fall"],
+					park: "zion",
+				},
+			]),
+		);
 
 		const config = {
 			specialHandlers: [],
@@ -193,6 +208,7 @@ describe("createMultiApiStore", () => {
 					select: { name: "name", activities: expect.any(Object) },
 				}),
 			}),
+			expect.any(Object),
 		);
 
 		expect(mockActivitiesGet).toHaveBeenCalledWith(
@@ -204,6 +220,7 @@ describe("createMultiApiStore", () => {
 					select: { name: "name", difficulty: "difficulty" },
 				}),
 			}),
+			expect.any(Object),
 		);
 
 		expect(result).toEqual([
@@ -220,26 +237,30 @@ describe("createMultiApiStore", () => {
 	});
 
 	it("queries parks with related activities with a configured relationship field", async () => {
-		const mockParksGet = vi.fn().mockResolvedValue([
-			{
-				id: "zion",
-				name: "Zion National Park",
-				location: "Utah",
-				established: 1919,
-				bestSeason: "spring",
-				activities: ["angels-landing"],
-			},
-		]);
+		const mockParksGet = vi.fn().mockImplementation((ctx, fin) =>
+			fin.finalizeResources([
+				{
+					id: "zion",
+					name: "Zion National Park",
+					location: "Utah",
+					established: 1919,
+					bestSeason: "spring",
+					activities: ["angels-landing"],
+				},
+			]),
+		);
 
-		const mockActivitiesGet = vi.fn().mockResolvedValue([
-			{
-				id: "angels-landing",
-				name: "Angels Landing",
-				difficulty: "strenuous",
-				duration: 240,
-				park_id: "zion",
-			},
-		]);
+		const mockActivitiesGet = vi.fn().mockImplementation((ctx, fin) =>
+			fin.finalizeResources([
+				{
+					id: "angels-landing",
+					name: "Angels Landing",
+					difficulty: "strenuous",
+					duration: 240,
+					park_id: "zion",
+				},
+			]),
+		);
 
 		const config = {
 			specialHandlers: [],
@@ -275,6 +296,7 @@ describe("createMultiApiStore", () => {
 					select: { name: "name", activities: expect.any(Object) },
 				}),
 			}),
+			expect.any(Object),
 		);
 
 		expect(mockActivitiesGet).toHaveBeenCalledWith(
@@ -286,6 +308,7 @@ describe("createMultiApiStore", () => {
 					select: { name: "name", difficulty: "difficulty" },
 				}),
 			}),
+			expect.any(Object),
 		);
 
 		expect(result).toEqual([
@@ -302,34 +325,40 @@ describe("createMultiApiStore", () => {
 	});
 
 	it("uses special handlers to customize data loading", async () => {
-		const mockParksGet = vi.fn().mockResolvedValue([
-			{
-				id: "zion",
-				name: "Zion National Park",
-				location: "Utah",
-				established: 1919,
-				bestSeason: "spring",
-				activities: ["angels-landing"],
-			},
-		]);
+		const mockParksGet = vi.fn().mockImplementation((ctx, fin) =>
+			fin.finalizeResources([
+				{
+					id: "zion",
+					name: "Zion National Park",
+					location: "Utah",
+					established: 1919,
+					bestSeason: "spring",
+					activities: ["angels-landing"],
+				},
+			]),
+		);
 
-		const mockActivitiesGet = vi.fn().mockResolvedValue([
-			{
-				id: "angels-landing",
-				name: "Standard Activity",
-				difficulty: "moderate",
-				park: "zion",
-			},
-		]);
+		const mockActivitiesGet = vi.fn().mockImplementation((ctx, fin) =>
+			fin.finalizeResources([
+				{
+					id: "angels-landing",
+					name: "Standard Activity",
+					difficulty: "moderate",
+					park: "zion",
+				},
+			]),
+		);
 
-		const mockActivitiesHandler = vi.fn().mockResolvedValue([
-			{
-				id: "angels-landing",
-				name: "Special Activity from Parks Endpoint",
-				difficulty: "strenuous",
-				park: "zion",
-			},
-		]);
+		const mockActivitiesHandler = vi.fn().mockImplementation((ctx, fin) =>
+			fin.finalizeResources([
+				{
+					id: "angels-landing",
+					name: "Special Activity from Parks Endpoint",
+					difficulty: "strenuous",
+					park: "zion",
+				},
+			]),
+		);
 
 		const config = {
 			specialHandlers: [
@@ -372,6 +401,7 @@ describe("createMultiApiStore", () => {
 					select: { name: "name", difficulty: "difficulty" },
 				}),
 			}),
+			expect.any(Object),
 		);
 
 		expect(result).toEqual([
@@ -400,7 +430,9 @@ describe("createMultiApiStore", () => {
 				resources: {
 					parks: {
 						query: {
-							fetch: vi.fn(),
+							fetch: vi.fn().mockImplementation((ctx, fin) =>
+								fin.finalizeResources([]),
+							),
 						},
 						create: {
 							fetch: mockCreate,
@@ -441,7 +473,9 @@ describe("createMultiApiStore", () => {
 				// No baseURL - should default to empty string
 				resources: {
 					parks: {
-						query: vi.fn(),
+						query: vi.fn().mockImplementation((ctx, fin) =>
+							fin.finalizeResources([]),
+						),
 						// no create handler - should use standard handler
 					},
 				},
@@ -482,7 +516,9 @@ describe("createMultiApiStore", () => {
 				resources: {
 					parks: {
 						query: {
-							fetch: vi.fn(),
+							fetch: vi.fn().mockImplementation((ctx, fin) =>
+								fin.finalizeResources([]),
+							),
 						},
 						update: {
 							fetch: mockUpdate,
@@ -527,7 +563,9 @@ describe("createMultiApiStore", () => {
 				resources: {
 					parks: {
 						query: {
-							fetch: vi.fn(),
+							fetch: vi.fn().mockImplementation((ctx, fin) =>
+								fin.finalizeResources([]),
+							),
 						},
 						delete: {
 							fetch: mockDelete,
@@ -567,8 +605,12 @@ describe("createMultiApiStore", () => {
 		it("caches query results when caching is enabled", async () => {
 			const mockQuery = vi
 				.fn()
-				.mockResolvedValueOnce([{ id: "1", name: "Zion National Park" }])
-				.mockResolvedValueOnce([{ id: "2", name: "Different Data" }]);
+				.mockImplementationOnce((ctx, fin) =>
+					fin.finalizeResources([{ id: "1", name: "Zion National Park" }]),
+				)
+				.mockImplementationOnce((ctx, fin) =>
+					fin.finalizeResources([{ id: "2", name: "Different Data" }]),
+				);
 
 			const config = {
 				cache: {
@@ -605,8 +647,12 @@ describe("createMultiApiStore", () => {
 		it("does not cache when caching is disabled", async () => {
 			const mockQuery = vi
 				.fn()
-				.mockResolvedValueOnce([{ id: "1", name: "Zion National Park" }])
-				.mockResolvedValueOnce([{ id: "1", name: "Zion National Park" }]);
+				.mockImplementationOnce((ctx, fin) =>
+					fin.finalizeResources([{ id: "1", name: "Zion National Park" }]),
+				)
+				.mockImplementationOnce((ctx, fin) =>
+					fin.finalizeResources([{ id: "1", name: "Zion National Park" }]),
+				);
 
 			const config = {
 				cache: {
@@ -640,7 +686,9 @@ describe("createMultiApiStore", () => {
 		it("clears cache when creating a resource", async () => {
 			const mockQuery = vi
 				.fn()
-				.mockResolvedValue([{ id: "1", name: "Zion National Park" }]);
+				.mockImplementation((ctx, fin) =>
+					fin.finalizeResources([{ id: "1", name: "Zion National Park" }]),
+				);
 			const mockCreate = vi.fn().mockResolvedValue({
 				id: "capitol-reef",
 				name: "Capitol Reef National Park",
