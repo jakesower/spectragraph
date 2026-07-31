@@ -140,6 +140,8 @@ const normalizers = {
 
 				// Derived filters come from select fields that are expressions that
 				// need to be resolved before they can be compared.
+				// TODO: Make these more pushdown friendly; it's difficult/impossible
+				// extract the original field names/values from the $pipe expressions.
 				const derivedFilterKeys = omit(node, attributeNames);
 				const derivedFilters = Object.entries(derivedFilterKeys).map(
 					([filterName, filter]) =>
